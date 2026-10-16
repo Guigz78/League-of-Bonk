@@ -18,7 +18,7 @@ export function freshSave() {
     equipped: { weapon: null, armor: null, trinket: null },
     stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {} },
     achievements: {},
-    settings: { sound: true, vibrate: true },
+    settings: { sound: true, music: true, vibrate: true },
     tutorialDone: false,
     run: null,
     nextId: 1,

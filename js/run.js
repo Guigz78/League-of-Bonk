@@ -7,7 +7,7 @@ import { heroGrid, iconImg } from './art.js';
 import { makeCreature, rng } from './pixel.js';
 import { voxelGeometry } from './voxel.js';
 import { buildWorld, S, HALF } from './world3d.js';
-import { sfx, buzz } from './audio.js';
+import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
 
 const TAU = Math.PI * 2;
@@ -142,6 +142,7 @@ export class Run {
     this.renderLoadout();
     this.renderEvo();
     this.banner(`<small>${esc(this.zone.name)}</small>Survivez ${Math.round(this.duration / 60)} minutes !`, 2200);
+    music('zone' + this.zone.id);
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
     setTimeout(() => $('#hintBubble')?.classList.add('out'), save.stats.runs > 2 ? 3000 : 7000);
@@ -284,6 +285,7 @@ export class Run {
 
   destroy() {
     this.over = true;
+    stopMusic();
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.resize);
     document.removeEventListener('visibilitychange', this.onVis);
@@ -333,14 +335,15 @@ export class Run {
   pause() {
     if (this.paused || this.over) return;
     this.paused = true; this.joy = null; this.look = null;
-    this.onPause(() => { this.paused = false; this.last = performance.now(); });
+    duckMusic(true);
+    this.onPause(() => { this.paused = false; duckMusic(false); this.last = performance.now(); });
   }
 
   jump() {
     const p = this.p;
     if (this.paused || this.over || p.h > 2) return;
     p.vh = 560; p.h = 1;
-    sfx('tap');
+    sfx('jump');
   }
 
   // ---------- Armes, tomes, autels ----------
@@ -412,7 +415,7 @@ export class Run {
     else if (c.kind === 'boon') this.addBoon(c.id);
     else if (c.kind === 'heal') this.p.hp = Math.min(this.p.maxHp, this.p.hp + this.p.maxHp * 0.3);
     else if (c.kind === 'gold') this.gold += 25 + this.zone.id * 10;
-    sfx('loot');
+    sfx('pick');
   }
 
   // ---------- Boucle ----------
@@ -437,7 +440,7 @@ export class Run {
     this.paused = true; this.joy = null; this.look = null;
     this.pending--;
     const opts = this.choices();
-    sfx('loot'); buzz(20);
+    sfx('levelup'); buzz(20);
     this.onLevelUp(`Niveau ${this.p.level} !`, opts, c => {
       this.applyChoice(c);
       this.paused = false; this.last = performance.now();
@@ -466,7 +469,7 @@ export class Run {
     for (const e of this.grid.query(p.x, p.y, 260)) if (!e.boss) { e.kx += (e.x - p.x) * 4; e.ky += (e.y - p.y) * 4; }
     this.banner(`<small>Votre champion évolue !</small>${esc(ev.name)}`, 2600, 'evo');
     this.renderEvo();
-    sfx('ult'); buzz(80);
+    sfx('evolve'); buzz(80);
   }
 
   update(dt) {
@@ -551,6 +554,7 @@ export class Run {
       this.nextElite += 45;
       this.addEnemy(mons[4], 4, { elite: true });
       this.banner('Un ennemi <span class="tag elite">ÉLITE</span> approche !', 1600);
+      sfx('honk');
     }
     if (this.swarms.length && t >= this.swarms[0]) {
       this.swarms.shift();
@@ -560,7 +564,7 @@ export class Run {
         this.addEnemy(def, k, { x: this.p.x + Math.cos(a) * R, y: this.p.y + Math.sin(a) * R });
       }
       this.banner('Une horde vous encercle !', 1500, 'warn');
-      sfx('hurt');
+      sfx('alarm');
     }
   }
 
@@ -594,7 +598,7 @@ export class Run {
     $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`;
     this.banner(`<small>${esc(def.title || 'Le chef de la horde')}</small>${esc(def.name)}`, 2400, 'boss');
     this.shake = 10;
-    sfx('ult'); buzz(60);
+    sfx('boss'); music('boss'); buzz(60);
   }
 
   // ---------- Ennemis ----------
@@ -646,7 +650,7 @@ export class Run {
         }
         return [nx * sp, ny * sp];
       case 'aim':
-        if (e.phaseT <= 0) { e.phase = 'dash'; e.phaseT = 0.6; sfx('hurt'); }
+        if (e.phaseT <= 0) { e.phase = 'dash'; e.phaseT = 0.6; sfx('charge'); }
         return [0, 0];
       case 'dash':
         if (e.phaseT <= 0) { e.phase = 'chase'; e.phaseT = rand(2.2, 3.6); }
@@ -657,7 +661,7 @@ export class Run {
         if (e.phaseT <= 0) {
           e.jumpH = 0; e.phase = 'chase'; e.phaseT = rand(2.5, 3.8);
           this.waves.push({ x: e.x, y: e.y, r: e.r, max: 540, speed: 330, dmg: e.dmg * 0.9, hit: false });
-          this.shake = 12; sfx('bonk'); buzz(50);
+          this.shake = 12; sfx('stomp'); buzz(50);
           this.burst(e.x, e.y, 30, 0, e.def.pal[1], 4);
         }
         return [nx * sp * 0.6, ny * sp * 0.6];
@@ -730,7 +734,7 @@ export class Run {
           const dmg = A * 1.8 * (lv >= 2 ? 1.3 : 1) * (lv >= 5 ? 1.4 : 1);
           const width = (lv >= 3 ? 30 : 18) * area, len = 320 * area;
           for (const a of lv >= 4 ? [ang, ang + Math.PI] : [ang]) this.beam(p.x, p.y, a, len, width, dmg);
-          sfx('perfect');
+          sfx('zap');
           break;
         }
         case 'arrows': {
@@ -740,6 +744,7 @@ export class Run {
           const n = 1 + (lv >= 2) + (lv >= 5), ang = Math.atan2(t.y - p.y, t.x - p.x);
           for (let i = 0; i < n; i++) {
             const a = ang + (i - (n - 1) / 2) * 0.16;
+            if (i === 0) sfx('pew');
             this.shots.push({ type: 'arrow', x: p.x, y: p.y, z: 30, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 8, dmg: A * (lv >= 3 ? 1.3 : 1), pierce: lv >= 4 ? 2 : 0, life: 0.9, hit: new Set() });
           }
           break;
@@ -761,7 +766,7 @@ export class Run {
               if (Math.abs(da) < 1.25 || d < 26) this.hitEnemy(e, dmg, { knock: 260, kx: dx / (d || 1), ky: dy / (d || 1) });
             }
           }
-          sfx('bonk');
+          sfx('swish');
           break;
         }
         case 'orbs': {
@@ -797,7 +802,7 @@ export class Run {
             this.fx.push({ type: 'bolt', x: t.x, y: t.y, life: 0.25, max: 0.25 });
             for (const e of this.grid.query(t.x, t.y, 60 * area)) if (dist2(e, t) < (46 * area) ** 2) this.hitEnemy(e, dmg, {});
           }
-          if (n) sfx('perfect');
+          if (n) sfx('thunder');
           break;
         }
         case 'boomerang': {
@@ -825,6 +830,7 @@ export class Run {
         }
         case 'frost': {
           if (w.t > 0) break;
+          sfx('freeze');
           w.t = (lv >= 4 ? 2.4 : 3.2) * p.haste;
           const R = (lv >= 3 ? 150 : 115) * area, dmg = A * 1.2 * (lv >= 2 ? 1.3 : 1);
           this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.45, max: 0.45, color: '#9ad8ff' });
@@ -839,6 +845,7 @@ export class Run {
           w.t = (lv >= 5 ? 0.95 : 1.3) * p.haste;
           const n = 4 + (lv >= 2 ? 2 : 0) + (lv >= 4 ? 2 : 0);
           w.rot = (w.rot || 0) + 0.4;
+          sfx('swish');
           for (let i = 0; i < n; i++) {
             const a = w.rot + i / n * TAU, sp = lv >= 5 ? 540 : 440;
             this.shots.push({ type: 'dagger', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 8, dmg: A * 0.9 * (lv >= 3 ? 1.3 : 1), pierce: lv >= 5 ? 3 : 0, life: 0.75, hit: new Set() });
@@ -868,7 +875,7 @@ export class Run {
         this.fx.push({ type: 'ring', x: m.x, y: m.y, r: m.R, life: 0.35, max: 0.35, color: '#8aff5a' });
         this.burst(m.x, m.y, 14, 0, '#8aff5a');
         for (const e of this.grid.query(m.x, m.y, m.R + 30)) if (dist2(e, m) < (m.R + e.r * 0.5) ** 2) this.hitEnemy(e, m.dmg, { color: '#8aff5a' });
-        sfx('bonk');
+        sfx('boom');
       }
     }
     this.mines = this.mines.filter(m => m.life > 0);
@@ -898,7 +905,7 @@ export class Run {
           this.fx.push({ type: 'ring', x: s.tx, y: s.ty, r: s.R, life: 0.35, max: 0.35, color: '#e8f4ff' });
           this.burst(s.tx, s.ty, 12, 0, '#ffffff');
           for (const e of this.grid.query(s.tx, s.ty, s.R + 30)) if ((e.x - s.tx) ** 2 + (e.y - s.ty) ** 2 < (s.R + e.r * 0.5) ** 2) { this.hitEnemy(e, s.dmg, {}); e.slow = 1.5; }
-          sfx('bonk');
+          sfx('splat');
         }
         continue;
       }
@@ -945,13 +952,14 @@ export class Run {
     e.flash = 0.09;
     if (o.knock && !e.boss) { const k = o.knock * (e.elite ? 0.3 : 1); e.kx += (o.kx || 0) * k; e.ky += (o.ky || 0) * k; }
     if (this.texts.length < 60 && (!o.quiet || crit)) this.text(e.x + rand(-8, 8), e.y, e.r * 2.4 + e.fly, fmt(d), crit ? '#ffd54a' : (o.color || '#ffffff'), crit ? 1.4 : 1);
-    if (this.hitSfxT <= 0 && !o.quiet) { sfx('tap'); this.hitSfxT = 0.07; }
+    if (!o.quiet) sfx(crit ? 'crit' : 'hit');
     if (e.hp <= 0) this.kill(e);
   }
 
   kill(e) {
     e.dead = true;
     this.kills++;
+    if (!e.boss) sfx('kill');
     const p = this.p, z = this.zone;
     p.ult = Math.min(100, p.ult + (e.boss ? 0 : e.elite ? 12 : 1.2) * (save.pet === 'voidy' ? 2 : 1));
     save.stats.seen[e.def.name] = (save.stats.seen[e.def.name] || 0) + 1;
@@ -962,7 +970,7 @@ export class Run {
     if (Math.random() < (e.elite ? 1 : 0.06)) this.pickups.push({ type: 'gold', x: e.x + rand(-10, 10), y: e.y + rand(-10, 10), v: Math.max(1, Math.round((1 + z.id * 0.5) * (e.elite ? 8 : 1) * luck)) });
     if (Math.random() < 0.012) this.pickups.push({ type: 'heart', x: e.x, y: e.y });
     if (Math.random() < 0.003) this.pickups.push({ type: 'magnet', x: e.x, y: e.y });
-    if (e.elite) { this.dropChest(e.x, e.y); sfx('loot'); }
+    if (e.elite) { this.dropChest(e.x, e.y); sfx('honk'); }
     if (e.boss) this.win();
   }
 
@@ -994,10 +1002,10 @@ export class Run {
         it.x += dx / d * sp * dt; it.y += dy / d * sp * dt;
         if (d < 18) {
           it.taken = true;
-          if (it.type === 'xp') this.gainXp(it.v);
+          if (it.type === 'xp') { this.gainXp(it.v); sfx('gem'); }
           if (it.type === 'gold') { this.gold += it.v; sfx('coin'); }
           if (it.type === 'heart') { const h = Math.round(p.maxHp * 0.25); p.hp = Math.min(p.maxHp, p.hp + h); this.text(p.x, p.y, 70, '+' + h, '#5ae87a', 1.2); sfx('heal'); }
-          if (it.type === 'magnet') { for (const o of this.pickups) if (o.type === 'xp') o.pull = true; sfx('loot'); }
+          if (it.type === 'magnet') { for (const o of this.pickups) if (o.type === 'xp') o.pull = true; sfx('boing'); sfx('loot'); }
         }
       }
     }
@@ -1029,7 +1037,7 @@ export class Run {
       if (inside && !s.told) { s.told = true; this.msg('Restez dans le cercle pour activer l\'autel'); }
       if (s.charge >= 1 && !this.paused) {
         s.used = true;
-        sfx('ult'); buzz(40);
+        sfx('shrine'); buzz(40);
         this.burst(s.x, s.y, 30, 40, '#4fd0ff');
         this.paused = true; this.joy = null; this.look = null;
         this.onLevelUp('Autel activé !', this.boonChoices(), c => { this.applyChoice(c); this.paused = false; this.last = performance.now(); }, 'Choisissez une bénédiction');
@@ -1054,7 +1062,7 @@ export class Run {
     const ch = this.choices(1)[0];
     const g = Math.round((10 + this.zone.id * 6) * this.base.gold);
     this.gold += g;
-    sfx('win');
+    sfx('chest');
     this.burst(c.x, c.y, 30, 20, '#ffd54a');
     c.mesh.userData.lid.rotation.x = -1.2; c.mesh.userData.lid.position.z = -0.35;
     c.mesh.userData.beam.visible = false;
@@ -1121,6 +1129,7 @@ export class Run {
     if (this.over || this.dying) return;
     this.dying = true;
     this.paused = true; this.joy = null; this.look = null;
+    duckMusic(true);
     sfx('lose'); buzz(80);
     setTimeout(() => this.onDefeat(!this.revived), 650);
   }
@@ -1130,9 +1139,10 @@ export class Run {
     this.revived = true; this.dying = false;
     p.hp = p.maxHp; p.inv = 3;
     this.eshots = []; this.waves = [];
+    duckMusic(false);
     for (const e of this.grid.query(p.x, p.y, 280)) if (!e.boss) this.hitEnemy(e, 1e7, { quiet: true, noCrit: true }); else { e.kx = (e.x - p.x) * 3; e.ky = (e.y - p.y) * 3; }
     this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 280, life: 0.7, max: 0.7, color: '#5ae87a' });
-    sfx('heal');
+    sfx('revive');
     this.paused = false; this.last = performance.now();
   }
 
@@ -1140,6 +1150,7 @@ export class Run {
     if (this.over || this.winning) return;
     this.winning = true;
     this.slowmo = 0.25;
+    stopMusic();
     sfx('win'); buzz(80);
     $('#bossbar').hidden = true;
     this.banner('VICTOIRE !', 1800, 'boss');

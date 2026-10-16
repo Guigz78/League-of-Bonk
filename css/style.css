@@ -219,7 +219,8 @@ p { margin: .4em 0; }
 .rewards, .summary { display: flex; flex-direction: column; gap: 6px; }
 .rw { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.25); padding: 8px 10px; border-radius: 10px; flex-wrap: wrap; }
 .rw small { color: var(--muted); width: 100%; padding-left: 30px; margin-top: -4px; }
-.toggles { display: flex; gap: 10px; }
+.toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+.toggles .toggle { min-width: 30%; }
 .toggle { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--card); padding: 12px; border-radius: 12px; font-weight: 700; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--gold); }
 .howto { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }

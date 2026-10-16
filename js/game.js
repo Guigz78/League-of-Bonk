@@ -3,7 +3,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PET
 import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave } from './save.js';
 import { heroURL, creatureURL, iconImg } from './art.js';
 import { rng } from './pixel.js';
-import { sfx } from './audio.js';
+import { sfx, music, stopMusic } from './audio.js';
 import { mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
 import { Run } from './run.js';
 import { mountPreview } from './preview3d.js';
@@ -62,6 +62,7 @@ function canAffordUpgrade() {
 
 // ---------- Accueil (onglets) ----------
 export function home(t) {
+  music('menu');
   battle = null;
   if (t) tab = t;
   const body = { adventure: adventureTab, gear: gearTab, shop: shopTab, trophies: trophiesTab }[tab]();
@@ -156,6 +157,7 @@ async function zoneSheet(i) {
 
 // ---------- Choix de la classe ----------
 function classSelect(first) {
+  music('menu');
   let sel = save.cls || 'mage';
   const render = () => {
     const c = CLASSES[sel];
@@ -270,6 +272,7 @@ async function pauseMenu(resume) {
     body: `<div class="toggles">
         <label class="toggle"><input type="checkbox" id="pSound" ${save.settings.sound ? 'checked' : ''}> Son</label>
         <label class="toggle"><input type="checkbox" id="pVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
+        <label class="toggle"><input type="checkbox" id="pMus" ${save.settings.music !== false ? 'checked' : ''}> Musique</label>
       </div>
       <div class="howto">
         <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</p>
@@ -284,6 +287,8 @@ async function pauseMenu(resume) {
   });
   save.settings.sound = $('#pSound')?.checked ?? save.settings.sound;
   save.settings.vibrate = $('#pVib')?.checked ?? save.settings.vibrate;
+  const musOn = $('#pMus')?.checked ?? save.settings.music;
+  if (musOn !== save.settings.music) { save.settings.music = musOn; if (!musOn) stopMusic(); else if (run) music('zone' + run.zone.id); }
   persist();
   if (v === 'quit') {
     const ok = await modal({ title: 'Abandonner ?', body: `<p>La partie s'arrête ici. Vous gardez <b>${fmt(run.gold)} or</b> ramassés.</p>`, buttons: [{ label: 'Continuer', cls: 'ghost', value: false }, { label: 'Abandonner', cls: 'danger', value: true }] });
@@ -573,6 +578,7 @@ async function settings() {
       <div class="toggles">
         <label class="toggle"><input type="checkbox" id="sSound" ${save.settings.sound ? 'checked' : ''}> Son</label>
         <label class="toggle"><input type="checkbox" id="sVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
+        <label class="toggle"><input type="checkbox" id="sMus" ${save.settings.music !== false ? 'checked' : ''}> Musique</label>
       </div>
       <h4>Installer sur iPhone</h4>
       <p class="muted">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
@@ -596,6 +602,8 @@ async function settings() {
   await p;
   save.settings.sound = wrap.querySelector('#sSound').checked;
   save.settings.vibrate = wrap.querySelector('#sVib').checked;
+  const mOn = wrap.querySelector('#sMus').checked;
+  if (mOn !== save.settings.music) { save.settings.music = mOn; if (!mOn) stopMusic(); }
   persist({ touch: false });
   if (action === 'login') return cloud.signIn();
   if (action === 'logout') {
