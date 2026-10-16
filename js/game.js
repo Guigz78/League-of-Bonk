@@ -108,9 +108,9 @@ function adventureTab() {
     const cleared = save.zoneCleared[i];
     const sprite = z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
       : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal);
-    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
+    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs && !cleared ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
       <div class="z-num">${i + 1}</div>
-      <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.runs ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
+      <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.runs && !cleared ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
       <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px" src="${sprite}" alt="">`}</div>
       ${cleared ? `<div class="z-done">${iconImg('star', 14)} Terminée</div>` : ''}
     </button>`;
@@ -525,7 +525,7 @@ function trophiesTab() {
   return `<div class="stat-grid card">
       <div><b>${fmt(st.wins)}</b><small>Zones gagnées</small></div>
       <div><b>${seen}/${MONSTER_COUNT + 5}</b><small>Bestiaire</small></div>
-      <div><b>${fmt(st.kills)}</b><small>Monstres vaincus</small></div>
+      <div><b>${fmt(st.kills || 0)}</b><small>Monstres vaincus</small></div>
       <div><b>${fmt(st.ults)}</b><small>Ultimes</small></div>
     </div>
     <h3 class="section-t">Succès <small>${n}/${ACHIEVEMENTS.length}</small></h3>

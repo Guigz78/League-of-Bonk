@@ -297,7 +297,7 @@ export class Run {
     const z = this.zone, t = this.time, mons = z.monsters;
     if (!this.bossSpawned && t >= this.duration) return this.spawnBoss();
     const cap = 150 + z.id * 12;
-    let rate = (0.9 + t / 22) * (1 + z.id * 0.12);
+    let rate = (0.9 + t / 22) * (1 + z.id * 0.15);
     if (this.bossSpawned) rate *= 0.35;
     this.spawnAcc += rate * dt;
     const pool = Math.min(3, Math.floor(t / (this.duration / 4)));
@@ -333,11 +333,12 @@ export class Run {
       x = this.p.x + Math.cos(a) * R; y = this.p.y + Math.sin(a) * R;
     }
     const spr = this.spriteFor(def, k, !!o.boss);
-    let hp = def.hp * 0.3 * (1 + t / 150) * tier;
-    let dmg = def.atk * 0.7 * tier;
+    const zm = 1 + z.id * 0.35;
+    let hp = def.hp * 0.3 * (1 + t / 150) * tier * zm;
+    let dmg = def.atk * 0.7 * tier * (1 + z.id * 0.12);
     let scale = 2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * rand(0.9, 1.1);
     if (o.elite) { hp *= 10; dmg *= 1.5; scale = 3.2; speed *= 0.85; }
-    if (o.boss) { hp = def.hp * 8 * tier; dmg = def.atk * 1.1 * tier; scale = 5; speed *= 0.8; }
+    if (o.boss) { hp = def.hp * 8 * tier * (1 + z.id * 0.8); dmg = def.atk * 1.1 * tier * (1 + z.id * 0.1); scale = 5; speed *= 0.8; }
     const e = {
       def, k, x, y, hp, maxHp: hp, dmg, speed, scale, r: 7 * scale, spr,
       elite: !!o.elite, boss: !!o.boss, ranged: def.ranged && !o.boss, shootT: rand(1, 3),
@@ -712,7 +713,7 @@ export class Run {
     const xp = (1 + Math.floor(z.id / 2)) * (e.elite ? 15 : 1);
     this.pickups.push({ type: 'xp', x: e.x, y: e.y, v: xp });
     const luck = this.base.gold;
-    if (Math.random() < (e.elite ? 1 : 0.09)) this.pickups.push({ type: 'gold', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), v: Math.round((1 + z.id) * (e.elite ? 8 : 1) * luck) });
+    if (Math.random() < (e.elite ? 1 : 0.05)) this.pickups.push({ type: 'gold', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), v: Math.max(1, Math.round((1 + z.id * 0.5) * (e.elite ? 8 : 1) * luck)) });
     if (Math.random() < 0.012) this.pickups.push({ type: 'heart', x: e.x, y: e.y });
     if (Math.random() < 0.003) this.pickups.push({ type: 'magnet', x: e.x, y: e.y });
     if (e.elite) { this.pickups.push({ type: 'chest', x: e.x, y: e.y }); sfx('loot'); }
