@@ -241,3 +241,12 @@ export function iconImg(name, size = 24, cls = '') {
 }
 
 export { creatureURL };
+
+// Canvas (pour le moteur temps réel)
+export function heroCanvas(cls, colors) {
+  return gridToCanvas(HEROES[cls], { ...BASE, ...colors }, 1);
+}
+export function iconCanvas(name) {
+  const def = ICONS[name] || ICONS.star;
+  return gridToCanvas(def[0], { ...BASE, ...def[1] }, 1);
+}

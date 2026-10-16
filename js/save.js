@@ -13,10 +13,10 @@ export function freshSave() {
     zoneCleared: [false, false, false, false, false, false],
     pets: [],
     pet: null,
-    upgrades: { hp: 0, atk: 0, crit: 0, regen: 0, potion: 0 },
+    upgrades: { hp: 0, atk: 0, crit: 0, regen: 0, speed: 0, magnet: 0, luck: 0 },
     inventory: [],
     equipped: { weapon: null, armor: null, trinket: null },
-    stats: { wins: 0, perfects: 0, ults: 0, deaths: 0, classWins: {}, kills: {} },
+    stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {} },
     achievements: {},
     settings: { sound: true, vibrate: true },
     tutorialDone: false,
@@ -39,6 +39,8 @@ function migrate(s) {
   const base = freshSave();
   const out = { ...base, ...s };
   out.upgrades = { ...base.upgrades, ...s.upgrades };
+  delete out.upgrades.potion;
+  if (typeof out.stats?.kills === 'object') out.stats = { ...base.stats };
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
   out.settings = { ...base.settings, ...s.settings };
@@ -67,9 +69,10 @@ export function resetSave() {
 // ---------- Statistiques ----------
 export function playerStats(clsId = save.cls) {
   const c = CLASSES[clsId];
-  const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: c.regen, potion: 1 };
+  const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: 0, speed: c.speed, magnet: 1, gold: 1 };
   for (const [k, lvl] of Object.entries(save.upgrades)) {
-    const per = UPGRADES[k].per;
+    const per = UPGRADES[k]?.per;
+    if (!per) continue;
     for (const [sk, v] of Object.entries(per)) st[sk] += v * lvl;
   }
   for (const id of Object.values(save.equipped)) {
@@ -132,8 +135,8 @@ export function addItem(it) {
 export function checkAchievements() {
   const s = save, st = s.stats, got = [];
   const cond = {
-    first_win: st.wins >= 1,
-    perfect10: st.perfects >= 10,
+    first_win: st.kills >= 1,
+    kills1000: st.kills >= 1000,
     zone1: s.zoneCleared[0],
     boss1: s.zoneCleared.slice(1).some(Boolean),
     allclass: ['mage', 'archer', 'knight'].every(c => st.classWins[c]),
@@ -141,6 +144,7 @@ export function checkAchievements() {
     epic: s.inventory.some(i => i.rarity === 'epic' || i.rarity === 'legendary'),
     pets3: s.pets.length >= 3,
     ult20: st.ults >= 20,
+    lvl20: st.bestLevel >= 20,
     nodeath: !!st.cleanZone,
     baron: s.zoneCleared[5],
   };

@@ -127,3 +127,53 @@ export function sceneryURL(zone) {
     return c;
   });
 }
+
+// Petits éléments de décor posés sur le sol pendant une partie
+export function propSprites(zone) {
+  const make = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d')); return c; };
+  const r = rng('props' + zone.id);
+  const list = [];
+  switch (zone.bg) {
+    case 'lane':
+      list.push(make(16, 28, g => tree(g, 8, 28, 2, '#3a7a3a', '#5a3a1a')));
+      list.push(make(12, 8, g => rock(g, 1, 8, 10, '#7a7a8a')));
+      list.push(make(10, 6, g => { px(g, 0, 3, 10, 3, '#3f8a3a'); px(g, 2, 1, 2, 2, '#ffe04a'); px(g, 6, 2, 2, 2, '#ff8ab0'); }));
+      break;
+    case 'jungle':
+      list.push(make(16, 30, g => tree(g, 8, 30, 2, '#2f6a3a', '#4a2f1a')));
+      list.push(make(16, 30, g => tree(g, 8, 30, 2, '#245a30', '#3a2414')));
+      list.push(make(12, 6, g => { px(g, 0, 2, 12, 4, '#3f8a3a'); px(g, 2, 0, 3, 2, '#7ac85a'); px(g, 7, 1, 3, 2, '#7ac85a'); }));
+      break;
+    case 'river':
+      list.push(make(14, 8, g => rock(g, 1, 8, 12, '#6a7a8a')));
+      list.push(make(10, 6, g => rock(g, 1, 6, 8, '#5a6a7a')));
+      list.push(make(14, 4, g => { px(g, 0, 1, 6, 1, '#bfefff'); px(g, 7, 3, 6, 1, '#bfefff'); }));
+      break;
+    case 'ice':
+      list.push(make(14, 18, g => crystal(g, 7, 18, 16, '#8ac8f0')));
+      list.push(make(12, 8, g => rock(g, 1, 8, 10, '#c8dff0')));
+      list.push(make(8, 4, g => { px(g, 0, 2, 8, 2, '#ffffff'); }));
+      break;
+    case 'shadow':
+      list.push(make(12, 16, g => deadTree(g, 5, 16, '#0a1412')));
+      list.push(make(12, 8, g => rock(g, 1, 8, 10, '#2a3a38')));
+      list.push(make(10, 6, g => { px(g, 2, 2, 6, 3, '#f0ece0'); px(g, 3, 3, 1, 1, '#1a1424'); px(g, 6, 3, 1, 1, '#1a1424'); }));
+      break;
+    default:
+      list.push(make(14, 22, g => crystal(g, 7, 22, 20, '#a83ad8')));
+      list.push(make(12, 16, g => crystal(g, 6, 16, 14, '#d83aa8')));
+      list.push(make(10, 4, g => { px(g, 0, 1, 10, 2, '#140820'); px(g, 2, 1, 6, 1, '#d83aa8'); }));
+  }
+  void r;
+  return list;
+}
+
+// Tuile de sol répétée
+export function groundTile(zone) {
+  const c = document.createElement('canvas'); c.width = 32; c.height = 32;
+  const g = c.getContext('2d'); const r = rng('ground' + zone.id);
+  px(g, 0, 0, 32, 32, zone.ground[0]);
+  for (let i = 0; i < 26; i++) px(g, r() * 32, r() * 32, 1 + (r() < 0.3), 1, shade(zone.ground[0], r() < 0.5 ? 0.12 : -0.12));
+  for (let i = 0; i < 6; i++) px(g, r() * 32, r() * 32, 2, 1, zone.ground[1]);
+  return c;
+}

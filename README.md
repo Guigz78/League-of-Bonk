@@ -1,13 +1,15 @@
 # League of Bonk
 
-Jeu de combat pixel art au tour par tour, inspiré de PokéBonk, dans un univers façon League of Legends (noms modifiés).
+Roguelike d'action pixel art façon Megabonk / Vampire Survivors, dans un univers façon League of Legends (noms modifiés).
 Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauvegarde sur l'appareil, synchronisation optionnelle avec un compte Google.
 
 ## Jouer
 - Ouvrir le site dans Safari → **Partager** → **Sur l'écran d'accueil**.
-- 3 champions (Mage, Archère, Chevalier), 12 sorts, 6 zones, 30 monstres, 5 boss, 6 familiers.
-- Frappe en rythme : touchez quand le curseur est dans la zone dorée. Parade : touchez quand « PARER ! » s'allume.
-- À la mort : une pub permet de revivre une fois par expédition.
+- 3 champions (Mage, Archère, Chevalier), chacun avec son arme de départ et son ultime.
+- Glissez le doigt pour vous déplacer, les attaques sont automatiques. Survivez 3 à 5 minutes aux hordes puis battez le boss.
+- À chaque niveau : choisissez 1 amélioration parmi 3 (11 armes, 9 tomes, 5 niveaux chacun). Les élites lâchent des coffres.
+- 6 zones, 30 monstres, 5 boss, 6 familiers, équipement, boutique d'améliorations permanentes, succès, bestiaire.
+- À la mort : une pub permet de revivre une fois par partie.
 
 ## Lancer en local
 ```
@@ -17,8 +19,8 @@ python3 -m http.server 8000
 
 ## Structure
 - `js/data.js` : classes, sorts, zones, monstres, objets, familiers, succès
-- `js/battle.js` : combat
-- `js/game.js` : écrans et déroulé des expéditions
+- `js/run.js` : moteur de jeu temps réel (déplacement, hordes, armes, boss)
+- `js/game.js` : écrans (carte, équipement, boutique, succès, niveaux, bilan)
 - `js/save.js` : sauvegarde locale et statistiques
 - `js/cloud.js` + `js/config.js` : compte Google et synchronisation (Supabase)
 - `js/pixel.js`, `js/art.js` : pixel art (héros dessinés, monstres générés)

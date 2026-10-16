@@ -4,60 +4,77 @@
 export const CLASSES = {
   mage: {
     id: 'mage', name: 'Luxanne', role: 'Mage',
-    desc: 'Gros dégâts magiques. Fragile, mais étourdit ses ennemis.',
-    hp: 90, atk: 15, crit: 0.08, regen: 20,
+    desc: 'Fragile mais dévastatrice : son rayon transperce les rangs ennemis.',
+    hp: 90, atk: 15, crit: 0.08, speed: 1,
+    weapon: 'beam', ult: 'nova',
     colors: { 1: '#f4f1ff', 2: '#b9b1e8', 3: '#ffffff', a: '#ffd54a', h: '#ffe08a', s: '#ffd9b8', d: '#e9b48f', c: '#4a63d6' },
-    spells: ['m_basic', 'm_beam', 'm_bind', 'm_ult'],
   },
   archer: {
     id: 'archer', name: 'Ashlyn', role: 'Archère',
-    desc: 'Coups critiques fréquents et attaques multiples. Ralentit ses cibles.',
-    hp: 105, atk: 12, crit: 0.22, regen: 16,
+    desc: 'Rapide et précise : ses flèches partent en rafale et font souvent des critiques.',
+    hp: 105, atk: 12, crit: 0.2, speed: 1.08,
+    weapon: 'arrows', ult: 'crystal',
     colors: { 1: '#4f8fe6', 2: '#2f5fae', 3: '#9cc6ff', a: '#e8f6ff', h: '#f3f3f3', s: '#ffd9b8', d: '#e9b48f', c: '#2a3c78' },
-    spells: ['a_basic', 'a_volley', 'a_frost', 'a_ult'],
   },
   knight: {
     id: 'knight', name: 'Garrus', role: 'Chevalier',
-    desc: 'Très résistant. Se protège avec son bouclier et achève les ennemis blessés.',
-    hp: 145, atk: 11, crit: 0.06, regen: 16,
+    desc: 'Très résistant : son épée balaie tout ce qui s\'approche.',
+    hp: 145, atk: 13, crit: 0.06, speed: 0.95,
+    weapon: 'sword', ult: 'justice',
     colors: { 1: '#c9ced8', 2: '#878fa0', 3: '#f2f4f8', a: '#e6b422', h: '#7a4a24', s: '#ffd9b8', d: '#e9b48f', c: '#2f55b8' },
-    spells: ['k_basic', 'k_shield', 'k_spin', 'k_ult'],
   },
 };
 
-// kind: 'basic' (gratuit), 'skill', 'ult' (jauge pleine)
-// Chaque sort a une phrase courte pour l'interface.
-export const SPELLS = {
-  m_basic: { name: 'Bâton', kind: 'basic', cost: 0, icon: 'staff', short: 'Dégâts ×1', mult: 1, fx: 'magic' },
-  m_beam:  { name: 'Rayon', kind: 'skill', cost: 35, icon: 'beam', short: 'Dégâts ×2,2', mult: 2.2, fx: 'beam' },
-  m_bind:  { name: 'Entrave', kind: 'skill', cost: 30, cd: 3, icon: 'bind', short: '×1 · Étourdit 1 tour', mult: 1, stun: 1, fx: 'magic' },
-  m_ult:   { name: 'Éclat final', kind: 'ult', cost: 0, icon: 'nova', short: 'Dégâts ×4', mult: 4, fx: 'nova' },
-
-  a_basic: { name: 'Flèche', kind: 'basic', cost: 0, icon: 'arrow', short: 'Dégâts ×1', mult: 1, fx: 'arrow' },
-  a_volley:{ name: 'Salve', kind: 'skill', cost: 30, icon: 'volley', short: '3 flèches ×0,8', mult: 0.8, hits: 3, fx: 'arrow' },
-  a_frost: { name: 'Givre', kind: 'skill', cost: 25, cd: 2, icon: 'frost', short: '×1,3 · Affaiblit (−30 %)', mult: 1.3, weak: 2, fx: 'frost' },
-  a_ult:   { name: 'Flèche de cristal', kind: 'ult', cost: 0, icon: 'crystal', short: '×3 · Étourdit 2 tours', mult: 3, stun: 2, fx: 'frost' },
-
-  k_basic: { name: 'Épée', kind: 'basic', cost: 0, icon: 'sword', short: 'Dégâts ×1', mult: 1, fx: 'slash' },
-  k_shield:{ name: 'Bouclier', kind: 'skill', cost: 25, cd: 3, icon: 'shield', short: 'Bloque le prochain coup · Soin 10 %', shield: 0.35, heal: 0.1, fx: 'shield' },
-  k_spin:  { name: 'Tourbillon', kind: 'skill', cost: 35, icon: 'spin', short: '4 coups ×0,65', mult: 0.65, hits: 4, fx: 'slash' },
-  k_ult:   { name: 'Justice', kind: 'ult', cost: 0, icon: 'justice', short: '×2,5 · Achève les blessés', mult: 2.5, execute: 0.3, fx: 'nova' },
+// Ultimes : bouton à charger en tuant des monstres
+export const ULTS = {
+  nova:    { name: 'Éclat final', icon: 'nova', desc: 'Explosion de lumière : énormes dégâts autour de vous.' },
+  crystal: { name: 'Flèche de cristal', icon: 'crystal', desc: 'Flèche géante qui transperce et gèle tout sur son passage.' },
+  justice: { name: 'Justice', icon: 'justice', desc: 'Frappe tous les ennemis à l\'écran et vous rend invincible 3 s.' },
 };
 
-// Intentions des monstres (affichées au-dessus d'eux)
-// type: 'atk' | 'heavy' | 'burn' | 'poison' | 'heal' | 'guard' | 'enrage' | 'drain' | 'multi'
+// Armes (attaques automatiques). lv = description de chaque niveau (1 à 5).
+export const WEAPONS = {
+  beam:      { name: 'Rayon lumineux', icon: 'beam', desc: 'Rayon qui transperce vers l\'ennemi le plus proche.', lv: ['', '+30 % dégâts', 'Rayon plus large', '2e rayon dans l\'autre sens', '+40 % dégâts, plus rapide'] },
+  arrows:    { name: 'Flèches', icon: 'arrow', desc: 'Tire des flèches sur l\'ennemi le plus proche.', lv: ['', '+1 flèche', '+30 % dégâts', 'Les flèches transpercent', '+1 flèche, plus rapide'] },
+  sword:     { name: 'Lame d\'acier', icon: 'sword', desc: 'Grand coup d\'épée devant vous, repousse les ennemis.', lv: ['', '+30 % dégâts', 'Plus grande portée', 'Frappe aussi derrière', '+40 % dégâts, plus rapide'] },
+  orbs:      { name: 'Orbes spirituels', icon: 'bind', desc: 'Des orbes tournent autour de vous.', lv: ['', '+1 orbe', '+30 % dégâts', '+1 orbe, plus large', '+1 orbe, +30 % dégâts'] },
+  aura:      { name: 'Cape solaire', icon: 'cloak', desc: 'Brûle en continu les ennemis proches.', lv: ['', '+25 % rayon', '+40 % dégâts', '+25 % rayon', '+50 % dégâts'] },
+  lightning: { name: 'Foudre', icon: 'i_stun', desc: 'La foudre frappe des ennemis au hasard.', lv: ['', '+1 éclair', '+30 % dégâts', '+1 éclair, plus rapide', '+2 éclairs'] },
+  boomerang: { name: 'Lame ricochet', icon: 'spin', desc: 'Lame qui part et revient en transperçant tout.', lv: ['', '+30 % dégâts', '+1 lame', 'Plus grande et plus rapide', '+1 lame, +30 % dégâts'] },
+  shrooms:   { name: 'Champignons', icon: 'i_poison', desc: 'Pose des champignons qui explosent au contact.', lv: ['', '+1 champignon', '+40 % dégâts', 'Explosion plus large', '+1 champignon, plus rapide'] },
+  frost:     { name: 'Nova de givre', icon: 'frost', desc: 'Onde glacée qui blesse et ralentit autour de vous.', lv: ['', '+30 % dégâts', 'Plus grande onde', 'Plus fréquente', 'Gèle 1 s'] },
+  daggers:   { name: 'Dagues', icon: 'volley', desc: 'Lance des dagues dans plusieurs directions.', lv: ['', '+2 dagues', '+30 % dégâts', '+2 dagues', 'Transpercent, plus rapides'] },
+  snowball:  { name: 'Boule de Poro', icon: 'heart', desc: 'Lance une boule de neige qui éclate sur une zone.', lv: ['', '+30 % dégâts', 'Zone plus grande', '+1 boule', '+1 boule, plus rapide'] },
+};
+
+// Tomes : améliorations passives pour la partie
+export const TOMES = {
+  power:  { name: 'Tome de puissance', icon: 'fist', desc: '+15 % dégâts' },
+  haste:  { name: 'Tome de hâte', icon: 'star', desc: 'Attaques 10 % plus fréquentes' },
+  boots:  { name: 'Bottes de vitesse', icon: 'arrow', desc: '+10 % vitesse de déplacement' },
+  vital:  { name: 'Cœur de géant', icon: 'heart', desc: '+20 % PV max (et soigne)' },
+  magnet: { name: 'Aimant', icon: 'ring', desc: '+35 % rayon de ramassage' },
+  crit:   { name: 'Lame de l\'infini', icon: 'target', desc: '+7 % de critique' },
+  armor:  { name: 'Armure de ronces', icon: 'armor', desc: '−8 % de dégâts subis' },
+  wisdom: { name: 'Tome de sagesse', icon: 'tome', desc: '+15 % d\'expérience' },
+  area:   { name: 'Coiffe de Rabadon', icon: 'crown', desc: '+12 % taille des attaques' },
+};
+export const MAX_WEAPONS = 4, MAX_TOMES = 4, MAX_LEVEL = 5;
+
+// Zones : chaque partie = survivre aux vagues, puis battre le boss.
+export const ZONE_TIME = [180, 240, 240, 240, 270, 300]; // secondes avant l'arrivée du boss
 export const ZONES = [
   {
     id: 0, name: 'Voie du Milieu', sub: 'Les sbires arrivent !', bg: 'lane',
     sky: ['#3a6fb0', '#8fc3ea'], ground: ['#4c7a3a', '#3b6230'],
     monsters: [
       { name: 'Sbire mêlée', body: 'humanoid', pal: ['#4f7fd8', '#2d4f9a', '#9ec0ff'], hp: 38, atk: 6, moves: ['atk'] },
-      { name: 'Sbire lanceur', body: 'humanoid', pal: ['#a05ad8', '#6a3696', '#d6a8ff'], hp: 32, atk: 7, moves: ['atk', 'atk', 'heavy'] },
+      { name: 'Sbire lanceur', ranged: true, body: 'humanoid', pal: ['#a05ad8', '#6a3696', '#d6a8ff'], hp: 32, atk: 7, moves: ['atk', 'atk', 'heavy'] },
       { name: 'Porolet', body: 'blob', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], hp: 44, atk: 6, moves: ['atk', 'heal'] },
       { name: 'Sbire canon', body: 'golem', pal: ['#d88a4f', '#9a5a2d', '#ffc79e'], hp: 58, atk: 8, moves: ['atk', 'guard', 'heavy'] },
       { name: 'Super Sbire', body: 'golem', pal: ['#e05050', '#962d2d', '#ff9e9e'], hp: 80, atk: 9, moves: ['atk', 'heavy', 'enrage'], elite: true },
     ],
-    boss: null,
+    boss: null, // la zone 1 se termine contre le Super Sbire
   },
   {
     id: 1, name: 'Jungle de la Faille', sub: 'Ça grouille dans les buissons…', bg: 'jungle',
@@ -79,7 +96,7 @@ export const ZONES = [
       { name: 'Gloop des eaux', body: 'blob', pal: ['#3a8ad8', '#2456a0', '#9ad0ff'], hp: 112, atk: 13, moves: ['poison', 'heal', 'atk'] },
       { name: 'Raptix des rives', body: 'bird', pal: ['#e0a83a', '#9a6a1f', '#ffe08a'], hp: 100, atk: 15, moves: ['multi', 'multi', 'heavy'] },
       { name: 'Crabe géant', body: 'crab', pal: ['#d86a3a', '#8a3f1f', '#ffb08a'], hp: 140, atk: 14, moves: ['guard', 'heavy', 'atk'] },
-      { name: 'Ombre aquatique', body: 'ghost', pal: ['#3ad8c8', '#1f8a80', '#b0fff5'], hp: 130, atk: 16, moves: ['drain', 'atk', 'heavy'], elite: true },
+      { name: 'Ombre aquatique', ranged: true, body: 'ghost', pal: ['#3ad8c8', '#1f8a80', '#b0fff5'], hp: 130, atk: 16, moves: ['drain', 'atk', 'heavy'], elite: true },
     ],
     boss: { name: 'Héraut de la Faille', title: 'L\'œil du Vide', body: 'beast', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], hp: 340, atk: 18, moves: ['heavy', 'atk', 'guard', 'enrage', 'multi'] },
   },
@@ -89,7 +106,7 @@ export const ZONES = [
     monsters: [
       { name: 'Poro sauvage', body: 'blob', pal: ['#e8f0ff', '#a8b8d8', '#ffffff'], hp: 145, atk: 16, moves: ['atk', 'heal', 'multi'] },
       { name: 'Yéti des glaces', body: 'beast', pal: ['#c8d8f0', '#8aa0c8', '#ffffff'], hp: 170, atk: 18, moves: ['heavy', 'atk', 'guard'] },
-      { name: 'Esprit du givre', body: 'ghost', pal: ['#8ad0ff', '#4a8ad8', '#e0f5ff'], hp: 150, atk: 19, moves: ['drain', 'atk'] },
+      { name: 'Esprit du givre', ranged: true, body: 'ghost', pal: ['#8ad0ff', '#4a8ad8', '#e0f5ff'], hp: 150, atk: 19, moves: ['drain', 'atk'] },
       { name: 'Golem de glace', body: 'golem', pal: ['#6ab8e8', '#3a78a8', '#c8f0ff'], hp: 200, atk: 17, moves: ['guard', 'heavy', 'atk'] },
       { name: 'Gardien du pont', body: 'humanoid', pal: ['#5a7ab8', '#344c80', '#a8c0f0'], hp: 190, atk: 20, moves: ['atk', 'heavy', 'enrage'], elite: true },
     ],
@@ -99,7 +116,7 @@ export const ZONES = [
     id: 4, name: 'Îles Ombreuses', sub: 'La Brume noire dévore tout.', bg: 'shadow',
     sky: ['#14262a', '#2f5a52'], ground: ['#1f3a36', '#142a26'],
     monsters: [
-      { name: 'Âme errante', body: 'ghost', pal: ['#5ae8b8', '#2a9a78', '#c0ffe8'], hp: 190, atk: 21, moves: ['drain', 'atk'] },
+      { name: 'Âme errante', ranged: true, body: 'ghost', pal: ['#5ae8b8', '#2a9a78', '#c0ffe8'], hp: 190, atk: 21, moves: ['drain', 'atk'] },
       { name: 'Squelette maudit', body: 'humanoid', pal: ['#d8d0b8', '#9a907a', '#fffaf0'], hp: 215, atk: 22, moves: ['atk', 'heavy', 'multi'] },
       { name: 'Araignée de brume', body: 'crab', pal: ['#3a4a48', '#1f2a28', '#7ae8b8'], hp: 205, atk: 23, moves: ['poison', 'multi', 'atk'] },
       { name: 'Revenant', body: 'ghost', pal: ['#8ab8a8', '#4a7a6a', '#d8fff0'], hp: 230, atk: 22, moves: ['drain', 'guard', 'heavy'] },
@@ -113,7 +130,7 @@ export const ZONES = [
     monsters: [
       { name: 'Larve du Vide', body: 'worm', pal: ['#a83ad8', '#62208a', '#f0a0ff'], hp: 250, atk: 26, moves: ['multi', 'atk'] },
       { name: 'Rôdeur abyssal', body: 'beast', pal: ['#6a2ad8', '#3a148a', '#c0a0ff'], hp: 280, atk: 28, moves: ['heavy', 'atk', 'multi'] },
-      { name: 'Œil du Vide', body: 'blob', pal: ['#d83aa8', '#8a1f6a', '#ffa0e0'], hp: 265, atk: 29, moves: ['drain', 'poison', 'atk'] },
+      { name: 'Œil du Vide', ranged: true, body: 'blob', pal: ['#d83aa8', '#8a1f6a', '#ffa0e0'], hp: 265, atk: 29, moves: ['drain', 'poison', 'atk'] },
       { name: 'Scarabée du Néant', body: 'crab', pal: ['#4a3ad8', '#2a1f8a', '#a8a0ff'], hp: 310, atk: 27, moves: ['guard', 'heavy', 'atk'] },
       { name: 'Héraut affamé', body: 'worm', pal: ['#d83a6a', '#8a1f3a', '#ffa0c0'], hp: 340, atk: 31, moves: ['heavy', 'enrage', 'drain'], elite: true },
     ],
@@ -126,11 +143,11 @@ export const BOSS_COUNT = ZONES.filter(z => z.boss).length; // 5
 
 // Familiers : obtenus en battant les boss. Agissent chaque tour.
 export const PETS = {
-  poro:   { name: 'Poro', desc: 'Soigne 3 % de vos PV chaque tour.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
-  brambi: { name: 'Bramblichou', desc: 'Inflige 6 % de votre ATQ ×3 en brûlure.', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], body: 'golem', zone: 1 },
-  herald: { name: 'Petit Héraut', desc: 'Frappe l\'ennemi chaque tour (40 % ATQ).', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], body: 'beast', zone: 2 },
-  phenix: { name: 'Phénixounet', desc: '+8 mana par tour.', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], body: 'bird', zone: 3 },
-  wisp:   { name: 'Lanterne', desc: 'Bouclier de 4 % PV chaque tour.', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], body: 'ghost', zone: 4 },
+  poro:   { name: 'Poro', desc: 'Vous soigne de 2 % des PV toutes les 3 s.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
+  brambi: { name: 'Bramblichou', desc: 'Brûle les ennemis qui vous touchent.', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], body: 'golem', zone: 1 },
+  herald: { name: 'Petit Héraut', desc: 'Tire sur les ennemis proches.', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], body: 'beast', zone: 2 },
+  phenix: { name: 'Phénixounet', desc: 'Attire l\'expérience de plus loin (+40 %).', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], body: 'bird', zone: 3 },
+  wisp:   { name: 'Lanterne', desc: 'Bloque un coup toutes les 8 s.', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], body: 'ghost', zone: 4 },
   voidy:  { name: 'Nashar Jr', desc: 'Votre ultime se charge 2× plus vite.', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], body: 'worm', zone: 5 },
 };
 // zone d'obtention = boss de la zone (poro offert à la fin de la zone 0)
@@ -179,23 +196,26 @@ export const BOSS_ITEMS = [
 
 // Améliorations permanentes (boutique, payées en or)
 export const UPGRADES = {
-  hp:     { name: 'Vitalité', icon: 'heart', desc: '+8 PV max', per: { hp: 8 }, base: 40, grow: 1.35, max: 20 },
-  atk:    { name: 'Puissance', icon: 'fist', desc: '+2 ATQ', per: { atk: 2 }, base: 50, grow: 1.38, max: 20 },
-  crit:   { name: 'Précision', icon: 'target', desc: '+2 % de critique', per: { crit: 0.02 }, base: 60, grow: 1.45, max: 10 },
-  regen:  { name: 'Clarté', icon: 'mana', desc: '+3 mana par tour', per: { regen: 3 }, base: 60, grow: 1.45, max: 8 },
-  potion: { name: 'Sacoche', icon: 'potion', desc: '+1 potion par expédition', per: { potion: 1 }, base: 120, grow: 2, max: 3 },
+  hp:     { name: 'Vitalité', icon: 'heart', desc: '+8 PV max', per: { hp: 8 }, base: 40, grow: 1.32, max: 20 },
+  atk:    { name: 'Puissance', icon: 'fist', desc: '+2 dégâts', per: { atk: 2 }, base: 50, grow: 1.35, max: 20 },
+  crit:   { name: 'Précision', icon: 'target', desc: '+2 % de critique', per: { crit: 0.02 }, base: 60, grow: 1.42, max: 10 },
+  regen:  { name: 'Régénération', icon: 'potion', desc: '+0,2 PV par seconde', per: { regen: 1 }, base: 60, grow: 1.42, max: 10 },
+  speed:  { name: 'Agilité', icon: 'arrow', desc: '+4 % de vitesse', per: { speed: 0.04 }, base: 70, grow: 1.45, max: 8 },
+  magnet: { name: 'Attraction', icon: 'ring', desc: '+12 % de rayon de ramassage', per: { magnet: 0.12 }, base: 50, grow: 1.4, max: 8 },
+  luck:   { name: 'Fortune', icon: 'gold', desc: '+10 % d\'or gagné', per: { gold: 0.1 }, base: 80, grow: 1.5, max: 10 },
 };
 
 export const ACHIEVEMENTS = [
-  { id: 'first_win', name: 'Premier sang', desc: 'Gagner votre premier combat.', gold: 20 },
-  { id: 'perfect10', name: 'Bonk parfait', desc: 'Réussir 10 frappes parfaites.', gold: 40 },
+  { id: 'first_win', name: 'Premier sang', desc: 'Vaincre 1 monstre.', gold: 20 },
+  { id: 'kills1000', name: 'Massacre', desc: 'Vaincre 1 000 monstres au total.', gold: 80 },
   { id: 'zone1', name: 'Sortie de voie', desc: 'Terminer la Voie du Milieu.', gold: 50 },
   { id: 'boss1', name: 'Chasseur', desc: 'Vaincre un boss.', gold: 80 },
-  { id: 'allclass', name: 'Polyvalent', desc: 'Gagner un combat avec chaque classe.', gold: 100 },
+  { id: 'allclass', name: 'Polyvalent', desc: 'Terminer une partie avec chaque champion.', gold: 100 },
   { id: 'rich', name: 'Fortune de Gangplank', desc: 'Posséder 1 000 or.', gold: 100 },
   { id: 'epic', name: 'Collectionneur', desc: 'Obtenir un objet épique.', gold: 60 },
   { id: 'pets3', name: 'Ménagerie', desc: 'Posséder 3 familiers.', gold: 120 },
   { id: 'ult20', name: 'Pentakill', desc: 'Lancer 20 ultimes.', gold: 80 },
-  { id: 'nodeath', name: 'Intouchable', desc: 'Terminer une zone sans mourir.', gold: 100 },
+  { id: 'lvl20', name: 'Niveau 20', desc: 'Atteindre le niveau 20 dans une partie.', gold: 80 },
+  { id: 'nodeath', name: 'Intouchable', desc: 'Terminer une zone sans revivre.', gold: 100 },
   { id: 'baron', name: 'Baron sécurisé', desc: 'Vaincre le Baron Nashar.', gold: 500 },
 ];

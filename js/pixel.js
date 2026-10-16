@@ -159,3 +159,12 @@ export function creatureURL(seed, body, pal, opts) {
     return gridToCanvas(grid, colors, 1);
   });
 }
+
+// Créature en canvas + version blanche (flash quand touchée)
+export function creatureCanvases(seed, body, pal, opts) {
+  const { grid, colors } = makeCreature(seed, body, pal, opts);
+  const img = gridToCanvas(grid, colors, 1);
+  const white = {}; for (const k of Object.keys(colors)) white[k] = '#ffffff';
+  const flash = gridToCanvas(grid, white, 1);
+  return { img, flash };
+}

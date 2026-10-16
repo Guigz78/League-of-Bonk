@@ -1,11 +1,11 @@
 // Écrans du jeu et déroulé d'une expédition.
-import { CLASSES, SPELLS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT } from './data.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT } from './data.js';
 import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave } from './save.js';
 import { heroURL, creatureURL, iconImg } from './art.js';
 import { rng } from './pixel.js';
 import { sfx } from './audio.js';
 import { mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
-import { Battle } from './battle.js';
+import { Run } from './run.js';
 import { sceneryURL } from './scenery.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
@@ -72,7 +72,6 @@ const handlers = {
   tab: el => { tab = el.dataset.tab; home(); },
   settings: () => settings(),
   zone: el => zoneSheet(+el.dataset.z),
-  resume: () => continueRun(),
   changeClass: () => classSelect(false),
   equip: el => equipItem(+el.dataset.id),
   item: el => itemSheet(+el.dataset.id),
@@ -94,7 +93,7 @@ function heroCard() {
         <span>${iconImg('heart', 16)}<b>${st.hp}</b></span>
         <span>${iconImg('fist', 16)}<b>${st.atk}</b></span>
         <span>${iconImg('target', 16)}<b>${pct(st.crit)}</b></span>
-        <span>${iconImg('mana', 16)}<b>+${st.regen}</b></span>
+        <span>${iconImg('arrow', 16)}<b>${pct(st.speed)}</b></span>
       </div>
       <button class="btn small ghost" data-act="changeClass">Changer de champion</button>
     </div>
@@ -102,20 +101,16 @@ function heroCard() {
 }
 
 function adventureTab() {
-  const run = save.run;
   const done = save.zoneCleared.filter(Boolean).length;
-  const resume = run ? `<button class="card resume" data-act="resume">
-      <div><b>Expédition en cours</b><small>${esc(ZONES[run.zone].name)} · combat ${run.step + 1}/${zoneSteps(ZONES[run.zone]).length}</small></div>
-      <span class="btn primary small">Reprendre</span>
-    </button>` : '';
+  const resume = '';
   const zones = ZONES.map((z, i) => {
     const locked = i > save.unlockedZone;
     const cleared = save.zoneCleared[i];
     const sprite = z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
       : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal);
-    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.wins ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
+    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
       <div class="z-num">${i + 1}</div>
-      <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.wins ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
+      <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.runs ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
       <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px" src="${sprite}" alt="">`}</div>
       ${cleared ? `<div class="z-done">${iconImg('star', 14)} Terminée</div>` : ''}
     </button>`;
@@ -134,12 +129,6 @@ function zoneSteps(z) {
 async function zoneSheet(i) {
   const z = ZONES[i];
   if (i > save.unlockedZone) { toast(`${iconImg('lock', 16)} Terminez d'abord « ${esc(ZONES[i - 1].name)} »`); return; }
-  if (save.run && save.run.zone !== i) {
-    const ok = await modal({ title: 'Expédition en cours', body: `<p>Vous êtes déjà dans <b>${esc(ZONES[save.run.zone].name)}</b>. L'abandonner pour partir ici ?</p><p class="muted">L'or déjà gagné est conservé.</p>`, buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Abandonner et partir', cls: 'danger', value: true }] });
-    if (!ok) return;
-    save.run = null; persist();
-  }
-  if (save.run?.zone === i) return continueRun();
   const steps = zoneSteps(z);
   const first = !save.zoneCleared[i];
   const pet = PETS[PET_BY_ZONE[i]];
@@ -149,13 +138,13 @@ async function zoneSheet(i) {
         <div class="rw">${iconImg('star', 18)} Zone suivante débloquée</div>
         <div class="rw"><img class="px" src="${creatureURL('pet-' + PET_BY_ZONE[i], pet.body, pet.pal)}" width="22" height="22" alt=""> Familier : <b>${esc(pet.name)}</b></div>
         ${bi ? `<div class="rw">${iconImg(bi.icon, 18)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b></div>` : ''}
-      </div>` : `<p class="muted">Zone déjà terminée : les ennemis sont plus forts (+15 %) mais rapportent plus d'or.</p>`;
+      </div>` : `<p class="muted">Zone déjà terminée : rejouez-la pour gagner de l'or et des objets (ennemis +20 %).</p>`;
   const ok = await modal({
     title: esc(z.name),
     cls: 'zone-modal',
     body: `<p class="muted">${esc(z.sub)}</p>
       <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
-      <p><b>${steps.length} combats</b>${z.boss ? ` dont le boss <b>${esc(z.boss.name)}</b>` : ''}. Vos PV ne remontent pas entre les combats : utilisez vos potions !</p>
+      <div class="goal">${iconImg('star', 18)}<div>Survivez <b>${Math.round(ZONE_TIME[i] / 60)} minutes</b> aux hordes, puis battez <b>${esc((z.boss || z.monsters[4]).name)}</b>.</div></div>
       ${first ? '<h4>Récompenses de première victoire</h4>' : ''}${reward}`,
     buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: 'Partir !', cls: 'primary', value: true }],
     dismissable: true,
@@ -178,9 +167,12 @@ function classSelect(first) {
           <span>${iconImg('heart', 16)} PV <b>${c.hp}</b></span>
           <span>${iconImg('fist', 16)} ATQ <b>${c.atk}</b></span>
           <span>${iconImg('target', 16)} Crit <b>${pct(c.crit)}</b></span>
-          <span>${iconImg('mana', 16)} Mana <b>+${c.regen}</b></span>
+          <span>${iconImg('arrow', 16)} Vitesse <b>${pct(c.speed)}</b></span>
         </div>
-        <div class="cs-spells">${c.spells.map(id => { const s = SPELLS[id]; return `<div class="cs-spell k-${s.kind}">${iconImg(s.icon, 26)}<div><b>${esc(s.name)}</b><small>${esc(s.short)}${s.kind === 'skill' ? ` · ${s.cost} mana${s.cd ? ` · recharge ${s.cd} tours` : ''}` : s.kind === 'ult' ? ' · Ultime' : ' · Gratuit'}</small></div></div>`; }).join('')}</div>
+        <div class="cs-spells">
+          <div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>Arme de départ · ${esc(WEAPONS[c.weapon].desc)}</small></div></div>
+          <div class="cs-spell k-ult">${iconImg(ULTS[c.ult].icon, 26)}<div><b>${esc(ULTS[c.ult].name)}</b><small>Ultime · ${esc(ULTS[c.ult].desc)}</small></div></div>
+        </div>
       </section>
       <button class="btn primary big" data-act="go">Jouer avec ${esc(c.name)}</button>
       ${first ? '' : '<button class="btn ghost" data-act="back">Retour</button>'}
@@ -189,7 +181,6 @@ function classSelect(first) {
     bind($('.class-select'), {
       pick: el => { sel = el.dataset.c; render(); },
       go: () => {
-        if (save.run && save.cls !== sel) save.run = null;
         save.cls = sel; persist();
         home('adventure');
       },
@@ -199,33 +190,76 @@ function classSelect(first) {
   render();
 }
 
-// ---------- Expédition ----------
+// ---------- Partie ----------
+let run = null;
+
 function startRun(z) {
-  const st = playerStats();
-  save.run = {
-    zone: z, step: 0, hp: st.hp, ult: 0, potions: st.potion,
-    buffs: { atk: 0, regen: 0 }, gold: 0, items: [], revived: false, deaths: 0,
-  };
+  save.stats.runs++;
   persist();
-  continueRun();
-}
-
-function continueRun() {
-  const run = save.run;
-  if (!run) return home();
-  const z = ZONES[run.zone];
-  const steps = zoneSteps(z);
-  const enemy = steps[run.step];
-  battle = new Battle({
-    zone: z, enemy, isBoss: enemy.boss, step: run.step, total: steps.length,
-    onWin: res => afterWin(res, enemy),
-    onDefeat: () => onDefeat(),
-    onPause: () => pause(),
+  const zone = ZONES[z];
+  run = new Run({
+    zone,
+    onPause: resume => pauseMenu(resume),
+    onLevelUp: (lvl, opts, done) => levelUpMenu(lvl, opts, done),
+    onChest: (c, gold, done) => chestMenu(c, gold, done),
+    onDefeat: canRevive => defeatMenu(canRevive),
+    onEnd: sum => endRun(zone, sum),
   });
-  battle.start();
+  battle = run;
+  window.__lobRun = run; // utile pour les tests automatisés
+  run.start();
 }
 
-async function pause() {
+function choiceInfo(c) {
+  if (c.kind === 'weapon') { const w = WEAPONS[c.id]; return { icon: w.icon, name: w.name, tag: c.lv === 1 ? 'Nouvelle arme' : `Arme · niv. ${c.lv}`, desc: c.lv === 1 ? w.desc : w.lv[c.lv - 1], cls: 'weapon' }; }
+  if (c.kind === 'tome') { const t = TOMES[c.id]; return { icon: t.icon, name: t.name, tag: c.lv === 1 ? 'Nouveau tome' : `Tome · niv. ${c.lv}`, desc: t.desc, cls: 'tome' }; }
+  if (c.kind === 'heal') return { icon: 'heart', name: 'Soin', tag: 'Bonus', desc: 'Récupère 30 % de vos PV', cls: 'tome' };
+  return { icon: 'gold', name: 'Bourse', tag: 'Bonus', desc: 'De l\'or en plus', cls: 'tome' };
+}
+
+function overlay(html) {
+  const w = document.createElement('div');
+  w.className = 'overlay';
+  w.innerHTML = html;
+  $('.run').appendChild(w);
+  requestAnimationFrame(() => w.classList.add('in'));
+  return w;
+}
+
+function levelUpMenu(lvl, opts, done) {
+  const w = overlay(`<div class="lvlup">
+    <h2>Niveau ${lvl} !</h2><p class="muted">Choisissez une amélioration</p>
+    <div class="cards">${opts.map((c, i) => { const f = choiceInfo(c); return `<button class="card-up ${f.cls}" data-i="${i}">
+      <span class="cu-ic">${iconImg(f.icon, 36)}</span>
+      <span class="cu-txt"><em>${f.tag}</em><b>${esc(f.name)}</b><small>${esc(f.desc)}</small></span>
+    </button>`; }).join('')}</div>
+  </div>`);
+  // petite pause pour éviter un choix accidentel pendant qu'on joue
+  const btns = [...w.querySelectorAll('.card-up')];
+  btns.forEach(b => b.disabled = true);
+  setTimeout(() => btns.forEach(b => b.disabled = false), 450);
+  w.addEventListener('click', e => {
+    const b = e.target.closest('.card-up'); if (!b || b.disabled) return;
+    sfx('tap');
+    w.remove();
+    done(opts[+b.dataset.i]);
+  });
+}
+
+function chestMenu(c, gold, done) {
+  const f = choiceInfo(c);
+  const w = overlay(`<div class="lvlup chest">
+    <h2>Coffre !</h2>
+    <div class="cards"><div class="card-up ${f.cls} open"><span class="cu-ic">${iconImg(f.icon, 36)}</span><span class="cu-txt"><em>${f.tag}</em><b>${esc(f.name)}</b><small>${esc(f.desc)}</small></span></div></div>
+    <p class="gold-t center">${iconImg('gold', 16)} +${fmt(gold)} or</p>
+    <button class="btn primary big" disabled>Super !</button>
+  </div>`);
+  const b = w.querySelector('.btn');
+  setTimeout(() => b.disabled = false, 450);
+  b.addEventListener('click', () => { sfx('tap'); w.remove(); done(); });
+}
+
+async function pauseMenu(resume) {
   const v = await modal({
     title: 'Pause',
     body: `<div class="toggles">
@@ -233,130 +267,69 @@ async function pause() {
         <label class="toggle"><input type="checkbox" id="pVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
       </div>
       <div class="howto">
-        <p>${iconImg('sword', 16)} <b>Attaquer</b> : touchez un sort, puis touchez l'écran quand le curseur est dans la zone <b class="gold-t">dorée</b>.</p>
-        <p>${iconImg('i_guard', 16)} <b>Parer</b> : quand le bouton PARER s'allume, touchez vite l'écran (−50 % de dégâts).</p>
-        <p>${iconImg('mana', 16)} <b>Mana</b> : se recharge à chaque tour. L'<b>ultime</b> se charge en frappant et en encaissant.</p>
-      </div>`,
-    buttons: [{ label: 'Quitter l\'expédition', cls: 'danger ghost', value: 'quit' }, { label: 'Reprendre', cls: 'primary', value: 'resume' }],
+        <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : posez le doigt n'importe où et glissez.</p>
+        <p>${iconImg('sword', 16)} <b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau.</p>
+        <p>${iconImg('nova', 16)} <b>Ultime</b> : se charge en battant des monstres, touchez le bouton en bas à droite.</p>
+        <p>${iconImg('crown', 16)} <b>Objectif</b> : survivez jusqu'à la fin du chrono puis battez le boss.</p>
+      </div>
+      <div class="cur-build">${run.p.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 18)} ${esc(WEAPONS[w.id].name)} <b>${w.lv}</b></span>`).join('')}${Object.entries(run.p.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 18)} ${esc(TOMES[id].name)} <b>${lv}</b></span>`).join('')}</div>`,
+    buttons: [{ label: 'Abandonner', cls: 'danger ghost', value: 'quit' }, { label: 'Reprendre', cls: 'primary', value: 'resume' }],
   });
   save.settings.sound = $('#pSound')?.checked ?? save.settings.sound;
   save.settings.vibrate = $('#pVib')?.checked ?? save.settings.vibrate;
   persist();
   if (v === 'quit') {
-    const ok = await modal({ title: 'Quitter ?', body: `<p>L'expédition sera perdue, mais vous gardez <b>${fmt(save.run.gold)} or</b> et les objets trouvés.</p>`, buttons: [{ label: 'Continuer à jouer', cls: 'ghost', value: false }, { label: 'Quitter', cls: 'danger', value: true }] });
-    if (ok) { save.run = null; persist(); home(); }
+    const ok = await modal({ title: 'Abandonner ?', body: `<p>La partie s'arrête ici. Vous gardez <b>${fmt(run.gold)} or</b> ramassés.</p>`, buttons: [{ label: 'Continuer', cls: 'ghost', value: false }, { label: 'Abandonner', cls: 'danger', value: true }] });
+    if (ok) { run.finish(false); return; }
   }
+  resume();
 }
 
-function goldFor(enemy, z) {
-  const base = 6 + z.id * 9;
-  let g = base * (enemy.boss ? 6 : enemy.elite ? 2 : 1);
-  if (save.zoneCleared[z.id]) g *= 1.3;
-  return Math.round(g * (0.9 + Math.random() * 0.2));
-}
-
-async function afterWin(res, enemy) {
-  const run = save.run, z = ZONES[run.zone];
-  const steps = zoneSteps(z);
-  run.hp = res.hp; run.ult = res.ult;
-  save.stats.wins++;
-  save.stats.classWins[save.cls] = (save.stats.classWins[save.cls] || 0) + 1;
-  save.stats.kills[enemy.name] = (save.stats.kills[enemy.name] || 0) + 1;
-  const gold = goldFor(enemy, z);
-  save.gold += gold; run.gold += gold;
-  const r = rng(Date.now());
-  let item = null;
-  const dropChance = enemy.boss ? 1 : enemy.elite ? 0.7 : 0.3;
-  if (Math.random() < dropChance) {
-    item = makeItem(r, z.id, { boost: enemy.boss ? 0.3 : enemy.elite ? 0.12 : 0 });
-    item.isNew = true;
-    const eq = addItem(item);
-    run.items.push(item.id);
-    item._equipped = eq;
-  }
-  run.step++;
-  const last = run.step >= steps.length;
-  persist();
-  announceAchievements();
-
-  if (last) return zoneComplete();
-
-  // récompense : 1 bonus parmi 3
-  const st = playerStats();
-  const options = [
-    { id: 'heal', icon: 'heart', name: 'Repos', desc: `Soigne ${Math.round(st.hp * 0.4)} PV`, apply: () => { run.hp = Math.min(st.hp, run.hp + Math.round(st.hp * 0.4)); } },
-    { id: 'atk', icon: 'fist', name: 'Rage du combat', desc: '+12 % ATQ pour cette expédition', apply: () => { run.buffs.atk += 0.12; } },
-    { id: 'mana', icon: 'mana', name: 'Méditation', desc: '+4 mana par tour pour cette expédition', apply: () => { run.buffs.regen += 4; } },
-    { id: 'potion', icon: 'potion', name: 'Potion', desc: '+1 potion de soin', apply: () => { run.potions++; } },
-    { id: 'gold', icon: 'gold', name: 'Butin', desc: `+${gold * 2} or`, apply: () => { save.gold += gold * 2; run.gold += gold * 2; } },
-  ];
-  // le soin est toujours proposé si les PV sont bas
-  let pool = options.slice();
-  const pick = [];
-  if (run.hp < st.hp * 0.5) { pick.push(pool[0]); pool = pool.slice(1); }
-  while (pick.length < 3) pick.push(...pool.splice(Math.floor(Math.random() * pool.length), 1));
-
-  const next = steps[run.step];
-  mount(`<div class="reward-screen">
-    <h2 class="rs-title">Victoire !</h2>
-    <div class="loot">
-      <div class="loot-gold">${iconImg('gold', 24)} +${fmt(gold)} or</div>
-      ${item ? `<button class="loot-item r-${item.rarity}" data-act="noop">${iconImg(item.icon, 32)}<div><b>${esc(item.name)}</b><small style="color:${RARITY[item.rarity].color}">${RARITY[item.rarity].name}</small><small>${statLine(item.stat)}</small>${item._equipped ? '<em>Équipé automatiquement</em>' : ''}</div></button>` : ''}
-    </div>
-    <div class="hp-now">${iconImg('heart', 16)} PV : <b>${fmt(Math.min(run.hp, st.hp))} / ${fmt(st.hp)}</b></div>
-    <h3 class="section-t center">Choisissez un bonus</h3>
-    <div class="choices">${pick.map((o, i) => `<button class="choice" data-act="choose" data-i="${i}">${iconImg(o.icon, 32)}<b>${o.name}</b><small>${o.desc}</small></button>`).join('')}</div>
-    <p class="next-up">Prochain : <b>${esc(next.name)}</b>${next.boss ? ' <span class="tag boss">BOSS</span>' : next.elite ? ' <span class="tag elite">ÉLITE</span>' : ''}</p>
-  </div>`);
-  sfx('coin');
-  bind($('.reward-screen'), {
-    choose: el => {
-      pick[+el.dataset.i].apply();
-      persist();
-      sfx('loot');
-      continueRun();
-    },
-  });
-}
-
-function announceAchievements() {
-  for (const a of checkAchievements()) {
-    toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)`, 3200);
-    sfx('loot');
-  }
-  persist();
-}
-
-async function onDefeat() {
-  const run = save.run;
-  save.stats.deaths++;
-  run.deaths++;
-  persist();
-  const canRevive = !run.revived;
+async function defeatMenu(canRevive) {
   const v = await modal({
     title: 'K.O. !',
     cls: 'ko-modal',
     body: canRevive
-      ? `<p>Vous êtes tombé au combat.</p><p><b>Regardez une courte publicité</b> pour revenir avec tous vos PV et votre mana.</p><p class="muted">Possible une fois par expédition.</p>`
-      : `<p>Vous êtes tombé au combat.</p><p class="muted">Vous gardez <b>${fmt(run.gold)} or</b> et tous les objets trouvés. Améliorez-vous dans la boutique et réessayez !</p>`,
+      ? `<p>Vous êtes tombé au combat après <b>${fmtTime(run.time)}</b>.</p><p><b>Regardez une courte publicité</b> pour revenir avec tous vos PV. Les monstres autour de vous seront balayés.</p><p class="muted">Possible une fois par partie.</p>`
+      : `<p>Vous êtes tombé au combat après <b>${fmtTime(run.time)}</b>.</p>`,
     buttons: canRevive
-      ? [{ label: 'Abandonner', cls: 'ghost', value: 'quit' }, { label: `${iconImg('heart', 16)} Revivre (pub)`, cls: 'primary', value: 'ad' }]
-      : [{ label: 'Retour à la carte', cls: 'primary', value: 'quit' }],
+      ? [{ label: 'Terminer', cls: 'ghost', value: 'quit' }, { label: `${iconImg('heart', 16)} Revivre (pub)`, cls: 'primary', value: 'ad' }]
+      : [{ label: 'Voir le bilan', cls: 'primary', value: 'quit' }],
   });
   if (v === 'ad') {
     const ok = await showRewardedAd();
-    if (ok) { run.revived = true; persist(); battle.revive(); return; }
+    if (ok) { run.revive(); return; }
   }
-  const gold = run.gold;
-  save.run = null; persist();
-  home('adventure');
-  toast(`Expédition terminée · ${fmt(gold)} or conservés`);
+  run.finish(false);
 }
 
-async function zoneComplete() {
-  const run = save.run, z = ZONES[run.zone];
-  const first = !save.zoneCleared[z.id];
+const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+function endRun(z, sum) {
+  battle = null; run = null;
+  const st = save.stats;
+  st.kills += sum.kills;
+  st.bestLevel = Math.max(st.bestLevel, sum.level);
+  if (!sum.win) st.deaths++;
   const lines = [];
+  let gold = Math.round(sum.gold);
+  // butin d'objets
+  const r = rng(Date.now());
+  const found = [];
+  const drops = sum.win ? 1 + (Math.random() < 0.5) : (sum.time > 90 && Math.random() < 0.4 ? 1 : 0);
+  for (let i = 0; i < drops; i++) {
+    const it = makeItem(r, z.id, { boost: sum.win ? 0.25 : 0 });
+    it.isNew = true; it._eq = addItem(it); found.push(it);
+  }
+  const first = sum.win && !save.zoneCleared[z.id];
+  if (sum.win) {
+    st.wins++;
+    st.classWins[save.cls] = (st.classWins[save.cls] || 0) + 1;
+    if (!sum.revived) st.cleanZone = true;
+    const bonus = Math.round((40 + z.id * 40) * (save.zoneCleared[z.id] ? 0.6 : 1));
+    gold += bonus;
+    lines.push(`${iconImg('crown', 22)} Bonus de victoire : <b>+${fmt(bonus)} or</b>`);
+  }
   if (first) {
     save.zoneCleared[z.id] = true;
     if (z.id + 1 < ZONES.length) { save.unlockedZone = Math.max(save.unlockedZone, z.id + 1); lines.push(`${iconImg('star', 22)} Nouvelle zone : <b>${esc(ZONES[z.id + 1].name)}</b>`); }
@@ -370,30 +343,54 @@ async function zoneComplete() {
     const bi = BOSS_ITEMS[z.id];
     if (bi) {
       const it = { ...bi, stat: { ...bi.stat }, id: save.nextId++, zone: z.id, isNew: true };
-      const eq = addItem(it);
-      lines.push(`${iconImg(bi.icon, 22)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b> <small>${statLine(bi.stat)}${eq ? ' · équipé' : ''}</small>`);
+      it._eq = addItem(it); found.push(it);
     }
   }
-  if (run.deaths === 0) save.stats.cleanZone = true;
-  const bonus = Math.round(run.gold * 0.25);
-  save.gold += bonus;
-  const total = run.gold + bonus;
-  save.run = null;
+  save.gold += gold;
   persist();
   announceAchievements();
-  sfx('win');
   const finale = first && z.id === ZONES.length - 1;
-  mount(`<div class="reward-screen complete">
-    <h2 class="rs-title">${finale ? 'La Faille est sauvée !' : 'Zone terminée !'}</h2>
-    <p class="center">${esc(z.name)}</p>
-    ${finale ? `<p class="center finale">Le Baron Nashar est tombé. Vous avez vaincu les ${MONSTER_COUNT} monstres et les 5 boss de Runeterre. Bravo, champion !</p>` : ''}
-    <div class="summary">
-      <div class="rw">${iconImg('gold', 22)} <b>${fmt(total)} or</b> <small>dont ${fmt(bonus)} de bonus de zone</small></div>
-      ${lines.map(l => `<div class="rw">${l}</div>`).join('')}
+  mount(`<div class="reward-screen ${sum.win ? 'complete' : 'lost'}">
+    <h2 class="rs-title">${finale ? 'La Faille est sauvée !' : sum.win ? 'Victoire !' : 'Fin de partie'}</h2>
+    <p class="center muted">${esc(z.name)}</p>
+    ${finale ? `<p class="center finale">Le Baron Nashar est tombé. Vous avez vaincu les 5 boss de Runeterre. Bravo, champion !</p>` : ''}
+    <div class="run-stats card">
+      <div><b>${fmtTime(sum.time)}</b><small>Survie</small></div>
+      <div><b>${fmt(sum.kills)}</b><small>Monstres</small></div>
+      <div><b>${sum.level}</b><small>Niveau</small></div>
+      <div><b class="gold-t">${fmt(gold)}</b><small>Or gagné</small></div>
     </div>
-    <button class="btn primary big" data-act="ok">Continuer</button>
+    <div class="summary">
+      ${lines.map(l => `<div class="rw">${l}</div>`).join('')}
+      ${found.map(it => `<div class="rw r-${it.rarity} loot-row">${iconImg(it.icon, 22)} <b style="color:${RARITY[it.rarity].color}">${esc(it.name)}</b> <small>${RARITY[it.rarity].name} · ${statLine(it.stat)}${it._eq ? ' · équipé' : ''}</small></div>`).join('')}
+    </div>
+    <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
+    ${!sum.win ? `<p class="center muted tip">${tipFor(sum)}</p>` : ''}
+    <div class="end-btns">
+      <button class="btn ghost" data-act="home">Carte</button>
+      <button class="btn primary" data-act="again">${sum.win && z.id + 1 < ZONES.length && first ? 'Zone suivante' : 'Rejouer'}</button>
+    </div>
   </div>`);
-  bind($('.reward-screen'), { ok: () => home('adventure') });
+  sfx(sum.win ? 'win' : 'coin');
+  for (const it of found) delete it._eq;
+  bind($('.reward-screen'), {
+    home: () => home('adventure'),
+    again: () => startRun(sum.win && first && z.id + 1 < ZONES.length ? z.id + 1 : z.id),
+  });
+}
+
+function tipFor(sum) {
+  if (canAffordUpgrade()) return 'Astuce : vous avez assez d\'or pour une amélioration permanente dans la Boutique !';
+  if (sum.time < 60) return 'Astuce : restez en mouvement et tournez autour des monstres plutôt que de foncer dedans.';
+  return 'Astuce : prenez des tomes de PV et d\'armure si vous mourez souvent, et équipez vos meilleurs objets.';
+}
+
+function announceAchievements() {
+  for (const a of checkAchievements()) {
+    toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)`, 3200);
+    sfx('loot');
+  }
+  persist();
 }
 
 // ---------- Équipement ----------
@@ -402,7 +399,7 @@ function statLine(s) {
   if (s.atk) p.push(`+${s.atk} ATQ`);
   if (s.hp) p.push(`+${s.hp} PV`);
   if (s.crit) p.push(`+${Math.round(s.crit * 100)} % crit`);
-  if (s.regen) p.push(`+${s.regen} mana/tour`);
+  if (s.regen) p.push(`+${Math.round(s.regen * 2) / 10} PV/s`);
   return p.join(' · ');
 }
 
@@ -524,11 +521,11 @@ function buyUpgrade(k) {
 function trophiesTab() {
   const n = Object.keys(save.achievements).length;
   const st = save.stats;
-  const seen = Object.keys(st.kills).length;
+  const seen = Object.keys(st.seen).length;
   return `<div class="stat-grid card">
-      <div><b>${fmt(st.wins)}</b><small>Victoires</small></div>
+      <div><b>${fmt(st.wins)}</b><small>Zones gagnées</small></div>
       <div><b>${seen}/${MONSTER_COUNT + 5}</b><small>Bestiaire</small></div>
-      <div><b>${fmt(st.perfects)}</b><small>Frappes parfaites</small></div>
+      <div><b>${fmt(st.kills)}</b><small>Monstres vaincus</small></div>
       <div><b>${fmt(st.ults)}</b><small>Ultimes</small></div>
     </div>
     <h3 class="section-t">Succès <small>${n}/${ACHIEVEMENTS.length}</small></h3>
@@ -538,7 +535,7 @@ function trophiesTab() {
     }).join('')}</div>
     <h3 class="section-t">Bestiaire</h3>
     <div class="bestiary">${ZONES.map(z => zoneSteps(z).map((m, k) => {
-      const known = st.kills[m.name];
+      const known = st.seen[m.name];
       return `<div class="beast ${known ? '' : 'unknown'} ${m.boss ? 'boss' : ''}"><img class="px" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""><small>${known ? esc(m.name) : '???'}</small></div>`;
     }).join('')).join('')}</div>`;
 }

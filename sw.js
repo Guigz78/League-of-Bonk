@@ -1,8 +1,8 @@
 // Service worker : le jeu fonctionne entièrement hors connexion.
-const VERSION = 'lob-v1';
+const VERSION = 'lob-v2';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'vendor/supabase.min.js',
-  'js/main.js', 'js/game.js', 'js/battle.js', 'js/data.js', 'js/save.js', 'js/cloud.js', 'js/config.js',
+  'js/main.js', 'js/game.js', 'js/run.js', 'js/data.js', 'js/save.js', 'js/cloud.js', 'js/config.js',
   'js/art.js', 'js/pixel.js', 'js/scenery.js', 'js/ui.js', 'js/audio.js', 'js/ads.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
