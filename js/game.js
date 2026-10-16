@@ -6,6 +6,7 @@ import { rng } from './pixel.js';
 import { sfx } from './audio.js';
 import { mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
 import { Battle } from './battle.js';
+import { sceneryURL } from './scenery.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 
@@ -112,7 +113,7 @@ function adventureTab() {
     const cleared = save.zoneCleared[i];
     const sprite = z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
       : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal);
-    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.wins ? 'cta' : ''}" data-act="zone" data-z="${i}" style="--sky1:${z.sky[0]};--sky2:${z.sky[1]};--g1:${z.ground[0]}">
+    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.wins ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
       <div class="z-num">${i + 1}</div>
       <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.wins ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
       <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px" src="${sprite}" alt="">`}</div>
@@ -500,7 +501,7 @@ function shopTab() {
       return `<div class="upgrade card">
         ${iconImg(u.icon, 36)}
         <div class="u-txt"><b>${u.name}</b><small>${u.desc}</small>
-          <div class="pips">${Array.from({ length: u.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
+          <div class="lvl"><span>Niv. ${lvl}/${u.max}</span><div class="lbar"><i style="width:${lvl / u.max * 100}%"></i></div></div></div>
         <button class="btn ${max ? 'ghost' : 'primary'} small" data-act="buy" data-k="${k}" ${max || save.gold < cost ? 'disabled' : ''}>
           ${max ? 'Max' : `${iconImg('gold', 14)} ${fmt(cost)}`}
         </button>

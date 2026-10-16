@@ -4,6 +4,7 @@ import { save, playerStats } from './save.js';
 import { heroURL, creatureURL, iconURL, iconImg } from './art.js';
 import { sfx, buzz } from './audio.js';
 import { mount, $, wait, fmt, esc } from './ui.js';
+import { sceneryURL } from './scenery.js';
 
 const INTENT_INFO = {
   atk:    { icon: 'i_atk', label: 'Attaque', mult: 1 },
@@ -36,7 +37,7 @@ export class Battle {
       ult: run.ult || 0, shield: 0, dots: [],
     };
     const tier = (save.zoneCleared[zone.id] ? 1.15 : 1); // rejouer une zone : un peu plus dur, plus d'or
-    const hpMul = tier * (1.15 + zone.id * 0.3), atkMul = tier * (1.2 + zone.id * 0.2);
+    const hpMul = tier * (1.2 + zone.id * 0.35), atkMul = tier * (1.45 + zone.id * 0.3);
     this.e = {
       ...enemy, maxHp: Math.round(enemy.hp * hpMul), hp: Math.round(enemy.hp * hpMul),
       atk: Math.round(enemy.atk * atkMul), guard: false, stun: 0, weak: 0, burn: 0, rage: 0, intent: null, last: [],
@@ -63,7 +64,7 @@ export class Battle {
         </header>
 
         <section class="arena">
-          <div class="scenery"></div>
+          <div class="scenery" style="background-image:url(${sceneryURL(z)})"></div>
           <div class="fighter enemy ${this.isBoss ? 'is-boss' : ''} ${e.elite ? 'is-elite' : ''}" id="enemy">
             <div class="nameplate">
               <div class="nm">${this.isBoss ? '<span class="tag boss">BOSS</span>' : e.elite ? '<span class="tag elite">ÉLITE</span>' : ''}${esc(e.name)}</div>
