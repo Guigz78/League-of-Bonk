@@ -1,0 +1,26 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<canvas id="c"></canvas>
+<script type="module">
+import { CLASSES } from '../js/data.js';
+import { creatureURL } from '../js/pixel.js';
+import { heroURL } from '../js/art.js';
+const size = +new URLSearchParams(location.search).get('s') || 512;
+const c = document.getElementById('c'); c.width = c.height = size;
+const g = c.getContext('2d');
+const grd = g.createRadialGradient(size/2, size*0.35, size*0.05, size/2, size/2, size*0.75);
+grd.addColorStop(0, '#4a3590'); grd.addColorStop(1, '#0d0b1a');
+g.fillStyle = grd; g.fillRect(0, 0, size, size);
+g.imageSmoothingEnabled = false;
+const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
+const k = CLASSES.knight;
+const hero = await load(heroURL('knight', k.colors));
+const mon = await load(creatureURL('icon-poro', 'blob', ['#f2f2f2', '#b9c3cf', '#ffffff']));
+const u = size / 32;
+g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(size*0.36, size*0.86, size*0.2, size*0.04, 0, 0, 7); g.fill();
+g.drawImage(mon, size*0.48, size*0.38, 18*u*0.95, 18*u*0.95);
+g.drawImage(hero, size*0.1, size*0.3, 16*u*1.05, 18*u*1.05);
+g.font = `900 ${size*0.17}px system-ui, sans-serif`; g.textAlign = 'center';
+g.lineWidth = size*0.03; g.strokeStyle = '#3a2200'; g.fillStyle = '#f0c35a';
+g.strokeText('BONK!', size*0.62, size*0.27); g.fillText('BONK!', size*0.62, size*0.27);
+document.title = 'ready';
+</script></body></html>
