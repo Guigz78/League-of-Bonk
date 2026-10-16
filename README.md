@@ -6,7 +6,7 @@ Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauveg
 ## Jouer
 - Ouvrir le site dans Safari → **Partager** → **Sur l'écran d'accueil**.
 - 3 champions (Mage, Archère, Chevalier), chacun avec son arme de départ et son ultime.
-- Monde ouvert en 3D : moitié gauche de l'écran pour courir, moitié droite pour tourner la caméra, bouton pour sauter. Les attaques sont automatiques. Survivez 3 à 5 minutes aux hordes puis battez le boss géant.
+- Monde ouvert en 3D, jouable à un seul doigt : glissez pour courir, touchez brièvement pour sauter, l'ultime se lance tout seul. Caméra fixe qui suit le champion. Les attaques sont automatiques. Survivez 3 à 5 minutes aux hordes puis battez le boss géant.
 - Votre champion évolue pendant la partie (niveaux 8 et 18), façon Pokémon. Explorez la carte : autels (bonus) et coffres (améliorations).
 - À chaque niveau : choisissez 1 amélioration parmi 3 (11 armes, 9 tomes, 5 niveaux chacun). Les élites lâchent des coffres.
 - 6 zones, 30 monstres, 5 boss, 6 familiers, équipement, boutique d'améliorations permanentes, succès, bestiaire.

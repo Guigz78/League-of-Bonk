@@ -114,8 +114,7 @@ export class Run {
         <div class="loadout" id="loadout"></div>
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><span></span></div></div>
         <div class="banner" id="banner"></div>
-        <div class="hint-bubble" id="hintBubble">Côté gauche : glissez pour courir.<br>Côté droit : glissez pour tourner la caméra.<br>Votre champion attaque tout seul !</div>
-        <button class="jump-btn" id="jumpBtn" aria-label="Sauter"><i class="jump-ic"></i><small>Sauter</small></button>
+        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir.<br>Touchez rapidement l'écran pour sauter.<br>Votre champion attaque tout seul !</div>
         <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 30)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
       </div>
     </div>`);
@@ -138,7 +137,6 @@ export class Run {
     this.bindInput();
     $('#pauseBtn').addEventListener('click', () => this.pause());
     $('#ultBtn').addEventListener('click', () => this.useUlt());
-    $('#jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); this.jump(); });
     this.onVis = () => { if (document.hidden && !this.paused && !this.over) this.pause(); };
     document.addEventListener('visibilitychange', this.onVis);
     this.renderLoadout();
@@ -302,15 +300,21 @@ export class Run {
     cv.addEventListener('pointerdown', e => {
       e.preventDefault();
       cv.setPointerCapture?.(e.pointerId);
-      if (!this.joy && e.clientX < this.vw * 0.55) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY };
-      else if (!this.look) this.look = { id: e.pointerId, x: e.clientX };
+      // un seul doigt : on glisse pour courir, on touche brièvement pour sauter
+      if (!this.joy) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: 0 };
       $('#hintBubble')?.classList.add('out');
     });
     cv.addEventListener('pointermove', e => {
-      if (this.joy && e.pointerId === this.joy.id) { this.joy.x = e.clientX; this.joy.y = e.clientY; }
-      if (this.look && e.pointerId === this.look.id) { this.yaw -= (e.clientX - this.look.x) * 0.008; this.look.x = e.clientX; }
+      const j = this.joy;
+      if (j && e.pointerId === j.id) { j.moved = Math.max(j.moved, Math.hypot(e.clientX - j.ox, e.clientY - j.oy)); j.x = e.clientX; j.y = e.clientY; }
     });
-    const up = e => { if (this.joy && e.pointerId === this.joy.id) this.joy = null; if (this.look && e.pointerId === this.look.id) this.look = null; };
+    const up = e => {
+      const j = this.joy;
+      if (j && e.pointerId === j.id) {
+        if (j.moved < 14 && performance.now() - j.t0 < 260) this.jump();
+        this.joy = null;
+      }
+    };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     this.kd = e => { this.keys.add(e.key.toLowerCase()); if (e.key === ' ') this.jump(); if (e.key.toLowerCase() === 'e') this.useUlt(); if (e.key === 'Escape') this.pause(); };
     this.ku = e => this.keys.delete(e.key.toLowerCase());
@@ -419,6 +423,7 @@ export class Run {
     if (!this.paused) {
       dt *= this.slowmo;
       this.update(dt);
+      if (!this.over && !this.winning && !this.dying && !this.paused && this.p.ult >= 100 && this.autoUltReady()) this.useUlt();
       if (!this.over && !this.winning && !this.dying && !this.paused) {
         if (this.evolveReady()) this.evolve();
         else if (this.pending > 0 && this.evoFlash <= 0) this.levelUp();
@@ -1078,6 +1083,13 @@ export class Run {
   }
 
   // ---------- Ultime ----------
+  autoUltReady() {
+    if (this.boss && !this.boss.dead && dist2(this.boss, this.p) < 300 * 300) return true;
+    let n = 0;
+    for (const e of this.enemies) if (dist2(e, this.p) < 260 * 260 && ++n >= 12) return true;
+    return false;
+  }
+
   useUlt() {
     const p = this.p;
     if (this.paused || this.over) return;
@@ -1186,13 +1198,18 @@ export class Run {
     const hs = 1 + Math.max(0, this.evoFlash - 0.6) * 0.8;
     this.hero.scale.set(hs * this.heroTurn, hs, hs);
     // caméra derrière le champion
-    const dist = 15 + (this.boss && !this.boss.dead ? 4 : 0), hgt = 11;
+    // caméra fixe (angle constant), qui suit en douceur avec un peu d'avance dans la direction de course
+    const k = Math.min(1, (dt || 0.016) * 5);
+    const ahead = p.moving ? 2.2 : 0;
+    const f = this.camFocus || (this.camFocus = new THREE.Vector3(px, gy, pz));
+    f.x += (px + p.face.x * ahead - f.x) * k;
+    f.z += (pz + p.face.y * ahead - f.z) * k;
+    f.y += (gy - f.y) * Math.min(1, (dt || 0.016) * 3);
+    const zoomT = (this.boss && !this.boss.dead ? 1.3 : 1) + Math.min(0.15, this.enemies.length / 1000);
+    this.zoom = (this.zoom || 1) + (zoomT - (this.zoom || 1)) * Math.min(1, (dt || 0.016) * 1.5);
     const sh = this.shake ? (Math.random() - 0.5) * this.shake * 0.04 : 0;
-    const cx = px + Math.sin(this.yaw) * dist, cz = pz + Math.cos(this.yaw) * dist;
-    const cy = Math.max(this.gh(cx / S, cz / S) + 3, gy + hgt);
-    if (!this.camInit) { cam.position.set(cx, cy, cz); this.camInit = true; }
-    cam.position.lerp(this.tv.set(cx + sh, cy + sh, cz), Math.min(1, dt * 8 || 0.2));
-    cam.lookAt(px, gy + 1.6, pz);
+    cam.position.set(f.x + sh, f.y + 15 * this.zoom + sh, f.z + 11 * this.zoom);
+    cam.lookAt(f.x, f.y + 1.2, f.z);
     // familier
     if (this.petMesh) {
       const pt = this.pet;

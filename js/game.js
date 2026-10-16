@@ -272,11 +272,11 @@ async function pauseMenu(resume) {
         <label class="toggle"><input type="checkbox" id="pVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
       </div>
       <div class="howto">
-        <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : glissez le doigt sur la moitié gauche de l'écran. Moitié droite : tourner la caméra.</p>
+        <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</p>
         <p>${iconImg('sword', 16)} <b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</p>
-        <p>${iconImg('i_heavy', 16)} <b>Sauter</b> : passez par-dessus les monstres et les ondes de choc des boss.</p>
+        <p>${iconImg('i_heavy', 16)} <b>Sauter</b> : touchez brièvement l'écran pour passer par-dessus les monstres et les ondes de choc des boss.</p>
         <p>${iconImg('gem', 16)} <b>Explorer</b> : les autels (bleus) donnent des bonus, les coffres (dorés) des améliorations.</p>
-        <p>${iconImg('nova', 16)} <b>Ultime</b> : se charge en battant des monstres, touchez le bouton en bas à droite.</p>
+        <p>${iconImg('nova', 16)} <b>Ultime</b> : se charge en battant des monstres et se lance tout seul quand des ennemis sont proches (ou touchez le bouton).</p>
         <p>${iconImg('crown', 16)} <b>Objectif</b> : survivez jusqu'à la fin du chrono puis battez le boss.</p>
       </div>
       <div class="cur-build">${run.p.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 18)} ${esc(WEAPONS[w.id].name)} <b>${w.lv}</b></span>`).join('')}${Object.entries(run.p.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 18)} ${esc(TOMES[id].name)} <b>${lv}</b></span>`).join('')}</div>`,
