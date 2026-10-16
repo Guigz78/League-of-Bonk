@@ -250,3 +250,8 @@ export function iconCanvas(name) {
   const def = ICONS[name] || ICONS.star;
   return gridToCanvas(def[0], { ...BASE, ...def[1] }, 1);
 }
+
+// Grille + palette d'un héros (pour le modèle 3D). evo : 0, 1 ou 2 (évolutions).
+export function heroGrid(cls, colors) {
+  return { grid: HEROES[cls], colors: { ...BASE, ...colors } };
+}

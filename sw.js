@@ -1,8 +1,8 @@
 // Service worker : le jeu fonctionne entièrement hors connexion.
-const VERSION = 'lob-v4';
+const VERSION = 'lob-v5';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'vendor/supabase.min.js',
-  'js/main.js', 'js/game.js', 'js/run.js', 'js/data.js', 'js/save.js', 'js/cloud.js', 'js/config.js',
+  'js/main.js', 'js/game.js', 'js/run.js', 'js/voxel.js', 'js/preview3d.js', 'js/world3d.js', 'vendor/three.module.min.js', 'js/data.js', 'js/save.js', 'js/cloud.js', 'js/config.js',
   'js/art.js', 'js/pixel.js', 'js/scenery.js', 'js/ui.js', 'js/audio.js', 'js/ads.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];

@@ -25,6 +25,36 @@ export const CLASSES = {
   },
 };
 
+// Évolutions façon Pokémon : pendant la partie, au niveau indiqué
+export const EVOLUTIONS = {
+  mage: [
+    { name: 'Luxanne' },
+    { name: 'Luxanne Prisme', lvl: 8, colors: { 1: '#fff0c0', 2: '#e0b050', 3: '#fffbe8', a: '#ff6ad8', h: '#ffffff', c: '#b04ad6' } },
+    { name: 'Luxanne Cosmique', lvl: 18, colors: { 1: '#4a3aa8', 2: '#2a1a7a', 3: '#8a7aff', a: '#ffd54a', h: '#ff9ae0', c: '#ffd54a' } },
+  ],
+  archer: [
+    { name: 'Ashlyn' },
+    { name: 'Ashlyn Givrée', lvl: 8, colors: { 1: '#9ad8ff', 2: '#5aa8e0', 3: '#e8f8ff', a: '#ffffff', c: '#3a6ab8' } },
+    { name: 'Reine Ashlyn', lvl: 18, colors: { 1: '#f0f6ff', 2: '#a8c8f0', 3: '#ffffff', a: '#ffd54a', h: '#9ad8ff', c: '#ffd54a' } },
+  ],
+  knight: [
+    { name: 'Garrus' },
+    { name: 'Garrus Paladin', lvl: 8, colors: { 1: '#e6c85a', 2: '#b08a2a', 3: '#fff0b0', c: '#c83a3a' } },
+    { name: 'Garrus Dieu-Roi', lvl: 18, colors: { 1: '#f4f4ff', 2: '#c0c0e0', 3: '#ffffff', a: '#ffd54a', c: '#ffd54a' } },
+  ],
+};
+
+// Bénédictions des autels (pendant la partie)
+export const BOONS = {
+  dmg:    { name: 'Autel de puissance', icon: 'fist', desc: '+12 % dégâts' },
+  hp:     { name: 'Autel de vitalité', icon: 'heart', desc: '+15 % PV max et soin complet' },
+  speed:  { name: 'Autel du vent', icon: 'arrow', desc: '+8 % vitesse' },
+  crit:   { name: 'Autel de précision', icon: 'target', desc: '+6 % de critique' },
+  xp:     { name: 'Autel du savoir', icon: 'tome', desc: '+20 % d\'expérience' },
+  magnet: { name: 'Autel d\'attraction', icon: 'ring', desc: '+30 % rayon de ramassage' },
+  haste:  { name: 'Autel de hâte', icon: 'star', desc: 'Attaques 8 % plus fréquentes' },
+};
+
 // Ultimes : bouton à charger en tuant des monstres
 export const ULTS = {
   nova:    { name: 'Éclat final', icon: 'nova', desc: 'Explosion de lumière : énormes dégâts autour de vous.' },

@@ -1,11 +1,12 @@
 // Écrans du jeu et déroulé d'une expédition.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT } from './data.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT } from './data.js';
 import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave } from './save.js';
 import { heroURL, creatureURL, iconImg } from './art.js';
 import { rng } from './pixel.js';
 import { sfx } from './audio.js';
 import { mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
 import { Run } from './run.js';
+import { mountPreview } from './preview3d.js';
 import { sceneryURL } from './scenery.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
@@ -66,6 +67,7 @@ export function home(t) {
   const body = { adventure: adventureTab, gear: gearTab, shop: shopTab, trophies: trophiesTab }[tab]();
   mount(`<div class="hub">${topbar()}<main class="hub-main" id="hubMain">${body}</main>${nav()}</div>`);
   bind($('.hub'), handlers);
+  mountPreview($('.hc-3d'), save.cls);
 }
 
 const handlers = {
@@ -84,7 +86,7 @@ const handlers = {
 function heroCard() {
   const c = CLASSES[save.cls], st = playerStats();
   return `<section class="card hero-card">
-    <div class="hc-sprite"><img class="px" src="${heroURL(c.id, c.colors)}" alt="">
+    <div class="hc-sprite"><canvas class="hc-3d"></canvas>
       ${save.pet ? `<img class="px hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}
     </div>
     <div class="hc-info">
@@ -144,7 +146,7 @@ async function zoneSheet(i) {
     cls: 'zone-modal',
     body: `<p class="muted">${esc(z.sub)}</p>
       <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
-      <div class="goal">${iconImg('star', 18)}<div>Survivez <b>${Math.round(ZONE_TIME[i] / 60)} minutes</b> aux hordes, puis battez <b>${esc((z.boss || z.monsters[4]).name)}</b>.</div></div>
+      <div class="goal">${iconImg('star', 18)}<div>Survivez <b>${Math.round(ZONE_TIME[i] / 60)} minutes</b> aux hordes, puis battez <b>${esc((z.boss || z.monsters[4]).name)}</b>. Votre champion évolue aux niveaux 8 et 18 !</div></div>
       ${first ? '<h4>Récompenses de première victoire</h4>' : ''}${reward}`,
     buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: 'Partir !', cls: 'primary', value: true }],
     dismissable: true,
@@ -162,7 +164,8 @@ function classSelect(first) {
       ${first ? '<p class="cs-sub">Choisissez votre champion</p>' : ''}
       <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''}" data-act="pick" data-c="${k.id}"><img class="px" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span></button>`).join('')}</div>
       <section class="card cs-detail">
-        <div class="cs-head"><img class="px big" src="${heroURL(c.id, c.colors)}" alt=""><div><h3>${esc(c.name)}</h3><div class="role">${c.role}</div><p>${esc(c.desc)}</p></div></div>
+        <div class="cs-head"><canvas class="cs-3d"></canvas><div><h3>${esc(c.name)}</h3><div class="role">${c.role}</div><p>${esc(c.desc)}</p></div></div>
+        <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span>${i ? `<em>niv. ${e.lvl}</em>` : '<em>départ</em>'}<b>${esc(e.name)}</b></span>`).join('<i>›</i>')}</div>
         <div class="stats wide">
           <span>${iconImg('heart', 16)} PV <b>${c.hp}</b></span>
           <span>${iconImg('fist', 16)} ATQ <b>${c.atk}</b></span>
@@ -178,6 +181,7 @@ function classSelect(first) {
       ${first ? '' : '<button class="btn ghost" data-act="back">Retour</button>'}
       ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
     </div>`);
+    mountPreview($('.cs-3d'), sel);
     bind($('.class-select'), {
       pick: el => { sel = el.dataset.c; render(); },
       go: () => {
@@ -200,7 +204,7 @@ function startRun(z) {
   run = new Run({
     zone,
     onPause: resume => pauseMenu(resume),
-    onLevelUp: (lvl, opts, done) => levelUpMenu(lvl, opts, done),
+    onLevelUp: (title, opts, done, sub) => levelUpMenu(title, opts, done, sub),
     onChest: (c, gold, done) => chestMenu(c, gold, done),
     onDefeat: canRevive => defeatMenu(canRevive),
     onEnd: sum => endRun(zone, sum),
@@ -213,6 +217,7 @@ function startRun(z) {
 function choiceInfo(c) {
   if (c.kind === 'weapon') { const w = WEAPONS[c.id]; return { icon: w.icon, name: w.name, tag: c.lv === 1 ? 'Nouvelle arme' : `Arme · niv. ${c.lv}`, desc: c.lv === 1 ? w.desc : w.lv[c.lv - 1], cls: 'weapon' }; }
   if (c.kind === 'tome') { const t = TOMES[c.id]; return { icon: t.icon, name: t.name, tag: c.lv === 1 ? 'Nouveau tome' : `Tome · niv. ${c.lv}`, desc: t.desc, cls: 'tome' }; }
+  if (c.kind === 'boon') { const b = BOONS[c.id]; return { icon: b.icon, name: b.name, tag: 'Bénédiction', desc: b.desc, cls: 'boon' }; }
   if (c.kind === 'heal') return { icon: 'heart', name: 'Soin', tag: 'Bonus', desc: 'Récupère 30 % de vos PV', cls: 'tome' };
   return { icon: 'gold', name: 'Bourse', tag: 'Bonus', desc: 'De l\'or en plus', cls: 'tome' };
 }
@@ -226,9 +231,9 @@ function overlay(html) {
   return w;
 }
 
-function levelUpMenu(lvl, opts, done) {
+function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration') {
   const w = overlay(`<div class="lvlup">
-    <h2>Niveau ${lvl} !</h2><p class="muted">Choisissez une amélioration</p>
+    <h2>${esc(title)}</h2><p class="muted">${esc(subtitle)}</p>
     <div class="cards">${opts.map((c, i) => { const f = choiceInfo(c); return `<button class="card-up ${f.cls}" data-i="${i}">
       <span class="cu-ic">${iconImg(f.icon, 36)}</span>
       <span class="cu-txt"><em>${f.tag}</em><b>${esc(f.name)}</b><small>${esc(f.desc)}</small></span>
@@ -267,8 +272,10 @@ async function pauseMenu(resume) {
         <label class="toggle"><input type="checkbox" id="pVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
       </div>
       <div class="howto">
-        <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : posez le doigt n'importe où et glissez.</p>
-        <p>${iconImg('sword', 16)} <b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau.</p>
+        <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : glissez le doigt sur la moitié gauche de l'écran. Moitié droite : tourner la caméra.</p>
+        <p>${iconImg('sword', 16)} <b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</p>
+        <p>${iconImg('i_heavy', 16)} <b>Sauter</b> : passez par-dessus les monstres et les ondes de choc des boss.</p>
+        <p>${iconImg('gem', 16)} <b>Explorer</b> : les autels (bleus) donnent des bonus, les coffres (dorés) des améliorations.</p>
         <p>${iconImg('nova', 16)} <b>Ultime</b> : se charge en battant des monstres, touchez le bouton en bas à droite.</p>
         <p>${iconImg('crown', 16)} <b>Objectif</b> : survivez jusqu'à la fin du chrono puis battez le boss.</p>
       </div>
@@ -364,6 +371,7 @@ function endRun(z, sum) {
       ${lines.map(l => `<div class="rw">${l}</div>`).join('')}
       ${found.map(it => `<div class="rw r-${it.rarity} loot-row">${iconImg(it.icon, 22)} <b style="color:${RARITY[it.rarity].color}">${esc(it.name)}</b> <small>${RARITY[it.rarity].name} · ${statLine(it.stat)}${it._eq ? ' · équipé' : ''}</small></div>`).join('')}
     </div>
+    ${sum.evo ? `<p class="center evo-reached">${iconImg('star', 16)} Évolution atteinte : <b>${esc(EVOLUTIONS[save.cls][sum.evo].name)}</b></p>` : ''}
     <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
     ${!sum.win ? `<p class="center muted tip">${tipFor(sum)}</p>` : ''}
     <div class="end-btns">
