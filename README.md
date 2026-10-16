@@ -28,6 +28,10 @@ python3 -m http.server 8000
 - `sw.js` : fonctionnement hors ligne
 
 ## Compte Google (synchronisation)
-1. Renseigner `SUPABASE_URL` et `SUPABASE_KEY` dans `js/config.js`.
-2. Créer la table avec `supabase/schema.sql`.
-3. Activer le fournisseur Google dans Supabase et ajouter l'adresse du site aux URL de redirection autorisées.
+Les sauvegardes sont stockées dans le projet Supabase « Pompelup », table `lob_saves` (voir `supabase/schema.sql`).
+L'adresse du jeu doit figurer dans Supabase → Authentication → URL Configuration → Redirect URLs :
+`https://guigz78.github.io/League-of-Bonk/**`
+
+## Mise en ligne
+GitHub → Settings → Pages → Source « Deploy from a branch » → `main` / `(root)`.
+Le jeu est alors disponible sur https://guigz78.github.io/League-of-Bonk/

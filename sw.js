@@ -1,5 +1,5 @@
 // Service worker : le jeu fonctionne entièrement hors connexion.
-const VERSION = 'lob-v3';
+const VERSION = 'lob-v4';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'vendor/supabase.min.js',
   'js/main.js', 'js/game.js', 'js/run.js', 'js/data.js', 'js/save.js', 'js/cloud.js', 'js/config.js',
