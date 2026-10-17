@@ -1054,7 +1054,7 @@ export class Run {
         case 'beam': {
           if (w.t > 0) break;
           const t = this.nearest(360); if (!t) { w.t = 0.2; break; }
-          w.t = (lv >= 5 ? 1.05 : 1.45) * p.haste;
+          w.t = (lv >= 5 ? 0.95 : 1.25) * p.haste;
           const ang = Math.atan2(t.y - p.y, t.x - p.x);
           const dmg = A * 1.8 * (lv >= 2 ? 1.3 : 1) * (lv >= 5 ? 1.4 : 1);
           const width = (lv >= 3 ? 30 : 18) * area, len = 320 * area;
@@ -1065,7 +1065,7 @@ export class Run {
         case 'arrows': {
           if (w.t > 0) break;
           const t = this.nearest(440); if (!t) { w.t = 0.2; break; }
-          w.t = (lv >= 5 ? 0.42 : 0.58) * p.haste;
+          w.t = (lv >= 5 ? 0.4 : 0.52) * p.haste;
           const n = 1 + (lv >= 2) + (lv >= 5), ang = Math.atan2(t.y - p.y, t.x - p.x);
           for (let i = 0; i < n; i++) {
             const a = ang + (i - (n - 1) / 2) * 0.16;
