@@ -412,3 +412,55 @@ p { margin: .4em 0; }
 .evo-chain em { font-style: normal; font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: .4px; }
 .evo-chain b { font-size: 12px; line-height: 1.15; }
 .evo-chain i { color: var(--muted); font-style: normal; font-size: 18px; }
+
+/* === Difficulté === */
+/* étoiles des cartes de zone : une icône par niveau battu */
+.z-stars { gap: 2px; padding: 3px 6px; }
+.z-stars .zs { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.06); }
+.z-stars .zs img { filter: grayscale(1) brightness(.45); }
+.z-stars .zs.on { background: color-mix(in srgb, var(--dc) 30%, transparent); box-shadow: 0 0 0 1px var(--dc); }
+.z-stars .zs.on img { filter: none; }
+.z-stars.s3 { box-shadow: 0 0 0 1px #ff4a6a, 0 0 12px rgba(255,74,106,.45); }
+
+/* sélecteur de difficulté (fiche de zone) */
+.diff-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.diff-btn {
+  --dc: var(--green);
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px 8px; min-height: 86px;
+  border-radius: 14px; background: var(--card); color: var(--text); text-align: center;
+  box-shadow: inset 0 0 0 2px var(--line), 0 3px 0 rgba(0,0,0,.3); transition: transform .12s, box-shadow .12s, background .12s;
+}
+.diff-btn .db-ic { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: rgba(0,0,0,.3); }
+.diff-btn b { font-size: 14px; line-height: 1.15; }
+.diff-btn small { font-size: 10.5px; color: var(--muted); font-weight: 600; line-height: 1.2; }
+.diff-btn.on { background: color-mix(in srgb, var(--dc) 18%, var(--card)); box-shadow: inset 0 0 0 3px var(--dc), 0 0 16px color-mix(in srgb, var(--dc) 45%, transparent); transform: translateY(-2px); }
+.diff-btn.on b { color: var(--dc); }
+.diff-btn.on .db-ic { background: color-mix(in srgb, var(--dc) 35%, transparent); }
+.diff-btn.beaten small { color: var(--dc); }
+.diff-btn.beaten::after { content: '✓'; position: absolute; top: 4px; right: 7px; font-size: 12px; font-weight: 900; color: var(--dc); }
+.diff-btn.locked { background: rgba(0,0,0,.2); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06); }
+.diff-btn.locked b, .diff-btn.locked .db-ic { opacity: .5; }
+.diff-btn.nope { animation: nope .35s; }
+.diff-btn:active { transform: scale(.96); }
+@keyframes nope { 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+
+.diff-info { margin: 10px 0 2px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,.25); display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.diff-info.d0 { box-shadow: inset 3px 0 0 #5ae87a; }
+.diff-info.d1 { box-shadow: inset 3px 0 0 #ffb03a; }
+.diff-info.d2 { box-shadow: inset 3px 0 0 #ff4a6a; }
+.di-desc { margin: 0; font-weight: 600; }
+.di-row { display: flex; gap: 8px; align-items: flex-start; line-height: 1.35; }
+.di-row img { flex: none; margin-top: 1px; }
+.di-row.bad b { color: #ff9a8a; }
+.di-row.good b { color: var(--gold); }
+.di-rec { display: flex; align-items: center; gap: 6px; color: var(--gold); font-size: 12px; font-weight: 700; }
+.di-note { font-size: 12px; margin: 6px 0 0; }
+
+/* étiquette de niveau (HUD, pause, bilan) */
+.diff-tag { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-size: 11px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; vertical-align: middle; color: #1a0c06; background: #5ae87a; text-shadow: none; }
+.diff-tag.d1 { background: #ffb03a; }
+.diff-tag.d2 { background: #ff4a6a; color: #fff; box-shadow: 0 0 10px rgba(255,74,106,.6); }
+.diff-tag img { width: 14px; height: 14px; }
+.timer .diff-tag { margin-top: 5px; font-size: 10px; padding: 1px 7px; }
+.modal h2 .diff-tag { margin-left: 6px; font-size: 11px; }
+.rs-zone { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
