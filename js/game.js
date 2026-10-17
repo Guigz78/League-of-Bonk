@@ -1,6 +1,6 @@
 // Écrans du jeu et déroulé d'une expédition.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT } from './data.js';
-import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave } from './save.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, DIFFICULTIES, ELITE_MODS } from './data.js';
+import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave, maxDiff } from './save.js';
 import { heroURL, creatureURL, iconImg } from './art.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
@@ -109,18 +109,66 @@ function adventureTab() {
   const zones = ZONES.map((z, i) => {
     const locked = i > save.unlockedZone;
     const cleared = save.zoneCleared[i];
+    const stars = save.diffCleared[i] || 0;
     const sprite = z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
       : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal);
     return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs && !cleared ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
       <div class="z-num">${i + 1}</div>
       <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.runs && !cleared ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
       <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px" src="${sprite}" alt="">`}</div>
-      ${cleared ? `<div class="z-done">${iconImg('star', 14)} Terminée</div>` : ''}
+      ${cleared ? zoneStars(stars) : ''}
     </button>`;
   }).join('');
   return `${heroCard()}${resume}
     <h3 class="section-t">Carte de Runeterre <small>${done}/6 zones</small></h3>
     <div class="zones">${zones}</div>`;
+}
+
+// badge de la carte de zone : une icône par niveau de difficulté, allumée quand il est battu
+function zoneStars(n) {
+  const label = n >= DIFFICULTIES.length ? 'Zone maîtrisée' : `${DIFFICULTIES[n - 1].name} battu`;
+  return `<div class="z-done z-stars s${n}" aria-label="${esc(label)}">${DIFFICULTIES.map((d, k) =>
+    `<i class="zs ${k < n ? 'on' : ''}" style="--dc:${d.color}">${iconImg(d.icon, 13)}</i>`).join('')}</div>`;
+}
+
+const mul = v => '×' + String(Math.round(v * 100) / 100).replace('.', ',');
+const plus = v => '+' + Math.round((v - 1) * 100) + ' %';
+
+// détail d'un niveau de difficulté dans la fiche de zone
+function diffInfo(i, k) {
+  const D = DIFFICULTIES[k], wins = save.diffWins[i]?.[k] || 0, best = save.diffBest[i]?.[k] || 0;
+  const rec = wins ? `<div class="di-rec">${iconImg('crown', 14)} ${wins} victoire${wins > 1 ? 's' : ''}${best ? ` · meilleur temps ${fmtTime(best)}` : ''}</div>` : '';
+  if (!k) return `<p class="di-desc">${esc(D.desc)}</p>${rec}`;
+  return `<p class="di-desc">${esc(D.desc)}</p>
+    <div class="di-row bad">${iconImg('skull', 16)}<span>Monstres : PV <b>${mul(D.hp)}</b> · dégâts <b>${mul(D.dmg)}</b> · vitesse <b>${plus(D.speed)}</b> · nombre <b>${plus(D.spawn)}</b>${D.mods > 1 ? ` · élites à <b>${D.mods} pouvoirs</b>` : ''}</span></div>
+    <div class="di-row bad">${iconImg('heart', 16)}<span>Soins <b>${mul(D.heal)}</b> (cœurs, familier, régénération)</span></div>
+    <div class="di-row good">${iconImg('gold', 16)}<span>Or <b>${mul(D.gold)}</b> · objets plus rares et plus puissants${k >= 2 ? ' · 1 objet de plus' : ''}</span></div>${rec}`;
+}
+
+// récompenses affichées selon le niveau choisi (celles de première victoire : en Normal uniquement)
+function zoneRewards(i, k) {
+  const first = !save.zoneCleared[i], top = save.diffCleared[i] || 0;
+  const next = DIFFICULTIES[k + 1];
+  const unlock = top <= k ? (next
+    ? `<div class="rw">${iconImg(next.icon, 18)} Niveau <b style="color:${next.color}">${esc(next.name)}</b> débloqué</div>`
+    : `<div class="rw">${iconImg('crown', 18)} Zone maîtrisée : <b>3 étoiles</b></div>`) : '';
+  if (k === 0 && first) {
+    const pet = PETS[PET_BY_ZONE[i]], bi = BOSS_ITEMS[i];
+    return `<h4>Récompenses de première victoire</h4>
+      <div class="rewards">
+        <div class="rw">${iconImg('star', 18)} Zone suivante débloquée</div>
+        <div class="rw"><img class="px" src="${creatureURL('pet-' + PET_BY_ZONE[i], pet.body, pet.pal)}" width="22" height="22" alt=""> Familier : <b>${esc(pet.name)}</b></div>
+        ${bi ? `<div class="rw">${iconImg(bi.icon, 18)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b></div>` : ''}
+        ${unlock}
+      </div>`;
+  }
+  const D = DIFFICULTIES[k];
+  return `<h4>Récompenses${k ? ' ' + esc(D.name) : ''}</h4>
+    <div class="rewards">
+      <div class="rw">${iconImg('gold', 18)} Or${k ? ` <b>${mul(D.gold)}</b>` : ''} et objets${k ? ' plus rares et plus puissants' : ''}</div>
+      ${unlock}
+    </div>
+    <p class="muted di-note">${k ? 'Familier et objet de boss : seulement à la première victoire en Normal.' : 'Zone déjà terminée : rejouez-la pour gagner de l\'or et des objets.'}</p>`;
 }
 
 function zoneSteps(z) {
@@ -133,26 +181,51 @@ async function zoneSheet(i) {
   const z = ZONES[i];
   if (i > save.unlockedZone) { toast(`${iconImg('lock', 16)} Terminez d'abord « ${esc(ZONES[i - 1].name)} »`); return; }
   const steps = zoneSteps(z);
-  const first = !save.zoneCleared[i];
-  const pet = PETS[PET_BY_ZONE[i]];
-  const bi = BOSS_ITEMS[i];
-  const reward = first ? `
-      <div class="rewards">
-        <div class="rw">${iconImg('star', 18)} Zone suivante débloquée</div>
-        <div class="rw"><img class="px" src="${creatureURL('pet-' + PET_BY_ZONE[i], pet.body, pet.pal)}" width="22" height="22" alt=""> Familier : <b>${esc(pet.name)}</b></div>
-        ${bi ? `<div class="rw">${iconImg(bi.icon, 18)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b></div>` : ''}
-      </div>` : `<p class="muted">Zone déjà terminée : rejouez-la pour gagner de l'or et des objets (ennemis +20 %).</p>`;
-  const ok = await modal({
+  const top = maxDiff(i);
+  let sel = Math.min(save.diffSel?.[i] || 0, top);
+  const id = 'zs-' + Date.now();
+  const btn = k => {
+    const D = DIFFICULTIES[k], locked = k > top, beaten = k < (save.diffCleared[i] || 0);
+    return `<button class="diff-btn d${k} ${k === sel ? 'on' : ''} ${locked ? 'locked' : ''} ${beaten ? 'beaten' : ''}" data-d="${k}" role="radio" aria-checked="${k === sel}" style="--dc:${D.color}">
+      <span class="db-ic">${iconImg(locked ? 'lock' : D.icon, 22)}</span><b>${esc(D.name)}</b>
+      <small>${locked ? `Battez ${esc(DIFFICULTIES[k - 1].name)}` : beaten ? 'Battu' : 'À vaincre'}</small>
+    </button>`;
+  };
+  const p = modal({
     title: esc(z.name),
     cls: 'zone-modal',
-    body: `<p class="muted">${esc(z.sub)}</p>
+    body: `<div id="${id}"><p class="muted">${esc(z.sub)}</p>
       <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
+      <h4>Difficulté</h4>
+      <div class="diff-pick" role="radiogroup" aria-label="Niveau de difficulté">${DIFFICULTIES.map((_, k) => btn(k)).join('')}</div>
+      <div class="diff-info d${sel}">${diffInfo(i, sel)}</div>
       <div class="goal">${iconImg('star', 18)}<div>Survivez <b>${Math.round(ZONE_TIME[i] / 60)} minutes</b> aux hordes, puis battez <b>${esc((z.boss || z.monsters[4]).name)}</b>. Votre champion évolue aux niveaux 8 et 18 !</div></div>
-      ${first ? '<h4>Récompenses de première victoire</h4>' : ''}${reward}`,
+      <div class="zone-rw">${zoneRewards(i, sel)}</div></div>`,
     buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: 'Partir !', cls: 'primary', value: true }],
     dismissable: true,
   });
-  if (ok) startRun(i);
+  const root = document.getElementById(id);
+  root?.addEventListener('click', e => {
+    const b = e.target.closest('.diff-btn');
+    if (!b) return;
+    const k = +b.dataset.d;
+    if (k > top) {
+      sfx('tap');
+      toast(`${iconImg('lock', 16)} Battez cette zone en <b>${esc(DIFFICULTIES[k - 1].name)}</b> pour débloquer <b>${esc(DIFFICULTIES[k].name)}</b>`);
+      b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
+      return;
+    }
+    if (k === sel) return;
+    sel = k;
+    sfx('tap');
+    root.querySelectorAll('.diff-btn').forEach(x => { const on = +x.dataset.d === k; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+    const info = root.querySelector('.diff-info');
+    info.className = `diff-info d${k}`; info.innerHTML = diffInfo(i, k);
+    root.querySelector('.zone-rw').innerHTML = zoneRewards(i, k);
+  });
+  const ok = await p;
+  if (save.diffSel[i] !== sel) { save.diffSel[i] = sel; persist({ touch: false }); }
+  if (ok) startRun(i, sel);
 }
 
 // ---------- Choix de la classe ----------
@@ -199,12 +272,14 @@ function classSelect(first) {
 // ---------- Partie ----------
 let run = null;
 
-function startRun(z) {
+function startRun(z, diff = 0) {
+  diff = Math.max(0, Math.min(diff, maxDiff(z)));
   save.stats.runs++;
   persist();
   const zone = ZONES[z];
   run = new Run({
     zone,
+    diff,
     onPause: resume => pauseMenu(resume),
     onLevelUp: (title, opts, done, sub) => levelUpMenu(title, opts, done, sub),
     onChest: (c, gold, done) => chestMenu(c, gold, done),
@@ -268,7 +343,7 @@ function chestMenu(c, gold, done) {
 
 async function pauseMenu(resume) {
   const v = await modal({
-    title: 'Pause',
+    title: run.diffId ? `Pause <span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : 'Pause',
     body: `<div class="toggles">
         <label class="toggle"><input type="checkbox" id="pSound" ${save.settings.sound ? 'checked' : ''}> Son</label>
         <label class="toggle"><input type="checkbox" id="pVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
@@ -279,6 +354,8 @@ async function pauseMenu(resume) {
         <p>${iconImg('sword', 16)} <b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</p>
         <p>${iconImg('i_heavy', 16)} <b>Sauter</b> : touchez brièvement l'écran pour passer par-dessus les monstres et les ondes de choc des boss.</p>
         <p>${iconImg('gem', 16)} <b>Explorer</b> : les autels (bleus) donnent des bonus, les coffres (dorés) des améliorations.</p>
+        <p>${iconImg('i_enrage', 16)} <b>Attaques spéciales</b> : un monstre qui clignote ou un cercle rouge au sol annonce une attaque. Écartez-vous vite !</p>
+        <p>${iconImg('skull', 16)} <b>Élites</b> : leur nom indique leur pouvoir (${Object.values(ELITE_MODS).map(m => esc(m.name)).join(', ')}). Fuyez les Explosifs quand ils tombent !</p>
         <p>${iconImg('nova', 16)} <b>Ultime</b> : se charge en battant des monstres et se lance tout seul quand des ennemis sont proches (ou touchez le bouton).</p>
         <p>${iconImg('crown', 16)} <b>Objectif</b> : survivez jusqu'à la fin du chrono puis battez le boss.</p>
       </div>
@@ -319,6 +396,7 @@ const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStar
 
 function endRun(z, sum) {
   battle = null; run = null;
+  const k = sum.diff || 0, D = DIFFICULTIES[k];
   const st = save.stats;
   st.kills += sum.kills;
   st.bestLevel = Math.max(st.bestLevel, sum.level);
@@ -328,19 +406,31 @@ function endRun(z, sum) {
   // butin d'objets
   const r = rng(Date.now());
   const found = [];
-  const drops = sum.win ? 1 + (Math.random() < 0.5) : (sum.time > 90 && Math.random() < 0.4 ? 1 : 0);
+  const drops = sum.win ? 1 + (Math.random() < 0.5) + (k >= 2 ? 1 : 0) : (sum.time > 90 && Math.random() < 0.4 ? 1 : 0);
   for (let i = 0; i < drops; i++) {
-    const it = makeItem(r, z.id, { boost: sum.win ? 0.25 : 0 });
+    const it = makeItem(r, z.id, { boost: (sum.win ? 0.25 : 0) + D.rarity, mult: D.itemMult });
     it.isNew = true; it._eq = addItem(it); found.push(it);
   }
-  const first = sum.win && !save.zoneCleared[z.id];
+  // récompenses de première victoire : en Normal uniquement
+  const first = sum.win && k === 0 && !save.zoneCleared[z.id];
+  let unlocked = null;
   if (sum.win) {
     st.wins++;
     st.classWins[save.cls] = (st.classWins[save.cls] || 0) + 1;
     if (!sum.revived) st.cleanZone = true;
-    const bonus = Math.round((40 + z.id * 40) * (save.zoneCleared[z.id] ? 0.6 : 1));
+    const bonus = Math.round((40 + z.id * 40) * (save.zoneCleared[z.id] && !k ? 0.6 : 1) * D.gold);
     gold += bonus;
-    lines.push(`${iconImg('crown', 22)} Bonus de victoire : <b>+${fmt(bonus)} or</b>`);
+    lines.push(`${iconImg('crown', 22)} Bonus de victoire${k ? ` (${esc(D.name)})` : ''} : <b>+${fmt(bonus)} or</b>`);
+    // progression par zone et par niveau
+    save.diffWins[z.id][k]++;
+    const best = save.diffBest[z.id][k], t = Math.round(sum.time);
+    if (!best || t < best) save.diffBest[z.id][k] = t;
+    if ((save.diffCleared[z.id] || 0) < k + 1) {
+      save.diffCleared[z.id] = k + 1;
+      const next = DIFFICULTIES[k + 1];
+      if (next) { unlocked = k + 1; lines.push(`${iconImg(next.icon, 22)} Nouveau niveau débloqué : <b style="color:${next.color}">${esc(next.name)}</b>`); }
+      else lines.push(`${iconImg('crown', 22)} Zone maîtrisée : <b>3 étoiles</b> ! Vous avez vaincu le Cauchemar.`);
+    }
   }
   if (first) {
     save.zoneCleared[z.id] = true;
@@ -364,7 +454,7 @@ function endRun(z, sum) {
   const finale = first && z.id === ZONES.length - 1;
   mount(`<div class="reward-screen ${sum.win ? 'complete' : 'lost'}">
     <h2 class="rs-title">${finale ? 'La Faille est sauvée !' : sum.win ? 'Victoire !' : 'Fin de partie'}</h2>
-    <p class="center muted">${esc(z.name)}</p>
+    <p class="center muted rs-zone">${esc(z.name)} <span class="diff-tag d${k}">${iconImg(D.icon, 14)}${esc(D.name)}</span></p>
     ${finale ? `<p class="center finale">Le Baron Nashar est tombé. Vous avez vaincu les 5 boss de Runeterre. Bravo, champion !</p>` : ''}
     <div class="run-stats card">
       <div><b>${fmtTime(sum.time)}</b><small>Survie</small></div>
@@ -378,23 +468,29 @@ function endRun(z, sum) {
     </div>
     ${sum.evo ? `<p class="center evo-reached">${iconImg('star', 16)} Évolution atteinte : <b>${esc(EVOLUTIONS[save.cls][sum.evo].name)}</b></p>` : ''}
     <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
-    ${!sum.win ? `<p class="center muted tip">${tipFor(sum)}</p>` : ''}
+    ${!sum.win ? `<p class="center muted tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns">
       <button class="btn ghost" data-act="home">Carte</button>
-      <button class="btn primary" data-act="again">${sum.win && z.id + 1 < ZONES.length && first ? 'Zone suivante' : 'Rejouer'}</button>
+      <button class="btn primary" data-act="again">${sum.win && z.id + 1 < ZONES.length && first ? 'Zone suivante' : unlocked ? `Tenter ${esc(DIFFICULTIES[unlocked].name)}` : 'Rejouer'}</button>
     </div>
   </div>`);
   sfx(sum.win ? 'win' : 'coin');
   for (const it of found) delete it._eq;
   bind($('.reward-screen'), {
     home: () => home('adventure'),
-    again: () => startRun(sum.win && first && z.id + 1 < ZONES.length ? z.id + 1 : z.id),
+    again: () => {
+      if (sum.win && first && z.id + 1 < ZONES.length) return startRun(z.id + 1, 0);
+      if (unlocked) { save.diffSel[z.id] = unlocked; return startRun(z.id, unlocked); }
+      startRun(z.id, k);
+    },
   });
 }
 
-function tipFor(sum) {
+function tipFor(sum, k = 0) {
   if (canAffordUpgrade()) return 'Astuce : vous avez assez d\'or pour une amélioration permanente dans la Boutique !';
+  if (k > 0 && Math.random() < 0.5) return 'Astuce : ce niveau est exigeant. Rejouez en Normal pour améliorer votre équipement.';
   if (sum.time < 60) return 'Astuce : restez en mouvement et tournez autour des monstres plutôt que de foncer dedans.';
+  if (Math.random() < 0.4) return 'Astuce : quand un monstre clignote, il va charger. Écartez-vous de sa trajectoire !';
   return 'Astuce : prenez des tomes de PV et d\'armure si vous mourez souvent, et équipez vos meilleurs objets.';
 }
 
@@ -412,7 +508,7 @@ function statLine(s) {
   if (s.atk) p.push(`+${s.atk} ATQ`);
   if (s.hp) p.push(`+${s.hp} PV`);
   if (s.crit) p.push(`+${Math.round(s.crit * 100)} % crit`);
-  if (s.regen) p.push(`+${Math.round(s.regen * 2) / 10} PV/s`);
+  if (s.regen) p.push(`+${(s.regen / 10).toLocaleString('fr-FR')} PV/s`);
   return p.join(' · ');
 }
 

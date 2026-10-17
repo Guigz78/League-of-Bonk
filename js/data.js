@@ -5,7 +5,7 @@ export const CLASSES = {
   mage: {
     id: 'mage', name: 'Luxanne', role: 'Mage',
     desc: 'Fragile mais dévastatrice : son rayon transperce les rangs ennemis.',
-    hp: 90, atk: 15, crit: 0.08, speed: 1,
+    hp: 100, atk: 15, crit: 0.08, speed: 1,
     weapon: 'beam', ult: 'nova',
     colors: { 1: '#f4f1ff', 2: '#b9b1e8', 3: '#ffffff', a: '#ffd54a', h: '#ffe08a', s: '#ffd9b8', d: '#e9b48f', c: '#4a63d6' },
   },
@@ -85,11 +85,34 @@ export const TOMES = {
   vital:  { name: 'Cœur de géant', icon: 'heart', desc: '+20 % PV max (et soigne)' },
   magnet: { name: 'Aimant', icon: 'ring', desc: '+35 % rayon de ramassage' },
   crit:   { name: 'Lame de l\'infini', icon: 'target', desc: '+7 % de critique' },
-  armor:  { name: 'Armure de ronces', icon: 'armor', desc: '−8 % de dégâts subis' },
+  armor:  { name: 'Armure de ronces', icon: 'armor', desc: '−6 % de dégâts subis' },
   wisdom: { name: 'Tome de sagesse', icon: 'tome', desc: '+15 % d\'expérience' },
   area:   { name: 'Coiffe de Rabadon', icon: 'crown', desc: '+12 % taille des attaques' },
 };
 export const MAX_WEAPONS = 4, MAX_TOMES = 4, MAX_LEVEL = 5;
+
+// Niveaux de difficulté, par zone (façon Megabonk) : Difficile se débloque en battant Normal,
+// Cauchemar en battant Difficile. Multiplicateurs appliqués aux monstres et aux récompenses.
+// heal = soins (cœurs, familier, régénération), elite = intervalle entre deux élites, mods = pouvoirs par élite,
+// rarity = bonus de rareté des objets, itemMult = puissance des objets trouvés.
+export const DIFFICULTIES = [
+  { id: 0, name: 'Normal', icon: 'star', color: '#5ae87a', desc: 'Le défi prévu pour découvrir la zone.',
+    hp: 1, dmg: 1, speed: 1, spawn: 1, elite: 1, mods: 1, boss: 1, heal: 1, gold: 1, rarity: 0, itemMult: 1 },
+  { id: 1, name: 'Difficile', icon: 'i_enrage', color: '#ffb03a', desc: 'Monstres plus coriaces, plus rapides et plus nombreux.',
+    hp: 1.8, dmg: 1.45, speed: 1.08, spawn: 1.25, elite: 0.8, mods: 1, boss: 1.7, heal: 0.75, gold: 1.6, rarity: 0.08, itemMult: 1.25 },
+  { id: 2, name: 'Cauchemar', icon: 'skull', color: '#ff4a6a', desc: 'Élites à deux pouvoirs, soins réduits de moitié.',
+    hp: 2.5, dmg: 1.8, speed: 1.15, spawn: 1.45, elite: 0.68, mods: 2, boss: 2.4, heal: 0.5, gold: 2.4, rarity: 0.16, itemMult: 1.5 },
+];
+
+// Pouvoirs des élites (tirés au hasard, affichés dans leur nom). f = accord au féminin.
+export const ELITE_MODS = {
+  rapide:     { name: 'Rapide', f: 'Rapide', desc: 'Se déplace et charge bien plus vite.' },
+  blinde:     { name: 'Blindé', f: 'Blindée', desc: 'Très résistant, impossible à repousser.' },
+  vampirique: { name: 'Vampirique', f: 'Vampirique', desc: 'Se soigne à chaque coup porté.' },
+  explosif:   { name: 'Explosif', f: 'Explosive', desc: 'Explose à sa mort : éloignez-vous !' },
+  enrage:     { name: 'Enragé', f: 'Enragée', desc: 'Frappe plus fort, encore plus quand il est blessé.' },
+  invocateur: { name: 'Invocateur', f: 'Invocatrice', desc: 'Appelle des renforts.' },
+};
 
 // Zones : chaque partie = survivre aux vagues, puis battre le boss.
 export const ZONE_TIME = [180, 240, 240, 240, 270, 300]; // secondes avant l'arrivée du boss
@@ -101,7 +124,7 @@ export const ZONES = [
       { name: 'Sbire mêlée', body: 'humanoid', pal: ['#4f7fd8', '#2d4f9a', '#9ec0ff'], hp: 38, atk: 6, moves: ['atk'] },
       { name: 'Sbire lanceur', ranged: true, body: 'humanoid', pal: ['#a05ad8', '#6a3696', '#d6a8ff'], hp: 32, atk: 7, moves: ['atk', 'atk', 'heavy'] },
       { name: 'Porolet', body: 'blob', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], hp: 44, atk: 6, moves: ['atk', 'heal'] },
-      { name: 'Sbire canon', body: 'golem', pal: ['#d88a4f', '#9a5a2d', '#ffc79e'], hp: 58, atk: 8, moves: ['atk', 'guard', 'heavy'] },
+      { name: 'Sbire canon', ranged: true, body: 'golem', pal: ['#d88a4f', '#9a5a2d', '#ffc79e'], hp: 58, atk: 8, moves: ['atk', 'guard', 'heavy'] },
       { name: 'Super Sbire', body: 'golem', pal: ['#e05050', '#962d2d', '#ff9e9e'], hp: 80, atk: 9, moves: ['atk', 'heavy', 'enrage'], elite: true },
     ],
     boss: null, // la zone 1 se termine contre le Super Sbire
@@ -114,7 +137,7 @@ export const ZONES = [
       { name: 'Grompf', body: 'blob', pal: ['#6fae3a', '#3d6a1f', '#c2e88a'], hp: 80, atk: 10, moves: ['poison', 'atk'] },
       { name: 'Loup murmure', body: 'beast', pal: ['#5a5f78', '#363a4f', '#a3a9c8'], hp: 74, atk: 12, moves: ['atk', 'multi', 'heavy'] },
       { name: 'Krog ancien', body: 'golem', pal: ['#8a7a64', '#5a4d3c', '#c8b89c'], hp: 100, atk: 11, moves: ['guard', 'heavy', 'atk'] },
-      { name: 'Sentinelle bleue', body: 'golem', pal: ['#3a7ad8', '#24508f', '#8ac2ff'], hp: 112, atk: 12, moves: ['atk', 'heal', 'heavy'], elite: true },
+      { name: 'Sentinelle bleue', f: true, body: 'golem', pal: ['#3a7ad8', '#24508f', '#8ac2ff'], hp: 112, atk: 12, moves: ['atk', 'heal', 'heavy'], elite: true },
     ],
     boss: { name: 'Brambleback Rouge', title: 'Gardien de la Jungle', body: 'golem', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], hp: 230, atk: 15, moves: ['burn', 'atk', 'heavy', 'enrage'] },
   },
@@ -126,7 +149,7 @@ export const ZONES = [
       { name: 'Gloop des eaux', body: 'blob', pal: ['#3a8ad8', '#2456a0', '#9ad0ff'], hp: 112, atk: 13, moves: ['poison', 'heal', 'atk'] },
       { name: 'Raptix des rives', body: 'bird', pal: ['#e0a83a', '#9a6a1f', '#ffe08a'], hp: 100, atk: 15, moves: ['multi', 'multi', 'heavy'] },
       { name: 'Crabe géant', body: 'crab', pal: ['#d86a3a', '#8a3f1f', '#ffb08a'], hp: 140, atk: 14, moves: ['guard', 'heavy', 'atk'] },
-      { name: 'Ombre aquatique', ranged: true, body: 'ghost', pal: ['#3ad8c8', '#1f8a80', '#b0fff5'], hp: 130, atk: 16, moves: ['drain', 'atk', 'heavy'], elite: true },
+      { name: 'Ombre aquatique', f: true, ranged: true, body: 'ghost', pal: ['#3ad8c8', '#1f8a80', '#b0fff5'], hp: 130, atk: 16, moves: ['drain', 'atk', 'heavy'], elite: true },
     ],
     boss: { name: 'Héraut de la Faille', title: 'L\'œil du Vide', body: 'beast', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], hp: 340, atk: 18, moves: ['heavy', 'atk', 'guard', 'enrage', 'multi'] },
   },
@@ -173,11 +196,11 @@ export const BOSS_COUNT = ZONES.filter(z => z.boss).length; // 5
 
 // Familiers : obtenus en battant les boss. Agissent chaque tour.
 export const PETS = {
-  poro:   { name: 'Poro', desc: 'Vous soigne de 2 % des PV toutes les 3 s.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
+  poro:   { name: 'Poro', desc: 'Vous soigne de 1,5 % des PV toutes les 4 s.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
   brambi: { name: 'Bramblichou', desc: 'Brûle les ennemis qui vous touchent.', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], body: 'golem', zone: 1 },
   herald: { name: 'Petit Héraut', desc: 'Tire sur les ennemis proches.', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], body: 'beast', zone: 2 },
   phenix: { name: 'Phénixounet', desc: 'Attire l\'expérience de plus loin (+40 %).', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], body: 'bird', zone: 3 },
-  wisp:   { name: 'Lanterne', desc: 'Bloque un coup toutes les 8 s.', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], body: 'ghost', zone: 4 },
+  wisp:   { name: 'Lanterne', desc: 'Bloque un coup toutes les 12 s.', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], body: 'ghost', zone: 4 },
   voidy:  { name: 'Nashar Jr', desc: 'Votre ultime se charge 2× plus vite.', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], body: 'worm', zone: 5 },
 };
 // zone d'obtention = boss de la zone (poro offert à la fin de la zone 0)
@@ -229,7 +252,7 @@ export const UPGRADES = {
   hp:     { name: 'Vitalité', icon: 'heart', desc: '+8 PV max', per: { hp: 8 }, base: 40, grow: 1.32, max: 20 },
   atk:    { name: 'Puissance', icon: 'fist', desc: '+2 dégâts', per: { atk: 2 }, base: 50, grow: 1.35, max: 20 },
   crit:   { name: 'Précision', icon: 'target', desc: '+2 % de critique', per: { crit: 0.02 }, base: 60, grow: 1.42, max: 10 },
-  regen:  { name: 'Régénération', icon: 'potion', desc: '+0,2 PV par seconde', per: { regen: 1 }, base: 60, grow: 1.42, max: 10 },
+  regen:  { name: 'Régénération', icon: 'potion', desc: '+0,1 PV par seconde', per: { regen: 1 }, base: 60, grow: 1.42, max: 10 },
   speed:  { name: 'Agilité', icon: 'arrow', desc: '+4 % de vitesse', per: { speed: 0.04 }, base: 70, grow: 1.45, max: 8 },
   magnet: { name: 'Attraction', icon: 'ring', desc: '+12 % de rayon de ramassage', per: { magnet: 0.12 }, base: 50, grow: 1.4, max: 8 },
   luck:   { name: 'Fortune', icon: 'gold', desc: '+10 % d\'or gagné', per: { gold: 0.1 }, base: 80, grow: 1.5, max: 10 },
@@ -248,4 +271,6 @@ export const ACHIEVEMENTS = [
   { id: 'lvl20', name: 'Niveau 20', desc: 'Atteindre le niveau 20 dans une partie.', gold: 80 },
   { id: 'nodeath', name: 'Intouchable', desc: 'Terminer une zone sans revivre.', gold: 100 },
   { id: 'baron', name: 'Baron sécurisé', desc: 'Vaincre le Baron Nashar.', gold: 500 },
+  { id: 'hard1', name: 'Sueurs froides', desc: 'Terminer une zone en Difficile.', gold: 150 },
+  { id: 'nightmare1', name: 'Cauchemar éveillé', desc: 'Terminer une zone en Cauchemar.', gold: 300 },
 ];

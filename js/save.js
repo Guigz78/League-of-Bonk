@@ -1,16 +1,21 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
-import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS } from './data.js';
+import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS, DIFFICULTIES } from './data.js';
 
 const KEY = 'lob_save_v1';
 
 export function freshSave() {
   return {
-    v: 1,
+    v: 2,
     updatedAt: 0,
     gold: 0,
     cls: null,
     unlockedZone: 0,
     zoneCleared: [false, false, false, false, false, false],
+    // progression par zone et par niveau de difficulté
+    diffCleared: [0, 0, 0, 0, 0, 0],   // nombre de niveaux battus (0 = aucun, 1 = Normal, 2 = Difficile, 3 = Cauchemar)
+    diffWins: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], // victoires par niveau
+    diffBest: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], // meilleur temps de victoire (s, 0 = aucun)
+    diffSel: [0, 0, 0, 0, 0, 0],       // dernier niveau choisi dans la fiche de zone
     pets: [],
     pet: null,
     upgrades: { hp: 0, atk: 0, crit: 0, regen: 0, speed: 0, magnet: 0, luck: 0 },
@@ -38,13 +43,36 @@ function load() {
 function migrate(s) {
   const base = freshSave();
   const out = { ...base, ...s };
+  out.v = base.v;
   out.upgrades = { ...base.upgrades, ...s.upgrades };
   delete out.upgrades.potion;
   if (typeof out.stats?.kills === 'object') out.stats = { ...base.stats };
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
   out.settings = { ...base.settings, ...s.settings };
+  migrateDifficulty(out, base);
   return out;
+}
+
+// v1 -> v2 : une zone terminée l'a été en Normal. Les tableaux sont toujours remis en forme (sauvegardes cloud anciennes).
+function migrateDifficulty(out, base) {
+  const nD = DIFFICULTIES.length, nZ = base.zoneCleared.length;
+  const int = (v, max) => Math.max(0, Math.min(max, Math.floor(+v || 0)));
+  out.zoneCleared = base.zoneCleared.map((_, i) => !!(out.zoneCleared || [])[i]);
+  const dc = Array.isArray(out.diffCleared) ? out.diffCleared : [];
+  out.diffCleared = out.zoneCleared.map((c, i) => Math.max(int(dc[i], nD), c ? 1 : 0));
+  out.zoneCleared = out.diffCleared.map(n => n >= 1);
+  const grid = (src, fill) => base.zoneCleared.map((_, i) => Array.from({ length: nD }, (_, d) => int(((Array.isArray(src) ? src : [])[i] || [])[d], 1e9) || fill(i, d)));
+  out.diffWins = grid(out.diffWins, (i, d) => (d < out.diffCleared[i] ? 1 : 0));
+  out.diffBest = grid(out.diffBest, () => 0);
+  const sel = Array.isArray(out.diffSel) ? out.diffSel : [];
+  out.diffSel = base.diffSel.map((_, i) => Math.min(int(sel[i], nD - 1), out.diffCleared[i]));
+  out.unlockedZone = int(out.unlockedZone, nZ - 1);
+}
+
+// niveau de difficulté le plus élevé jouable sur une zone (0 = Normal seulement)
+export function maxDiff(zone) {
+  return Math.min(DIFFICULTIES.length - 1, save.diffCleared?.[zone] || 0);
 }
 
 const listeners = new Set();
@@ -105,7 +133,7 @@ export function makeItem(r, zone, opts = {}) {
   const list = ITEM_BASES[slot];
   const base = list[Math.floor(r() * list.length)];
   const rarity = opts.rarity || rollRarity(r, zone, opts.boost || 0);
-  const m = RARITY[rarity].mult * (1 + zone * 0.5);
+  const m = RARITY[rarity].mult * (1 + zone * 0.5) * (opts.mult || 1);
   const stat = {};
   for (const [k, v] of Object.entries(base.stat)) {
     stat[k] = k === 'crit' ? Math.round(v * m * 100) / 100 : Math.max(1, Math.round(v * m));
@@ -147,6 +175,8 @@ export function checkAchievements() {
     lvl20: st.bestLevel >= 20,
     nodeath: !!st.cleanZone,
     baron: s.zoneCleared[5],
+    hard1: (s.diffCleared || []).some(n => n >= 2),
+    nightmare1: (s.diffCleared || []).some(n => n >= 3),
   };
   for (const a of ACHIEVEMENTS) {
     if (!s.achievements[a.id] && cond[a.id]) {
