@@ -203,8 +203,10 @@ export class Actors {
     hero.root.rotation.y = this.yaw + spinA;
     const pop = 1 + Math.max(0, run.evoFlash - 0.6) * 0.8;
     hero.root.scale.setScalar(HERO_SCALE[this.evo] * pop);
-    hero.root.visible = !(p.inv > 0 && p.inv < 2.5 && !run.evoFlash && Math.floor(t * 20) % 2);
-    this.heroMat.emissive.setRGB(run.hurtFlash * 2.4 + run.evoFlash * 0.8, run.evoFlash * 0.7 + run.hurtFlash * 0.2, run.evoFlash * 0.2 + run.hurtFlash * 0.25);
+    // clignote seulement juste après un coup encaissé ; les longues invincibilités (ultime, résurrection) brillent à la place
+    hero.root.visible = !(p.inv > 0 && p.inv <= 0.5 && run.hurtFlash > 0 && Math.floor(t * 20) % 2);
+    const shine = p.inv > 0.5 && !run.evoFlash ? 0.35 + Math.sin(t * 12) * 0.15 : 0;
+    this.heroMat.emissive.setRGB(run.hurtFlash * 2.4 + run.evoFlash * 0.8 + shine, run.evoFlash * 0.7 + run.hurtFlash * 0.2 + shine * 0.85, run.evoFlash * 0.2 + run.hurtFlash * 0.25 + shine * 0.4);
     hero.update(dt, { moving: p.moving && this.hspd > 0.05, speed: Math.max(this.hspd, p.moving ? 0.6 : 0), air: p.h * S, turn: this.turn });
   }
 
