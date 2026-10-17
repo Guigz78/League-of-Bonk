@@ -15,7 +15,7 @@ const SPEED = { blob: 50, humanoid: 62, golem: 42, beast: 80, bird: 88, crab: 58
 const FLYERS = { bird: 34, ghost: 26 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
-const SPAWN_R = 640, VIEW_R = 470;
+const SPAWN_R = 800, VIEW_R = 520;
 
 // ---------- Grille spatiale ----------
 class Grid {
@@ -129,7 +129,7 @@ export class Run {
       this.renderer.setPixelRatio(Math.min(1.5, dpr));
       this.renderer.setSize(this.vw, this.vh, false);
       this.camera.aspect = this.vw / this.vh;
-      this.camera.fov = this.vw / this.vh < 0.7 ? 62 : 50;
+      this.camera.fov = this.vw / this.vh < 0.7 ? 68 : 55;
       this.camera.updateProjectionMatrix();
     };
     this.resize();
@@ -152,7 +152,7 @@ export class Run {
     const canvas = $('#cv3');
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(55, 1, 0.5, 120);
+    this.camera = new THREE.PerspectiveCamera(60, 1, 0.3, 140);
     this.world = buildWorld(this.scene, this.zone);
     this.height = this.world.height;
     this.placeInterest();
@@ -303,7 +303,7 @@ export class Run {
       e.preventDefault();
       cv.setPointerCapture?.(e.pointerId);
       // un seul doigt : on glisse pour courir, on touche brièvement pour sauter
-      if (!this.joy) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: 0 };
+      if (!this.joy) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: 0, yaw: this.yaw };
       $('#hintBubble')?.classList.add('out');
     });
     cv.addEventListener('pointermove', e => {
@@ -491,7 +491,8 @@ export class Run {
     if (K.has('arrowright') || K.has('d')) jx += 1;
     if (K.has('arrowup') || K.has('w') || K.has('z')) jy -= 1;
     if (K.has('arrowdown') || K.has('s')) jy += 1;
-    const fwx = -Math.sin(this.yaw), fwy = -Math.cos(this.yaw), rgx = Math.cos(this.yaw), rgy = -Math.sin(this.yaw);
+    const iy = this.joy ? this.joy.yaw : this.yaw;
+    const fwx = -Math.sin(iy), fwy = -Math.cos(iy), rgx = Math.cos(iy), rgy = -Math.sin(iy);
     let mx = rgx * jx - fwx * jy, my = rgy * jx - fwy * jy;
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
@@ -499,6 +500,12 @@ export class Run {
     p.x = Math.max(-HALF + 80, Math.min(HALF - 80, p.x + mx * p.speed * dt));
     p.y = Math.max(-HALF + 80, Math.min(HALF - 80, p.y + my * p.speed * dt));
     p.moving = ml > 0.05;
+    // la caméra se replace doucement dans le dos du champion quand il court
+    if (p.moving) {
+      const target = Math.atan2(-p.face.x, -p.face.y);
+      let d = target - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
+      this.yaw += d * Math.min(1, dt * 2.4 * Math.min(1, ml));
+    }
     if (p.h > 0 || p.vh > 0) { p.vh -= 1700 * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) p.vh = 0; }
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
@@ -583,7 +590,7 @@ export class Run {
       def, k, x, y, hp, maxHp: hp, dmg, speed, scale, r: 7 * scale, pool: this.enemyPool(def, k, !!o.boss),
       elite: !!o.elite, boss: !!o.boss, ranged: def.ranged && !o.boss, shootT: rand(1, 3), fly: FLYERS[def.body] || 0,
       flash: 0, slow: 0, freeze: 0, kx: 0, ky: 0, hitT: {}, bob: Math.random() * TAU, dead: false, jumpH: 0,
-      phase: 'chase', phaseT: 3, dashX: 0, dashY: 0, ang: 0,
+      phase: 'chase', phaseT: 3, dashX: 0, dashY: 0, ang: 0, born: this.time,
     };
     this.enemies.push(e);
     return e;
@@ -1199,28 +1206,31 @@ export class Run {
     const px = p.x * S, pz = p.y * S, gy = this.gh(p.x, p.y), py = gy + p.h * S;
     const bob = p.moving && p.h === 0 ? Math.abs(Math.sin(t * 13)) * 0.12 : 0;
     this.hero.position.set(px, py + bob, pz);
-    // style « Paper Mario » : face à la caméra, se retourne selon la direction (gauche/droite à l'écran)
+    // le sprite voxel est vu de 3/4 : de profil, tourné vers la direction de course
     const sideX = p.face.x * Math.cos(this.yaw) - p.face.y * Math.sin(this.yaw);
-    if (Math.abs(sideX) > 0.2) this.heroFlip = sideX < 0 ? -1 : 1;
-    this.heroTurn = (this.heroTurn ?? 1) + ((this.heroFlip ?? 1) - (this.heroTurn ?? 1)) * Math.min(1, (dt || 0) * 16);
-    this.hero.rotation.y = this.yaw + (this.heroFlip ?? 1) * 0.35;
+    if (Math.abs(sideX) > 0.15) this.heroFlip = sideX < 0 ? -1 : 1;
+    this.heroTurn = (this.heroTurn ?? 1) + ((this.heroFlip ?? 1) - (this.heroTurn ?? 1)) * Math.min(1, (dt || 0) * 12);
+    this.hero.rotation.y = this.yaw + this.heroTurn * 0.75;
     this.hero.visible = !(p.inv > 0 && p.inv < 2.5 && !this.evoFlash && Math.floor(t * 20) % 2);
     this.heroMat.emissive.setRGB(this.hurtFlash * 3 + this.evoFlash * 0.8, this.evoFlash * 0.7, this.evoFlash * 0.2);
     const hs = 1 + Math.max(0, this.evoFlash - 0.6) * 0.8;
     this.hero.scale.set(hs * this.heroTurn, hs, hs);
     // caméra derrière le champion
-    // caméra fixe (angle constant), qui suit en douceur avec un peu d'avance dans la direction de course
-    const k = Math.min(1, (dt || 0.016) * 5);
-    const ahead = p.moving ? 2.2 : 0;
-    const f = this.camFocus || (this.camFocus = new THREE.Vector3(px, gy, pz));
-    f.x += (px + p.face.x * ahead - f.x) * k;
-    f.z += (pz + p.face.y * ahead - f.z) * k;
-    f.y += (gy - f.y) * Math.min(1, (dt || 0.016) * 3);
-    const zoomT = (this.boss && !this.boss.dead ? 1.3 : 1) + Math.min(0.15, this.enemies.length / 1000);
+    // caméra basse dans le dos du champion : on voit loin devant
+    const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+    this.camY = (this.camY ?? gy) + (gy - (this.camY ?? gy)) * Math.min(1, (dt || 0.016) * 4); // lisse les marches du relief
+    const zoomT = this.boss && !this.boss.dead ? 1.35 : 1;
     this.zoom = (this.zoom || 1) + (zoomT - (this.zoom || 1)) * Math.min(1, (dt || 0.016) * 1.5);
+    const back = 10.5 * this.zoom, up = 7.2 * this.zoom;
+    let cxp = px + sy * back, czp = pz + cy * back;
+    let cyp = this.camY + up;
+    // ne jamais passer sous une colline
+    const under = this.gh(cxp / S, czp / S) + 1.6;
+    if (cyp < under) cyp = under;
     const sh = this.shake ? (Math.random() - 0.5) * this.shake * 0.04 : 0;
-    cam.position.set(f.x + sh, f.y + 15 * this.zoom + sh, f.z + 11 * this.zoom);
-    cam.lookAt(f.x, f.y + 1.2, f.z);
+    cam.position.set(cxp + sh, cyp + sh, czp);
+    cam.lookAt(px - sy * 6, this.camY + 0.6, pz - cy * 6);
+    this.camX = cxp; this.camZ = czp; this.camFx = -sy; this.camFz = -cy; this.camBack = back;
     // familier
     if (this.petMesh) {
       const pt = this.pet;
@@ -1236,7 +1246,14 @@ export class Run {
       const vs = e.scale * (e.boss ? 0.06 : 0.068);
       const egy = this.gh(e.x, e.y);
       const hop = e.fly ? e.fly * S + Math.sin(e.bob * 0.6) * 0.3 : Math.abs(Math.sin(e.bob)) * 0.06 * e.scale;
-      e.pool.add(e.x * S, egy + hop + e.jumpH * S, e.y * S, e.ang, vs, e.flash > 0 ? 4 : e.freeze ? 1.7 : 1, 0, vs * (e.flash > 0 ? 0.85 : 1));
+      // les monstres collés à la caméra (derrière le héros) ne sont pas dessinés pour ne pas boucher la vue
+      {
+        const rx = e.x * S - this.camX, rz = e.y * S - this.camZ;
+        const along = rx * this.camFx + rz * this.camFz, lat = Math.abs(rx * -this.camFz + rz * this.camFx);
+        if (along < 4.5 || (along < this.camBack - 0.6 && lat < 2 + e.scale * 0.25)) continue;
+      }
+      const rise = Math.min(1, (this.time - e.born) / 0.45);
+      e.pool.add(e.x * S, egy + hop + e.jumpH * S - (1 - rise) * 1.2, e.y * S, e.ang, vs * (0.3 + rise * 0.7), e.flash > 0 ? 4 : e.freeze ? 1.7 : 1, 0, vs * (0.3 + rise * 0.7) * (e.flash > 0 ? 0.85 : 1));
       this.shadows.add(e.x * S, egy + 0.05, e.y * S, 0, e.r * S * 1.3);
     }
     for (const pool of this.enemyPools.values()) pool.end();

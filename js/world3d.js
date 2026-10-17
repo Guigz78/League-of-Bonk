@@ -33,7 +33,7 @@ export function buildWorld(scene, zone) {
   const r = rng('world' + zone.id);
   const sky = new THREE.Color(zone.sky[1]);
   scene.background = new THREE.Color(zone.sky[0]).lerp(sky, 0.6);
-  scene.fog = new THREE.Fog(scene.background, 26, 62);
+  scene.fog = new THREE.Fog(scene.background, 34, 95);
   scene.add(new THREE.HemisphereLight(new THREE.Color(zone.sky[1]).lerp(new THREE.Color('#ffffff'), 0.5), new THREE.Color(zone.ground[1]), zone.bg === 'void' || zone.bg === 'shadow' ? 1.6 : 2.1));
   const sun = new THREE.DirectionalLight('#fff4e0', zone.bg === 'void' || zone.bg === 'shadow' ? 1.2 : 2.2);
   sun.position.set(30, 60, 20);
