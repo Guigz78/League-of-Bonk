@@ -1,12 +1,11 @@
 // Moteur 3D façon Megabonk / PokéBonk : monde ouvert, hordes, armes automatiques,
 // saut, évolutions du champion, autels, coffres, boss géants.
-import * as THREE from '../vendor/three.module.min.js';
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, PETS, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS } from './data.js';
 import { save, playerStats } from './save.js';
-import { heroGrid, iconImg } from './art.js';
-import { makeCreature, rng } from './pixel.js';
-import { voxelGeometry } from './voxel.js';
-import { buildWorld, S, HALF } from './world3d.js';
+import { iconImg } from './art.js';
+import { rng } from './pixel.js';
+import { HALF } from './world3d.js';
+import { Gfx } from './gfx/renderer.js';
 import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
 
@@ -30,37 +29,6 @@ class Grid {
       if (a) for (const e of a) out.push(e);
     }
     return out;
-  }
-}
-
-// ---------- Groupe d'instances (dessin rapide de nombreux objets identiques) ----------
-class Pool {
-  constructor(scene, geo, mat, cap) {
-    this.mesh = new THREE.InstancedMesh(geo, mat, cap);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.frustumCulled = false;
-    this.mesh.count = 0;
-    this.cap = cap; this.i = 0;
-    this.d = new THREE.Object3D();
-    this.c = new THREE.Color();
-    scene.add(this.mesh);
-  }
-  begin() { this.i = 0; }
-  add(x, y, z, ry = 0, s = 1, color = null, rx = 0, sy = null) {
-    if (this.i >= this.cap) return;
-    const d = this.d;
-    d.position.set(x, y, z); d.rotation.set(rx, ry, 0);
-    d.scale.set(s, sy ?? s, s);
-    d.updateMatrix();
-    this.mesh.setMatrixAt(this.i, d.matrix);
-    if (color !== null) this.mesh.setColorAt(this.i, typeof color === 'number' ? this.c.setScalar(color) : this.c.set(color));
-    this.i++;
-  }
-  addMatrix(m) { if (this.i < this.cap) this.mesh.setMatrixAt(this.i++, m); }
-  end() {
-    this.mesh.count = this.i;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
   }
 }
 
@@ -95,7 +63,14 @@ export class Run {
     this.hurtFlash = 0; this.evoFlash = 0; this.ultFlash = 0;
     this.petT = 0; this.pet = save.pet ? { id: save.pet, x: -30, y: 10 } : null;
     this.slowmo = 1;
+    this.SPAWN_R = SPAWN_R;
+    this.dropChests = [];
+    this.events = []; // événements pour le rendu (coups, morts, sauts...), vidés à chaque image par gfx
+    this.placeInterest();
   }
+
+  // signale un événement aux effets visuels (n'a aucun effet sur la partie)
+  emit(type, data = {}) { if (this.events.length < 400) this.events.push({ type, t: this.time, ...data }); }
 
   // ---------- Mise en place ----------
   start() {
@@ -119,19 +94,8 @@ export class Run {
       </div>
     </div>`);
     this.cv = $('#cv');
-    this.g = this.cv.getContext('2d');
-    this.initThree();
-    this.resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      this.vw = this.cv.clientWidth; this.vh = this.cv.clientHeight;
-      this.cv.width = Math.round(this.vw * dpr); this.cv.height = Math.round(this.vh * dpr);
-      this.dpr = dpr;
-      this.renderer.setPixelRatio(Math.min(1.5, dpr));
-      this.renderer.setSize(this.vw, this.vh, false);
-      this.camera.aspect = this.vw / this.vh;
-      this.camera.fov = this.vw / this.vh < 0.7 ? 68 : 55;
-      this.camera.updateProjectionMatrix();
-    };
+    this.gfx = new Gfx(this, $('#cv3'), this.cv);
+    this.resize = () => this.gfx.resize();
     this.resize();
     window.addEventListener('resize', this.resize);
     this.bindInput();
@@ -146,124 +110,6 @@ export class Run {
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
     setTimeout(() => $('#hintBubble')?.classList.add('out'), save.stats.runs > 2 ? 3000 : 7000);
-  }
-
-  initThree() {
-    const canvas = $('#cv3');
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(60, 1, 0.3, 140);
-    this.world = buildWorld(this.scene, this.zone);
-    this.height = this.world.height;
-    this.placeInterest();
-
-    this.vmat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    // héros
-    this.heroMat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: new THREE.Color('#000000') });
-    this.hero = new THREE.Mesh(this.heroGeo(0), this.heroMat);
-    this.scene.add(this.hero);
-    // familier
-    if (this.pet) {
-      const pd = PETS[this.pet.id], cr = makeCreature('pet-' + this.pet.id, pd.body, pd.pal);
-      this.petMesh = new THREE.Mesh(voxelGeometry(cr.grid, cr.colors, { size: 0.07, maxDepth: 4 }), this.vmat);
-      this.scene.add(this.petMesh);
-    }
-    this.enemyPools = new Map();
-    const shadowGeo = new THREE.CircleGeometry(1, 12); shadowGeo.rotateX(-Math.PI / 2);
-    this.shadows = new Pool(this.scene, shadowGeo, new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.28, depthWrite: false }), 420);
-    // objets au sol
-    const gemGeo = new THREE.OctahedronGeometry(0.28, 0); gemGeo.scale(0.8, 1.2, 0.8);
-    this.gems = new Pool(this.scene, gemGeo, new THREE.MeshBasicMaterial({ color: '#ffffff' }), 900);
-    this.gems.mesh.setColorAt(0, new THREE.Color('#fff'));
-    const coinGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.08, 10); coinGeo.rotateX(Math.PI / 2);
-    this.coins = new Pool(this.scene, coinGeo, new THREE.MeshLambertMaterial({ color: '#ffc83a', emissive: '#6a4a00' }), 200);
-    this.hearts = new Pool(this.scene, new THREE.OctahedronGeometry(0.4, 0), new THREE.MeshLambertMaterial({ color: '#ff4a6a', emissive: '#6a0010' }), 40);
-    this.magnets = new Pool(this.scene, new THREE.TorusGeometry(0.35, 0.1, 6, 12), new THREE.MeshLambertMaterial({ color: '#4fa8ff', emissive: '#002a6a' }), 10);
-    // tirs
-    const unlit = c => new THREE.MeshBasicMaterial({ color: c });
-    this.pArrow = new Pool(this.scene, new THREE.BoxGeometry(0.9, 0.12, 0.12), unlit('#f0e0c0'), 300);
-    this.pDagger = new Pool(this.scene, new THREE.BoxGeometry(0.6, 0.1, 0.22), unlit('#e8eef8'), 300);
-    this.pBall = new Pool(this.scene, new THREE.SphereGeometry(0.22, 8, 6), unlit('#d0a0ff'), 120);
-    this.pSnow = new Pool(this.scene, new THREE.SphereGeometry(0.45, 10, 8), new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#4a5a6a' }), 30);
-    this.pBoom = new Pool(this.scene, new THREE.BoxGeometry(1.4, 0.12, 0.3), unlit('#f4f0e0'), 20);
-    this.pBoom2 = new Pool(this.scene, new THREE.BoxGeometry(0.3, 0.12, 1.4), unlit('#e6b422'), 20);
-    this.pCrystal = new Pool(this.scene, new THREE.OctahedronGeometry(1, 0), new THREE.MeshBasicMaterial({ color: '#9ad8ff', transparent: true, opacity: 0.85 }), 4);
-    this.pEnemyShot = new Pool(this.scene, new THREE.SphereGeometry(0.3, 8, 6), unlit('#ff3a5a'), 200);
-    this.pOrb = new Pool(this.scene, new THREE.SphereGeometry(0.38, 10, 8), unlit('#e0c0ff'), 10);
-    this.pShroom = new Pool(this.scene, new THREE.SphereGeometry(0.45, 8, 6, 0, TAU, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#ffffff' }), 20);
-    this.pShroom.mesh.setColorAt(0, new THREE.Color('#fff'));
-    // particules
-    this.pPart = new Pool(this.scene, new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshBasicMaterial({ color: '#ffffff' }), 700);
-    this.pPart.mesh.setColorAt(0, new THREE.Color('#fff'));
-    // effets au sol
-    const ringGeo = new THREE.RingGeometry(0.9, 1, 40); ringGeo.rotateX(-Math.PI / 2);
-    this.pRing = new Pool(this.scene, ringGeo, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }), 40);
-    this.pRing.mesh.setColorAt(0, new THREE.Color('#fff'));
-    const discGeo = new THREE.CircleGeometry(1, 32); discGeo.rotateX(-Math.PI / 2);
-    this.aura = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color: '#ffaa3a', transparent: true, opacity: 0.22, depthWrite: false }));
-    this.aura.visible = false; this.scene.add(this.aura);
-    this.pBeam = new Pool(this.scene, new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: '#fff6c0', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }), 8);
-    const slashGeo = new THREE.RingGeometry(0.6, 1, 20, 1, -1.2, 2.4); slashGeo.rotateX(-Math.PI / 2);
-    this.pSlash = new Pool(this.scene, slashGeo, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }), 6);
-    this.pBolt = new Pool(this.scene, new THREE.CylinderGeometry(0.14, 0.14, 1, 4), new THREE.MeshBasicMaterial({ color: '#fff7a0', blending: THREE.AdditiveBlending, transparent: true }), 16);
-    this.pools = [this.pArrow, this.pDagger, this.pBall, this.pSnow, this.pBoom, this.pBoom2, this.pCrystal, this.pEnemyShot, this.pOrb, this.pShroom, this.pPart, this.pRing, this.pBeam, this.pSlash, this.pBolt];
-    // coffres & autels
-    for (const c of this.chests) { c.mesh = this.makeChestMesh(); c.mesh.position.set(c.x * S, this.gh(c.x, c.y), c.y * S); this.scene.add(c.mesh); }
-    for (const s of this.shrines) { s.mesh = this.makeShrineMesh(); s.mesh.position.set(s.x * S, this.gh(s.x, s.y), s.y * S); this.scene.add(s.mesh); }
-    this.dropChests = [];
-    this.tv = new THREE.Vector3();
-    this.usedGemMat = new THREE.MeshBasicMaterial({ color: '#555566' });
-  }
-
-  heroGeo(evo) {
-    const ev = EVOLUTIONS[this.cls.id][evo];
-    const { grid, colors } = heroGrid(this.cls.id, { ...this.cls.colors, ...(ev.colors || {}) });
-    return voxelGeometry(grid, colors, { size: 0.14 * (1 + evo * 0.14), maxDepth: 7 });
-  }
-
-  enemyPool(def, k, boss) {
-    const key = def.name + (boss ? '!' : '');
-    if (!this.enemyPools.has(key)) {
-      const cr = makeCreature(`${this.zone.id}-${k}-${def.name}`, def.body, def.pal, { boss });
-      const pool = new Pool(this.scene, voxelGeometry(cr.grid, cr.colors, { size: 1, maxDepth: 6 }), this.vmat, boss ? 2 : 260);
-      pool.mesh.setColorAt(0, new THREE.Color('#fff'));
-      this.enemyPools.set(key, pool);
-    }
-    return this.enemyPools.get(key);
-  }
-
-  makeChestMesh() {
-    const g = new THREE.Group();
-    const wood = new THREE.MeshLambertMaterial({ color: '#a0602a' }), gold = new THREE.MeshLambertMaterial({ color: '#ffc83a', emissive: '#5a3a00' });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 0.9), wood); body.position.y = 0.4;
-    const lid = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.35, 0.95), wood); lid.position.y = 0.95;
-    const band = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 1), gold); band.position.y = 0.78;
-    const lock = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 0.1), gold); lock.position.set(0, 0.7, 0.48);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 14, 8, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd54a', transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
-    beam.position.y = 7;
-    g.add(body, lid, band, lock, beam);
-    g.userData = { lid, beam };
-    return g;
-  }
-
-  makeShrineMesh() {
-    const g = new THREE.Group();
-    const stone = new THREE.MeshLambertMaterial({ color: '#8a8aa8', flatShading: true });
-    for (let i = 0; i < 4; i++) {
-      const a = i / 4 * TAU + 0.4;
-      const pil = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.2, 0.5), stone);
-      pil.position.set(Math.cos(a) * 2.4, 1.1, Math.sin(a) * 2.4);
-      g.add(pil);
-    }
-    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.6, 0), new THREE.MeshBasicMaterial({ color: '#4fd0ff' }));
-    gem.position.y = 2.2;
-    const disc = new THREE.Mesh(new THREE.RingGeometry(2.6, 3, 32), new THREE.MeshBasicMaterial({ color: '#4fd0ff', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
-    disc.rotation.x = -Math.PI / 2; disc.position.y = 0.1;
-    const fill = new THREE.Mesh(new THREE.CircleGeometry(2.6, 32), new THREE.MeshBasicMaterial({ color: '#4fd0ff', transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
-    fill.rotation.x = -Math.PI / 2; fill.position.y = 0.08; fill.scale.setScalar(0.01);
-    g.add(gem, disc, fill);
-    g.userData = { gem, fill, disc };
-    return g;
   }
 
   placeInterest() {
@@ -290,11 +136,7 @@ export class Run {
     window.removeEventListener('resize', this.resize);
     document.removeEventListener('visibilitychange', this.onVis);
     window.removeEventListener('keydown', this.kd); window.removeEventListener('keyup', this.ku);
-    try {
-      this.scene.traverse(o => { o.geometry?.dispose?.(); if (o.material) [].concat(o.material).forEach(m => m.dispose?.()); });
-      this.renderer.dispose();
-      this.renderer.forceContextLoss?.();
-    } catch (e) { /* */ }
+    this.gfx?.dispose();
   }
 
   bindInput() {
@@ -343,6 +185,7 @@ export class Run {
     const p = this.p;
     if (this.paused || this.over || p.h > 2) return;
     p.vh = 560; p.h = 1;
+    this.emit('jump', { x: p.x, y: p.y });
     sfx('jump');
   }
 
@@ -460,14 +303,13 @@ export class Run {
     p.hp = p.maxHp;
     p.ult = 100;
     this.addWeapon(this.cls.weapon);
-    this.hero.geometry.dispose();
-    this.hero.geometry = this.heroGeo(p.evo);
     this.evoFlash = 1.2;
     p.inv = 2;
     this.burst(p.x, p.y, 40, 60, '#ffe48a');
     this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 260, life: 0.8, max: 0.8, color: '#ffd54a' });
     for (const e of this.grid.query(p.x, p.y, 260)) if (!e.boss) { e.kx += (e.x - p.x) * 4; e.ky += (e.y - p.y) * 4; }
     this.banner(`<small>Votre champion évolue !</small>${esc(ev.name)}`, 2600, 'evo');
+    this.emit('evolve', { evo: p.evo, x: p.x, y: p.y });
     this.renderEvo();
     sfx('evolve'); buzz(80);
   }
@@ -506,7 +348,7 @@ export class Run {
       let d = target - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * Math.min(1, dt * 2.4 * Math.min(1, ml));
     }
-    if (p.h > 0 || p.vh > 0) { p.vh -= 1700 * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) p.vh = 0; }
+    if (p.h > 0 || p.vh > 0) { p.vh -= 1700 * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) { p.vh = 0; this.emit('land', { x: p.x, y: p.y }); } }
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
 
@@ -559,12 +401,14 @@ export class Run {
     }
     if (t >= this.nextElite && !this.bossSpawned) {
       this.nextElite += 45;
-      this.addEnemy(mons[4], 4, { elite: true });
+      const el = this.addEnemy(mons[4], 4, { elite: true });
+      this.emit('elite', { e: el });
       this.banner('Un ennemi <span class="tag elite">ÉLITE</span> approche !', 1600);
       sfx('honk');
     }
     if (this.swarms.length && t >= this.swarms[0]) {
       this.swarms.shift();
+      this.emit('swarm', {});
       const n = 18 + z.id * 2, k = Math.min(pool, 3), def = mons[k];
       for (let i = 0; i < n; i++) {
         const a = i / n * TAU, R = 430;
@@ -587,7 +431,7 @@ export class Run {
     if (o.elite) { hp *= 10; dmg *= 1.5; scale = 3.6; speed *= 0.85; }
     if (o.boss) { hp = def.hp * 8 * tier * (1 + z.id * 0.8); dmg = def.atk * 1.1 * tier * (1 + z.id * 0.1); scale = 8; speed *= 0.8; }
     const e = {
-      def, k, x, y, hp, maxHp: hp, dmg, speed, scale, r: 7 * scale, pool: this.enemyPool(def, k, !!o.boss),
+      def, k, x, y, hp, maxHp: hp, dmg, speed, scale, r: 7 * scale,
       elite: !!o.elite, boss: !!o.boss, ranged: def.ranged && !o.boss, shootT: rand(1, 3), fly: FLYERS[def.body] || 0,
       flash: 0, slow: 0, freeze: 0, kx: 0, ky: 0, hitT: {}, bob: Math.random() * TAU, dead: false, jumpH: 0,
       phase: 'chase', phaseT: 3, dashX: 0, dashY: 0, ang: 0, born: this.time,
@@ -601,6 +445,7 @@ export class Run {
     const z = this.zone, def = z.boss || z.monsters[4];
     const a = Math.random() * TAU;
     this.boss = this.addEnemy(def, z.boss ? 5 : 4, { boss: true, x: this.p.x + Math.cos(a) * 380, y: this.p.y + Math.sin(a) * 380 });
+    this.emit('boss', { e: this.boss });
     $('#bossbar').hidden = false;
     $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`;
     this.banner(`<small>${esc(def.title || 'Le chef de la horde')}</small>${esc(def.name)}`, 2400, 'boss');
@@ -652,12 +497,13 @@ export class Run {
           const r = Math.random();
           e.phase = r < 0.3 ? 'aim' : r < 0.55 ? 'stomp' : r < 0.78 ? 'ring' : 'summon';
           e.phaseT = e.phase === 'aim' || e.phase === 'stomp' ? 0.9 : 0.4;
-          if (e.phase === 'aim') { e.dashX = nx; e.dashY = ny; }
+          if (e.phase === 'aim') { e.dashX = nx; e.dashY = ny; this.emit('bossAim', { e, dx: nx, dy: ny }); }
+          if (e.phase === 'stomp') this.emit('bossJump', { e });
           if (e.phase === 'stomp') this.msg('Sautez pour éviter l\'onde de choc !');
         }
         return [nx * sp, ny * sp];
       case 'aim':
-        if (e.phaseT <= 0) { e.phase = 'dash'; e.phaseT = 0.6; sfx('charge'); }
+        if (e.phaseT <= 0) { e.phase = 'dash'; e.phaseT = 0.6; sfx('charge'); this.emit('bossDash', { e }); }
         return [0, 0];
       case 'dash':
         if (e.phaseT <= 0) { e.phase = 'chase'; e.phaseT = rand(2.2, 3.6); }
@@ -668,6 +514,7 @@ export class Run {
         if (e.phaseT <= 0) {
           e.jumpH = 0; e.phase = 'chase'; e.phaseT = rand(2.5, 3.8);
           this.waves.push({ x: e.x, y: e.y, r: e.r, max: 540, speed: 330, dmg: e.dmg * 0.9, hit: false });
+          this.emit('bossStomp', { e, x: e.x, y: e.y });
           this.shake = 12; sfx('stomp'); buzz(50);
           this.burst(e.x, e.y, 30, 0, e.def.pal[1], 4);
         }
@@ -707,6 +554,7 @@ export class Run {
     const d = Math.max(1, Math.round(dmg * (1 - p.armor)));
     p.hp -= d;
     p.inv = 0.5;
+    this.emit('hurt', { x: p.x, y: p.y, dmg: d, src: src || null });
     this.shake = 6;
     this.hurtFlash = 0.25;
     this.text(p.x, p.y, 60, '-' + d, '#ff6a6a', 1.1);
@@ -957,6 +805,7 @@ export class Run {
     const d = Math.max(1, Math.round(dmg * (crit ? 2 : 1) * rand(0.92, 1.08)));
     e.hp -= d;
     e.flash = 0.09;
+    this.emit('hit', { e, x: e.x, y: e.y, dmg: d, crit, color: o.color || null, quiet: !!o.quiet });
     if (o.knock && !e.boss) { const k = o.knock * (e.elite ? 0.3 : 1); e.kx += (o.kx || 0) * k; e.ky += (o.ky || 0) * k; }
     if (this.texts.length < 60 && (!o.quiet || crit)) this.text(e.x + rand(-8, 8), e.y, e.r * 2.4 + e.fly, fmt(d), crit ? '#ffd54a' : (o.color || '#ffffff'), crit ? 1.4 : 1);
     if (!o.quiet) sfx(crit ? 'crit' : 'hit');
@@ -965,6 +814,7 @@ export class Run {
 
   kill(e) {
     e.dead = true;
+    this.emit('kill', { e, x: e.x, y: e.y });
     this.kills++;
     if (!e.boss) sfx('kill');
     const p = this.p, z = this.zone;
@@ -982,10 +832,7 @@ export class Run {
   }
 
   dropChest(x, y) {
-    const mesh = this.makeChestMesh();
-    mesh.position.set(x * S, this.gh(x, y), y * S);
-    this.scene.add(mesh);
-    this.dropChests.push({ x, y, mesh, open: false });
+    this.dropChests.push({ x, y, open: false });
   }
 
   burst(x, y, n, z = 0, color = '#ffffff', scale = 2) {
@@ -1009,6 +856,7 @@ export class Run {
         it.x += dx / d * sp * dt; it.y += dy / d * sp * dt;
         if (d < 18) {
           it.taken = true;
+          this.emit('pickup', { kind: it.type, x: it.x, y: it.y, v: it.v || 0 });
           if (it.type === 'xp') { this.gainXp(it.v); sfx('gem'); }
           if (it.type === 'gold') { this.gold += it.v; sfx('coin'); }
           if (it.type === 'heart') { const h = Math.round(p.maxHp * 0.25); p.hp = Math.min(p.maxHp, p.hp + h); this.text(p.x, p.y, 70, '+' + h, '#5ae87a', 1.2); sfx('heal'); }
@@ -1044,6 +892,7 @@ export class Run {
       if (inside && !s.told) { s.told = true; this.msg('Restez dans le cercle pour activer l\'autel'); }
       if (s.charge >= 1 && !this.paused) {
         s.used = true;
+        this.emit('shrine', { x: s.x, y: s.y });
         sfx('shrine'); buzz(40);
         this.burst(s.x, s.y, 30, 40, '#4fd0ff');
         this.paused = true; this.joy = null; this.look = null;
@@ -1060,10 +909,12 @@ export class Run {
       p.level++;
       p.xpNext = Math.round(4 + (p.level - 1) * 2.6 + Math.pow(p.level, 1.25));
       this.pending++;
+      this.emit('levelup', { level: p.level });
     }
   }
 
   openChest(c) {
+    this.emit('chest', { x: c.x, y: c.y });
     if (this.paused) { c.open = false; return; }
     this.paused = true; this.joy = null; this.look = null;
     const ch = this.choices(1)[0];
@@ -1071,8 +922,6 @@ export class Run {
     this.gold += g;
     sfx('chest');
     this.burst(c.x, c.y, 30, 20, '#ffd54a');
-    c.mesh.userData.lid.rotation.x = -1.2; c.mesh.userData.lid.position.z = -0.35;
-    c.mesh.userData.beam.visible = false;
     this.onChest(ch, g, () => { this.applyChoice(ch); this.paused = false; this.last = performance.now(); });
   }
 
@@ -1128,6 +977,7 @@ export class Run {
       p.inv = 3;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 240, life: 0.5, max: 0.5, color: '#ffffff' });
     }
+    this.emit('ult', { kind: this.cls.ult, x: p.x, y: p.y });
     this.banner(esc(ULTS[this.cls.ult].name), 900, 'ult');
   }
 
@@ -1135,6 +985,7 @@ export class Run {
   die() {
     if (this.over || this.dying) return;
     this.dying = true;
+    this.emit('die', { x: this.p.x, y: this.p.y });
     this.paused = true; this.joy = null; this.look = null;
     duckMusic(true);
     sfx('lose'); buzz(80);
@@ -1144,6 +995,7 @@ export class Run {
   revive() {
     const p = this.p;
     this.revived = true; this.dying = false;
+    this.emit('revive', { x: p.x, y: p.y });
     p.hp = p.maxHp; p.inv = 3;
     this.eshots = []; this.waves = [];
     duckMusic(false);
@@ -1156,6 +1008,7 @@ export class Run {
   win() {
     if (this.over || this.winning) return;
     this.winning = true;
+    this.emit('win', {});
     this.slowmo = 0.25;
     stopMusic();
     sfx('win'); buzz(80);
@@ -1198,193 +1051,6 @@ export class Run {
     }
   }
 
-  // ---------- Rendu 3D ----------
-  gh(x, y) { return this.height(x, y) * S; }
-
-  render(dt) {
-    const p = this.p, t = this.time, cam = this.camera;
-    const px = p.x * S, pz = p.y * S, gy = this.gh(p.x, p.y), py = gy + p.h * S;
-    const bob = p.moving && p.h === 0 ? Math.abs(Math.sin(t * 13)) * 0.12 : 0;
-    this.hero.position.set(px, py + bob, pz);
-    // le sprite voxel est vu de 3/4 : de profil, tourné vers la direction de course
-    const sideX = p.face.x * Math.cos(this.yaw) - p.face.y * Math.sin(this.yaw);
-    if (Math.abs(sideX) > 0.15) this.heroFlip = sideX < 0 ? -1 : 1;
-    this.heroTurn = (this.heroTurn ?? 1) + ((this.heroFlip ?? 1) - (this.heroTurn ?? 1)) * Math.min(1, (dt || 0) * 12);
-    this.hero.rotation.y = this.yaw + this.heroTurn * 0.75;
-    this.hero.visible = !(p.inv > 0 && p.inv < 2.5 && !this.evoFlash && Math.floor(t * 20) % 2);
-    this.heroMat.emissive.setRGB(this.hurtFlash * 3 + this.evoFlash * 0.8, this.evoFlash * 0.7, this.evoFlash * 0.2);
-    const hs = 1 + Math.max(0, this.evoFlash - 0.6) * 0.8;
-    this.hero.scale.set(hs * this.heroTurn, hs, hs);
-    // caméra derrière le champion
-    // caméra basse dans le dos du champion : on voit loin devant
-    const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
-    this.camY = (this.camY ?? gy) + (gy - (this.camY ?? gy)) * Math.min(1, (dt || 0.016) * 4); // lisse les marches du relief
-    const zoomT = this.boss && !this.boss.dead ? 1.35 : 1;
-    this.zoom = (this.zoom || 1) + (zoomT - (this.zoom || 1)) * Math.min(1, (dt || 0.016) * 1.5);
-    const back = 10.5 * this.zoom, up = 7.2 * this.zoom;
-    let cxp = px + sy * back, czp = pz + cy * back;
-    let cyp = this.camY + up;
-    // ne jamais passer sous une colline
-    const under = this.gh(cxp / S, czp / S) + 1.6;
-    if (cyp < under) cyp = under;
-    const sh = this.shake ? (Math.random() - 0.5) * this.shake * 0.04 : 0;
-    cam.position.set(cxp + sh, cyp + sh, czp);
-    cam.lookAt(px - sy * 6, this.camY + 0.6, pz - cy * 6);
-    this.camX = cxp; this.camZ = czp; this.camFx = -sy; this.camFz = -cy; this.camBack = back;
-    // familier
-    if (this.petMesh) {
-      const pt = this.pet;
-      this.petMesh.position.set(pt.x * S, this.gh(pt.x, pt.y) + 0.6 + Math.abs(Math.sin(t * 9)) * 0.25, pt.y * S);
-      this.petMesh.rotation.y = Math.atan2(p.x - pt.x, p.y - pt.y);
-    }
-    // ennemis
-    for (const pool of this.enemyPools.values()) pool.begin();
-    this.shadows.begin();
-    this.shadows.add(px, gy + 0.05, pz, 0, 0.9);
-    for (const e of this.enemies) {
-      if (dist2(e, p) > (SPAWN_R + 200) ** 2) continue;
-      const vs = e.scale * (e.boss ? 0.06 : 0.068);
-      const egy = this.gh(e.x, e.y);
-      const hop = e.fly ? e.fly * S + Math.sin(e.bob * 0.6) * 0.3 : Math.abs(Math.sin(e.bob)) * 0.06 * e.scale;
-      // les monstres collés à la caméra (derrière le héros) ne sont pas dessinés pour ne pas boucher la vue
-      {
-        const rx = e.x * S - this.camX, rz = e.y * S - this.camZ;
-        const along = rx * this.camFx + rz * this.camFz, lat = Math.abs(rx * -this.camFz + rz * this.camFx);
-        if (along < 4.5 || (along < this.camBack - 0.6 && lat < 2 + e.scale * 0.25)) continue;
-      }
-      const rise = Math.min(1, (this.time - e.born) / 0.45);
-      e.pool.add(e.x * S, egy + hop + e.jumpH * S - (1 - rise) * 1.2, e.y * S, e.ang, vs * (0.3 + rise * 0.7), e.flash > 0 ? 4 : e.freeze ? 1.7 : 1, 0, vs * (0.3 + rise * 0.7) * (e.flash > 0 ? 0.85 : 1));
-      this.shadows.add(e.x * S, egy + 0.05, e.y * S, 0, e.r * S * 1.3);
-    }
-    for (const pool of this.enemyPools.values()) pool.end();
-    this.shadows.end();
-    // objets au sol
-    this.gems.begin(); this.coins.begin(); this.hearts.begin(); this.magnets.begin();
-    for (const it of this.pickups) {
-      if (dist2(it, p) > 900 * 900) continue;
-      const y = this.gh(it.x, it.y) + 0.45 + Math.sin(t * 4 + it.x) * 0.1;
-      if (it.type === 'xp') this.gems.add(it.x * S, y, it.y * S, t * 3 + (it.spin || 0), it.v >= 15 ? 1.6 : it.v >= 3 ? 1.2 : 1, it.v >= 15 ? '#ff5a8a' : it.v >= 3 ? '#5ae87a' : '#4fc8ff');
-      else if (it.type === 'gold') this.coins.add(it.x * S, y, it.y * S, t * 4);
-      else if (it.type === 'heart') this.hearts.add(it.x * S, y + 0.2, it.y * S, t * 2);
-      else if (it.type === 'magnet') this.magnets.add(it.x * S, y + 0.2, it.y * S, t * 2);
-    }
-    this.gems.end(); this.coins.end(); this.hearts.end(); this.magnets.end();
-    // tirs et effets
-    for (const pl of this.pools) pl.begin();
-    for (const s of this.shots) {
-      const y = this.gh(s.x, s.y) + (s.z || 26) * S;
-      const a = Math.atan2(-s.vy, s.vx);
-      if (s.type === 'arrow') this.pArrow.add(s.x * S, y, s.y * S, a);
-      else if (s.type === 'dagger') this.pDagger.add(s.x * S, y, s.y * S, a);
-      else if (s.type === 'boom') { this.pBoom.add(s.x * S, y, s.y * S, s.spin, s.r / 15); this.pBoom2.add(s.x * S, y, s.y * S, s.spin, s.r / 15); }
-      else if (s.type === 'snow') this.pSnow.add(s.x * S, this.gh(s.x, s.y) + s.z * S, s.y * S);
-      else if (s.type === 'crystal') this.pCrystal.add(s.x * S, y + 0.5, s.y * S, a, 1.6, null, 0, 1.6);
-      else this.pBall.add(s.x * S, y, s.y * S);
-    }
-    for (const s of this.eshots) this.pEnemyShot.add(s.x * S, this.gh(s.x, s.y) + s.z * S, s.y * S, 0, s.r / 9);
-    for (const w of p.weapons) if (w.orbs && w.id === 'orbs') for (const [ox, oy] of w.orbs) this.pOrb.add(ox * S, this.gh(ox, oy) + 1.2, oy * S);
-    for (const m of this.mines) this.pShroom.add(m.x * S, this.gh(m.x, m.y), m.y * S, 0, 1, m.arm > 0 ? '#8aa86a' : '#e04a4a');
-    for (const q of this.parts) this.pPart.add(q.x * S, this.gh(q.x, q.y) + q.z * S, q.y * S, q.life * 8, q.s * Math.min(1, q.life * 2), q.c);
-    for (const f of this.fx) {
-      const k = f.life / f.max, fgy = this.gh(f.x, f.y);
-      if (f.type === 'ring') this.pRing.add(f.x * S, fgy + 0.15, f.y * S, 0, f.r * S * (1 - k * 0.75), f.color);
-      else if (f.type === 'beam') {
-        const cx2 = Math.cos(f.a), cy2 = Math.sin(f.a), mx = f.x + cx2 * f.len / 2, my = f.y + cy2 * f.len / 2;
-        const d = this.pBeam.d;
-        d.position.set(mx * S, fgy + 1.3, my * S); d.rotation.set(0, Math.atan2(-cy2, cx2), 0);
-        d.scale.set(f.len * S, Math.max(0.05, f.w * S * k), Math.max(0.05, f.w * S * k)); d.updateMatrix();
-        this.pBeam.addMatrix(d.matrix);
-      } else if (f.type === 'slash') this.pSlash.add(f.x * S, fgy + 1, f.y * S, Math.atan2(-Math.sin(f.a), Math.cos(f.a)) + (1 - k) * 1.5 - 0.75, f.r * S);
-      else if (f.type === 'bolt') this.pBolt.add(f.x * S, fgy + 6, f.y * S, 0, k * 1.5 + 0.5, null, 0, 12);
-    }
-    for (const w of this.waves) this.pRing.add(w.x * S, this.gh(w.x, w.y) + 0.2, w.y * S, 0, w.r * S, '#ff5a3a');
-    for (const pl of this.pools) pl.end();
-    // aura
-    const aura = p.weapons.find(w => w.id === 'aura');
-    this.aura.visible = !!aura?.R;
-    if (aura?.R) { this.aura.position.set(px, gy + 0.12, pz); this.aura.scale.setScalar(aura.R * S); }
-    // coffres & autels
-    for (const c of this.chests.concat(this.dropChests)) if (!c.open) { c.mesh.userData.beam.material.opacity = 0.12 + Math.sin(t * 3) * 0.06; c.mesh.rotation.y = Math.sin(t) * 0.15; }
-    for (const s of this.shrines) {
-      const m = s.mesh.userData;
-      m.gem.rotation.y = t * 2; m.gem.position.y = 2.2 + Math.sin(t * 2 + s.x) * 0.2;
-      m.fill.scale.setScalar(Math.max(0.01, s.charge));
-      if (s.used && m.disc.visible) { m.gem.material = this.usedGemMat; m.disc.visible = false; m.fill.visible = false; }
-    }
-    this.renderer.render(this.scene, cam);
-    this.render2d();
-  }
-
-  project(x, y, z) {
-    const v = this.tv.set(x * S, this.gh(x, y) + z * S, y * S).project(this.camera);
-    if (v.z > 1 || v.z < -1) return null;
-    return [(v.x + 1) / 2 * this.vw, (1 - v.y) / 2 * this.vh];
-  }
-
-  render2d() {
-    const g = this.g, p = this.p, vw = this.vw, vh = this.vh;
-    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    g.clearRect(0, 0, vw, vh);
-    // barre de vie sous le héros
-    const hp = this.project(p.x, p.y, p.h - 6);
-    if (hp) {
-      const bw = 50, ratio = Math.max(0, p.hp / p.maxHp);
-      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(hp[0] - bw / 2 - 1, hp[1] + 4, bw + 2, 7);
-      g.fillStyle = ratio < 0.3 ? '#ff7a4a' : '#5ae87a'; g.fillRect(hp[0] - bw / 2, hp[1] + 5, bw * ratio, 5);
-    }
-    for (const e of this.enemies) if (e.elite && !e.dead) {
-      const s = this.project(e.x, e.y, e.r * 2.6 + e.fly); if (!s) continue;
-      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(s[0] - 26, s[1], 52, 6);
-      g.fillStyle = '#c06aff'; g.fillRect(s[0] - 25, s[1] + 1, 50 * Math.max(0, e.hp / e.maxHp), 4);
-    }
-    g.textAlign = 'center';
-    for (const c of this.chests) if (!c.open && dist2(c, p) < 340 * 340) {
-      const s = this.project(c.x, c.y, 55); if (!s) continue;
-      g.font = '800 13px ui-rounded, system-ui, sans-serif';
-      g.fillStyle = 'rgba(10,6,20,.8)'; g.fillRect(s[0] - 30, s[1] - 14, 60, 20);
-      g.fillStyle = this.gold >= this.chestCost ? '#ffd54a' : '#ff9a8a'; g.fillText(`${this.chestCost} or`, s[0], s[1] + 1);
-    }
-    for (const tx of this.texts) {
-      const s = this.project(tx.x, tx.y, tx.z); if (!s) continue;
-      g.globalAlpha = Math.min(1, tx.life * 3);
-      g.font = `900 ${Math.round(15 * tx.size)}px ui-rounded, system-ui, sans-serif`;
-      g.lineWidth = 3; g.strokeStyle = '#000'; g.strokeText(tx.txt, s[0], s[1]);
-      g.fillStyle = tx.color; g.fillText(tx.txt, s[0], s[1]);
-    }
-    g.globalAlpha = 1;
-    this.minimap(g, vw);
-    if (this.ultFlash > 0) { g.fillStyle = `rgba(255,240,200,${this.ultFlash})`; g.fillRect(0, 0, vw, vh); }
-    if (this.evoFlash > 0.6) { g.fillStyle = `rgba(255,250,220,${(this.evoFlash - 0.6) * 1.2})`; g.fillRect(0, 0, vw, vh); }
-    if (this.hurtFlash > 0) { g.fillStyle = `rgba(255,40,60,${this.hurtFlash})`; g.fillRect(0, 0, vw, vh); }
-    if (this.joy) {
-      const j = this.joy, r = this.cv.getBoundingClientRect();
-      const ox = j.ox - r.left, oy = j.oy - r.top;
-      let kx = j.x - j.ox, ky = j.y - j.oy; const d = Math.hypot(kx, ky); if (d > 50) { kx *= 50 / d; ky *= 50 / d; }
-      g.fillStyle = 'rgba(255,255,255,.12)'; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2;
-      g.beginPath(); g.arc(ox, oy, 54, 0, TAU); g.fill(); g.stroke();
-      g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(ox + kx, oy + ky, 24, 0, TAU); g.fill();
-    }
-  }
-
-  minimap(g, vw) {
-    const p = this.p, R = 44, cx = vw - R - 12, cy = 158, range = 900;
-    g.save();
-    g.beginPath(); g.arc(cx, cy, R, 0, TAU);
-    g.fillStyle = 'rgba(10,6,20,.6)'; g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 2; g.stroke();
-    g.clip();
-    // le haut de la mini-carte = la direction regardée par la caméra
-    const c = Math.cos(this.yaw), s = Math.sin(this.yaw);
-    const dot = (x, y, col, r) => {
-      const dx = (x - p.x) / range * R, dy = (y - p.y) / range * R;
-      g.fillStyle = col; g.beginPath(); g.arc(cx + dx * c - dy * s, cy + dx * s + dy * c, r, 0, TAU); g.fill();
-    };
-    for (const e of this.enemies) if (!e.boss && dist2(e, p) < range * range) dot(e.x, e.y, 'rgba(255,90,90,.6)', 1.3);
-    for (const ch of this.chests) if (!ch.open) dot(ch.x, ch.y, '#ffc83a', 3);
-    for (const ch of this.dropChests) if (!ch.open) dot(ch.x, ch.y, '#ffc83a', 3);
-    for (const sh of this.shrines) if (!sh.used) dot(sh.x, sh.y, '#4fd0ff', 3.2);
-    if (this.boss && !this.boss.dead) dot(this.boss.x, this.boss.y, '#ff2a4a', 4.5);
-    g.restore();
-    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(cx, cy - 5); g.lineTo(cx + 4, cy + 4); g.lineTo(cx - 4, cy + 4); g.fill();
-  }
+  // ---------- Rendu ----------
+  render(dt) { this.gfx.render(dt); }
 }
