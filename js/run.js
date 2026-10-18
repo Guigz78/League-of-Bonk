@@ -2,8 +2,11 @@
 // saut, évolutions du champion, autels, coffres, boss géants.
 // Difficulté : niveaux Normal / Difficile / Cauchemar par zone, comportements par type de monstre
 // (chaque attaque spéciale est annoncée par l'événement 'enemyTelegraph' avant d'agir), élites à pouvoirs,
-// boss à phase de rage.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, PETS, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF } from './data.js';
+// boss en 3 phases.
+// Expédition : une partie enchaîne les mondes. Dans chaque monde, l'autel invoque le boss dans une arène ;
+// sa mort ouvre un portail vers le monde suivant (plus dur). Chrono écoulé : les monstres deviennent fous.
+// Totems de défi (plus dur contre des récompenses), coffres de butin ramassés pendant la partie, bonus de départ.
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS } from './data.js';
 import { save, playerStats } from './save.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -22,10 +25,17 @@ const BODY = {
 };
 const BODY0 = { hp: 1, knock: 1, dmg: 1 };
 const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
-const BOSS_HP = 22;     // PV du boss = PV de base × BOSS_HP × zone × difficulté
+const BOSS_HP = 33;     // PV du boss = PV de base × BOSS_HP × zone × difficulté × monde traversé
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const SPAWN_R = 800, VIEW_R = 520;
+const ARENA_R = 420;    // rayon de l'arène du boss
+const OT_STEP = 15;     // secondes entre deux niveaux de folie après le chrono
+const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le chrono), le monde s'effondre
+const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
+const WORLD_SHORT = ['Voie du Milieu', 'Jungle', 'Rivière', 'Abîme Glacial', 'Îles Ombreuses', 'Le Vide'];
+const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 // ---------- Grille spatiale ----------
 class Grid {
@@ -44,40 +54,35 @@ class Grid {
 }
 
 export class Run {
-  constructor({ zone, diff = 0, onEnd, onPause, onLevelUp, onChest, onDefeat }) {
+  constructor({ zone, diff = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal }) {
     this.zone = zone;
+    this.startZone = zone.id;
     this.diffId = Math.max(0, Math.min(DIFFICULTIES.length - 1, diff | 0));
     this.diff = DIFFICULTIES[this.diffId];
     this.cls = CLASSES[save.cls];
-    this.onEnd = onEnd; this.onPause = onPause; this.onLevelUp = onLevelUp; this.onChest = onChest; this.onDefeat = onDefeat;
-    this.duration = ZONE_TIME[zone.id];
-    this.replay = save.zoneCleared[zone.id];
+    this.onEnd = onEnd; this.onPause = onPause; this.onLevelUp = onLevelUp; this.onChest = onChest; this.onDefeat = onDefeat; this.onPortal = onPortal;
+    // bonus choisis avant la partie (déjà consommés par l'interface)
+    this.boosts = [...new Set(boosts || [])].filter(id => BOOSTS[id]);
+    const has = id => this.boosts.includes(id);
     const st = playerStats();
+    if (has('vigueur')) st.hp = Math.round(st.hp * 1.25);
+    if (has('fortune')) { st.gold *= 1.4; st.magnet *= 1.3; }
     this.base = st;
+    this.bDmg = has('rage') ? 1.2 : 1; this.bXp = has('sagesse') ? 1.3 : 1;
+    this.phoenix = has('phenix');
     this.p = {
       x: 0, y: 0, h: 0, vh: 0, r: 14, face: { x: 0, y: -1 },
       maxHp: st.hp, hp: st.hp, atk: st.atk, crit: st.crit, regen: st.regen * 0.1 * this.diff.heal,
       speed: 160 * st.speed, magnet: 95 * st.magnet * (save.pet === 'phenix' ? 1.4 : 1),
       armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1,
-      inv: 0, shieldHit: 0, level: 1, xp: 0, xpNext: 5, ult: 0,
+      inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: 5, ult: 0,
       weapons: [], tomes: {}, boons: {}, evo: 0,
     };
     this.addWeapon(this.cls.weapon);
-    this.enemies = []; this.shots = []; this.eshots = []; this.fx = []; this.pickups = []; this.texts = []; this.mines = []; this.parts = []; this.waves = [];
+    this.recalc();
     this.grid = new Grid(64);
-    this.time = 0; this.kills = 0; this.gold = 0;
-    this.spawnAcc = 0;
-    // élites plus fréquentes, 4 hordes de plus en plus denses, plafond de monstres selon la zone et le niveau
-    this.nextElite = 35;
-    this.eliteGap = (zone.id ? 30 : 34) * this.diff.elite;
-    this.swarms = [0.25, 0.46, 0.66, 0.85].map(f => f * this.duration);
-    this.swarmN = 0;
-    this.cap = Math.min(HARD_CAP - 10, Math.round((150 + zone.id * 16) * (1 + (this.diff.spawn - 1) * 0.6)));
-    this.pack = 0; this.packX = 0; this.packY = 0;
-    this.bombs = [];          // attaques de zone à retardement (explosions, météores) : { x, y, R, t, dmg, kind, e }
+    this.kills = 0; this.gold = 0;
     this.mv = { x: 0, y: 0 }; // vitesse calculée par l'IA d'un monstre (réutilisée, pas d'allocation)
-    this.acts = 0;            // attaques spéciales en cours (limitées pour rester lisibles)
-    this.boss = null; this.bossSpawned = false;
     this.paused = false; this.over = false; this.revived = false;
     this.pending = 0;
     this.joy = null; this.look = null; this.yaw = 0;
@@ -85,10 +90,45 @@ export class Run {
     this.shake = 0; this.hitSfxT = 0; this.msgT = 0;
     this.hurtFlash = 0; this.evoFlash = 0; this.ultFlash = 0;
     this.petT = 0; this.pet = save.pet ? { id: save.pet, x: -30, y: 10 } : null;
-    this.slowmo = 1; this.hitStop = 0;
+    this.slowmo = 1; this.hitStop = 0; this.celebT = 0;
     this.SPAWN_R = SPAWN_R;
-    this.dropChests = [];
     this.events = []; // événements pour le rendu (coups, morts, sauts...), vidés à chaque image par gfx
+    // expédition : monde courant dans la partie, temps total, mondes nettoyés, butin, totems activés
+    this.stage = 0; this.runTime = 0; this.cleared = []; this.loot = []; this.heat = 0;
+    this.lootLuck = 0;        // chance d'améliorer le rang de chaque coffre de butin (totem maudit)
+    this.runHp = 1;           // PV des monstres pour le reste de la partie (totem maudit)
+    this.setupWorld();
+    if (has('depart')) { // départ éclair : niveau 4, 3 améliorations à choisir tout de suite
+      const p = this.p;
+      p.level = 4; p.xpNext = Math.round(5 + 3 * 4 + Math.pow(4, 1.6)); this.pending = 3;
+    }
+  }
+
+  // (re)met en place le monde courant : au départ et à chaque passage de portail
+  setupWorld() {
+    const z = this.zone, D = this.diff;
+    this.duration = ZONE_TIME[z.id];
+    this.time = 0;
+    this.enemies = []; this.shots = []; this.eshots = []; this.fx = []; this.pickups = []; this.texts = []; this.mines = []; this.parts = []; this.waves = [];
+    this.bombs = [];          // attaques de zone à retardement (explosions, météores) : { x, y, R, t, dmg, kind, e }
+    this.dropChests = [];
+    this.spawnAcc = 0;
+    // élites plus fréquentes, 4 hordes de plus en plus denses, plafond de monstres selon la zone et le niveau
+    this.nextElite = 35;
+    this.eliteGap = (z.id ? 30 : 34) * D.elite;
+    this.swarms = [0.25, 0.46, 0.66, 0.85].map(f => f * this.duration);
+    this.swarmN = 0;
+    this.cap = Math.min(HARD_CAP - 10, Math.round((150 + z.id * 16 + this.stage * 12) * (1 + (D.spawn - 1) * 0.6)));
+    this.pack = 0; this.packX = 0; this.packY = 0;
+    this.acts = 0;            // attaques spéciales en cours (limitées pour rester lisibles)
+    this.boss = null; this.bossSpawned = false;
+    this.arena = null; this.portal = null; this.entering = 0;
+    this.overtime = 0; this.otLevel = 0; this.doomT = 0;
+    // modificateurs de ce monde (totems) : apparitions, or, dégâts, vitesse, intervalle des élites
+    this.wm = { spawn: 1, gold: 1, dmg: 1, speed: 1, elite: 1 };
+    // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
+    const st = this.stage, carry = this.runTime;
+    this.sk = { hp: (1 + 1.0 * st) * (1 + carry / 300), dmg: (1 + 0.45 * st) * (1 + carry / 700), boss: 1 + 1.6 * st };
     this.placeInterest();
   }
 
@@ -103,13 +143,16 @@ export class Run {
       <div class="hud">
         <div class="hud-top">
           <button class="icon-btn" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
-          <div class="timer"><b id="timer">0:00</b><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
-          <div class="hud-right"><span>${iconImg('skull', 16)}<b id="killsN">0</b></span><span>${iconImg('gold', 16)}<b id="goldRun">0</b></span></div>
+          <div class="timer"><span class="world-tag" id="worldTag"></span><b id="timer">0:00</b><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
+          <div class="hud-right">
+            <span>${iconImg('skull', 16)}<b id="killsN">0</b></span><span>${iconImg('gold', 16)}<b id="goldRun">0</b></span>
+            <span class="hr-loot" id="lootPill"><i class="hud-chest"></i><b id="lootN">0</b></span><span class="hr-heat" id="heatPill" hidden>${iconImg('i_burn', 16)}<b id="heatN">0</b></span>
+          </div>
         </div>
         <div class="xpbar"><div class="fill" id="xpFill"></div><span id="lvl">Niv. 1</span></div>
         <div class="evo-line" id="evoLine"></div>
         <div class="loadout" id="loadout"></div>
-        <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><span></span></div></div>
+        <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
         <div class="banner" id="banner"></div>
         <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir.<br>Touchez rapidement l'écran pour sauter.<br>Votre champion attaque tout seul !</div>
         <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 30)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
@@ -127,7 +170,8 @@ export class Run {
     document.addEventListener('visibilitychange', this.onVis);
     this.renderLoadout();
     this.renderEvo();
-    this.banner(`<small>${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Survivez ${Math.round(this.duration / 60)} minutes !`, 2200);
+    this.renderWorld();
+    this.banner(`<small>Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
     music('zone' + this.zone.id);
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -135,17 +179,30 @@ export class Run {
   }
 
   placeInterest() {
-    const r = rng('poi' + this.zone.id + ':' + save.stats.runs);
+    const r = rng('poi' + this.zone.id + ':' + save.stats.runs + ':' + this.stage);
     const spots = [];
-    const pick = minD => {
-      for (let t = 0; t < 60; t++) {
-        const x = (r() * 2 - 1) * (HALF - 220), y = (r() * 2 - 1) * (HALF - 220);
-        if (Math.hypot(x, y) < minD) continue;
-        if (spots.some(s => Math.hypot(s.x - x, s.y - y) < 260)) continue;
-        spots.push({ x, y }); return { x, y };
+    // point libre : à une distance du départ comprise entre minD et maxD (sinon n'importe où au-delà de minD)
+    const pick = (minD, maxD = 0, gap = 260, lim = HALF - 220) => {
+      for (let t = 0; t < 120; t++) {
+        let x, y;
+        if (maxD) { const a = r() * TAU, d = minD + r() * (maxD - minD); x = Math.cos(a) * d; y = Math.sin(a) * d; }
+        else { x = (r() * 2 - 1) * lim; y = (r() * 2 - 1) * lim; }
+        if (Math.abs(x) > lim || Math.abs(y) > lim || Math.hypot(x, y) < minD) continue;
+        if (spots.some(s => Math.hypot(s.x - x, s.y - y) < Math.max(gap, s.gap))) continue;
+        spots.push({ x, y, gap }); return { x, y };
       }
-      return { x: rand(-800, 800), y: rand(-800, 800) };
+      const a = r() * TAU, d = maxD || minD + 200, s = { x: Math.cos(a) * d, y: Math.sin(a) * d, gap };
+      spots.push(s); return { x: s.x, y: s.y };
     };
+    // autel du boss : loin du départ, avec la place pour l'arène
+    this.altar = { ...pick(900, 1250, 330, HALF - 500), R: 70, charge: 0, used: false };
+    // trésor caché tout au bout de la carte
+    const tr = pick(1100, 1450, 260, HALF - 150);
+    this.pickups.push({ type: 'loot', x: tr.x, y: tr.y, tier: this.lootTier(r() < 0.35 ? 2 : 1), hidden: true, t0: 0 });
+    // 3 totems de défi de sortes différentes
+    const kinds = Object.keys(TOTEMS);
+    for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
+    this.totems = kinds.slice(0, 3).map(kind => ({ ...pick(350, 1300, 280), kind, charge: 0, used: false }));
     this.chests = Array.from({ length: 9 }, () => ({ ...pick(260), open: false }));
     this.shrines = Array.from({ length: 5 }, () => ({ ...pick(320), charge: 0, used: false }));
     this.chestCost = Math.round(12 + this.zone.id * 8);
@@ -227,13 +284,13 @@ export class Run {
 
   recalc() {
     const p = this.p, t = p.tomes, b = p.boons, evo = p.evo;
-    p.dmgMul = (1 + 0.15 * (t.power || 0) + 0.12 * (b.dmg || 0)) * (1 + 0.2 * evo);
+    p.dmgMul = (1 + 0.15 * (t.power || 0) + 0.12 * (b.dmg || 0)) * (1 + 0.2 * evo) * this.bDmg;
     p.haste = Math.max(0.45, 1 - 0.1 * (t.haste || 0) - 0.08 * (b.haste || 0));
     p.speed = 160 * this.base.speed * (1 + 0.1 * (t.boots || 0) + 0.08 * (b.speed || 0) + 0.05 * evo);
     p.magnet = 95 * this.base.magnet * (1 + 0.35 * (t.magnet || 0) + 0.3 * (b.magnet || 0)) * (save.pet === 'phenix' ? 1.4 : 1);
     p.crit = this.base.crit + 0.07 * (t.crit || 0) + 0.06 * (b.crit || 0);
     p.armor = Math.min(0.3, 0.06 * (t.armor || 0));
-    p.xpMul = 1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0);
+    p.xpMul = (1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0)) * this.bXp;
     p.area = 1 + 0.12 * (t.area || 0);
     const old = p.maxHp;
     p.maxHp = Math.round(this.base.hp * (1 + 0.2 * (t.vital || 0) + 0.15 * (b.hp || 0)) * (1 + 0.25 * evo));
@@ -244,7 +301,18 @@ export class Run {
     const el = $('#loadout'); if (!el) return;
     const p = this.p;
     el.innerHTML = p.weapons.map(w => `<span class="lo w">${iconImg(WEAPONS[w.id].icon, 18)}<b>${w.lv}</b></span>`).join('') +
-      Object.entries(p.tomes).map(([id, lv]) => `<span class="lo t">${iconImg(TOMES[id].icon, 18)}<b>${lv}</b></span>`).join('');
+      Object.entries(p.tomes).map(([id, lv]) => `<span class="lo t">${iconImg(TOMES[id].icon, 18)}<b>${lv}</b></span>`).join('') +
+      // bonus de départ (l'égide affiche ses blocages restants, la plume de phénix s'éteint une fois utilisée)
+      this.boosts.map(id => {
+        const off = (id === 'egide' && !p.aegis) || (id === 'phenix' && !this.phoenix);
+        return `<span class="lo bst ${off ? 'off' : ''}" title="${esc(BOOSTS[id].name)}">${iconImg(BOOSTS[id].icon, 14)}${id === 'egide' && p.aegis ? `<b>${p.aegis}</b>` : ''}</span>`;
+      }).join('');
+  }
+
+  // monde courant dans le bandeau du haut : « Monde 2/6 · Jungle »
+  renderWorld() {
+    const el = $('#worldTag'); if (!el) return;
+    el.innerHTML = `Monde <b>${this.zone.id + 1}/${ZONES.length}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
   }
 
   renderEvo() {
@@ -289,11 +357,13 @@ export class Run {
     let dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     if (!this.paused) {
+      // court ralenti de célébration à la mort d'un boss
+      if (this.celebT > 0) { this.celebT -= dt; this.slowmo = this.celebT > 0.4 ? 0.3 : 1 - 0.7 * Math.max(0, this.celebT) / 0.4; }
       dt *= this.slowmo;
       if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.06; } // arrêt sur image très bref (gros coups)
       this.update(dt);
-      if (!this.over && !this.winning && !this.dying && !this.paused && this.p.ult >= 100 && this.autoUltReady()) this.useUlt();
-      if (!this.over && !this.winning && !this.dying && !this.paused) {
+      if (!this.over && !this.entering && !this.dying && !this.paused && this.p.ult >= 100 && this.autoUltReady()) this.useUlt();
+      if (!this.over && !this.entering && !this.dying && !this.paused) {
         if (this.evolveReady()) this.evolve();
         else if (this.pending > 0 && this.evoFlash <= 0) this.levelUp();
       }
@@ -339,7 +409,7 @@ export class Run {
 
   update(dt) {
     const p = this.p;
-    this.time += dt;
+    this.time += dt; this.runTime += dt;
     this.hitSfxT -= dt; this.msgT -= dt;
     this.evoFlash = Math.max(0, this.evoFlash - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
@@ -359,11 +429,20 @@ export class Run {
     const iy = this.joy ? this.joy.yaw : this.yaw;
     const fwx = -Math.sin(iy), fwy = -Math.cos(iy), rgx = Math.cos(iy), rgy = -Math.sin(iy);
     let mx = rgx * jx - fwx * jy, my = rgy * jx - fwy * jy;
-    const ml = Math.hypot(mx, my);
+    let ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
+    if (this.entering) { // aspiré par le portail : plus de contrôle, le héros glisse vers son centre
+      const P = this.portal; mx = 0; my = 0; ml = 0;
+      if (P) { const k = Math.min(1, dt * 6); p.x += (P.x - p.x) * k; p.y += (P.y - p.y) * k; }
+    }
     if (ml > 0.05) p.face = { x: mx / ml, y: my / ml };
     p.x = Math.max(-HALF + 80, Math.min(HALF - 80, p.x + mx * p.speed * dt));
     p.y = Math.max(-HALF + 80, Math.min(HALF - 80, p.y + my * p.speed * dt));
+    const A = this.arena;
+    if (A) { // mur de l'arène : on ne sort pas tant que le boss vit
+      const ax = p.x - A.x, ay = p.y - A.y, ad = Math.hypot(ax, ay), m = A.R - p.r;
+      if (ad > m) { p.x = A.x + ax / ad * m; p.y = A.y + ay / ad * m; }
+    }
     p.moving = ml > 0.05;
     if (p.h > 0 || p.vh > 0) { p.vh -= 1700 * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) { p.vh = 0; this.emit('land', { x: p.x, y: p.y }); } }
     p.inv = Math.max(0, p.inv - dt);
@@ -378,7 +457,8 @@ export class Run {
     this.updateWaves(dt);
     this.updateBombs(dt);
     this.updatePickups(dt);
-    this.updateInterest(dt);
+    if (!this.entering) { this.updateInterest(dt); this.updateAltar(dt); this.updateTotems(dt); }
+    this.updatePortal(dt);
     this.updatePet(dt);
     for (const f of this.fx) f.life -= dt;
     this.fx = this.fx.filter(f => f.life > 0);
@@ -388,15 +468,16 @@ export class Run {
     this.parts = this.parts.filter(q => q.life > 0);
     this.shake = Math.max(0, this.shake - dt * 30);
     this.enemies = this.enemies.filter(e => !e.dead);
-    this.hud();
+    if (!this.over) this.hud();
   }
 
   // ---------- Apparition ----------
   spawnPoint() {
-    const p = this.p;
-    for (let t = 0; t < 8; t++) {
+    const p = this.p, A = this.arena;
+    for (let t = 0; t < 10; t++) {
       const a = Math.random() * TAU;
       const x = p.x + Math.cos(a) * SPAWN_R, y = p.y + Math.sin(a) * SPAWN_R;
+      if (A && (x - A.x) ** 2 + (y - A.y) ** 2 < (A.R + 90) ** 2) continue; // jamais dans l'arène
       if (Math.abs(x) < HALF - 100 && Math.abs(y) < HALF - 100) return [x, y];
     }
     return [p.x - Math.sign(p.x || 1) * SPAWN_R, p.y];
@@ -404,15 +485,17 @@ export class Run {
 
   spawn(dt) {
     const z = this.zone, t = this.time, mons = z.monsters, D = this.diff;
-    if (!this.bossSpawned && t >= this.duration) return this.spawnBoss();
-    // la cadence monte nettement avec le temps (zone 1 un peu plus douce)
-    let rate = (0.9 + t / 18) * (1 + z.id * 0.12) * D.spawn;
-    if (this.bossSpawned) rate *= this.boss && this.boss.enraged ? 0.5 : 0.32;
+    if (t >= this.duration) this.updateOvertime(dt);
+    const ot = this.otLevel, fight = this.boss && !this.boss.dead;
+    // la cadence monte nettement avec le temps (zone 1 un peu plus douce), puis avec la folie après le chrono
+    let rate = (0.9 + Math.min(t, this.duration) / 18) * (1 + z.id * 0.12) * (1 + this.stage * 0.1) * D.spawn * this.wm.spawn * (1 + 0.3 * ot);
+    if (fight) rate *= this.boss.enraged ? 0.5 : 0.36;
     this.spawnAcc += rate * dt;
     const pool = Math.min(3, Math.floor(t / (this.duration / 4)));
+    const cap = Math.min(HARD_CAP - 10, this.cap + ot * 12);
     while (this.spawnAcc >= 1) {
       this.spawnAcc--;
-      if (this.enemies.length >= this.cap) { this.spawnAcc = Math.min(this.spawnAcc, 4); break; }
+      if (this.enemies.length >= cap) { this.spawnAcc = Math.min(this.spawnAcc, 4); break; }
       const k = Math.floor(Math.random() * (pool + 1));
       const kk = Math.max(0, Math.min(3, k - (Math.random() < 0.3 ? 1 : 0)));
       // par petits groupes : les monstres arrivent en meutes
@@ -420,14 +503,11 @@ export class Run {
       const e = this.addEnemy(mons[kk], kk);
       if (t > 30 && Math.random() < 0.45) { this.pack = 1 + Math.floor(Math.random() * (t > 100 ? 4 : 2)); this.packX = e.x; this.packY = e.y; }
     }
-    if (t >= this.nextElite && !this.bossSpawned) {
-      this.nextElite += this.eliteGap;
-      const el = this.addEnemy(mons[4], 4, { elite: true });
-      this.emit('elite', { e: el });
-      this.banner(`<small>Un ennemi élite approche !</small><span class="tag elite">ÉLITE</span>${esc(el.name)}`, 1900);
-      sfx('honk');
+    if (t >= this.nextElite && !fight) {
+      this.nextElite += this.eliteGap * this.wm.elite / (1 + 0.35 * ot);
+      this.spawnElite();
     }
-    if (this.swarms.length && t >= this.swarms[0]) {
+    if (this.swarms.length && t >= this.swarms[0] && !this.arena) {
       this.swarms.shift();
       const wave = ++this.swarmN;
       this.emit('swarm', {});
@@ -455,17 +535,64 @@ export class Run {
     }
   }
 
+  spawnElite(o = {}) {
+    const mons = this.zone.monsters, el = this.addEnemy(mons[4], 4, { elite: true, ...o });
+    this.emit('elite', { e: el });
+    this.banner(`<small>${o.why || 'Un ennemi élite approche !'}</small><span class="tag elite">ÉLITE</span>${esc(el.name)}`, 1900);
+    sfx('honk');
+    return el;
+  }
+
+  // ---------- Chrono écoulé : les monstres deviennent fous ----------
+  updateOvertime(dt) {
+    if (!this.otLevel) {
+      // le boss n'a pas été invoqué : il surgit à côté du joueur, l'arène se referme sur lui
+      if (!this.bossSpawned) { if (this.altar) this.altar.used = true; this.summonBoss(this.p.x, this.p.y, true); }
+      this.otLevel = 1;
+      for (const e of this.enemies) if (!e.boss && !e.dead) { e.mad = true; e.speed *= 1.12; e.dmg *= 1.15; }
+      this.emit('overtime', {});
+      this.banner('<small>Le chrono est écoulé</small>Les monstres deviennent fous !', 2400, 'boss ot');
+      this.shake = 10; sfx('overtime'); buzz(80);
+    }
+    this.overtime = this.time - this.duration;
+    const lv = 1 + Math.floor(this.overtime / OT_STEP);
+    if (lv > this.otLevel) {
+      this.otLevel = lv;
+      this.emit('overtimeStep', { level: lv });
+      if (this.boss && !this.boss.dead) this.boss.dmg *= 1.1;
+      if (lv === DOOM_LV) this.banner('<small>Le monde s\'effondre !</small>Fuyez par le portail !', 2200, 'boss ot');
+      else if (lv % 2 === 0) this.banner(`<small>Ils sont de plus en plus fous…</small>Folie niv. ${lv}`, 1500, 'warn ot');
+      sfx('alarm');
+    }
+    // le monde s'effondre : des météores visent le joueur, de plus en plus vite (on ne peut pas rester indéfiniment)
+    if (lv >= DOOM_LV && !this.entering && !this.dying) {
+      this.doomT = (this.doomT ?? 0) - dt;
+      if (this.doomT <= 0) {
+        const k = lv - DOOM_LV, p = this.p;
+        this.doomT = Math.max(0.3, 1.5 - k * 0.2);
+        for (let i = 0; i < 1 + (k >> 1); i++) {
+          const lead = p.moving ? rand(30, 90) : 0, a = Math.random() * TAU, r = i ? rand(40, 140) : rand(0, 50);
+          this.addBomb({ x: p.x + p.face.x * lead + Math.cos(a) * r, y: p.y + p.face.y * lead + Math.sin(a) * r, R: 72, t: 1.05, dmg: p.maxHp * (0.12 + 0.04 * k), kind: 'meteor', e: null, doom: true });
+        }
+      }
+    }
+  }
+
   addEnemy(def, k, o = {}) {
-    const z = this.zone, t = this.time, D = this.diff, B = BODY[def.body] || BODY0;
+    const z = this.zone, t = Math.min(this.time, this.duration), D = this.diff, B = BODY[def.body] || BODY0, S = this.sk, ot = this.otLevel, W = this.wm;
     let x = o.x, y = o.y;
     if (x == null) [x, y] = this.spawnPoint();
     const zm = 1 + z.id * 0.3;
-    // progression dans le temps : PV, dégâts et vitesse montent nettement au fil de la partie
-    let hp = def.hp * 0.3 * (1 + t / 110 + (t / 240) ** 2) * zm * D.hp * B.hp;
-    let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * 0.05) * D.dmg * B.dmg;
-    let scale = 2.2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed * (1 + Math.min(0.22, t / 800)) * rand(0.9, 1.1);
+    // progression dans le temps : PV, dégâts et vitesse montent nettement au fil du monde ;
+    // en plus : mondes déjà traversés (S), totems (W, runHp), folie après le chrono (ot, exponentielle)
+    let hp = def.hp * 0.3 * (1 + t / 110 + (t / 240) ** 2) * zm * D.hp * B.hp * S.hp * this.runHp * 1.2 ** ot;
+    let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * 0.05) * D.dmg * B.dmg * S.dmg * W.dmg * 1.2 ** ot;
+    let scale = 2.2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed * (1 + Math.min(0.22, t / 800)) * W.speed * Math.min(1.35, 1 + 0.06 * ot) * rand(0.9, 1.1);
     if (o.elite) { hp *= 12; dmg *= 1.6; scale = 3.6; speed *= 0.9; }
-    if (o.boss) { hp = Math.max(def.hp, 165) * BOSS_HP * (1 + z.id * 0.9) * D.boss; dmg = def.atk * 1.25 * (1 + z.id * 0.1) * D.dmg; scale = 8; speed *= 0.85; }
+    if (o.boss) {
+      hp = Math.max(def.hp, 165) * BOSS_HP * (1 + z.id * 0.9) * D.boss * S.boss * this.runHp;
+      dmg = def.atk * 1.25 * (1 + z.id * 0.1) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
+    }
     if (o.gen) { hp *= 0.32; dmg *= 0.6; scale *= 0.62; speed *= 1.18; } // petit morceau d'un blob divisé
     const e = {
       def, k, x, y, hp, maxHp: hp, dmg, speed, scale, r: 7 * scale,
@@ -475,6 +602,8 @@ export class Run {
       // difficulté : nom affiché (élites), pouvoirs, attaque spéciale en cours (act), recharge (cd)
       name: def.name, mods: null, knockMul: B.knock, act: null, cd: rand(1.5, 4.5), cdMul: 1, burrowed: false, gen: o.gen || 0,
       side: Math.random() < 0.5 ? 1 : -1, sideT: rand(0.5, 2), regen: 0, vamp: false, bomb: false, rage: 0, sumT: 0, enraged: false,
+      // expédition : fou (après le chrono), enfermé dans l'arène (boss et ses renforts), phase du boss, invulnérable
+      mad: ot > 0, inArena: !!o.inArena, bossPhase: o.boss ? 1 : 0, invuln: 0,
     };
     if (o.elite) this.makeElite(e);
     this.enemies.push(e);
@@ -500,22 +629,56 @@ export class Run {
     }
   }
 
-  spawnBoss() {
+  // ---------- Autel, arène et boss ----------
+  updateAltar(dt) {
+    const a = this.altar, p = this.p;
+    if (!a || a.used) return;
+    const inside = dist2(a, p) < a.R * a.R;
+    a.charge = clamp(a.charge + (inside ? dt / 2.5 : -dt / 2), 0, 1);
+    if (inside && !a.told) {
+      a.told = true;
+      const def = this.zone.boss || this.zone.monsters[4];
+      this.banner(`<small>Autel du boss</small>Restez dessus pour invoquer ${esc(def.name)}`, 2200, 'small altar');
+    }
+    if (!inside) a.told = a.charge > 0 ? a.told : false;
+    if (a.charge >= 1 && !this.paused) { a.used = true; a.charge = 1; this.summonBoss(a.x, a.y, false); }
+  }
+
+  // invoque le boss : l'arène se referme autour de l'autel (ou du joueur quand le chrono est écoulé)
+  summonBoss(cx, cy, auto) {
     this.bossSpawned = true;
-    const z = this.zone, def = z.boss || z.monsters[4];
-    const a = Math.random() * TAU;
-    this.boss = this.addEnemy(def, z.boss ? 5 : 4, { boss: true, x: this.p.x + Math.cos(a) * 380, y: this.p.y + Math.sin(a) * 380 });
-    this.emit('boss', { e: this.boss });
-    $('#bossbar').hidden = false;
-    $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`;
-    this.banner(`<small>${esc(def.title || 'Le chef de la horde')}</small>${esc(def.name)}`, 2400, 'boss');
-    this.shake = 10;
-    sfx('boss'); music('boss'); buzz(60);
+    const z = this.zone, def = z.boss || z.monsters[4], p = this.p, lim = HALF - 500;
+    cx = clamp(cx, -lim, lim); cy = clamp(cy, -lim, lim);
+    const A = this.arena = { x: cx, y: cy, R: ARENA_R };
+    // le boss surgit de l'autre côté de l'autel
+    let dx = cx - p.x, dy = cy - p.y, d = Math.hypot(dx, dy);
+    if (d < 20) { const a = Math.random() * TAU; dx = Math.cos(a); dy = Math.sin(a); d = 1; }
+    const B = this.boss = this.addEnemy(def, z.boss ? 5 : 4, { boss: true, inArena: true, x: cx + dx / d * 230, y: cy + dy / d * 230 });
+    B.phase = 'intro'; B.phaseT = 1.5; B.invuln = 1.5;
+    // les monstres présents sont repoussés hors du cercle
+    for (const e of this.enemies) {
+      if (e.inArena || e.dead) continue;
+      const ex = e.x - A.x, ey = e.y - A.y, ed = Math.hypot(ex, ey) || 1;
+      if (ed < A.R + e.r + 40) { const m = A.R + e.r * 0.8 + 10; e.x = A.x + ex / ed * m; e.y = A.y + ey / ed * m; e.kx = ex / ed * 300; e.ky = ey / ed * 300; e.act = null; e.burrowed = false; e.jumpH = 0; }
+    }
+    this.eshots = this.eshots.filter(s => (s.x - A.x) ** 2 + (s.y - A.y) ** 2 > A.R * A.R);
+    this.bombs = this.bombs.filter(b => (b.x - A.x) ** 2 + (b.y - A.y) ** 2 > A.R * A.R);
+    p.inv = Math.max(p.inv, 1.2);
+    this.emit('bossSummon', { x: B.x, y: B.y, auto: !!auto });
+    this.emit('arena', { x: A.x, y: A.y, R: A.R });
+    this.emit('boss', { e: B });
+    const bb = $('#bossbar');
+    if (bb) { bb.hidden = false; $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`; }
+    this.banner(`<small>${auto ? 'Le chrono est écoulé : il vient à vous !' : 'Vous l\'avez invoqué…'}</small>${esc(def.name)}<em class="b-title">— ${esc(def.title || 'Le chef de la horde')} —</em>`, 2600, 'boss summon');
+    this.burst(B.x, B.y, 50, 0, '#ff3a3a', 6);
+    this.fx.push({ type: 'ring', x: A.x, y: A.y, r: A.R, life: 0.7, max: 0.7, color: '#ff4a3a' });
+    this.shake = 14;
+    sfx('summon'); sfx('boss'); music('boss'); buzz(80);
   }
 
   // ---------- Ennemis ----------
   updateEnemies(dt) {
-    const p = this.p, near = this._near || (this._near = []), mv = this.mv;
+    const p = this.p, near = this._near || (this._near = []), mv = this.mv, A = this.arena;
     let acts = 0;
     for (const e of this.enemies) if (e.act && !e.dead && e.act.kind !== 'shoot' && e.act.kind !== 'volley') acts++;
     this.acts = acts;
@@ -525,6 +688,7 @@ export class Run {
       e.flash = Math.max(0, e.flash - dt);
       e.slow = Math.max(0, e.slow - dt);
       e.freeze = Math.max(0, e.freeze - dt);
+      if (e.invuln > 0) e.invuln -= dt;
       if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
       const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
       const fury = e.rage && e.hp < e.maxHp * 0.5 ? 1.3 : 1;
@@ -543,6 +707,11 @@ export class Run {
       }
       e.x += (vx + e.kx) * dt; e.y += (vy + e.ky) * dt;
       e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
+      if (A) { // l'arène : le boss et ses renforts restent dedans, les autres monstres restent dehors
+        const ax = e.x - A.x, ay = e.y - A.y, ad = Math.hypot(ax, ay) || 1;
+        if (e.inArena) { const m = A.R - e.r * 0.6; if (ad > m) { e.x = A.x + ax / ad * m; e.y = A.y + ay / ad * m; } }
+        else { const m = A.R + e.r * 0.8 + 6; if (ad < m) { e.x = A.x + ax / ad * m; e.y = A.y + ay / ad * m; } }
+      }
       const a = e.act, dashing = !!a && a.stage === 1 && (a.kind === 'dash' || a.kind === 'strafe');
       if (!e.freeze) e.ang = dashing && a.kind === 'dash' ? Math.atan2(a.dx, a.dy) : Math.atan2(dx, dy);
       if (!e.boss && !a && d > SPAWN_R * 1.5) { const [nx2, ny2] = this.spawnPoint(); e.x = nx2; e.y = ny2; }
@@ -634,8 +803,8 @@ export class Run {
         this.acts++;
         return;
       }
-      case 'ghost': { // se téléporte près du joueur (le point d'arrivée est signalé)
-        if (d < 230 || d > 760) break;
+      case 'ghost': { // se téléporte près du joueur (le point d'arrivée est signalé) ; pas à travers le mur de l'arène
+        if (d < 230 || d > 760 || (this.arena && !e.inArena)) break;
         const ang = Math.atan2(p.face.y, p.face.x) + rand(-0.9, 0.9), R = e.ranged ? 230 : 75 + e.r;
         const lim = HALF - 120;
         const tx = Math.max(-lim, Math.min(lim, p.x + Math.cos(ang) * R)), ty = Math.max(-lim, Math.min(lim, p.y + Math.sin(ang) * R));
@@ -645,7 +814,7 @@ export class Run {
         return;
       }
       case 'worm': { // s'enfouit, file sous terre et ressurgit sous le joueur
-        if (d < 100 || d > 650) break;
+        if (d < 100 || d > 650 || (this.arena && !e.inArena)) break;
         e.act = { kind: 'burrow', stage: 0, t: 0.35, dur: 0.35, x: e.x, y: e.y, dx: nx, dy: ny, R: 55 + e.r * 0.6, go: 0, v: 0 };
         e.burrowed = true;
         this.emit('burrow', { e, x: e.x, y: e.y });
@@ -701,6 +870,7 @@ export class Run {
         if (a.stage === 0) { e.jumpH = -170 * (1 - Math.max(0, a.t) / 0.35); if (a.t <= 0) { a.stage = 1; a.t = 0.7; } }
         else if (a.stage === 1) {
           e.jumpH = -170; mv.x = nx * 260; mv.y = ny * 260;
+          if (a.t <= 0 && this.arena && !e.inArena) { e.burrowed = false; e.jumpH = 0; this.endAct(e); return; } // l'arène bloque
           if (a.t <= 0) {
             a.stage = 2; a.t = 0.85; a.x = p.x; a.y = p.y;
             this.emit('enemyTelegraph', { e, kind: 'emerge', x: a.x, y: a.y, dx: 0, dy: 0, dur: 0.85, R: a.R });
@@ -734,7 +904,7 @@ export class Run {
           const mons = this.zone.monsters;
           for (let i = 0; i < 3 && this.enemies.length < HARD_CAP; i++) {
             const an = i / 3 * TAU + Math.random(), kk = Math.floor(Math.random() * 4);
-            this.addEnemy(mons[kk], kk, { x: e.x + Math.cos(an) * 60, y: e.y + Math.sin(an) * 60 });
+            this.addEnemy(mons[kk], kk, { x: e.x + Math.cos(an) * 60, y: e.y + Math.sin(an) * 60, inArena: e.inArena });
           }
           this.burst(e.x, e.y, 16, 20, '#c06aff', 3);
           e.sumT = rand(6, 8);
@@ -758,14 +928,48 @@ export class Run {
 
   // ---------- Boss ----------
   bossAI(e, dt, nx, ny, d, sp) {
-    const mv = this.mv, p = this.p, rage = e.enraged, cdm = rage ? 0.6 : 1;
+    const mv = this.mv, p = this.p, rage = e.enraged, cdm = rage ? 0.6 : e.bossPhase >= 2 ? 0.85 : 1;
     e.phaseT -= dt;
     mv.x = nx * sp; mv.y = ny * sp;
     if (e.ring2 > 0) { e.ring2 -= dt; if (e.ring2 <= 0) this.bossRing(e, 0.5); }
+    // phases : 2 sous 60 % de PV (rugissement), 3 sous 30 % (rage) ; seulement entre deux attaques
+    if (e.phase === 'chase' || e.phase === 'rainW') {
+      if (e.bossPhase < 2 && e.hp < e.maxHp * 0.6) return this.bossPhase2(e);
+      if (e.bossPhase === 2 && e.hp < e.maxHp * 0.3) { this.enrage(e); }
+    }
     switch (e.phase) {
       case 'chase':
         if (e.phaseT <= 0) this.bossPick(e, nx, ny, d);
         return;
+      case 'intro': case 'roar': // apparition / changement de phase : il rugit sur place, invulnérable
+        mv.x = 0; mv.y = 0;
+        if ((e.phaseT * 8 | 0) % 2 === 0) e.flash = Math.max(e.flash, 0.04);
+        if (e.phaseT <= 0) {
+          const roar = e.phase === 'roar';
+          if (roar) { this.bossRing(e, 0); this.shake = Math.max(this.shake, 8); }
+          e.phase = 'chase'; e.phaseT = roar ? 0.6 : rand(0.8, 1.4);
+        }
+        return;
+      case 'sweepW': // le rayon se charge : la ligne de départ est annoncée
+        mv.x = 0; mv.y = 0;
+        if ((e.phaseT * 10 | 0) % 2 === 0) e.flash = Math.max(e.flash, 0.04);
+        if (e.phaseT <= 0) {
+          e.phase = 'sweep'; e.phaseT = e.sweepDur;
+          this.emit('bossSweep', { e });
+          sfx('charge'); this.shake = Math.max(this.shake, 6);
+        }
+        return;
+      case 'sweep': { // rayon tournant : on saute par-dessus
+        mv.x = 0; mv.y = 0;
+        e.sweepA += e.sweepDir * SWEEP_ARC / e.sweepDur * dt;
+        const cx = Math.cos(e.sweepA), cy = Math.sin(e.sweepA), dx = p.x - e.x, dy = p.y - e.y, along = dx * cx + dy * cy;
+        if (along > 0 && along < e.sweepLen && Math.abs(dy * cx - dx * cy) < e.sweepW / 2 + p.r * 0.6 && p.h <= 40) this.hurtPlayer(e.dmg * 0.9, e);
+        if (e.phaseT <= 0) {
+          if (--e.sweeps > 0) { e.sweepDir = -e.sweepDir; e.phaseT = e.sweepDur; this.emit('bossSweep', { e }); }
+          else { e.phase = 'chase'; e.phaseT = rand(1.8, 2.8) * cdm; }
+        }
+        return;
+      }
       case 'aim':
         mv.x = 0; mv.y = 0;
         if ((e.phaseT * 10 | 0) % 2 === 0) e.flash = Math.max(e.flash, 0.04);
@@ -871,6 +1075,7 @@ export class Run {
     W.spiral = easy ? 0 : (B === 'bird' || B === 'ghost' || B === 'worm') ? 2.2 : 0.8;
     W.blink = B === 'ghost' && d > 160 ? 2.6 : 0;
     W.burrow = B === 'worm' ? 2.6 : 0;
+    W.sweep = e.bossPhase >= 2 ? (e.enraged ? 3 : 2.6) : 0; // rayon tournant : à partir de la phase 2
     if (e.last) W[e.last] *= 0.25;
     let tot = 0;
     for (const k in W) tot += W[k];
@@ -925,7 +1130,31 @@ export class Run {
         this.emit('enemyTelegraph', { e, kind: 'summon', x: e.x, y: e.y, dx: 0, dy: 0, dur: 0.6, R: 90 });
         this.warnRing(e.x, e.y, 110, 0.6, '#c06aff');
         break;
+      case 'sweep': {
+        // rayon tournant de ~200° : il commence loin du joueur et passe sur lui à mi-course (2 passages en phase 3)
+        const dir = Math.random() < 0.5 ? 1 : -1, toP = Math.atan2(p.y - e.y, p.x - e.x);
+        e.sweepDir = dir; e.sweepA = toP - dir * SWEEP_ARC / 2;
+        e.sweepLen = ARENA_R * 1.3; e.sweepW = 34 + this.zone.id * 2;
+        e.sweeps = e.enraged ? 2 : 1; e.sweepDur = e.enraged ? 1.8 : 2.4;
+        e.phase = 'sweepW'; e.phaseT = e.enraged ? 0.75 : 0.95;
+        this.emit('enemyTelegraph', { e, kind: 'sweep', x: e.x, y: e.y, dx: Math.cos(e.sweepA), dy: Math.sin(e.sweepA), dur: e.phaseT, R: e.sweepLen });
+        this.msg('Rayon tournant : sautez par-dessus !');
+        break;
+      }
     }
+  }
+
+  // phase 2 : rugissement (invulnérable 1 s), puis attaques plus fréquentes et rayon tournant
+  bossPhase2(e) {
+    e.bossPhase = 2;
+    e.phase = 'roar'; e.phaseT = 1; e.invuln = 1;
+    e.speed *= 1.1;
+    e.act = null; e.jumpH = 0; e.burrowed = false;
+    this.emit('bossPhase', { e, phase: 2 });
+    this.banner(`<small>${esc(e.def.name)}</small>Phase 2 : il se déchaîne !`, 1800, 'boss');
+    this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 300, life: 0.7, max: 0.7, color: '#ff7a3a' });
+    this.burst(e.x, e.y, 40, 40, e.def.pal[2], 5);
+    this.shake = 12; sfx('boss'); buzz(60);
   }
 
   bossAim(e, nx, ny, dur) {
@@ -946,21 +1175,22 @@ export class Run {
     const mons = this.zone.monsters, n = 5 + this.zone.id + (e.enraged ? 3 : 0);
     for (let i = 0; i < n && this.enemies.length < HARD_CAP; i++) {
       const a = i / n * TAU;
-      this.addEnemy(mons[i % 4], i % 4, { x: e.x + Math.cos(a) * 90, y: e.y + Math.sin(a) * 90 });
+      this.addEnemy(mons[i % 4], i % 4, { x: e.x + Math.cos(a) * 90, y: e.y + Math.sin(a) * 90, inArena: true });
     }
-    if (e.enraged && !e.summonedElite && (this.zone.id > 0 || this.diffId > 0)) {
+    if (e.enraged && !e.summonedElite && (this.zone.id > 0 || this.diffId > 0 || this.stage > 0)) {
       e.summonedElite = true;
-      const el = this.addEnemy(mons[4], 4, { elite: true, x: e.x + 120, y: e.y });
+      const el = this.addEnemy(mons[4], 4, { elite: true, x: e.x + 120, y: e.y, inArena: true });
       this.emit('elite', { e: el });
     }
     this.burst(e.x, e.y, 20, 30, '#c06aff', 4);
   }
 
-  // phase de rage sous 30 % de PV : plus rapide, attaques plus fréquentes et renforcées
+  // phase 3 (rage) sous 30 % de PV : plus rapide, attaques plus fréquentes et renforcées, rayon double
   enrage(e) {
-    e.enraged = true;
+    e.enraged = true; e.bossPhase = 3;
     e.speed *= 1.3;
     if (e.phase === 'chase') e.phaseT = Math.min(e.phaseT, 0.8);
+    this.emit('bossPhase', { e, phase: 3 });
     this.emit('bossEnrage', { e });
     this.banner(`<small>${esc(e.def.name)}</small>entre en rage !`, 1800, 'boss');
     this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 260, life: 0.6, max: 0.6, color: '#ff3a3a' });
@@ -1007,6 +1237,14 @@ export class Run {
     const p = this.p;
     if (p.inv > 0 || this.over || this.dying) return;
     if (save.pet === 'brambi' && src && !src.dead) this.hitEnemy(src, p.atk * 1.2, { noCrit: true, color: '#ff9a3a' });
+    if (p.aegis > 0) { // bonus Égide : bloque les premiers coups
+      p.aegis--; p.inv = 0.5;
+      this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 46, life: 0.45, max: 0.45, color: '#ffd54a' });
+      this.emit('block', { x: p.x, y: p.y, aegis: p.aegis });
+      sfx('block'); this.renderLoadout();
+      if (!p.aegis) this.msg('L\'Égide est épuisée !');
+      return;
+    }
     if (p.shieldHit) { p.shieldHit = 0; p.inv = 0.5; this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 40, life: 0.4, max: 0.4, color: '#a8d8ff' }); sfx('block'); return; }
     const d = Math.max(1, Math.round(dmg * (1 - p.armor)));
     p.hp -= d;
@@ -1265,6 +1503,7 @@ export class Run {
 
   hitEnemy(e, dmg, o = {}) {
     if (e.dead || e.burrowed) return;
+    if (e.invuln > 0) { if (e.flash <= 0) e.flash = 0.05; return; } // boss qui rugit : invulnérable
     const crit = !o.noCrit && Math.random() < this.p.crit;
     const d = Math.max(1, Math.round(dmg * (crit ? 2 : 1) * rand(0.92, 1.08)));
     e.hp -= d;
@@ -1273,7 +1512,6 @@ export class Run {
     if (o.knock && !e.boss) { const k = o.knock * e.knockMul * (e.elite ? 0.3 : 1); e.kx += (o.kx || 0) * k; e.ky += (o.ky || 0) * k; }
     if (this.texts.length < 60 && (!o.quiet || crit)) this.text(e.x + rand(-8, 8), e.y, e.r * 2.4 + e.fly, fmt(d), crit ? '#ffd54a' : (o.color || '#ffffff'), crit ? 1.4 : 1);
     if (!o.quiet) sfx(crit ? 'crit' : 'hit');
-    if (e.boss && !e.enraged && e.hp > 0 && e.hp < e.maxHp * 0.3) this.enrage(e);
     if (e.hp <= 0) this.kill(e);
   }
 
@@ -1286,16 +1524,55 @@ export class Run {
     p.ult = Math.min(100, p.ult + (e.boss ? 0 : e.elite ? 8 : e.gen ? 0.25 : 0.5) * (save.pet === 'voidy' ? 2 : 1));
     save.stats.seen[e.def.name] = (save.stats.seen[e.def.name] || 0) + 1;
     this.burst(e.x, e.y, e.boss ? 70 : e.elite ? 26 : 7, e.fly + 10, e.def.pal[0], e.scale);
+    if (e.boss) return this.bossDown(e);
     const xp = (1 + Math.floor(z.id / 2)) * (e.elite ? 15 : 1);
     this.pickups.push({ type: 'xp', x: e.x, y: e.y, v: xp, spin: Math.random() * 6 });
-    const luck = this.base.gold * this.diff.gold;
+    const luck = this.base.gold * this.diff.gold * this.wm.gold;
     if (Math.random() < (e.elite ? 1 : 0.06)) this.pickups.push({ type: 'gold', x: e.x + rand(-10, 10), y: e.y + rand(-10, 10), v: Math.max(1, Math.round((1 + z.id * 0.5) * (e.elite ? 8 : 1) * luck)) });
     if (Math.random() < 0.0045 * (e.elite ? 8 : 1)) this.pickups.push({ type: 'heart', x: e.x, y: e.y });
     if (Math.random() < 0.003) this.pickups.push({ type: 'magnet', x: e.x, y: e.y });
-    if (e.elite) { this.dropChest(e.x, e.y); sfx('honk'); this.hitStop = 0.08; }
+    if (e.elite) {
+      this.dropChest(e.x, e.y); sfx('honk'); this.hitStop = 0.08;
+      // coffre de butin (à ouvrir après la partie) : surtout en bois, meilleur en Difficile / Cauchemar
+      if (Math.random() < 0.35) {
+        const d = this.diffId, x = Math.random(), gold = 0.07 + 0.065 * d, silver = 0.28 + 0.085 * d;
+        this.dropLoot(e.x + rand(-30, 30), e.y + rand(20, 40), x < gold ? 2 : x < gold + silver ? 1 : 0);
+      }
+    }
     if (e.bomb) this.addBomb({ x: e.x, y: e.y, R: 115 + e.r * 0.5, t: 1, dmg: e.dmg * 1.6, kind: 'explode', e });
     if (e.def.body === 'blob' && !e.gen && !e.boss && !e.elite && this.enemies.length < HARD_CAP - 2) this.split(e);
-    if (e.boss) this.win();
+  }
+
+  // le boss est vaincu : court ralenti, butin, l'arène tombe et le portail s'ouvre en son centre
+  bossDown(e) {
+    const A = this.arena || { x: e.x, y: e.y, R: ARENA_R }, z = this.zone, p = this.p;
+    if (!this.cleared.includes(z.id)) this.cleared.push(z.id);
+    this.arena = null;
+    this.celebT = 1.5; this.hitStop = 0;
+    this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 520, life: 0.8, max: 0.8, color: '#ffe48a' });
+    // l'onde de choc balaie les monstres autour de l'arène (le temps de rejoindre le portail)
+    for (const o of this.enemies) if (!o.dead && o !== e && !o.elite && dist2(o, A) < (A.R + 260) ** 2) this.hitEnemy(o, 1e7, { quiet: true, noCrit: true });
+    for (const o of this.enemies) if (!o.dead && o.inArena) o.inArena = false;
+    this.eshots = []; this.bombs = []; this.waves = [];
+    // récompenses : grosse gemme, or, coffres de butin (1 en or, parfois mythique, + 1 en argent par niveau de difficulté)
+    this.pickups.push({ type: 'xp', x: e.x, y: e.y, v: 40 * (1 + z.id) * (1 + this.stage), spin: 0 });
+    const g = Math.max(1, Math.round((6 + z.id * 3) * this.base.gold * this.diff.gold * this.wm.gold));
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; this.pickups.push({ type: 'gold', x: e.x + Math.cos(a) * 40, y: e.y + Math.sin(a) * 40, v: g }); }
+    const tiers = [Math.random() < 0.12 + 0.08 * this.diffId ? 3 : 2];
+    for (let i = 0; i < this.diffId; i++) tiers.push(1);
+    tiers.forEach((t, i) => { const a = -Math.PI / 2 + (i - (tiers.length - 1) / 2) * 0.7; this.dropLoot(A.x + Math.cos(a) * 95, A.y + Math.sin(a) * 95, t, { boss: true }); });
+    // portail vers le monde suivant (il s'ouvre en 1,5 s, puis on peut y entrer)
+    this.portal = { x: A.x, y: A.y, R: 60, charge: 0, t: 0 };
+    this.nextElite = Math.max(this.nextElite, this.time + 25);
+    this.emit('bossDeath', { e, x: e.x, y: e.y });
+    this.emit('portalOpen', { x: A.x, y: A.y });
+    const bb = $('#bossbar'); if (bb) bb.hidden = true;
+    const last = !ZONES[z.id + 1];
+    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${last ? 'Le dernier portail est ouvert !' : 'Le portail est ouvert ! Foncez-y !'}`, 2600, 'boss portal');
+    this.shake = 16;
+    p.inv = Math.max(p.inv, 1.5);
+    stopMusic(); sfx('win'); sfx('portal'); buzz(100);
+    setTimeout(() => { if (!this.over && this.portal && !this.entering) music('zone' + this.zone.id); }, 2200);
   }
 
   // un blob se divise en 2 petits à sa mort
@@ -1304,13 +1581,39 @@ export class Run {
     const a0 = Math.random() * TAU;
     for (let i = 0; i < 2; i++) {
       const a = a0 + i * Math.PI;
-      const c = this.addEnemy(e.def, e.k, { x: e.x + Math.cos(a) * 10, y: e.y + Math.sin(a) * 10, gen: 1 });
+      const c = this.addEnemy(e.def, e.k, { x: e.x + Math.cos(a) * 10, y: e.y + Math.sin(a) * 10, gen: 1, inArena: e.inArena });
+      c.mad = e.mad;
       c.born = this.time - 0.3; c.kx = Math.cos(a) * 170; c.ky = Math.sin(a) * 170; c.flash = 0.1;
     }
   }
 
   dropChest(x, y) {
     this.dropChests.push({ x, y, open: false });
+  }
+
+  // ---------- Butin (coffres ouverts après la partie) ----------
+  // le totem maudit et le trèfle peuvent faire monter le coffre d'un rang
+  lootTier(t) {
+    const up = Math.min(0.9, this.lootLuck + (this.boosts.includes('trefle') ? 0.35 : 0));
+    return Math.min(LOOT_TIERS.length - 1, t + (up > 0 && Math.random() < up ? 1 : 0));
+  }
+
+  dropLoot(x, y, tier, o = {}) {
+    const lim = HALF - 100;
+    const it = { type: 'loot', x: clamp(x, -lim, lim), y: clamp(y, -lim, lim), tier: this.lootTier(tier), t0: this.time, ...o };
+    this.pickups.push(it);
+    this.emit('lootDrop', { x: it.x, y: it.y, tier: it.tier });
+    return it;
+  }
+
+  takeLoot(it, quiet = false) {
+    it.taken = true;
+    this.loot.push({ tier: it.tier, zone: this.zone.id });
+    this.emit('pickup', { kind: 'loot', x: it.x, y: it.y, v: it.tier });
+    if (quiet) return;
+    sfx('lootPick'); buzz(30);
+    this.burst(it.x, it.y, 18, 20, LOOT_TIERS[it.tier].color, 3);
+    this.banner(`<small>Butin · à ouvrir après la partie</small>${esc(LOOT_TIERS[it.tier].name)} ramassé !`, 1500, `small loot t${it.tier}`);
   }
 
   burst(x, y, n, z = 0, color = '#ffffff', scale = 2) {
@@ -1328,6 +1631,7 @@ export class Run {
     const p = this.p, R = p.magnet;
     for (const it of this.pickups) {
       const dx = p.x - it.x, dy = p.y - it.y, d = Math.hypot(dx, dy) || 1;
+      if (it.type === 'loot') { if (d < 30 && !this.dying) this.takeLoot(it); continue; } // pas attiré par l'aimant : il faut marcher dessus
       if (it.pull || d < R) {
         it.pull = true;
         const sp = 400 + (it.pt = (it.pt || 0) + dt) * 900;
@@ -1363,6 +1667,7 @@ export class Run {
     };
     for (const c of this.chests) tryOpen(c, this.chestCost);
     for (const c of this.dropChests) tryOpen(c, 0);
+    if (this.paused) return;
     for (const s of this.shrines) {
       if (s.used) continue;
       const inside = dist2(s, p) < 58 * 58;
@@ -1377,6 +1682,128 @@ export class Run {
         this.onLevelUp('Autel activé !', this.boonChoices(), c => { this.applyChoice(c); this.paused = false; this.last = performance.now(); }, 'Choisissez une bénédiction');
       }
     }
+  }
+
+  // ---------- Totems de défi : plus dur, mais ça rapporte tout de suite ----------
+  updateTotems(dt) {
+    const p = this.p;
+    for (const T of this.totems) {
+      if (T.used) continue;
+      const inside = dist2(T, p) < 55 * 55;
+      T.charge = clamp(T.charge + (inside ? dt / 1.5 : -dt / 2.5), 0, 1);
+      if (inside && !T.told) {
+        T.told = true;
+        const d = TOTEMS[T.kind];
+        this.banner(`<small>${iconImg(d.icon, 14)} ${esc(d.name)}</small><span class="tt-curse">${esc(d.curse)}</span><span class="tt-reward">${esc(d.reward)}</span>`, 2800, 'small totem');
+      }
+      if (!inside && T.charge <= 0) T.told = false;
+      if (T.charge >= 1 && !this.paused) this.activateTotem(T);
+    }
+  }
+
+  activateTotem(T) {
+    T.used = true; T.charge = 1;
+    this.heat++;
+    const d = TOTEMS[T.kind], z = this.zone, p = this.p;
+    this.emit('totem', { kind: T.kind, x: T.x, y: T.y });
+    this.fx.push({ type: 'ring', x: T.x, y: T.y, r: 220, life: 0.6, max: 0.6, color: d.color });
+    this.burst(T.x, T.y, 34, 50, d.color, 4);
+    this.shake = 8; sfx('totem'); buzz(50);
+    const done = c => { this.applyChoice(c); this.paused = false; this.last = performance.now(); };
+    switch (T.kind) {
+      case 'horde': {
+        this.wm.spawn *= 1.35; this.wm.gold *= 1.25;
+        const g = Math.round((30 + 15 * z.id) * this.diff.gold * this.base.gold);
+        this.gold += g;
+        this.text(p.x, p.y, 70, '+' + g + ' or', '#ffd54a', 1.3);
+        this.banner(`<small>${esc(d.name)} activé !</small>+${fmt(g)} or · la horde grossit`, 2000, 'totem');
+        sfx('coin');
+        break;
+      }
+      case 'fureur':
+        this.wm.dmg *= 1.25; this.wm.speed *= 1.12;
+        this.dropLoot(T.x + 60, T.y + 20, Math.random() < 0.3 ? 2 : 1);
+        this.banner(`<small>${esc(d.name)} activé !</small>Les monstres enragent… un coffre apparaît !`, 2000, 'totem');
+        break;
+      case 'elite': {
+        this.wm.elite *= 0.5;
+        this.nextElite = Math.min(this.nextElite, this.time + this.eliteGap * this.wm.elite);
+        const a = Math.random() * TAU;
+        this.spawnElite({ x: p.x + Math.cos(a) * 420, y: p.y + Math.sin(a) * 420, why: 'Le totem appelle un champion !' });
+        this.paused = true; this.joy = null; this.look = null;
+        this.onLevelUp('Totem des Champions', this.boonChoices(), done, 'Choisissez une bénédiction');
+        break;
+      }
+      case 'maudit':
+        this.runHp *= 1.2; this.lootLuck += 0.15;
+        this.paused = true; this.joy = null; this.look = null;
+        this.onLevelUp('Totem maudit', this.choices(), done, 'Choisissez une amélioration gratuite');
+        break;
+    }
+  }
+
+  // ---------- Portail vers le monde suivant ----------
+  updatePortal(dt) {
+    const P = this.portal, p = this.p;
+    if (!P) return;
+    P.t += dt;
+    if (this.entering) {
+      p.inv = Math.max(p.inv, 0.5);
+      if ((this.entering -= dt) <= 0) { this.entering = 0; this.portalReached(); }
+      return;
+    }
+    const inside = P.t > 1.5 && dist2(P, p) < P.R * P.R;
+    P.charge = clamp(P.charge + (inside ? dt / 0.8 : -dt / 1.5), 0, 1);
+    if (P.charge >= 1 && !this.paused && !this.dying) {
+      this.entering = 0.7;
+      p.inv = Math.max(p.inv, 1);
+      this.emit('portalEnter', {});
+      sfx('portal'); buzz(60);
+    }
+  }
+
+  // le héros est passé : on propose le monde suivant ou le retour avec le butin
+  portalReached() {
+    for (const it of this.pickups) if (it.type === 'loot' && it.boss && !it.taken) this.takeLoot(it, true); // le butin du boss suit
+    this.paused = true; this.joy = null; this.look = null;
+    const next = ZONES[this.zone.id + 1] || null;
+    const info = { from: this.zone.id, to: next ? next.id : null, stage: this.stage, kills: this.kills, gold: this.gold, loot: this.loot.length, time: this.runTime, cleared: [...this.cleared] };
+    let chosen = false;
+    const choose = c => {
+      if (chosen || this.over) return;
+      chosen = true;
+      if (c === 'next' && next) { this.paused = false; this.last = performance.now(); this.nextWorld(); }
+      else this.finish(true);
+    };
+    if (this.onPortal) this.onPortal(info, choose); else choose(next ? 'next' : 'home');
+  }
+
+  nextWorld() {
+    const next = ZONES[this.zone.id + 1];
+    if (!next || this.over) return this.finish(true);
+    // les gemmes restées au sol sont accordées
+    let xp = 0;
+    for (const it of this.pickups) if (it.type === 'xp' && !it.taken) xp += it.v;
+    if (xp) this.gainXp(xp);
+    this.stage++;
+    this.zone = next;
+    this.setupWorld();
+    this.events.length = 0;
+    const p = this.p;
+    p.x = 0; p.y = 0; p.h = 0; p.vh = 0; p.inv = 2; p.face = { x: 0, y: -1 };
+    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.3);
+    for (const w of p.weapons) w.orbs = null;
+    if (this.pet) { this.pet.x = -30; this.pet.y = 10; }
+    this.slowmo = 1; this.celebT = 0; this.hitStop = 0; this.shake = 0; this.joy = null;
+    // nouveau monde : nouveau décor (le rendu est recréé)
+    if (this.cv) { this.gfx?.dispose(); this.gfx = new Gfx(this, this.cv); this.gfx.resize(); }
+    const bb = $('#bossbar'); if (bb) bb.hidden = true;
+    $('#timer')?.classList.remove('boss', 'ot', 'low');
+    this.renderWorld();
+    music('zone' + next.id);
+    this.banner(`<small>${esc(next.sub)}</small>Monde ${next.id + 1} · ${esc(next.name)}`, 2800, 'world');
+    this.emit('worldStart', { zone: next.id, stage: this.stage });
+    sfx('shrine'); buzz(60);
   }
 
   gainXp(v) {
@@ -1467,42 +1894,35 @@ export class Run {
     this.paused = true; this.joy = null; this.look = null;
     duckMusic(true);
     sfx('lose'); buzz(80);
+    // plume de phénix : on revient tout seul, une fois (la pub pour revivre reste possible ensuite)
+    if (this.phoenix) { this.phoenix = false; setTimeout(() => { if (!this.over) this.revive(true); }, 800); return; }
     setTimeout(() => this.onDefeat(!this.revived), 650);
   }
 
-  revive() {
+  revive(free = false) {
     const p = this.p;
-    this.revived = true; this.dying = false;
-    this.emit('revive', { x: p.x, y: p.y });
+    if (!free) this.revived = true;
+    this.dying = false;
+    this.emit('revive', { x: p.x, y: p.y, free });
     p.hp = p.maxHp; p.inv = 3;
     this.eshots = []; this.waves = []; this.bombs = [];
     duckMusic(false);
     for (const e of this.grid.query(p.x, p.y, 280)) if (!e.boss) this.hitEnemy(e, 1e7, { quiet: true, noCrit: true }); else { e.kx = (e.x - p.x) * 3; e.ky = (e.y - p.y) * 3; }
-    this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 280, life: 0.7, max: 0.7, color: '#5ae87a' });
+    this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 280, life: 0.7, max: 0.7, color: free ? '#ffb03a' : '#5ae87a' });
+    if (free) { this.banner('<small>Vous revenez à la vie</small>Plume de phénix !', 2000, 'evo'); this.renderLoadout(); }
     sfx('revive');
     this.paused = false; this.last = performance.now();
-  }
-
-  win() {
-    if (this.over || this.winning) return;
-    this.winning = true;
-    this.emit('win', {});
-    this.slowmo = 0.25;
-    stopMusic();
-    sfx('win'); buzz(80);
-    $('#bossbar').hidden = true;
-    this.banner('VICTOIRE !', 1800, 'boss');
-    for (const e of this.enemies) if (!e.boss) { e.dead = true; this.burst(e.x, e.y, 3, e.fly, '#ffffff'); }
-    for (const it of this.pickups) it.pull = true;
-    setTimeout(() => this.finish(true), 1800);
   }
 
   finish(win) {
     if (this.over) return;
     this.destroy();
     this.onEnd({
-      win, diff: this.diffId, time: this.time, kills: this.kills, level: this.p.level, gold: this.gold, evo: this.p.evo,
+      win, final: !!win && !ZONES[this.zone.id + 1] && this.cleared.includes(this.zone.id),
+      diff: this.diffId, time: this.runTime, kills: this.kills, level: this.p.level, gold: this.gold, evo: this.p.evo,
       weapons: this.p.weapons.map(w => ({ ...w })), tomes: { ...this.p.tomes }, revived: this.revived,
+      startZone: this.startZone, cleared: [...this.cleared], stage: this.stage,
+      loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone })), heat: this.heat, boosts: [...this.boosts],
     });
   }
 
@@ -1511,12 +1931,34 @@ export class Run {
     const p = this.p;
     this.hudT = (this.hudT || 0) + 1;
     if (this.hudT % 3) return;
-    const left = Math.max(0, this.duration - this.time);
     const tm = $('#timer'), lbl = $('#timerLbl');
-    if (this.bossSpawned) { tm.textContent = 'BOSS'; lbl.textContent = 'Battez-le !'; tm.classList.add('boss'); }
-    else { tm.textContent = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`; lbl.textContent = left < 20 ? 'Le boss arrive…' : 'Survivez !'; }
+    if (!tm) return;
+    // chrono du monde, puis temps de folie en rouge (« +0:12 »)
+    const left = this.duration - this.time, ot = left < 0, fight = this.boss && !this.boss.dead;
+    tm.textContent = ot ? '+' + mmss(-left) : mmss(Math.ceil(left));
+    tm.classList.toggle('ot', ot);
+    tm.classList.toggle('low', !ot && left < 20 && !fight);
+    tm.classList.toggle('boss', fight && !ot);
+    lbl.textContent = this.entering ? 'En route !'
+      : this.portal ? 'Au portail !'
+      : fight ? 'Battez le boss !'
+      : ot ? `Folie niv. ${this.otLevel}`
+      : left < 30 ? 'Folie imminente !'
+      : this.time < 25 ? 'Survivez !' : 'Trouvez l\'autel';
+    lbl.classList.toggle('hot', ot || left < 30 || !!this.portal);
     $('#killsN').textContent = fmt(this.kills);
     $('#goldRun').textContent = fmt(this.gold);
+    if (this.loot.length !== this._lootN) {
+      const pill = $('#lootPill');
+      $('#lootN').textContent = this.loot.length;
+      if (this._lootN != null && pill) { pill.classList.remove('pop'); void pill.offsetWidth; pill.classList.add('pop'); }
+      this._lootN = this.loot.length;
+    }
+    if (this.heat !== this._heatN) {
+      const hp = $('#heatPill');
+      if (hp) { hp.hidden = !this.heat; $('#heatN').textContent = this.heat; if (this._heatN != null) { hp.classList.remove('pop'); void hp.offsetWidth; hp.classList.add('pop'); } }
+      this._heatN = this.heat;
+    }
     $('#xpFill').style.width = (p.xp / p.xpNext * 100) + '%';
     $('#lvl').textContent = 'Niv. ' + p.level;
     const ub = $('#ultBtn');
@@ -1525,7 +1967,7 @@ export class Run {
     if (this.boss && !this.boss.dead) {
       const b = $('#bossbar');
       b.querySelector('.fill').style.width = Math.max(0, this.boss.hp / this.boss.maxHp * 100) + '%';
-      b.querySelector('span').textContent = fmt(Math.max(0, this.boss.hp));
+      b.querySelector('.hpbar span').textContent = fmt(Math.max(0, this.boss.hp));
     }
   }
 
