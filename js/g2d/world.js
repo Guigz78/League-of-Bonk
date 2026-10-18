@@ -443,7 +443,7 @@ export class World2D {
       const out2 = Math.max(Math.abs(x), Math.abs(y));
       if (out2 > HALF + 140) continue;
       if (!edge && Math.hypot(x, y) < 230) continue;
-      if (this.avoid.some(a => Math.hypot(a.x - x, a.y - y) < 80)) continue;
+      if (this.avoid.some(a => Math.hypot(a.x - x, a.y - y) < (a.r || 80))) continue;
       let kind = 'tree';
       if (!edge) { let q = r() * tot; for (const [k, w] of T.props) { q -= w; if (q <= 0) { kind = k; break; } } }
       else if (r() < 0.35) kind = 'rock';
