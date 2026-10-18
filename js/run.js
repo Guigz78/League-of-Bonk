@@ -1,14 +1,13 @@
-// Moteur 3D façon Megabonk / PokéBonk : monde ouvert, hordes, armes automatiques,
+// Moteur façon Megabonk / PokéBonk (rendu 2D vu de dessus) : monde ouvert, hordes, armes automatiques,
 // saut, évolutions du champion, autels, coffres, boss géants.
 // Difficulté : niveaux Normal / Difficile / Cauchemar par zone, comportements par type de monstre
 // (chaque attaque spéciale est annoncée par l'événement 'enemyTelegraph' avant d'agir), élites à pouvoirs,
 // boss à phase de rage.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, PETS, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS } from './data.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, PETS, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF } from './data.js';
 import { save, playerStats } from './save.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
-import { HALF } from './world3d.js';
-import { Gfx } from './gfx/renderer.js';
+import { Gfx } from './g2d/renderer.js';
 import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
 
@@ -86,7 +85,7 @@ export class Run {
     this.shake = 0; this.hitSfxT = 0; this.msgT = 0;
     this.hurtFlash = 0; this.evoFlash = 0; this.ultFlash = 0;
     this.petT = 0; this.pet = save.pet ? { id: save.pet, x: -30, y: 10 } : null;
-    this.slowmo = 1;
+    this.slowmo = 1; this.hitStop = 0;
     this.SPAWN_R = SPAWN_R;
     this.dropChests = [];
     this.events = []; // événements pour le rendu (coups, morts, sauts...), vidés à chaque image par gfx
@@ -100,7 +99,6 @@ export class Run {
   start() {
     const u = ULTS[this.cls.ult];
     mount(`<div class="run">
-      <canvas id="cv3"></canvas>
       <canvas id="cv"></canvas>
       <div class="hud">
         <div class="hud-top">
@@ -118,7 +116,7 @@ export class Run {
       </div>
     </div>`);
     this.cv = $('#cv');
-    this.gfx = new Gfx(this, $('#cv3'), this.cv);
+    this.gfx = new Gfx(this, this.cv);
     this.resize = () => this.gfx.resize();
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -292,6 +290,7 @@ export class Run {
     this.last = now;
     if (!this.paused) {
       dt *= this.slowmo;
+      if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.06; } // arrêt sur image très bref (gros coups)
       this.update(dt);
       if (!this.over && !this.winning && !this.dying && !this.paused && this.p.ult >= 100 && this.autoUltReady()) this.useUlt();
       if (!this.over && !this.winning && !this.dying && !this.paused) {
@@ -345,7 +344,7 @@ export class Run {
     this.evoFlash = Math.max(0, this.evoFlash - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.ultFlash = Math.max(0, this.ultFlash - dt);
-    // déplacement relatif à la caméra
+    // déplacement dans le sens du doigt (caméra fixe, le haut de l'écran est toujours le nord)
     let jx = 0, jy = 0;
     if (this.joy) {
       const dx = this.joy.x - this.joy.ox, dy = this.joy.y - this.joy.oy, d = Math.hypot(dx, dy);
@@ -366,12 +365,6 @@ export class Run {
     p.x = Math.max(-HALF + 80, Math.min(HALF - 80, p.x + mx * p.speed * dt));
     p.y = Math.max(-HALF + 80, Math.min(HALF - 80, p.y + my * p.speed * dt));
     p.moving = ml > 0.05;
-    // la caméra se replace doucement dans le dos du champion quand il court
-    if (p.moving) {
-      const target = Math.atan2(-p.face.x, -p.face.y);
-      let d = target - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-      this.yaw += d * Math.min(1, dt * 2.4 * Math.min(1, ml));
-    }
     if (p.h > 0 || p.vh > 0) { p.vh -= 1700 * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) { p.vh = 0; this.emit('land', { x: p.x, y: p.y }); } }
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
@@ -569,7 +562,7 @@ export class Run {
 
   // cercle d'alerte au sol (rendu par les anneaux existants : il grandit jusqu'à l'impact)
   warnRing(x, y, R, dur, color = '#ff3a3a') {
-    if (this.fx.length < 90) this.fx.push({ type: 'ring', x, y, r: R, life: dur, max: dur, color });
+    if (this.fx.length < 90) this.fx.push({ type: 'ring', x, y, r: R, life: dur, max: dur, color, warn: true });
   }
 
   endAct(e, cd) { e.act = null; e.cd = cd ?? rand(3.5, 6) * e.cdMul; }
@@ -1024,6 +1017,7 @@ export class Run {
       this.text(src.x, src.y, src.r * 2.4 + src.fly, '+' + fmt(h), '#5ae87a', 1.1);
     }
     this.emit('hurt', { x: p.x, y: p.y, dmg: d, src: src || null });
+    if (d >= p.maxHp * 0.08) this.hitStop = Math.max(this.hitStop, 0.05);
     this.shake = 6;
     this.hurtFlash = 0.25;
     this.text(p.x, p.y, 60, '-' + d, '#ff6a6a', 1.1);
@@ -1298,7 +1292,7 @@ export class Run {
     if (Math.random() < (e.elite ? 1 : 0.06)) this.pickups.push({ type: 'gold', x: e.x + rand(-10, 10), y: e.y + rand(-10, 10), v: Math.max(1, Math.round((1 + z.id * 0.5) * (e.elite ? 8 : 1) * luck)) });
     if (Math.random() < 0.0045 * (e.elite ? 8 : 1)) this.pickups.push({ type: 'heart', x: e.x, y: e.y });
     if (Math.random() < 0.003) this.pickups.push({ type: 'magnet', x: e.x, y: e.y });
-    if (e.elite) { this.dropChest(e.x, e.y); sfx('honk'); }
+    if (e.elite) { this.dropChest(e.x, e.y); sfx('honk'); this.hitStop = 0.08; }
     if (e.bomb) this.addBomb({ x: e.x, y: e.y, R: 115 + e.r * 0.5, t: 1, dmg: e.dmg * 1.6, kind: 'explode', e });
     if (e.def.body === 'blob' && !e.gen && !e.boss && !e.elite && this.enemies.length < HARD_CAP - 2) this.split(e);
     if (e.boss) this.win();

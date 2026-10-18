@@ -1,13 +1,14 @@
 // Écrans du jeu et déroulé d'une expédition.
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, DIFFICULTIES, ELITE_MODS } from './data.js';
 import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave, maxDiff } from './save.js';
-import { heroURL, creatureURL, iconImg } from './art.js';
+import { iconImg } from './art.js';
+import { heroURL, creatureURL } from './g2d/sprites.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
 import { mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
 import { Run } from './run.js';
-import { mountPreview } from './preview3d.js';
-import { sceneryURL } from './scenery.js';
+import { mountPreview } from './g2d/preview.js';
+import { zoneBannerURL } from './g2d/world.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 
@@ -88,7 +89,7 @@ function heroCard() {
   const c = CLASSES[save.cls], st = playerStats();
   return `<section class="card hero-card">
     <div class="hc-sprite"><canvas class="hc-3d"></canvas>
-      ${save.pet ? `<img class="px hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}
+      ${save.pet ? `<img class="px spr hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}
     </div>
     <div class="hc-info">
       <div class="hc-name">${esc(c.name)} <small>${c.role}</small></div>
@@ -112,10 +113,10 @@ function adventureTab() {
     const stars = save.diffCleared[i] || 0;
     const sprite = z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
       : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal);
-    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs && !cleared ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${sceneryURL(z)})">
+    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs && !cleared ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${zoneBannerURL(z)})">
       <div class="z-num">${i + 1}</div>
       <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.runs && !cleared ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
-      <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px" src="${sprite}" alt="">`}</div>
+      <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px spr" src="${sprite}" alt="">`}</div>
       ${cleared ? zoneStars(stars) : ''}
     </button>`;
   }).join('');
@@ -157,7 +158,7 @@ function zoneRewards(i, k) {
     return `<h4>Récompenses de première victoire</h4>
       <div class="rewards">
         <div class="rw">${iconImg('star', 18)} Zone suivante débloquée</div>
-        <div class="rw"><img class="px" src="${creatureURL('pet-' + PET_BY_ZONE[i], pet.body, pet.pal)}" width="22" height="22" alt=""> Familier : <b>${esc(pet.name)}</b></div>
+        <div class="rw"><img class="px spr" src="${creatureURL('pet-' + PET_BY_ZONE[i], pet.body, pet.pal)}" width="22" height="22" alt=""> Familier : <b>${esc(pet.name)}</b></div>
         ${bi ? `<div class="rw">${iconImg(bi.icon, 18)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b></div>` : ''}
         ${unlock}
       </div>`;
@@ -195,7 +196,7 @@ async function zoneSheet(i) {
     title: esc(z.name),
     cls: 'zone-modal',
     body: `<div id="${id}"><p class="muted">${esc(z.sub)}</p>
-      <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
+      <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px spr" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
       <h4>Difficulté</h4>
       <div class="diff-pick" role="radiogroup" aria-label="Niveau de difficulté">${DIFFICULTIES.map((_, k) => btn(k)).join('')}</div>
       <div class="diff-info d${sel}">${diffInfo(i, sel)}</div>
@@ -237,7 +238,7 @@ function classSelect(first) {
     mount(`<div class="class-select">
       ${first ? `<div class="title-logo"><div class="l1">League</div><div class="l2">of</div><div class="l3">Bonk</div></div>` : '<h2 class="cs-title">Choisissez votre champion</h2>'}
       ${first ? '<p class="cs-sub">Choisissez votre champion</p>' : ''}
-      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''}" data-act="pick" data-c="${k.id}"><img class="px" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span></button>`).join('')}</div>
+      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span></button>`).join('')}</div>
       <section class="card cs-detail">
         <div class="cs-head"><canvas class="cs-3d"></canvas><div><h3>${esc(c.name)}</h3><div class="role">${c.role}</div><p>${esc(c.desc)}</p></div></div>
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span>${i ? `<em>niv. ${e.lvl}</em>` : '<em>départ</em>'}<b>${esc(e.name)}</b></span>`).join('<i>›</i>')}</div>
@@ -440,7 +441,7 @@ function endRun(z, sum) {
       save.pets.push(petId);
       if (!save.pet) save.pet = petId;
       const p = PETS[petId];
-      lines.push(`<img class="px" src="${creatureURL('pet-' + petId, p.body, p.pal)}" width="28" height="28" alt=""> Familier : <b>${esc(p.name)}</b> <small>${esc(p.desc)}</small>`);
+      lines.push(`<img class="px spr" src="${creatureURL('pet-' + petId, p.body, p.pal)}" width="28" height="28" alt=""> Familier : <b>${esc(p.name)}</b> <small>${esc(p.desc)}</small>`);
     }
     const bi = BOSS_ITEMS[z.id];
     if (bi) {
@@ -528,7 +529,7 @@ function gearTab() {
   const pets = Object.entries(PETS).map(([id, p]) => {
     const owned = save.pets.includes(id);
     return `<button class="pet-card ${owned ? '' : 'locked'} ${save.pet === id ? 'on' : ''}" ${owned ? `data-act="pet" data-id="${id}"` : ''}>
-      ${owned ? `<img class="px" src="${creatureURL('pet-' + id, p.body, p.pal)}" alt="">` : iconImg('lock', 24)}
+      ${owned ? `<img class="px spr" src="${creatureURL('pet-' + id, p.body, p.pal)}" alt="">` : iconImg('lock', 24)}
       <b>${owned ? esc(p.name) : '???'}</b>
       <small>${owned ? esc(p.desc) : `Terminez « ${esc(ZONES[p.zone].name)} »`}</small>
       ${save.pet === id ? '<em>Actif</em>' : ''}
@@ -645,7 +646,7 @@ function trophiesTab() {
     <h3 class="section-t">Bestiaire</h3>
     <div class="bestiary">${ZONES.map(z => zoneSteps(z).map((m, k) => {
       const known = st.seen[m.name];
-      return `<div class="beast ${known ? '' : 'unknown'} ${m.boss ? 'boss' : ''}"><img class="px" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""><small>${known ? esc(m.name) : '???'}</small></div>`;
+      return `<div class="beast ${known ? '' : 'unknown'} ${m.boss ? 'boss' : ''}"><img class="px spr" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""><small>${known ? esc(m.name) : '???'}</small></div>`;
     }).join('')).join('')}</div>`;
 }
 

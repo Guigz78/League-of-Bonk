@@ -1,12 +1,12 @@
 # League of Bonk
 
-Roguelike d'action **3D** façon Megabonk / PokéBonk, en voxels, dans un univers façon League of Legends (noms modifiés).
+Roguelike d'action **2D** façon Megabonk / PokéBonk, en style cartoon vu de dessus, dans un univers façon League of Legends (noms modifiés).
 Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauvegarde sur l'appareil, synchronisation optionnelle avec un compte Google.
 
 ## Jouer
 - Ouvrir le site dans Safari → **Partager** → **Sur l'écran d'accueil**.
 - 3 champions (Mage, Archère, Chevalier), chacun avec son arme de départ et son ultime.
-- Monde ouvert en 3D, jouable à un seul doigt : glissez pour courir, touchez brièvement pour sauter, l'ultime se lance tout seul. Caméra fixe qui suit le champion. Les attaques sont automatiques. Survivez 3 à 5 minutes aux hordes puis battez le boss géant.
+- Monde ouvert en 2D vu de dessus, jouable à un seul doigt : glissez pour courir, touchez brièvement pour sauter, l'ultime se lance tout seul. Caméra fixe qui suit le champion, sans aucune rotation. Les attaques sont automatiques. Survivez 3 à 5 minutes aux hordes puis battez le boss géant.
 - Votre champion évolue pendant la partie (niveaux 8 et 18), façon Pokémon. Explorez la carte : autels (bonus) et coffres (améliorations).
 - À chaque niveau : choisissez 1 amélioration parmi 3 (11 armes, 9 tomes, 5 niveaux chacun). Les élites lâchent des coffres.
 - 6 zones, 30 monstres, 5 boss, 6 familiers, équipement, boutique d'améliorations permanentes, succès, bestiaire.
@@ -20,9 +20,8 @@ python3 -m http.server 8000
 
 ## Structure
 - `js/data.js` : classes, sorts, zones, monstres, objets, familiers, succès
-- `js/run.js` : moteur de jeu 3D (déplacement, saut, hordes, armes, évolutions, autels, coffres, boss)
-- `js/world3d.js`, `js/voxel.js`, `js/preview3d.js` : monde 3D, modèles voxels générés à partir du pixel art, aperçus des menus
-- `vendor/three.module.min.js` : Three.js r170 (moteur 3D, embarqué pour le hors-ligne)
+- `js/run.js` : moteur de jeu (déplacement, saut, hordes, armes, évolutions, autels, coffres, boss)
+- `js/g2d/` : rendu 2D (`renderer.js` caméra, effets et interface dessinée ; `sprites.js` personnages cartoon ; `world.js` sol, décor et bandeaux des zones ; `items.js` objets et projectiles ; `preview.js` aperçus des menus)
 - `js/game.js` : écrans (carte, équipement, boutique, succès, niveaux, bilan)
 - `js/save.js` : sauvegarde locale et statistiques
 - `js/cloud.js` + `js/config.js` : compte Google et synchronisation (Supabase)

@@ -90,6 +90,7 @@ export const TOMES = {
   area:   { name: 'Coiffe de Rabadon', icon: 'crown', desc: '+12 % taille des attaques' },
 };
 export const MAX_WEAPONS = 4, MAX_TOMES = 4, MAX_LEVEL = 5;
+export const HALF = 1600; // demi-taille de la carte (unités du monde)
 
 // Niveaux de difficulté, par zone (façon Megabonk) : Difficile se débloque en battant Normal,
 // Cauchemar en battant Difficile. Multiplicateurs appliqués aux monstres et aux récompenses.
