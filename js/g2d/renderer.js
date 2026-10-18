@@ -177,6 +177,7 @@ export class Gfx {
           const a = Math.random() * TAU, v = rand(120, 300) * (ev.crit ? 1.4 : 1);
           this.sparks.push({ x: e.x, y: e.y - e.r - e.fly * 0.9, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(0.12, 0.25), max: 0.25, c: ev.crit ? '#ffd54a' : ev.color || '#ffffff', w: ev.crit ? 2.6 : 1.8 });
         }
+        if (ev.crit && this.sparks.length < 170) this.sparks.push({ x: e.x + rand(-6, 6), y: e.y - e.r - e.fly * 0.9, vx: 0, vy: -40, life: 0.22, max: 0.22, c: '#fff6a0', star: true, w: 2, big: 2.4 });
         if (ev.quiet && !ev.crit) break;
         const n = this.numBy.get(e);
         if (n && n.t < 0.45 && n.life > 0.2) { n.v += ev.dmg; n.pop = 1; n.crit = n.crit || ev.crit; n.t = Math.min(n.t, 0.2); n.life = 0.7; }
@@ -791,8 +792,8 @@ export class Gfx {
       this.arrival -= dt;
       const k = clamp(this.arrival / 1.3, 0, 1), s = k < 0.85 ? easeOut(k / 0.85) : 1, x = p.x, y = p.y - 40;
       if (s > 0.01) {
-        g.globalAlpha = 0.9 * s; this.tex(swirlTex('#3a1a8a', '#a05aff', '#ffffff'), x, y, 56 * s, 72 * s, -t * 5);
-        g.globalAlpha = 0.6 * s; this.tex(swirlTex('#1a3aaa', '#5ae8ff', '#ffffff'), x, y, 40 * s, 54 * s, t * 7);
+        g.globalAlpha = 0.6 * s; this.tex(swirlTex('#3a1a8a', '#a05aff', '#ffffff'), x, y, 56 * s, 72 * s, -t * 5);
+        g.globalAlpha = 0.4 * s; this.tex(swirlTex('#1a3aaa', '#5ae8ff', '#ffffff'), x, y, 40 * s, 54 * s, t * 7);
         g.globalAlpha = 0.5 * s; this.W(); g.drawImage(beamTex('#c08aff'), x - 60 * s, y - 500, 120 * s, 540);
         g.globalAlpha = 1;
       }
@@ -813,10 +814,12 @@ export class Gfx {
     for (const r of this.rays) {
       r.t += dt;
       const k = r.t / r.max, a = k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85;
+      g.globalCompositeOperation = 'source-over';
       this.M(p.x, p.y - 24, 1, 1, t * 0.8);
-      g.fillStyle = r.c;
-      for (let i = 0; i < 14; i++) { g.rotate(TAU / 14); g.globalAlpha = 0.28 * a; g.beginPath(); g.moveTo(0, 0); g.lineTo(460, -34); g.lineTo(460, 34); g.fill(); }
-      g.globalAlpha = 1;
+      g.fillStyle = '#ffe680';
+      for (let i = 0; i < 14; i++) { g.rotate(TAU / 14); g.globalAlpha = 0.34 * a; g.beginPath(); g.moveTo(0, 0); g.lineTo(460, -36); g.lineTo(460, 36); g.fill(); }
+      g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
+      this.glowAdd(p.x, p.y - 24, 160, r.c, 0.6 * a); g.globalCompositeOperation = 'lighter';
     }
     this.rays = this.rays.filter(r => r.t < r.max);
     g.globalCompositeOperation = 'source-over';
@@ -880,8 +883,10 @@ export class Gfx {
     // le héros toujours par-dessus la foule, avec un anneau au sol pour le repérer
     if (!run.dying) {
       this.W(); const g2 = this.g;
-      g2.strokeStyle = 'rgba(255,213,74,.75)'; g2.lineWidth = 2.4;
-      g2.beginPath(); g2.ellipse(p.x, p.y, 17, 7, 0, 0, TAU); g2.stroke();
+      g2.fillStyle = 'rgba(74,160,255,.18)'; g2.beginPath(); g2.ellipse(p.x, p.y, 18, 7.5, 0, 0, TAU); g2.fill();
+      g2.strokeStyle = 'rgba(20,40,110,.5)'; g2.lineWidth = 4.4; g2.stroke();
+      g2.strokeStyle = '#4aa8ff'; g2.lineWidth = 2.6; g2.stroke();
+      g2.strokeStyle = 'rgba(220,240,255,.85)'; g2.lineWidth = 1; g2.beginPath(); g2.ellipse(p.x, p.y - 0.8, 18, 7.5, 0, Math.PI * 1.05, Math.PI * 1.95); g2.stroke();
     }
     this.drawHero();
   }
@@ -1266,6 +1271,21 @@ export class Gfx {
       else if (kind === 'void') { g.globalAlpha = 0.45 + Math.sin(t * 4 + q.ph) * 0.3; g.drawImage(glowTex('#e070ff'), q.x - 6 * q.s, q.y - 6 * q.s, 12 * q.s, 12 * q.s); }
       else if (kind === 'mist') { g.globalAlpha = 0.12; g.drawImage(glowTex('#9affe0'), q.x - 160 * q.s, q.y - 70 * q.s, 320 * q.s, 140 * q.s); }
     }
+    g.globalAlpha = 1;
+    // chrono écoulé : des braises montent de partout
+    const E = this.embers;
+    if (this.run.overtime > 0) {
+      const lv = this.run.otLevel || 1;
+      while (E.length < Math.min(40, 12 + lv * 4)) E.push({ x: Math.random() * vw, y: vh + Math.random() * 40, v: rand(40, 110), ph: Math.random() * TAU, s: rand(0.6, 1.4) });
+      g.globalCompositeOperation = 'lighter';
+      for (const q of E) {
+        q.x -= dx; q.y -= dy + q.v * dt; q.x += Math.sin(t * 2 + q.ph) * 20 * dt;
+        if (q.y < -20) { q.y = vh + 10; q.x = Math.random() * vw; }
+        if (q.x < -20) q.x += vw + 40; if (q.x > vw + 20) q.x -= vw + 40;
+        g.globalAlpha = 0.5 + Math.sin(t * 6 + q.ph) * 0.3;
+        g.drawImage(glowTex(q.s > 1 ? '#ff7a2a' : '#ff3a1a'), q.x - 5 * q.s, q.y - 5 * q.s, 10 * q.s, 10 * q.s);
+      }
+    } else E.length = 0;
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
 
