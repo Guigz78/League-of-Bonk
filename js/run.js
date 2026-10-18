@@ -25,7 +25,10 @@ const BODY = {
 };
 const BODY0 = { hp: 1, knock: 1, dmg: 1 };
 const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
-const BOSS_HP = 33;     // PV du boss = PV de base × BOSS_HP × zone × difficulté × monde traversé
+// Réglages d'équilibre (exportés : le simulateur d'équilibrage peut les modifier)
+// bossHp : PV du boss = PV de base × bossHp × zone × difficulté × monde traversé ;
+// st* : renfort par monde déjà traversé dans la partie ; carry* : renfort selon le temps total de la partie (s)
+export const BAL = { bossHp: 42, bossDmg: 1.4, stHp: 1.3, stDmg: 1.0, stBoss: 2.5, carryHp: 300, carryDmg: 700 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -178,7 +181,7 @@ export class Run {
     this.wm = { spawn: 1, gold: 1, dmg: 1, speed: 1, elite: 1 };
     // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
     const st = this.stage, carry = this.runTime;
-    this.sk = { hp: (1 + 1.0 * st) * (1 + carry / 300), dmg: (1 + 0.45 * st) * (1 + carry / 700), boss: 1 + 1.6 * st };
+    this.sk = { hp: (1 + BAL.stHp * st) * (1 + carry / BAL.carryHp), dmg: (1 + BAL.stDmg * st) * (1 + carry / BAL.carryDmg), boss: 1 + BAL.stBoss * st };
     this.placeInterest();
   }
 
@@ -785,8 +788,8 @@ export class Run {
     let scale = 2.2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed * (1 + Math.min(0.22, t / 800)) * W.speed * Math.min(1.35, 1 + 0.06 * ot) * rand(0.9, 1.1);
     if (o.elite) { hp *= 12; dmg *= 1.6; scale = 3.6; speed *= 0.9; }
     if (o.boss) {
-      hp = Math.max(def.hp, 165) * BOSS_HP * (1 + z.id * 0.9) * D.boss * S.boss * this.runHp;
-      dmg = def.atk * 1.25 * (1 + z.id * 0.1) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
+      hp = Math.max(def.hp, 165) * BAL.bossHp * (1 + z.id * 0.9) * D.boss * S.boss * this.runHp;
+      dmg = def.atk * BAL.bossDmg * (1 + z.id * 0.1) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
     }
     if (o.gen) { hp *= 0.32; dmg *= 0.6; scale *= 0.62; speed *= 1.18; } // petit morceau d'un blob divisé
     const e = {
