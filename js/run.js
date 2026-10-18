@@ -34,7 +34,7 @@ const ARENA_R = 420;    // rayon de l'arène du boss
 const OT_STEP = 15;     // secondes entre deux niveaux de folie après le chrono
 const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le chrono), le monde s'effondre
 const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
-const WORLD_SHORT = ['Voie du Milieu', 'Jungle', 'Rivière', 'Abîme Glacial', 'Îles Ombreuses', 'Le Vide'];
+const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', 'Néant'];
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 // ---------- Grille spatiale ----------

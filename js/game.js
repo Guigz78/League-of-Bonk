@@ -145,7 +145,7 @@ function adventureTab() {
     </button>`;
   }).join('');
   return `${heroCard()}${resume}
-    <h3 class="section-t">Carte de Runeterre <small>${done}/6 zones</small></h3>
+    <h3 class="section-t">Carte des mondes <small>${done}/6 zones</small></h3>
     <div class="zones">${zones}</div>`;
 }
 
@@ -435,7 +435,7 @@ function portalMenu(info, choose) {
   const w = overlay(`<div class="portal-menu ${to ? '' : 'final'}">
     <div class="pm-vortex"><i></i><i></i><i></i><b>${iconImg(to ? 'portal' : 'crown', 34)}</b></div>
     <h2>${to ? 'Portail ouvert !' : 'Victoire finale !'}</h2>
-    <p class="pm-sub">${to ? `Monde ${nW} vaincu : <b>${esc(from.name)}</b>` : 'Les six mondes sont vaincus. Runeterre est sauvée !'}</p>
+    <p class="pm-sub">${to ? `Monde ${nW} vaincu : <b>${esc(from.name)}</b>` : 'Les six mondes sont vaincus. Le monde est sauvé !'}</p>
     <div class="pm-stats">${stat('star', fmtTime(info.time || 0), 'Temps')}${stat('skull', fmt(info.kills || 0), 'Monstres')}${stat('gold', fmt(info.gold || 0), 'Or')}${stat('chest', info.loot || 0, 'Coffres')}</div>
     <div class="pm-bosses">${cleared.map(id => `<span class="pm-b" title="${esc(ZONES[id].name)}">${bossImg(ZONES[id])}<i>✓</i></span>`).join('')}</div>
     ${to ? `<button class="pm-next" data-v="next" style="background-image:url(${zoneBannerURL(to)})">
@@ -776,14 +776,14 @@ function summaryScreen(R, opened = []) {
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l}</div>`).join('')}</div>
     </div>`).join('');
-  const title = R.final ? 'La Faille est sauvée !' : sum.win ? 'Expédition réussie !' : won ? 'Fin de l\'expédition' : 'Fin de partie';
+  const title = R.final ? 'Le monde est sauvé !' : sum.win ? 'Expédition réussie !' : won ? 'Fin de l\'expédition' : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
   mount(`<div class="reward-screen ${won ? 'complete' : 'lost'}">
     <h2 class="rs-title">${title}</h2>
     <p class="center muted rs-zone">${route} <span class="diff-tag d${k}">${iconImg(D.icon, 14)}${esc(D.name)}</span></p>
-    ${R.final ? `<p class="center finale">Le Baron Nashar est tombé. Vous avez vaincu les 6 boss de Runeterre. Bravo, champion !</p>` : ''}
+    ${R.final ? `<p class="center finale">Le Ver-Roi du Néant est tombé. Vous avez vaincu les 6 boss. Bravo, champion !</p>` : ''}
     <div class="run-stats card">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
       <div><b>${fmt(sum.kills)}</b><small>Monstres</small></div>

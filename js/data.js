@@ -1,23 +1,22 @@
 // Toutes les données du jeu : classes, sorts, zones, monstres, boss, objets, familiers.
-// Univers inspiré de League of Legends, noms volontairement modifiés.
 
 export const CLASSES = {
   mage: {
-    id: 'mage', name: 'Luxanne', role: 'Mage',
+    id: 'mage', name: 'Lumi', role: 'Mage',
     desc: 'Fragile mais dévastatrice : son rayon transperce les rangs ennemis.',
     hp: 110, atk: 15, crit: 0.08, speed: 1,
     weapon: 'beam', ult: 'nova',
     colors: { 1: '#f4f1ff', 2: '#b9b1e8', 3: '#ffffff', a: '#ffd54a', h: '#ffe08a', s: '#ffd9b8', d: '#e9b48f', c: '#4a63d6' },
   },
   archer: {
-    id: 'archer', name: 'Ashlyn', role: 'Archère',
+    id: 'archer', name: 'Kira', role: 'Archère',
     desc: 'Rapide et précise : ses flèches partent en rafale et font souvent des critiques.',
     hp: 125, atk: 14, crit: 0.2, speed: 1.08,
     weapon: 'arrows', ult: 'crystal',
     colors: { 1: '#4f8fe6', 2: '#2f5fae', 3: '#9cc6ff', a: '#e8f6ff', h: '#f3f3f3', s: '#ffd9b8', d: '#e9b48f', c: '#2a3c78' },
   },
   knight: {
-    id: 'knight', name: 'Garrus', role: 'Chevalier',
+    id: 'knight', name: 'Brok', role: 'Chevalier',
     desc: 'Très résistant : son épée balaie tout ce qui s\'approche.',
     hp: 135, atk: 12, crit: 0.06, speed: 0.95,
     weapon: 'sword', ult: 'justice',
@@ -25,22 +24,28 @@ export const CLASSES = {
   },
 };
 
-// Évolutions façon Pokémon : pendant la partie, au niveau indiqué
+// Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
 export const EVOLUTIONS = {
   mage: [
-    { name: 'Luxanne' },
-    { name: 'Luxanne Prisme', lvl: 8, colors: { 1: '#fff0c0', 2: '#e0b050', 3: '#fffbe8', a: '#ff6ad8', h: '#ffffff', c: '#b04ad6' } },
-    { name: 'Luxanne Cosmique', lvl: 18, colors: { 1: '#4a3aa8', 2: '#2a1a7a', 3: '#8a7aff', a: '#ffd54a', h: '#ff9ae0', c: '#ffd54a' } },
+    { name: 'Lumi' },
+    { name: 'Lumi Prisme', lvl: 5, colors: { 1: '#fff0c0', 2: '#e0b050', 3: '#fffbe8', a: '#ff6ad8', h: '#ffffff', c: '#b04ad6' } },
+    { name: 'Lumi Astrale', lvl: 11, colors: { 1: '#4a3aa8', 2: '#2a1a7a', 3: '#8a7aff', a: '#ffd54a', h: '#ff9ae0', c: '#ffd54a' } },
+    { name: 'Lumi Céleste', lvl: 19, colors: { 1: '#e8f4ff', 2: '#9ac8f0', 3: '#ffffff', a: '#5ad8ff', h: '#d0f4ff', c: '#ffd54a' } },
+    { name: 'Lumi Supernova', lvl: 28, aura: '#ffd54a', colors: { 1: '#fff6d0', 2: '#ffc23a', 3: '#ffffff', a: '#ffffff', h: '#ffe94a', c: '#ff9a2a' } },
   ],
   archer: [
-    { name: 'Ashlyn' },
-    { name: 'Ashlyn Givrée', lvl: 8, colors: { 1: '#9ad8ff', 2: '#5aa8e0', 3: '#e8f8ff', a: '#ffffff', c: '#3a6ab8' } },
-    { name: 'Reine Ashlyn', lvl: 18, colors: { 1: '#f0f6ff', 2: '#a8c8f0', 3: '#ffffff', a: '#ffd54a', h: '#9ad8ff', c: '#ffd54a' } },
+    { name: 'Kira' },
+    { name: 'Kira Givrée', lvl: 5, colors: { 1: '#9ad8ff', 2: '#5aa8e0', 3: '#e8f8ff', a: '#ffffff', c: '#3a6ab8' } },
+    { name: 'Kira Blizzard', lvl: 11, colors: { 1: '#2a5ab8', 2: '#1a3a80', 3: '#7ab0ff', a: '#e8f8ff', h: '#ffffff', c: '#9ad8ff' } },
+    { name: 'Kira Boréale', lvl: 19, colors: { 1: '#3ad8b0', 2: '#1a8a78', 3: '#a8fff0', a: '#ff6ad8', h: '#e0fff8', c: '#7a5aff' } },
+    { name: 'Kira Zéro Absolu', lvl: 28, aura: '#7ae8ff', colors: { 1: '#f0faff', 2: '#a8d8ff', 3: '#ffffff', a: '#5ae8ff', h: '#bff8ff', c: '#5ab8ff' } },
   ],
   knight: [
-    { name: 'Garrus' },
-    { name: 'Garrus Paladin', lvl: 8, colors: { 1: '#e6c85a', 2: '#b08a2a', 3: '#fff0b0', c: '#c83a3a' } },
-    { name: 'Garrus Dieu-Roi', lvl: 18, colors: { 1: '#f4f4ff', 2: '#c0c0e0', 3: '#ffffff', a: '#ffd54a', c: '#ffd54a' } },
+    { name: 'Brok' },
+    { name: 'Brok Paladin', lvl: 5, colors: { 1: '#e6c85a', 2: '#b08a2a', 3: '#fff0b0', c: '#c83a3a' } },
+    { name: 'Brok Croisé', lvl: 11, colors: { 1: '#c8d0e0', 2: '#7a8aa8', 3: '#ffffff', a: '#ff3a4a', c: '#3a5ad8' } },
+    { name: 'Brok Titan', lvl: 19, colors: { 1: '#3a3a4a', 2: '#1a1a28', 3: '#7a7a9a', a: '#ff8a2a', c: '#c83a3a' } },
+    { name: 'Brok Légende Dorée', lvl: 28, aura: '#ffd54a', colors: { 1: '#ffe070', 2: '#e0a020', 3: '#fffbe0', a: '#ffffff', c: '#ff5a3a' } },
   ],
 };
 
@@ -84,10 +89,10 @@ export const TOMES = {
   boots:  { name: 'Bottes de vitesse', icon: 'arrow', desc: '+10 % vitesse de déplacement' },
   vital:  { name: 'Cœur de géant', icon: 'heart', desc: '+20 % PV max (et soigne)' },
   magnet: { name: 'Aimant', icon: 'ring', desc: '+35 % rayon de ramassage' },
-  crit:   { name: 'Lame de l\'infini', icon: 'target', desc: '+7 % de critique' },
-  armor:  { name: 'Armure de ronces', icon: 'armor', desc: '−6 % de dégâts subis' },
+  crit:   { name: 'Lame aiguisée', icon: 'target', desc: '+7 % de critique' },
+  armor:  { name: 'Armure à pointes', icon: 'armor', desc: '−6 % de dégâts subis' },
   wisdom: { name: 'Tome de sagesse', icon: 'tome', desc: '+15 % d\'expérience' },
-  area:   { name: 'Coiffe de Rabadon', icon: 'crown', desc: '+12 % taille des attaques' },
+  area:   { name: 'Chapeau de sorcier', icon: 'crown', desc: '+12 % taille des attaques' },
 };
 export const MAX_WEAPONS = 4, MAX_TOMES = 4, MAX_LEVEL = 5;
 export const HALF = 1600; // demi-taille de la carte (unités du monde)
@@ -119,55 +124,55 @@ export const ELITE_MODS = {
 export const ZONE_TIME = [180, 240, 240, 240, 270, 300]; // durée du chrono de chaque monde (après : les monstres deviennent fous)
 export const ZONES = [
   {
-    id: 0, name: 'Voie du Milieu', sub: 'Les sbires arrivent !', bg: 'lane',
+    id: 0, name: 'Vallée des Gobelins', sub: 'Les gobelins attaquent !', bg: 'lane',
     sky: ['#3a6fb0', '#8fc3ea'], ground: ['#4c7a3a', '#3b6230'],
     monsters: [
-      { name: 'Sbire mêlée', body: 'humanoid', pal: ['#4f7fd8', '#2d4f9a', '#9ec0ff'], hp: 38, atk: 6, moves: ['atk'] },
-      { name: 'Sbire lanceur', ranged: true, body: 'humanoid', pal: ['#a05ad8', '#6a3696', '#d6a8ff'], hp: 32, atk: 7, moves: ['atk', 'atk', 'heavy'] },
-      { name: 'Porolet', body: 'blob', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], hp: 44, atk: 6, moves: ['atk', 'heal'] },
-      { name: 'Sbire canon', ranged: true, body: 'golem', pal: ['#d88a4f', '#9a5a2d', '#ffc79e'], hp: 58, atk: 8, moves: ['atk', 'guard', 'heavy'] },
-      { name: 'Super Sbire', body: 'golem', pal: ['#e05050', '#962d2d', '#ff9e9e'], hp: 80, atk: 9, moves: ['atk', 'heavy', 'enrage'], elite: true },
+      { name: 'Gobelin bagarreur', body: 'humanoid', pal: ['#4f7fd8', '#2d4f9a', '#9ec0ff'], hp: 38, atk: 6, moves: ['atk'] },
+      { name: 'Gobelin lanceur', ranged: true, body: 'humanoid', pal: ['#a05ad8', '#6a3696', '#d6a8ff'], hp: 32, atk: 7, moves: ['atk', 'atk', 'heavy'] },
+      { name: 'Boule de poils', body: 'blob', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], hp: 44, atk: 6, moves: ['atk', 'heal'] },
+      { name: 'Canonnier gobelin', ranged: true, body: 'golem', pal: ['#d88a4f', '#9a5a2d', '#ffc79e'], hp: 58, atk: 8, moves: ['atk', 'guard', 'heavy'] },
+      { name: 'Ogre cogneur', body: 'golem', pal: ['#e05050', '#962d2d', '#ff9e9e'], hp: 80, atk: 9, moves: ['atk', 'heavy', 'enrage'], elite: true },
     ],
-    boss: { name: 'Sbire Titan', title: 'Fléau de la Voie', body: 'humanoid', pal: ['#e0b040', '#9a6a1a', '#fff0a0'], hp: 190, atk: 13, moves: ['heavy', 'atk', 'enrage'] },
+    boss: { name: 'Roi Gobelin', title: 'Tyran de la Vallée', body: 'humanoid', pal: ['#e0b040', '#9a6a1a', '#fff0a0'], hp: 190, atk: 13, moves: ['heavy', 'atk', 'enrage'] },
   },
   {
-    id: 1, name: 'Jungle de la Faille', sub: 'Ça grouille dans les buissons…', bg: 'jungle',
+    id: 1, name: 'Jungle Grondante', sub: 'Ça grouille dans les buissons…', bg: 'jungle',
     sky: ['#1f4a3a', '#4d8a62'], ground: ['#2f5a2a', '#244a20'],
     monsters: [
-      { name: 'Raptix', body: 'bird', pal: ['#d84f4f', '#8a2d2d', '#ffb08a'], hp: 62, atk: 10, moves: ['multi', 'atk'] },
-      { name: 'Grompf', body: 'blob', pal: ['#6fae3a', '#3d6a1f', '#c2e88a'], hp: 80, atk: 10, moves: ['poison', 'atk'] },
-      { name: 'Loup murmure', body: 'beast', pal: ['#5a5f78', '#363a4f', '#a3a9c8'], hp: 74, atk: 12, moves: ['atk', 'multi', 'heavy'] },
-      { name: 'Krog ancien', body: 'golem', pal: ['#8a7a64', '#5a4d3c', '#c8b89c'], hp: 100, atk: 11, moves: ['guard', 'heavy', 'atk'] },
-      { name: 'Sentinelle bleue', f: true, body: 'golem', pal: ['#3a7ad8', '#24508f', '#8ac2ff'], hp: 112, atk: 12, moves: ['atk', 'heal', 'heavy'], elite: true },
+      { name: 'Piaf vorace', body: 'bird', pal: ['#d84f4f', '#8a2d2d', '#ffb08a'], hp: 62, atk: 10, moves: ['multi', 'atk'] },
+      { name: 'Crapaud gluant', body: 'blob', pal: ['#6fae3a', '#3d6a1f', '#c2e88a'], hp: 80, atk: 10, moves: ['poison', 'atk'] },
+      { name: 'Loup des ombres', body: 'beast', pal: ['#5a5f78', '#363a4f', '#a3a9c8'], hp: 74, atk: 12, moves: ['atk', 'multi', 'heavy'] },
+      { name: 'Golem moussu', body: 'golem', pal: ['#8a7a64', '#5a4d3c', '#c8b89c'], hp: 100, atk: 11, moves: ['guard', 'heavy', 'atk'] },
+      { name: 'Gardien de pierre bleue', body: 'golem', pal: ['#3a7ad8', '#24508f', '#8ac2ff'], hp: 112, atk: 12, moves: ['atk', 'heal', 'heavy'], elite: true },
     ],
-    boss: { name: 'Brambleback Rouge', title: 'Gardien de la Jungle', body: 'golem', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], hp: 230, atk: 15, moves: ['burn', 'atk', 'heavy', 'enrage'] },
+    boss: { name: 'Ronce-Brûlante', title: 'Seigneur de la Jungle', body: 'golem', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], hp: 230, atk: 15, moves: ['burn', 'atk', 'heavy', 'enrage'] },
   },
   {
     id: 2, name: 'Rivière Scintillante', sub: 'Attention à ne pas glisser.', bg: 'river',
     sky: ['#2a5a8a', '#7ac2e0'], ground: ['#3a8aa8', '#2a6a88'],
     monsters: [
-      { name: 'Crabe scuttle', body: 'crab', pal: ['#4fb8a8', '#2d7a70', '#a8f0e0'], hp: 105, atk: 13, moves: ['guard', 'atk'] },
+      { name: 'Crabe trotteur', body: 'crab', pal: ['#4fb8a8', '#2d7a70', '#a8f0e0'], hp: 105, atk: 13, moves: ['guard', 'atk'] },
       { name: 'Gloop des eaux', body: 'blob', pal: ['#3a8ad8', '#2456a0', '#9ad0ff'], hp: 112, atk: 13, moves: ['poison', 'heal', 'atk'] },
-      { name: 'Raptix des rives', body: 'bird', pal: ['#e0a83a', '#9a6a1f', '#ffe08a'], hp: 100, atk: 15, moves: ['multi', 'multi', 'heavy'] },
+      { name: 'Mouette pirate', body: 'bird', pal: ['#e0a83a', '#9a6a1f', '#ffe08a'], hp: 100, atk: 15, moves: ['multi', 'multi', 'heavy'] },
       { name: 'Crabe géant', body: 'crab', pal: ['#d86a3a', '#8a3f1f', '#ffb08a'], hp: 140, atk: 14, moves: ['guard', 'heavy', 'atk'] },
       { name: 'Ombre aquatique', f: true, ranged: true, body: 'ghost', pal: ['#3ad8c8', '#1f8a80', '#b0fff5'], hp: 130, atk: 16, moves: ['drain', 'atk', 'heavy'], elite: true },
     ],
-    boss: { name: 'Héraut de la Faille', title: 'L\'œil du Vide', body: 'beast', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], hp: 340, atk: 18, moves: ['heavy', 'atk', 'guard', 'enrage', 'multi'] },
+    boss: { name: 'Léviathan pourpre', title: 'Terreur de la rivière', body: 'beast', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], hp: 340, atk: 18, moves: ['heavy', 'atk', 'guard', 'enrage', 'multi'] },
   },
   {
-    id: 3, name: 'Abîme Glacial', sub: 'Un pont gelé, sans retour.', bg: 'ice',
+    id: 3, name: 'Pics Gelés', sub: 'Le froid mord, les yétis aussi.', bg: 'ice',
     sky: ['#4a6a9a', '#c8e0f5'], ground: ['#d8eaf8', '#a8c8e8'],
     monsters: [
-      { name: 'Poro sauvage', body: 'blob', pal: ['#e8f0ff', '#a8b8d8', '#ffffff'], hp: 145, atk: 16, moves: ['atk', 'heal', 'multi'] },
+      { name: 'Boule de neige vivante', body: 'blob', pal: ['#e8f0ff', '#a8b8d8', '#ffffff'], hp: 145, atk: 16, moves: ['atk', 'heal', 'multi'] },
       { name: 'Yéti des glaces', body: 'beast', pal: ['#c8d8f0', '#8aa0c8', '#ffffff'], hp: 170, atk: 18, moves: ['heavy', 'atk', 'guard'] },
       { name: 'Esprit du givre', ranged: true, body: 'ghost', pal: ['#8ad0ff', '#4a8ad8', '#e0f5ff'], hp: 150, atk: 19, moves: ['drain', 'atk'] },
       { name: 'Golem de glace', body: 'golem', pal: ['#6ab8e8', '#3a78a8', '#c8f0ff'], hp: 200, atk: 17, moves: ['guard', 'heavy', 'atk'] },
-      { name: 'Gardien du pont', body: 'humanoid', pal: ['#5a7ab8', '#344c80', '#a8c0f0'], hp: 190, atk: 20, moves: ['atk', 'heavy', 'enrage'], elite: true },
+      { name: 'Chevalier de givre', body: 'humanoid', pal: ['#5a7ab8', '#344c80', '#a8c0f0'], hp: 190, atk: 20, moves: ['atk', 'heavy', 'enrage'], elite: true },
     ],
-    boss: { name: 'Anivale', title: 'Cryophénix éternel', body: 'bird', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], hp: 460, atk: 22, moves: ['multi', 'heavy', 'heal', 'atk', 'guard'] },
+    boss: { name: 'Cryophénix', title: 'Ailes de l\'hiver éternel', body: 'bird', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], hp: 460, atk: 22, moves: ['multi', 'heavy', 'heal', 'atk', 'guard'] },
   },
   {
-    id: 4, name: 'Îles Ombreuses', sub: 'La Brume noire dévore tout.', bg: 'shadow',
+    id: 4, name: 'Marais Hanté', sub: 'La brume noire dévore tout.', bg: 'shadow',
     sky: ['#14262a', '#2f5a52'], ground: ['#1f3a36', '#142a26'],
     monsters: [
       { name: 'Âme errante', ranged: true, body: 'ghost', pal: ['#5ae8b8', '#2a9a78', '#c0ffe8'], hp: 190, atk: 21, moves: ['drain', 'atk'] },
@@ -176,19 +181,19 @@ export const ZONES = [
       { name: 'Revenant', body: 'ghost', pal: ['#8ab8a8', '#4a7a6a', '#d8fff0'], hp: 230, atk: 22, moves: ['drain', 'guard', 'heavy'] },
       { name: 'Chevalier déchu', body: 'humanoid', pal: ['#3a5a58', '#1f3836', '#7affd0'], hp: 260, atk: 25, moves: ['heavy', 'enrage', 'atk'], elite: true },
     ],
-    boss: { name: 'Thrash', title: 'Geôlier des âmes', body: 'ghost', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], hp: 600, atk: 27, moves: ['drain', 'heavy', 'poison', 'guard', 'enrage'] },
+    boss: { name: 'Geôlier spectral', title: 'Collectionneur d\'âmes', body: 'ghost', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], hp: 600, atk: 27, moves: ['drain', 'heavy', 'poison', 'guard', 'enrage'] },
   },
   {
-    id: 5, name: 'Le Vide', sub: 'Au-delà, il n\'y a que la faim.', bg: 'void',
+    id: 5, name: 'Le Néant', sub: 'Au-delà, il n\'y a que la faim.', bg: 'void',
     sky: ['#1a0a2a', '#4a1a6a'], ground: ['#2a1040', '#1a0828'],
     monsters: [
-      { name: 'Larve du Vide', body: 'worm', pal: ['#a83ad8', '#62208a', '#f0a0ff'], hp: 250, atk: 26, moves: ['multi', 'atk'] },
+      { name: 'Larve du Néant', body: 'worm', pal: ['#a83ad8', '#62208a', '#f0a0ff'], hp: 250, atk: 26, moves: ['multi', 'atk'] },
       { name: 'Rôdeur abyssal', body: 'beast', pal: ['#6a2ad8', '#3a148a', '#c0a0ff'], hp: 280, atk: 28, moves: ['heavy', 'atk', 'multi'] },
-      { name: 'Œil du Vide', ranged: true, body: 'blob', pal: ['#d83aa8', '#8a1f6a', '#ffa0e0'], hp: 265, atk: 29, moves: ['drain', 'poison', 'atk'] },
+      { name: 'Œil du Néant', ranged: true, body: 'blob', pal: ['#d83aa8', '#8a1f6a', '#ffa0e0'], hp: 265, atk: 29, moves: ['drain', 'poison', 'atk'] },
       { name: 'Scarabée du Néant', body: 'crab', pal: ['#4a3ad8', '#2a1f8a', '#a8a0ff'], hp: 310, atk: 27, moves: ['guard', 'heavy', 'atk'] },
-      { name: 'Héraut affamé', body: 'worm', pal: ['#d83a6a', '#8a1f3a', '#ffa0c0'], hp: 340, atk: 31, moves: ['heavy', 'enrage', 'drain'], elite: true },
+      { name: 'Dévoreur affamé', body: 'worm', pal: ['#d83a6a', '#8a1f3a', '#ffa0c0'], hp: 340, atk: 31, moves: ['heavy', 'enrage', 'drain'], elite: true },
     ],
-    boss: { name: 'Baron Nashar', title: 'Seigneur du Vide', body: 'worm', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], hp: 820, atk: 33, moves: ['heavy', 'poison', 'multi', 'enrage', 'guard', 'drain'] },
+    boss: { name: 'Ver-Roi du Néant', title: 'Celui qui dévore les mondes', body: 'worm', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], hp: 820, atk: 33, moves: ['heavy', 'poison', 'multi', 'enrage', 'guard', 'drain'] },
   },
 ];
 
@@ -197,14 +202,14 @@ export const BOSS_COUNT = ZONES.filter(z => z.boss).length; // 5
 
 // Familiers : obtenus en battant les boss. Agissent chaque tour.
 export const PETS = {
-  poro:   { name: 'Poro', desc: 'Vous soigne de 1,5 % des PV toutes les 4 s.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
-  brambi: { name: 'Bramblichou', desc: 'Brûle les ennemis qui vous touchent.', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], body: 'golem', zone: 1 },
-  herald: { name: 'Petit Héraut', desc: 'Tire sur les ennemis proches.', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], body: 'beast', zone: 2 },
+  poro:   { name: 'Pompon', desc: 'Vous soigne de 1,5 % des PV toutes les 4 s.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
+  brambi: { name: 'Ronchou', desc: 'Brûle les ennemis qui vous touchent.', pal: ['#c83a2a', '#7a1f16', '#ff9a5a'], body: 'golem', zone: 1 },
+  herald: { name: 'Mini Léviathan', desc: 'Tire sur les ennemis proches.', pal: ['#8a3ad8', '#541f8a', '#d0a0ff'], body: 'beast', zone: 2 },
   phenix: { name: 'Phénixounet', desc: 'Attire l\'expérience de plus loin (+40 %).', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], body: 'bird', zone: 3 },
   wisp:   { name: 'Lanterne', desc: 'Bloque un coup toutes les 12 s.', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], body: 'ghost', zone: 4 },
-  voidy:  { name: 'Nashar Jr', desc: 'Votre ultime se charge 2× plus vite.', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], body: 'worm', zone: 5 },
+  voidy:  { name: 'Ver Jr', desc: 'Votre ultime se charge 2× plus vite.', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], body: 'worm', zone: 5 },
 };
-// zone d'obtention = boss de la zone (poro offert à la fin de la zone 0)
+// zone d'obtention = boss de la zone
 export const PET_BY_ZONE = ['poro', 'brambi', 'herald', 'phenix', 'wisp', 'voidy'];
 
 // Équipement : 3 emplacements
@@ -219,33 +224,33 @@ export const RARITY = {
 export const ITEM_BASES = {
   weapon: [
     { name: 'Épée longue', icon: 'sword', stat: { atk: 3 } },
-    { name: 'Tome d\'amplification', icon: 'tome', stat: { atk: 3 } },
+    { name: 'Grimoire runique', icon: 'tome', stat: { atk: 3 } },
     { name: 'Arc courbé', icon: 'bow', stat: { atk: 2, crit: 0.03 } },
-    { name: 'Lame de Doran', icon: 'sword', stat: { atk: 2, hp: 8 } },
-    { name: 'Bâton du néant', icon: 'staff', stat: { atk: 4 } },
+    { name: 'Lame du voyageur', icon: 'sword', stat: { atk: 2, hp: 8 } },
+    { name: 'Bâton de foudre', icon: 'staff', stat: { atk: 4 } },
   ],
   armor: [
     { name: 'Cotte de mailles', icon: 'armor', stat: { hp: 16 } },
-    { name: 'Cape de négation', icon: 'cloak', stat: { hp: 12, regen: 1 } },
+    { name: 'Cape de brume', icon: 'cloak', stat: { hp: 12, regen: 1 } },
     { name: 'Gilet d\'épines', icon: 'armor', stat: { hp: 14, atk: 1 } },
-    { name: 'Plastron de Warmog', icon: 'armor', stat: { hp: 20 } },
+    { name: 'Plastron du géant', icon: 'armor', stat: { hp: 20 } },
   ],
   trinket: [
-    { name: 'Larme de la déesse', icon: 'gem', stat: { regen: 2 } },
+    { name: 'Larme de fée', icon: 'gem', stat: { regen: 2 } },
     { name: 'Gant de cogneur', icon: 'glove', stat: { crit: 0.05 } },
-    { name: 'Anneau de Doran', icon: 'ring', stat: { regen: 1, atk: 1 } },
+    { name: 'Anneau du voyageur', icon: 'ring', stat: { regen: 1, atk: 1 } },
     { name: 'Talisman ancien', icon: 'gem', stat: { hp: 8, crit: 0.02 } },
   ],
 };
 
 // Objets légendaires uniques donnés par les boss
 export const BOSS_ITEMS = [
-  { slot: 'trinket', name: 'Bannière du Titan', icon: 'shield', rarity: 'legendary', stat: { hp: 30, atk: 4 } },
-  { slot: 'weapon', name: 'Lame du Brambleback', icon: 'sword', rarity: 'legendary', stat: { atk: 14, crit: 0.05 } },
-  { slot: 'armor', name: 'Carapace du Héraut', icon: 'armor', rarity: 'legendary', stat: { hp: 80, regen: 3 } },
+  { slot: 'trinket', name: 'Couronne du Roi Gobelin', icon: 'crown', rarity: 'legendary', stat: { hp: 30, atk: 4 } },
+  { slot: 'weapon', name: 'Lame de Ronce-Brûlante', icon: 'sword', rarity: 'legendary', stat: { atk: 14, crit: 0.05 } },
+  { slot: 'armor', name: 'Carapace du Léviathan', icon: 'armor', rarity: 'legendary', stat: { hp: 80, regen: 3 } },
   { slot: 'trinket', name: 'Plume de Cryophénix', icon: 'gem', rarity: 'legendary', stat: { crit: 0.12, regen: 5 } },
-  { slot: 'weapon', name: 'Faux de Thrash', icon: 'staff', rarity: 'legendary', stat: { atk: 26, hp: 30 } },
-  { slot: 'armor', name: 'Écailles du Baron', icon: 'armor', rarity: 'legendary', stat: { hp: 160, atk: 10 } },
+  { slot: 'weapon', name: 'Faux du Geôlier', icon: 'staff', rarity: 'legendary', stat: { atk: 26, hp: 30 } },
+  { slot: 'armor', name: 'Écailles du Ver-Roi', icon: 'armor', rarity: 'legendary', stat: { hp: 160, atk: 10 } },
 ];
 
 // Améliorations permanentes (boutique, payées en or)
@@ -262,16 +267,16 @@ export const UPGRADES = {
 export const ACHIEVEMENTS = [
   { id: 'first_win', name: 'Premier sang', desc: 'Vaincre 1 monstre.', gold: 20 },
   { id: 'kills1000', name: 'Massacre', desc: 'Vaincre 1 000 monstres au total.', gold: 80 },
-  { id: 'zone1', name: 'Sortie de voie', desc: 'Terminer la Voie du Milieu.', gold: 50 },
+  { id: 'zone1', name: 'Hors de la vallée', desc: 'Terminer la Vallée des Gobelins.', gold: 50 },
   { id: 'boss1', name: 'Chasseur', desc: 'Vaincre un boss.', gold: 80 },
   { id: 'allclass', name: 'Polyvalent', desc: 'Terminer une partie avec chaque champion.', gold: 100 },
-  { id: 'rich', name: 'Fortune de Gangplank', desc: 'Posséder 1 000 or.', gold: 100 },
+  { id: 'rich', name: 'Fortune de pirate', desc: 'Posséder 1 000 or.', gold: 100 },
   { id: 'epic', name: 'Collectionneur', desc: 'Obtenir un objet épique.', gold: 60 },
   { id: 'pets3', name: 'Ménagerie', desc: 'Posséder 3 familiers.', gold: 120 },
-  { id: 'ult20', name: 'Pentakill', desc: 'Lancer 20 ultimes.', gold: 80 },
+  { id: 'ult20', name: 'Déluge de pouvoir', desc: 'Lancer 20 ultimes.', gold: 80 },
   { id: 'lvl20', name: 'Niveau 20', desc: 'Atteindre le niveau 20 dans une partie.', gold: 80 },
   { id: 'nodeath', name: 'Intouchable', desc: 'Terminer une zone sans revivre.', gold: 100 },
-  { id: 'baron', name: 'Baron sécurisé', desc: 'Vaincre le Baron Nashar.', gold: 500 },
+  { id: 'baron', name: 'Dévoreur dévoré', desc: 'Vaincre le Ver-Roi du Néant.', gold: 500 },
   { id: 'hard1', name: 'Sueurs froides', desc: 'Terminer une zone en Difficile.', gold: 150 },
   { id: 'nightmare1', name: 'Cauchemar éveillé', desc: 'Terminer une zone en Cauchemar.', gold: 300 },
   { id: 'portal1', name: 'Au-delà du portail', desc: 'Franchir un portail après avoir vaincu un boss.', gold: 80 },
@@ -337,3 +342,80 @@ export const BOOSTS = {
 
 // Bilan d'une expédition : +10 % d'or par totem de défi activé.
 export const HEAT_GOLD = 0.1;
+
+// Anciens noms (avant le changement d'univers) -> nouveaux : pour mettre à jour les vieilles sauvegardes
+export const RENAMED = {
+  'Sbire mêlée': 'Gobelin bagarreur',
+  'Sbire lanceur': 'Gobelin lanceur',
+  'Porolet': 'Boule de poils',
+  'Sbire canon': 'Canonnier gobelin',
+  'Super Sbire': 'Ogre cogneur',
+  'Sbire Titan': 'Roi Gobelin',
+  'Raptix': 'Piaf vorace',
+  'Grompf': 'Crapaud gluant',
+  'Loup murmure': 'Loup des ombres',
+  'Krog ancien': 'Golem moussu',
+  'Sentinelle bleue': 'Gardien de pierre bleue',
+  'Brambleback Rouge': 'Ronce-Brûlante',
+  'Crabe scuttle': 'Crabe trotteur',
+  'Raptix des rives': 'Mouette pirate',
+  'Héraut de la Faille': 'Léviathan pourpre',
+  'Poro sauvage': 'Boule de neige vivante',
+  'Gardien du pont': 'Chevalier de givre',
+  'Anivale': 'Cryophénix',
+  'Thrash': 'Geôlier spectral',
+  'Larve du Vide': 'Larve du Néant',
+  'Œil du Vide': 'Œil du Néant',
+  'Héraut affamé': 'Dévoreur affamé',
+  'Baron Nashar': 'Ver-Roi du Néant',
+  "Tome d'amplification": 'Grimoire runique',
+  'Lame de Doran': 'Lame du voyageur',
+  'Bâton du néant': 'Bâton de foudre',
+  'Cape de négation': 'Cape de brume',
+  'Plastron de Warmog': 'Plastron du géant',
+  'Larme de la déesse': 'Larme de fée',
+  'Anneau de Doran': 'Anneau du voyageur',
+  'Bannière du Titan': 'Couronne du Roi Gobelin',
+  'Lame du Brambleback': 'Lame de Ronce-Brûlante',
+  'Carapace du Héraut': 'Carapace du Léviathan',
+  'Faux de Thrash': 'Faux du Geôlier',
+  'Écailles du Baron': 'Écailles du Ver-Roi',
+};
+
+// ---------- Caractéristiques des objets (demande du joueur : « des améliorations, du vol de vie… ») ----------
+// Chaque objet a sa caractéristique principale (arme : ATQ, armure : PV, bijou : au choix) plus des bonus tirés au
+// hasard : 1 (commun) à 4 (légendaire). roll = valeur par rareté [commun, rare, épique, légendaire] avant le bonus de zone.
+// fmt : 'flat' (+12), 'pct' (+5 %), 'regen' (+0,3 PV/s, unités de 0,1). max = plafond total une fois tout additionné.
+export const AFFIXES = {
+  atk:       { name: 'Dégâts', fmt: 'flat', roll: [3, 6, 10, 16] },
+  hp:        { name: 'PV max', fmt: 'flat', roll: [12, 24, 40, 64] },
+  crit:      { name: 'Chance de critique', fmt: 'pct', roll: [0.03, 0.05, 0.08, 0.12], max: 0.75 },
+  critDmg:   { name: 'Dégâts critiques', fmt: 'pct', roll: [0.15, 0.25, 0.4, 0.6] },
+  lifesteal: { name: 'Vol de vie', fmt: 'pct', roll: [0.01, 0.02, 0.035, 0.05], max: 0.15 },
+  haste:     { name: 'Vitesse d\'attaque', fmt: 'pct', roll: [0.04, 0.07, 0.1, 0.15], max: 0.6 },
+  speed:     { name: 'Vitesse de course', fmt: 'pct', roll: [0.03, 0.05, 0.08, 0.12], max: 0.5 },
+  area:      { name: 'Taille des attaques', fmt: 'pct', roll: [0.05, 0.08, 0.12, 0.18] },
+  armor:     { name: 'Armure', fmt: 'pct', roll: [0.02, 0.04, 0.06, 0.09], max: 0.5 },
+  regen:     { name: 'Régénération', fmt: 'regen', roll: [1, 2, 3, 5] },
+  thorns:    { name: 'Épines', fmt: 'pct', roll: [0.3, 0.5, 0.8, 1.2] },
+  dodge:     { name: 'Esquive', fmt: 'pct', roll: [0.02, 0.03, 0.05, 0.07], max: 0.3 },
+  xp:        { name: 'Expérience', fmt: 'pct', roll: [0.05, 0.08, 0.12, 0.18] },
+  magnet:    { name: 'Ramassage', fmt: 'pct', roll: [0.1, 0.15, 0.22, 0.3] },
+  gold:      { name: 'Or gagné', fmt: 'pct', roll: [0.05, 0.08, 0.12, 0.18] },
+  ult:       { name: 'Charge de l\'ultime', fmt: 'pct', roll: [0.08, 0.12, 0.18, 0.25] },
+};
+// bonus possibles selon l'emplacement (la caractéristique principale est à part)
+export const AFFIX_POOLS = {
+  weapon:  ['crit', 'critDmg', 'lifesteal', 'haste', 'area', 'atk'],
+  armor:   ['armor', 'regen', 'thorns', 'dodge', 'hp', 'speed'],
+  trinket: ['lifesteal', 'xp', 'magnet', 'gold', 'ult', 'crit', 'speed', 'haste'],
+};
+// Effets uniques des objets légendaires (un au hasard par légendaire), appliqués pendant la partie.
+export const LEGEND_EFFECTS = {
+  boom:    { name: 'Explosion', desc: '20 % de chances qu\'un ennemi vaincu explose et blesse ses voisins' },
+  chain:   { name: 'Foudre en chaîne', desc: 'Un coup sur 8 déclenche un éclair qui rebondit sur 3 ennemis' },
+  frost:   { name: 'Gel', desc: '8 % de chances de geler un ennemi touché pendant 1 s' },
+  feast:   { name: 'Festin', desc: 'Chaque ennemi vaincu rend 0,5 % de vos PV max' },
+  bubble:  { name: 'Bulle', desc: 'Un bouclier bloque un coup toutes les 10 s' },
+  fury:    { name: 'Furie', desc: '+30 % de dégâts quand vous avez moins de 40 % de PV' },
+};

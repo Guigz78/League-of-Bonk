@@ -1,5 +1,5 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
-import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, FORGE, BOOSTS, BOOST_SLOTS } from './data.js';
+import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, FORGE, BOOSTS, BOOST_SLOTS, RENAMED } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -58,7 +58,15 @@ function migrate(s) {
   out.settings = { ...base.settings, ...s.settings };
   migrateDifficulty(out, base);
   migrateLoot(out, s);
+  renameOld(out);
   return out;
+}
+
+// l'univers a changé de noms : bestiaire et objets des anciennes sauvegardes suivent
+function renameOld(out) {
+  const seen = out.stats.seen || {};
+  for (const [o, n] of Object.entries(RENAMED)) if (seen[o]) { seen[n] = (seen[n] || 0) + seen[o]; delete seen[o]; }
+  for (const it of out.inventory || []) if (RENAMED[it.name]) it.name = RENAMED[it.name];
 }
 
 // v2 -> v3 : pièces, bonus, coffres en attente (toujours remis en forme, comme la difficulté)

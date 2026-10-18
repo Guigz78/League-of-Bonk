@@ -1,6 +1,6 @@
 # League of Bonk
 
-Roguelike d'action **2D** façon Megabonk / PokéBonk, en style cartoon vu de dessus, dans un univers façon League of Legends (noms modifiés).
+Roguelike d'action **2D** façon Megabonk / PokéBonk, en style cartoon vu de dessus, dans un univers fantastique original.
 Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauvegarde sur l'appareil, synchronisation optionnelle avec un compte Google.
 
 ## Jouer
