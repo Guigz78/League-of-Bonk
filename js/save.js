@@ -169,12 +169,12 @@ export function rollRarity(r, zone, boost = 0) {
 }
 
 // valeur d'un bonus : roll de la rareté × zone (les bonus en % montent plus doucement) × hasard ±15 %.
-// La caractéristique principale est un peu plus forte qu'un bonus.
+// Une régénération en caractéristique principale vaut double.
 function affixValue(k, ri, zone, mult, r, main = false) {
   const A = AFFIXES[k];
-  const v = A.roll[ri] * mult * (0.85 + r() * 0.3) * (main ? (k === 'regen' ? 2 : 1.25) : 1);
+  const v = A.roll[ri] * mult * (0.85 + r() * 0.3) * (main && k === 'regen' ? 2 : 1);
   if (A.fmt === 'pct') return Math.max(0.005, r3(v * (1 + zone * 0.12)));
-  return Math.max(1, Math.round(v * (1 + zone * 0.5)));
+  return Math.max(1, Math.round(v * (1 + zone * 0.45)));
 }
 
 // objet : caractéristique principale + 1 (commun) à 4 (légendaire) bonus, + un effet unique sur les légendaires.

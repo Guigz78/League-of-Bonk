@@ -573,18 +573,18 @@ async function pauseMenu(resume) {
         <label class="toggle"><input type="checkbox" id="pMus" ${save.settings.music !== false ? 'checked' : ''}> Musique</label>
       </div>
       <div class="howto">
-        <p>${iconImg('arrow', 16)} <b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</p>
-        <p>${iconImg('sword', 16)} <b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</p>
-        <p>${iconImg('i_heavy', 16)} <b>Sauter</b> : touchez brièvement l'écran pour passer par-dessus les monstres, les ondes de choc et les lasers des boss.</p>
-        <p>${iconImg('skull', 16)} <b>Boss</b> : suivez la flèche jusqu'à l'<b>autel au crâne rouge</b> et restez dessus pour invoquer le boss. Le combat a lieu dans une arène fermée.</p>
-        <p>${iconImg('portal', 16)} <b>Portail</b> : le boss vaincu ouvre un portail (suivez la flèche) vers le monde suivant, plus dur mais plus riche. Vous pouvez aussi rentrer avec votre butin.</p>
-        <p>${iconImg('i_enrage', 16)} <b>Chrono</b> : quand il est écoulé, le boss arrive de lui-même et les monstres deviennent <b>fous</b>, de plus en plus. Ne traînez pas !</p>
-        <p>${iconImg('i_burn', 16)} <b>Totems de défi</b> : restez près d'un totem pour l'activer. Le monde devient plus dur, mais vous gagnez de l'or, un coffre ou une bénédiction (et +${Math.round(HEAT_GOLD * 100)} % d'or au bilan).</p>
-        <p>${iconImg('chest', 16)} <b>Coffres de butin</b> : ramassez-les, ils s'ouvrent à la fin de la partie. Leurs pièces servent à fabriquer de l'équipement à la Forge.</p>
-        <p>${iconImg('gem', 16)} <b>Explorer</b> : les autels bleus donnent des bénédictions, les coffres dorés des améliorations.</p>
-        <p>${iconImg('i_atk', 16)} <b>Attaques spéciales</b> : un monstre qui clignote ou un cercle rouge au sol annonce une attaque. Écartez-vous vite !</p>
-        <p>${iconImg('crown', 16)} <b>Élites</b> : leur nom indique leur pouvoir (${Object.values(ELITE_MODS).map(m => esc(m.name)).join(', ')}). Fuyez les Explosifs quand ils tombent !</p>
-        <p>${iconImg('nova', 16)} <b>Ultime</b> : se charge en battant des monstres et se lance tout seul quand des ennemis sont proches (ou touchez le bouton).</p>
+        <p>${iconImg('arrow', 20)}<span><b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</span></p>
+        <p>${iconImg('sword', 20)}<span><b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</span></p>
+        <p>${iconImg('i_heavy', 20)}<span><b>Sauter</b> : touchez le bouton <b>Saut</b> (en bas à gauche) pour passer par-dessus les monstres, les ondes de choc et les lasers des boss. Quand il clignote en rouge, une attaque arrive : sautez !</span></p>
+        <p>${iconImg('skull', 20)}<span><b>Boss</b> : suivez la flèche jusqu'à l'<b>autel au crâne rouge</b> et restez dessus pour invoquer le boss. Le combat a lieu dans une arène fermée.</span></p>
+        <p>${iconImg('portal', 20)}<span><b>Portail</b> : le boss vaincu ouvre un portail (suivez la flèche) vers le monde suivant, plus dur mais plus riche. Vous pouvez aussi rentrer avec votre butin.</span></p>
+        <p>${iconImg('i_enrage', 20)}<span><b>Chrono</b> : quand il est écoulé, le boss arrive de lui-même et les monstres deviennent <b>fous</b>, de plus en plus. Ne traînez pas !</span></p>
+        <p>${iconImg('i_burn', 20)}<span><b>Totems de défi</b> : restez près d'un totem pour l'activer. Le monde devient plus dur, mais vous gagnez de l'or, un coffre ou une bénédiction (et +${Math.round(HEAT_GOLD * 100)} % d'or au bilan).</span></p>
+        <p>${iconImg('chest', 20)}<span><b>Coffres de butin</b> : ramassez-les, ils s'ouvrent à la fin de la partie. Leurs pièces servent à fabriquer de l'équipement à la Forge.</span></p>
+        <p>${iconImg('gem', 20)}<span><b>Explorer</b> : les autels bleus donnent des bénédictions, les coffres dorés des améliorations.</span></p>
+        <p>${iconImg('i_atk', 20)}<span><b>Attaques spéciales</b> : un monstre qui clignote ou un cercle rouge au sol annonce une attaque. Écartez-vous vite !</span></p>
+        <p>${iconImg('crown', 20)}<span><b>Élites</b> : leur nom indique leur pouvoir (${Object.values(ELITE_MODS).map(m => esc(m.name)).join(', ')}). Fuyez les Explosifs quand ils tombent !</span></p>
+        <p>${iconImg('nova', 20)}<span><b>Ultime</b> : se charge en battant des monstres et se lance tout seul quand des ennemis sont proches (ou touchez le bouton).</span></p>
       </div>
       ${runBoosts.length ? `<div class="cur-build boosts-on">${runBoosts.map(id => `<span>${iconImg(BOOSTS[id].icon, 18)} ${esc(BOOSTS[id].name)}</span>`).join('')}</div>` : ''}
       <div class="cur-build">${run.p.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 18)} ${esc(WEAPONS[w.id].name)} <b>${w.lv}</b></span>`).join('')}${Object.entries(run.p.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 18)} ${esc(TOMES[id].name)} <b>${lv}</b></span>`).join('')}</div>`,
@@ -1069,7 +1069,7 @@ function gearTab() {
     <div class="slots">${slots}</div>
     <h3 class="section-t">Sac <small>${list.length} objet${list.length > 1 ? 's' : ''}</small></h3>
     <div class="filters">${[['all', 'Tout'], ...Object.entries(SLOTS)].map(([k, l]) => `<button class="chip-btn ${gearFilter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${l}</button>`).join('')}
-      ${list.some(i => i.rarity === 'common' && !i.lv) ? '<button class="chip-btn sell" data-act="sellJunk">Vendre les communs</button>' : ''}</div>
+      ${list.some(i => i.rarity === 'common' && !i.lv) ? '<button class="chip-btn sell" data-act="sellJunk">Vendre ou recycler les communs</button>' : ''}</div>
     ${list.length ? `<div class="inv-grid">${list.map(it => itemTile(it, { cur: save.inventory.find(i => i.id === save.equipped[it.slot]) || null, isNew: fresh.has(it.id) })).join('')}</div>`
     : '<p class="muted center empty-note">Ouvrez des coffres de butin et battez des boss pour trouver de l\'équipement.</p>'}
     <h3 class="section-t">Familier <small>${save.pets.length}/6</small></h3>
@@ -1183,12 +1183,15 @@ function equipItem(id) {
 async function sellJunk() {
   const eq = Object.values(save.equipped);
   const junk = save.inventory.filter(i => i.rarity === 'common' && !eq.includes(i.id) && !i.lv);
-  const total = junk.reduce((n, i) => n + sellValue(i), 0);
-  const ok = await modal({ title: 'Vendre les objets communs ?', body: `<p>${junk.length} objet(s) pour <b>${fmt(total)} or</b>.</p><p class="muted">Les objets améliorés sont gardés. Vous pouvez aussi les recycler en pièces pour la Forge.</p>`, buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Vendre', cls: 'primary', value: true }] });
-  if (!ok) return;
-  save.inventory = save.inventory.filter(i => !junk.includes(i));
-  save.gold += total;
-  persist(); sfx('coin'); announceAchievements(); home();
+  const total = junk.reduce((n, i) => n + sellValue(i), 0), parts = junk.reduce((n, i) => n + salvageValue(i), 0);
+  const v = await modal({ title: 'Objets communs', body: `<p><b>${junk.length} objet${junk.length > 1 ? 's' : ''}</b> commun${junk.length > 1 ? 's' : ''} dans le sac (les objets améliorés sont gardés).</p>
+      <div class="rw">${iconImg('gold', 22)}<span>Vendre : <b class="gold-t">+${fmt(total)} or</b></span></div>
+      <div class="rw">${iconImg('hammer', 22)}<span>Recycler : <b>+${parts} pièces</b> communes pour la Forge</span></div>`,
+    buttons: [{ label: 'Annuler', cls: 'ghost', value: null }, { label: 'Recycler', cls: 'green', value: 'salvage' }, { label: 'Vendre', cls: 'primary', value: 'sell' }] });
+  if (!v) return;
+  if (v === 'salvage') { for (const it of junk) salvageItem(it.id); sfx('forge'); toast(`${iconImg('hammer', 16)} <b>+${parts}</b> pièces communes`); }
+  else { save.inventory = save.inventory.filter(i => !junk.includes(i)); save.gold += total; sfx('coin'); }
+  persist(); announceAchievements(); home();
 }
 
 // ---------- Forge ----------
