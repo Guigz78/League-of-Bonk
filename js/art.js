@@ -229,6 +229,23 @@ const ICONS = {
     '..........', '..k...k...', '.k3k.k3k..', 'k333k333k.', '.k3k.k3k..',
     '..k...k...', '.....k....', '....k3k...', '...k333k..', '....k3k...',
   ], { 3: '#ffe04a' }],
+  // Expédition : forge, butin, portail
+  hammer: [[
+    '.kkkkkkkk.', 'k3333333ak', 'k3aaaaaa2k', '.kkkkbkkk.', '....kbk...',
+    '....kbk...', '....kbk...', '....kbk...', '....kbk...', '....kkk...',
+  ], { 3: '#e8eef8', a: '#9aa4b8', 2: '#5a6478', b: '#c8874a' }],
+  chest: [[
+    '..........', '.kkkkkkkk.', 'k33333333k', 'k31111113k', 'kkkkaakkkk',
+    'k111ka111k', 'k1111k111k', 'k21111112k', 'k22222222k', '.kkkkkkkk.',
+  ], { 1: '#c8874a', 2: '#8a5428', 3: '#f0b070', a: '#ffd54a' }],
+  portal: [[
+    '..kkkkkk..', '.k111111k.', 'k11333311k', 'k13111131k', 'k131ww131k',
+    'k131ww131k', 'k13111131k', 'k11333311k', '.k111111k.', '..kkkkkk..',
+  ], { 1: '#8a3ad8', 3: '#e0b0ff', w: '#ffffff' }],
+  upg: [[
+    '....kk....', '...k33k...', '..k3333k..', '.k333333k.', 'kkkk33kkkk',
+    '...k33k...', '...k33k...', '...k22k...', '...k22k...', '...kkkk...',
+  ], { 3: '#7af09a', 2: '#3ab85a' }],
 };
 
 export function iconURL(name) {
@@ -254,4 +271,133 @@ export function iconCanvas(name) {
 // Grille + palette d'un héros (pour le modèle 3D). evo : 0, 1 ou 2 (évolutions).
 export function heroGrid(cls, colors) {
   return { grid: HEROES[cls], colors: { ...BASE, ...colors } };
+}
+
+// ---------- Expédition : coffres de butin, enclume et marteau (dessin vectoriel, style cartoon) ----------
+const TAU = Math.PI * 2, INK = '#1a1424';
+const CHEST_PAL = [
+  { hi: '#f6c088', a: '#d08a4a', b: '#7a4620', band: '#8a94a8', bandD: '#454d60', lock: '#ffd54a', lockD: '#a8700c', glow: '#ffd27a' },
+  { hi: '#ffffff', a: '#dce6f6', b: '#7a8aa8', band: '#55658a', bandD: '#28324c', lock: '#ffd54a', lockD: '#a8700c', glow: '#d8ecff' },
+  { hi: '#fff6c0', a: '#ffcc3a', b: '#b8740c', band: '#9a4a16', bandD: '#4e2406', lock: '#fff2b8', lockD: '#c08a18', glow: '#ffe066' },
+  { hi: '#ffd6f8', a: '#e05ad2', b: '#5a168e', band: '#ffd54a', bandD: '#9a6a0a', lock: '#8af4ff', lockD: '#2a86b8', glow: '#ff9ae8' },
+];
+
+function rrect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function vgrad(g, y0, y1, stops) {
+  const gr = g.createLinearGradient(0, y0, 0, y1);
+  stops.forEach((c, i) => gr.addColorStop(i / (stops.length - 1), c));
+  return gr;
+}
+function ink(g, w = 3.2) { g.strokeStyle = INK; g.lineWidth = w; g.stroke(); }
+function sparkle(g, x, y, r, col) {
+  g.fillStyle = col; g.beginPath();
+  g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r);
+  g.fill();
+}
+function canvas2x(W, H, S = 2) {
+  const c = document.createElement('canvas'); c.width = W * S; c.height = H * S;
+  const g = c.getContext('2d'); g.scale(S, S); g.lineJoin = 'round'; g.lineCap = 'round';
+  return [c, g];
+}
+
+// coffre de butin (tier 0 bois … 3 mythique), fermé ou ouvert
+export function chestURL(tier = 0, open = false) {
+  return cachedURL(`chest:${tier}:${open ? 1 : 0}`, () => drawChest(tier, open));
+}
+
+function drawChest(tier, open) {
+  const P = CHEST_PAL[tier] || CHEST_PAL[0];
+  const [c, g] = canvas2x(120, 112);
+  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(60, 104, 50, 7, 0, 0, TAU); g.fill();
+  const straps = (y0, y1) => { for (const x of [22, 88]) { g.fillStyle = vgrad(g, y0, y1, [P.band, P.bandD]); g.fillRect(x, y0, 10, y1 - y0); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x + 2, y0, 2, y1 - y0); } };
+  if (open) {
+    // couvercle basculé vers l'arrière : on voit son intérieur
+    const lid = () => { g.beginPath(); g.moveTo(12, 56); g.lineTo(18, 18); g.quadraticCurveTo(60, 2, 102, 18); g.lineTo(108, 56); g.closePath(); };
+    lid(); g.fillStyle = vgrad(g, 8, 56, [P.b, P.a]); g.fill();
+    g.save(); lid(); g.clip(); straps(0, 60); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, 36, 120, 30); g.restore();
+    lid(); ink(g);
+    // lumière du trésor
+    const gl = g.createRadialGradient(60, 58, 2, 60, 58, 48);
+    gl.addColorStop(0, '#ffffff'); gl.addColorStop(0.35, P.glow); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gl; g.beginPath(); g.ellipse(60, 58, 47, 12, 0, 0, TAU); g.fill();
+  }
+  // corps
+  rrect(g, 12, 56, 96, 44, 7); g.fillStyle = vgrad(g, 56, 100, [P.a, P.b]); g.fill();
+  g.save(); rrect(g, 12, 56, 96, 44, 7); g.clip();
+  if (tier === 0) { g.strokeStyle = 'rgba(60,30,10,.45)'; g.lineWidth = 2; for (const y of [72, 86]) { g.beginPath(); g.moveTo(12, y); g.lineTo(108, y); g.stroke(); } }
+  else { g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(12, 64, 96, 4); }
+  straps(56, 100);
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(12, 92, 96, 8);
+  g.restore();
+  rrect(g, 12, 56, 96, 44, 7); ink(g);
+  if (!open) {
+    // couvercle bombé
+    const lid = () => { g.beginPath(); g.moveTo(10, 60); g.lineTo(10, 40); g.bezierCurveTo(10, 18, 30, 12, 60, 12); g.bezierCurveTo(90, 12, 110, 18, 110, 40); g.lineTo(110, 60); g.closePath(); };
+    lid(); g.fillStyle = vgrad(g, 12, 60, [P.hi, P.a, P.b]); g.fill();
+    g.save(); lid(); g.clip(); straps(0, 62);
+    if (tier === 0) { g.strokeStyle = 'rgba(60,30,10,.4)'; g.lineWidth = 2; g.beginPath(); g.moveTo(10, 34); g.quadraticCurveTo(60, 22, 110, 34); g.stroke(); }
+    g.restore();
+    lid(); ink(g);
+    g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 3; g.beginPath(); g.moveTo(20, 36); g.quadraticCurveTo(26, 20, 48, 18); g.stroke();
+  }
+  // rebord du couvercle
+  rrect(g, 8, 52, 104, 10, 4); g.fillStyle = vgrad(g, 52, 62, [P.band, P.bandD]); g.fill(); ink(g, 2.8);
+  g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(12, 54, 96, 2);
+  // rivets / gemmes
+  for (const x of [27, 93]) for (const y of [70, 90]) {
+    if (tier === 3) { g.fillStyle = y === 70 ? '#8af4ff' : '#ff6ad8'; g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 4, y); g.lineTo(x, y + 5); g.lineTo(x - 4, y); g.closePath(); g.fill(); ink(g, 1.6); }
+    else { g.fillStyle = tier === 2 ? '#fff2b8' : '#d8e0f0'; g.beginPath(); g.arc(x, y, 2.4, 0, TAU); g.fill(); }
+  }
+  // serrure
+  const ly = open ? 60 : 48;
+  rrect(g, 49, ly, 22, 24, 6); g.fillStyle = vgrad(g, ly, ly + 24, [P.lock, P.lockD]); g.fill(); ink(g, 2.8);
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(53, ly + 3, 4, 8);
+  g.fillStyle = INK; g.beginPath(); g.arc(60, ly + 10, 3.2, 0, TAU); g.fill(); g.fillRect(58.6, ly + 11, 2.8, 7);
+  if (open) {
+    // colonne de lumière qui s'échappe (s'estompe vers le haut)
+    const col = g.createLinearGradient(0, 58, 0, 4);
+    col.addColorStop(0, P.glow); col.addColorStop(1, 'rgba(255,255,255,0)');
+    g.globalAlpha = 0.55; g.fillStyle = col;
+    g.beginPath(); g.moveTo(30, 57); g.lineTo(14, 4); g.lineTo(106, 4); g.lineTo(90, 57); g.closePath(); g.fill();
+    g.globalAlpha = 1;
+    sparkle(g, 40, 40, 5, '#fff'); sparkle(g, 80, 34, 4, '#fff'); sparkle(g, 60, 24, 7, '#fff');
+  } else if (tier >= 2) {
+    sparkle(g, 100, 18, 6, '#fff'); sparkle(g, 18, 50, 4, tier === 3 ? '#8af4ff' : '#fff6c0');
+  }
+  return c;
+}
+
+// enclume de la forge
+export function anvilURL() {
+  return cachedURL('anvil', () => {
+    const [c, g] = canvas2x(150, 100);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(75, 92, 58, 7, 0, 0, TAU); g.fill();
+    const steel = (y0, y1) => vgrad(g, y0, y1, ['#a8b2c6', '#5a6478', '#2e3446']);
+    g.beginPath(); g.moveTo(34, 90); g.lineTo(46, 70); g.lineTo(106, 70); g.lineTo(118, 90); g.closePath(); g.fillStyle = steel(70, 90); g.fill(); ink(g);
+    g.beginPath(); g.moveTo(56, 72); g.lineTo(62, 46); g.lineTo(96, 46); g.lineTo(100, 72); g.closePath(); g.fillStyle = steel(46, 72); g.fill(); ink(g);
+    g.beginPath(); g.moveTo(42, 24); g.lineTo(128, 24); g.quadraticCurveTo(136, 24, 136, 32); g.lineTo(136, 42); g.quadraticCurveTo(136, 50, 128, 50);
+    g.lineTo(58, 50); g.quadraticCurveTo(28, 50, 6, 30); g.quadraticCurveTo(26, 25, 42, 24); g.closePath();
+    g.fillStyle = steel(24, 50); g.fill(); ink(g);
+    g.fillStyle = '#d8e0ee'; g.fillRect(44, 26, 88, 4);
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(14, 30); g.quadraticCurveTo(28, 28, 42, 28); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(64, 50, 6, 20);
+    return c;
+  });
+}
+
+// marteau de forgeron (pivot en bas du manche)
+export function hammerURL() {
+  return cachedURL('hammer-big', () => {
+    const [c, g] = canvas2x(90, 110);
+    rrect(g, 40, 34, 11, 72, 5); g.fillStyle = vgrad(g, 34, 106, ['#e0a060', '#8a5428']); g.fill(); ink(g, 3);
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(43, 40, 3, 60);
+    rrect(g, 36, 34, 19, 9, 3); g.fillStyle = '#5a6478'; g.fill(); ink(g, 2.6);
+    rrect(g, 8, 10, 74, 28, 7); g.fillStyle = vgrad(g, 10, 38, ['#e8eef8', '#9aa4b8', '#4a5266']); g.fill(); ink(g, 3.4);
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(14, 15, 56, 3);
+    g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(8, 30, 6, 8); g.fillRect(76, 30, 6, 8);
+    return c;
+  });
 }

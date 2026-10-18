@@ -274,6 +274,14 @@ export const ACHIEVEMENTS = [
   { id: 'baron', name: 'Baron sécurisé', desc: 'Vaincre le Baron Nashar.', gold: 500 },
   { id: 'hard1', name: 'Sueurs froides', desc: 'Terminer une zone en Difficile.', gold: 150 },
   { id: 'nightmare1', name: 'Cauchemar éveillé', desc: 'Terminer une zone en Cauchemar.', gold: 300 },
+  { id: 'portal1', name: 'Au-delà du portail', desc: 'Franchir un portail après avoir vaincu un boss.', gold: 80 },
+  { id: 'stage3', name: 'Grand voyageur', desc: 'Traverser 3 mondes en une seule partie.', gold: 250 },
+  { id: 'world6', name: 'Expédition légendaire', desc: 'Traverser les 6 mondes en une seule partie.', gold: 1500 },
+  { id: 'totems10', name: 'Tête brûlée', desc: 'Activer 10 totems de défi.', gold: 150 },
+  { id: 'forge1', name: 'Forgeron', desc: 'Fabriquer un objet à la forge.', gold: 60 },
+  { id: 'upgrade5', name: 'Chef-d\'œuvre', desc: 'Améliorer un objet jusqu\'à +5.', gold: 200 },
+  { id: 'mythic', name: 'Trésor mythique', desc: 'Ouvrir un coffre mythique.', gold: 150 },
+  { id: 'chests50', name: 'Pilleur de coffres', desc: 'Ouvrir 50 coffres de butin.', gold: 200 },
 ];
 
 // ---------- Expédition : mondes enchaînés, totems de défi, butin, forge, bonus ----------
@@ -326,3 +334,6 @@ export const BOOSTS = {
   phenix:  { name: 'Plume de phénix', icon: 'heart', desc: 'Revient une fois à la vie, sans publicité', price: 250 },
   trefle:  { name: 'Trèfle à quatre feuilles', icon: 'crown', desc: 'Les coffres de butin trouvés sont de meilleure qualité', price: 160 },
 };
+
+// Bilan d'une expédition : +10 % d'or par totem de défi activé.
+export const HEAT_GOLD = 0.1;

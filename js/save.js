@@ -1,11 +1,11 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
-import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS, DIFFICULTIES } from './data.js';
+import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, FORGE, BOOSTS, BOOST_SLOTS } from './data.js';
 
 const KEY = 'lob_save_v1';
 
 export function freshSave() {
   return {
-    v: 2,
+    v: 3,
     updatedAt: 0,
     gold: 0,
     cls: null,
@@ -21,7 +21,13 @@ export function freshSave() {
     upgrades: { hp: 0, atk: 0, crit: 0, regen: 0, speed: 0, magnet: 0, luck: 0 },
     inventory: [],
     equipped: { weapon: null, armor: null, trinket: null },
-    stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {} },
+    stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {},
+      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0 },
+    // expédition : pièces d'équipement par rareté, bonus possédés et choisis, coffres pas encore ouverts
+    parts: { weapon: [0, 0, 0, 0], armor: [0, 0, 0, 0], trinket: [0, 0, 0, 0] },
+    boosts: {},
+    boostSel: [null, null],
+    pendingChests: [],
     achievements: {},
     settings: { sound: true, music: true, vibrate: true },
     tutorialDone: false,
@@ -51,7 +57,26 @@ function migrate(s) {
   out.stats = { ...base.stats, ...s.stats };
   out.settings = { ...base.settings, ...s.settings };
   migrateDifficulty(out, base);
+  migrateLoot(out, s);
   return out;
+}
+
+// v2 -> v3 : pièces, bonus, coffres en attente (toujours remis en forme, comme la difficulté)
+function migrateLoot(out, s) {
+  const int = (v, max) => Math.max(0, Math.min(max, Math.floor(+v || 0)));
+  const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  const parts = obj(out.parts), boosts = obj(out.boosts);
+  out.parts = Object.fromEntries(Object.keys(PARTS).map(k => [k, RARITIES.map((_, r) => int((Array.isArray(parts[k]) ? parts[k] : [])[r], 1e6))]));
+  out.boosts = {};
+  for (const id of Object.keys(BOOSTS)) { const n = int(boosts[id], 999); if (n) out.boosts[id] = n; }
+  const sel = Array.isArray(out.boostSel) ? out.boostSel : [];
+  out.boostSel = Array.from({ length: BOOST_SLOTS }, (_, i) => (BOOSTS[sel[i]] && sel.indexOf(sel[i]) === i ? sel[i] : null));
+  out.pendingChests = (Array.isArray(out.pendingChests) ? out.pendingChests : [])
+    .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5) }));
+  const st = out.stats;
+  if ((s.v || 1) < 3) st.worlds = Math.max(st.worlds || 0, st.wins || 0);
+  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic']) st[k] = int(st[k], 1e9);
+  if (!Array.isArray(out.inventory)) out.inventory = [];
 }
 
 // v1 -> v2 : une zone terminée l'a été en Normal. Les tableaux sont toujours remis en forme (sauvegardes cloud anciennes).
@@ -159,6 +184,135 @@ export function addItem(it) {
   return false;
 }
 
+// ---------- Butin de l'expédition ----------
+const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pickW = w => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < w.length; i++) if ((x -= w[i]) < 0) return i; return w.length - 1; };
+export const rarityIdx = it => Math.max(0, RARITIES.indexOf(it.rarity));
+
+// tire le contenu d'un coffre (pièces, bonus, objet, or) sans l'appliquer
+export function rollChest({ tier = 0, zone = 0 }) {
+  const T = LOOT_TIERS[tier] || LOOT_TIERS[0], slots = Object.keys(PARTS), got = {};
+  for (let n = rint(T.parts[0], T.parts[1]); n > 0; n--) { const k = slots[rint(0, slots.length - 1)] + ':' + pickW(T.rar); got[k] = (got[k] || 0) + 1; }
+  const parts = Object.entries(got).map(([k, n]) => { const [slot, r] = k.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n);
+  const ids = Object.keys(BOOSTS);
+  const boost = Math.random() < T.boost ? ids[rint(0, ids.length - 1)] : null;
+  // objet complet : rareté tirée comme les pièces, un cran au-dessus
+  const item = Math.random() < T.item ? makeItem(Math.random, zone, { rarity: RARITIES[Math.min(RARITIES.length - 1, pickW(T.rar) + 1)] }) : null;
+  const gold = Math.round(rint(T.gold[0], T.gold[1]) * (1 + 0.4 * zone));
+  return { tier, zone, parts, boost, item, gold };
+}
+
+// ouvre le coffre en attente n° i : contenu ajouté à la sauvegarde et coffre retiré en même temps
+export function openChest(i = 0) {
+  const c = save.pendingChests[i];
+  if (!c) return null;
+  const res = rollChest(c);
+  save.pendingChests.splice(i, 1);
+  for (const p of res.parts) save.parts[p.slot][p.r] += p.n;
+  if (res.boost) save.boosts[res.boost] = (save.boosts[res.boost] || 0) + 1;
+  if (res.item) { res.item.isNew = true; res.equipped = addItem(res.item); }
+  save.gold += res.gold;
+  save.stats.chests++;
+  if (res.tier >= 3) save.stats.mythic++;
+  persist();
+  return res;
+}
+
+// ---------- Forge ----------
+export function canCraft(slot, r) {
+  return save.parts[slot][r] >= FORGE.craft.parts && save.gold >= FORGE.craft.gold[r];
+}
+
+// fabrique un objet de l'emplacement et de la rareté choisis (puissance : meilleure zone atteinte, +10 %)
+export function craftItem(slot, r) {
+  if (!canCraft(slot, r)) return null;
+  save.parts[slot][r] -= FORGE.craft.parts;
+  save.gold -= FORGE.craft.gold[r];
+  const it = makeItem(Math.random, save.unlockedZone, { slot, rarity: RARITIES[r], mult: 1.1 });
+  it.crafted = true; it.isNew = true;
+  const equipped = addItem(it);
+  save.stats.crafted++;
+  persist();
+  return { item: it, equipped };
+}
+
+export function canFuse(slot, r) { return r < RARITIES.length - 1 && save.parts[slot][r] >= FORGE.fuse; }
+export function fuseParts(slot, r) {
+  if (!canFuse(slot, r)) return false;
+  save.parts[slot][r] -= FORGE.fuse;
+  save.parts[slot][r + 1]++;
+  persist();
+  return true;
+}
+
+// coût du prochain niveau d'un objet (null au maximum)
+export function itemUpgradeCost(it) {
+  const lv = it.lv || 0, U = FORGE.upgrade;
+  if (lv >= U.max) return null;
+  return { parts: U.parts[lv], gold: U.gold[lv], slot: it.slot, r: rarityIdx(it), lv: lv + 1 };
+}
+export function canUpgrade(it) {
+  const c = itemUpgradeCost(it);
+  return !!c && save.parts[c.slot][c.r] >= c.parts && save.gold >= c.gold;
+}
+// stats d'un objet au niveau lv : base × (1 + per × lv), au moins +1 par niveau
+export function statsAt(base, lv) {
+  const m = 1 + FORGE.upgrade.per * lv, out = {};
+  for (const [k, v] of Object.entries(base)) {
+    out[k] = k === 'crit' ? Math.max(Math.round(v * m * 100) / 100, Math.round((v + 0.01 * lv) * 100) / 100) : Math.max(Math.round(v * m), v + lv);
+  }
+  return out;
+}
+export function upgradeItem(id) {
+  const it = save.inventory.find(i => i.id === id);
+  if (!it || !canUpgrade(it)) return false;
+  const c = itemUpgradeCost(it);
+  save.parts[c.slot][c.r] -= c.parts;
+  save.gold -= c.gold;
+  if (!it.base) it.base = { ...it.stat };
+  it.lv = c.lv;
+  it.stat = statsAt(it.base, it.lv);
+  persist();
+  return true;
+}
+// recyclage : pièces de l'emplacement et de la rareté de l'objet (+1 par niveau d'amélioration)
+export function salvageValue(it) { return FORGE.salvage[rarityIdx(it)] + (it.lv || 0); }
+export function salvageItem(id) {
+  const it = save.inventory.find(i => i.id === id);
+  if (!it || Object.values(save.equipped).includes(id)) return 0;
+  const n = salvageValue(it);
+  save.parts[it.slot][rarityIdx(it)] += n;
+  save.inventory = save.inventory.filter(i => i !== it);
+  persist();
+  return n;
+}
+
+// ---------- Bonus ----------
+export function buyBoost(id) {
+  const b = BOOSTS[id];
+  if (!b || save.gold < b.price) return false;
+  save.gold -= b.price;
+  save.boosts[id] = (save.boosts[id] || 0) + 1;
+  persist();
+  return true;
+}
+// vide les emplacements dont le bonus n'est plus possédé
+export function cleanBoostSel() {
+  save.boostSel = Array.from({ length: BOOST_SLOTS }, (_, i) => { const id = save.boostSel[i]; return id && save.boosts[id] > 0 && save.boostSel.indexOf(id) === i ? id : null; });
+}
+// consomme un exemplaire de chaque bonus choisi au départ d'une partie
+export function consumeBoosts() {
+  cleanBoostSel();
+  const out = [];
+  for (const id of save.boostSel) {
+    if (!id) continue;
+    if (!--save.boosts[id]) delete save.boosts[id];
+    out.push(id);
+  }
+  persist();
+  return out;
+}
+
 // ---------- Succès ----------
 export function checkAchievements() {
   const s = save, st = s.stats, got = [];
@@ -166,7 +320,7 @@ export function checkAchievements() {
     first_win: st.kills >= 1,
     kills1000: st.kills >= 1000,
     zone1: s.zoneCleared[0],
-    boss1: s.zoneCleared.slice(1).some(Boolean),
+    boss1: s.zoneCleared.some(Boolean),
     allclass: ['mage', 'archer', 'knight'].every(c => st.classWins[c]),
     rich: s.gold >= 1000,
     epic: s.inventory.some(i => i.rarity === 'epic' || i.rarity === 'legendary'),
@@ -177,6 +331,14 @@ export function checkAchievements() {
     baron: s.zoneCleared[5],
     hard1: (s.diffCleared || []).some(n => n >= 2),
     nightmare1: (s.diffCleared || []).some(n => n >= 3),
+    portal1: st.portals >= 1,
+    stage3: st.bestStage >= 2,
+    world6: st.bestStage >= 5,
+    totems10: st.totems >= 10,
+    forge1: st.crafted >= 1,
+    upgrade5: s.inventory.some(i => (i.lv || 0) >= 5),
+    mythic: st.mythic >= 1,
+    chests50: st.chests >= 50,
   };
   for (const a of ACHIEVEMENTS) {
     if (!s.achievements[a.id] && cond[a.id]) {
