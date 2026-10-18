@@ -25,13 +25,14 @@ const BODY = {
 };
 const BODY0 = { hp: 1, knock: 1, dmg: 1 };
 const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
-const BOSS_HP = 30;     // PV du boss = PV de base × BOSS_HP × zone × difficulté × monde traversé
+const BOSS_HP = 33;     // PV du boss = PV de base × BOSS_HP × zone × difficulté × monde traversé
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const SPAWN_R = 800, VIEW_R = 520;
 const ARENA_R = 420;    // rayon de l'arène du boss
 const OT_STEP = 15;     // secondes entre deux niveaux de folie après le chrono
+const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le chrono), le monde s'effondre
 const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
 const WORLD_SHORT = ['Voie du Milieu', 'Jungle', 'Rivière', 'Abîme Glacial', 'Îles Ombreuses', 'Le Vide'];
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
@@ -122,12 +123,12 @@ export class Run {
     this.acts = 0;            // attaques spéciales en cours (limitées pour rester lisibles)
     this.boss = null; this.bossSpawned = false;
     this.arena = null; this.portal = null; this.entering = 0;
-    this.overtime = 0; this.otLevel = 0;
+    this.overtime = 0; this.otLevel = 0; this.doomT = 0;
     // modificateurs de ce monde (totems) : apparitions, or, dégâts, vitesse, intervalle des élites
     this.wm = { spawn: 1, gold: 1, dmg: 1, speed: 1, elite: 1 };
     // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
     const st = this.stage, carry = this.runTime;
-    this.sk = { hp: (1 + 0.6 * st) * (1 + carry / 420), dmg: (1 + 0.15 * st) * (1 + carry / 1100), boss: 1 + 0.75 * st };
+    this.sk = { hp: (1 + 1.0 * st) * (1 + carry / 300), dmg: (1 + 0.45 * st) * (1 + carry / 700), boss: 1 + 1.6 * st };
     this.placeInterest();
   }
 
@@ -484,7 +485,7 @@ export class Run {
 
   spawn(dt) {
     const z = this.zone, t = this.time, mons = z.monsters, D = this.diff;
-    if (t >= this.duration) this.updateOvertime();
+    if (t >= this.duration) this.updateOvertime(dt);
     const ot = this.otLevel, fight = this.boss && !this.boss.dead;
     // la cadence monte nettement avec le temps (zone 1 un peu plus douce), puis avec la folie après le chrono
     let rate = (0.9 + Math.min(t, this.duration) / 18) * (1 + z.id * 0.12) * (1 + this.stage * 0.1) * D.spawn * this.wm.spawn * (1 + 0.3 * ot);
@@ -543,7 +544,7 @@ export class Run {
   }
 
   // ---------- Chrono écoulé : les monstres deviennent fous ----------
-  updateOvertime() {
+  updateOvertime(dt) {
     if (!this.otLevel) {
       // le boss n'a pas été invoqué : il surgit à côté du joueur, l'arène se referme sur lui
       if (!this.bossSpawned) { if (this.altar) this.altar.used = true; this.summonBoss(this.p.x, this.p.y, true); }
@@ -559,8 +560,21 @@ export class Run {
       this.otLevel = lv;
       this.emit('overtimeStep', { level: lv });
       if (this.boss && !this.boss.dead) this.boss.dmg *= 1.1;
-      if (lv % 2 === 0) this.banner(`<small>Ils sont de plus en plus fous…</small>Folie niv. ${lv}`, 1500, 'warn ot');
+      if (lv === DOOM_LV) this.banner('<small>Le monde s\'effondre !</small>Fuyez par le portail !', 2200, 'boss ot');
+      else if (lv % 2 === 0) this.banner(`<small>Ils sont de plus en plus fous…</small>Folie niv. ${lv}`, 1500, 'warn ot');
       sfx('alarm');
+    }
+    // le monde s'effondre : des météores visent le joueur, de plus en plus vite (on ne peut pas rester indéfiniment)
+    if (lv >= DOOM_LV && !this.entering && !this.dying) {
+      this.doomT = (this.doomT ?? 0) - dt;
+      if (this.doomT <= 0) {
+        const k = lv - DOOM_LV, p = this.p;
+        this.doomT = Math.max(0.3, 1.5 - k * 0.2);
+        for (let i = 0; i < 1 + (k >> 1); i++) {
+          const lead = p.moving ? rand(30, 90) : 0, a = Math.random() * TAU, r = i ? rand(40, 140) : rand(0, 50);
+          this.addBomb({ x: p.x + p.face.x * lead + Math.cos(a) * r, y: p.y + p.face.y * lead + Math.sin(a) * r, R: 72, t: 1.05, dmg: p.maxHp * (0.12 + 0.04 * k), kind: 'meteor', e: null, doom: true });
+        }
+      }
     }
   }
 
