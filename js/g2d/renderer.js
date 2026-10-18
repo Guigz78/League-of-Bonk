@@ -618,7 +618,7 @@ export class Gfx {
       const L = B.sweepLen, dir = B.sweepDir || 1, w = B.sweepW || 34, warn = B.phase === 'sweepW';
       const left = warn ? SWEEP_ARC : SWEEP_ARC * clamp(B.phaseT / (B.sweepDur || 2.4), 0, 1), a0 = B.sweepA, a1 = a0 + dir * left;
       const blink = warn ? 0.5 + Math.sin(t * 24) * 0.5 : 0;
-      g.fillStyle = `rgba(255,40,30,${0.1 + blink * 0.07})`;
+      g.fillStyle = `rgba(255,40,30,${0.14 + blink * 0.12})`;
       g.beginPath(); g.moveTo(B.x, B.y); g.arc(B.x, B.y, L, a0, a1, dir < 0); g.closePath(); g.fill();
       g.strokeStyle = 'rgba(255,90,60,.6)'; g.lineWidth = 3;
       g.save(); g.setLineDash([16, 12]); g.lineDashOffset = -t * 40 * dir; g.beginPath(); g.arc(B.x, B.y, L, a0, a1, dir < 0); g.stroke(); g.restore();
@@ -704,10 +704,10 @@ export class Gfx {
     else { const ph = (t * 1.2 + it.x * 0.013) % 2.4; if (ph < 0.4) { const k = Math.sin(ph / 0.4 * Math.PI); up = k * 6; sx = 1 - k * 0.05; sy = 1 + k * 0.07; } }
     // rayons tournants (or, mythique), halo, colonne de lumière
     if (tier >= 2) {
-      g.globalCompositeOperation = 'lighter'; g.fillStyle = col;
+      g.fillStyle = tier === 3 ? '#ffb0f0' : '#fff0a0';
       this.M(it.x, it.y - 14 - up, 1, 1, t * 0.7);
-      for (let i = 0; i < 8; i++) { g.rotate(TAU / 8); g.globalAlpha = 0.16 + 0.06 * tier; g.beginPath(); g.moveTo(0, 0); g.lineTo(32 + tier * 8, -4); g.lineTo(32 + tier * 8, 4); g.fill(); }
-      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 8; i++) { g.rotate(TAU / 8); g.globalAlpha = 0.28 + 0.06 * tier; g.beginPath(); g.moveTo(0, 0); g.lineTo(30 + tier * 8, -5); g.lineTo(30 + tier * 8, 5); g.fill(); }
+      g.globalAlpha = 1;
     }
     this.glowAdd(it.x, it.y - 14 - up, 24 + tier * 7, col, 0.35 + 0.12 * tier + Math.sin(t * 3 + it.x) * 0.08);
     if (tier >= 2 || it.hidden) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.22 + 0.05 * tier; this.W(); const w = 24 + tier * 6, h = 90 + tier * 30; g.drawImage(beamTex(col), it.x - w / 2, it.y - h, w, h); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
@@ -1413,10 +1413,10 @@ export class Gfx {
     const on = (x, y) => x > -40 && x < this.vw + 40 && y > -40 && y < this.vh + 40;
     if (Po && Po.t > 0.6) {
       const [x, y] = this.ws(Po.x, Po.y - 150);
-      if (on(x, y)) this.pin(g, x, y + Math.sin(t * 5) * 6, '#8a3aff', '#7ae8ff', 'PORTAIL', 1.1);
+      if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 5) * 6, '#8a3aff', '#7ae8ff', 'PORTAIL', 1.1);
     } else if (Al && !Al.used && !run.arena && Math.hypot(Al.x - p.x, Al.y - p.y) > 220) {
       const [x, y] = this.ws(Al.x, Al.y - 108);
-      if (on(x, y)) this.pin(g, x, y + Math.sin(t * 4) * 5, '#d81e2e', '#ff8a5a', 'BOSS', 0.9);
+      if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 4) * 5, '#d81e2e', '#ff8a5a', 'BOSS', 0.9);
     }
   }
   pin(g, x, y, c1, c2, label, s = 1) {
@@ -1445,7 +1445,7 @@ export class Gfx {
     const dx = tg.x - p.x, dy = tg.y - p.y, d = Math.hypot(dx, dy);
     if (d < 120) return;
     const a = Math.atan2(dy, dx), R = 44 * z + 12 + Math.sin(t * 6) * 4, cx = hx, cy = hy - 20 * z;
-    g.save(); g.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); g.rotate(a);
+    g.save(); g.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); g.rotate(a); g.scale(1.25, 1.25);
     g.lineJoin = 'round'; g.lineCap = 'round';
     for (let i = 0; i < 2; i++) {
       const x = i * 10 - 4;

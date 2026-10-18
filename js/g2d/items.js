@@ -108,7 +108,22 @@ export function rune(g, k, s) {
 export const RUNE_N = RUNES.length;
 
 // ---------- Objets ----------
+// les sprites ne dépendent que de la résolution (sauf la butte de terre, couleur du monde) : gardés d'un monde à l'autre
+const spriteCache = new Map();
 export function itemSprites(res, T) {
+  let base = spriteCache.get(res);
+  if (!base) { if (spriteCache.size > 2) spriteCache.clear(); spriteCache.set(res, base = baseSprites(res)); }
+  const S = { ...base };
+  S.mound = bake(50, 26, 25, 20, res, g => {
+    const c = T.rock;
+    const p = P(); p.moveTo(-22, 0); p.bezierCurveTo(-18, -16, 18, -16, 22, 0); p.quadraticCurveTo(0, 4, -22, 0); p.closePath();
+    blob(g, p, c[1], { dark: shade(c[1], -0.4), light: c[0], y0: -14, y1: 0, hl: { x: -6, y: -9, rx: 6, ry: 2, a: 0.5 } });
+    g.fillStyle = c[0]; for (const [x, y] of [[-12, -4], [8, -7], [14, -3], [-3, -10]]) g.fill(ell(x, y, 2.4, 1.8));
+  }, { outline: 1.4 });
+  return S;
+}
+
+function baseSprites(res) {
   const S = {};
   const gem = (col, dark, light, s) => bake(14 * s, 18 * s, 7 * s, 17 * s, res, g => {
     g.scale(s, s);
@@ -178,12 +193,6 @@ export function itemSprites(res, T) {
   S.snow = bake(30, 30, 15, 15, res, g => {
     blob(g, ell(0, 0, 12, 12), '#ffffff', { dark: '#b8d0ea', light: '#ffffff', y0: -12, y1: 12, ao: 0 });
     g.fillStyle = '#dce8f6'; g.fill(ell(4, 4, 2.4, 2)); g.fill(ell(-5, 2, 1.8, 1.4));
-  }, { outline: 1.4 });
-  S.mound = bake(50, 26, 25, 20, res, g => {
-    const c = T.rock;
-    const p = P(); p.moveTo(-22, 0); p.bezierCurveTo(-18, -16, 18, -16, 22, 0); p.quadraticCurveTo(0, 4, -22, 0); p.closePath();
-    blob(g, p, c[1], { dark: shade(c[1], -0.4), light: c[0], y0: -14, y1: 0, hl: { x: -6, y: -9, rx: 6, ry: 2, a: 0.5 } });
-    g.fillStyle = c[0]; for (const [x, y] of [[-12, -4], [8, -7], [14, -3], [-3, -10]]) g.fill(ell(x, y, 2.4, 1.8));
   }, { outline: 1.4 });
   Object.assign(S, landmarkSprites(res));
   return S;
