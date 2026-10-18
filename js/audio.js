@@ -172,6 +172,15 @@ const SFX = {
     for (let i = 0; i < 4; i++) wood(700 + i * 120, at - 0.6 + i * 0.12, 0.08);
   },
   boing: () => boing(260, 0.4, 0, 0.1),
+  // expédition : autel du boss, totems, portail, chrono écoulé, butin, forge
+  summon: () => { osc({ type: 'sawtooth', f: 60, to: 180, d: 1.2, v: 0.12, filter: ['lowpass', 700], q: 6 }); noise({ d: 1, v: 0.12, filter: ['bandpass', 300], q: 1, sweepTo: 1800 }); honk(196, 0.5, 0.9, 0.1); },
+  totem: () => { wood(300); honk(262, 0.18, 0.05, 0.08); honk(247, 0.35, 0.22, 0.08); boing(140, 0.4, 0.3, 0.07); },
+  portal: () => { whistle(200, 2000, 1, 0, 0.07); [392, 523, 659, 784, 1047].forEach((f, i) => osc({ type: 'sine', f, d: 0.5, v: 0.05, at: 0.3 + i * 0.08 })); },
+  overtime: () => { for (let i = 0; i < 4; i++) honk(i % 2 ? 233 : 277, 0.16, i * 0.18, 0.1); noise({ d: 0.8, v: 0.1, filter: ['lowpass', 600], at: 0.7 }); },
+  lootPick: () => { wood(700); [659, 880, 1175].forEach((f, i) => osc({ type: 'triangle', f, d: 0.12, v: 0.07, at: 0.05 + i * 0.06 })); },
+  chestShake: () => { wood(r(380, 520), 0, 0.12); wood(r(380, 520), 0.09, 0.1); },
+  chestOpen: () => { boing(200, 0.35, 0, 0.1); [523, 659, 784, 1047, 1319].forEach((f, i) => kazoo(f, i === 4 ? 0.4 : 0.08, 0.1 + i * 0.07, 0.08)); },
+  forge: () => { for (let i = 0; i < 3; i++) { wood(1400, i * 0.16, 0.14); osc({ type: 'square', f: 2600, to: 1800, d: 0.06, v: 0.03, at: i * 0.16 }); } kazoo(784, 0.3, 0.5, 0.08); },
   // compatibilité avec les anciens noms
   perfect: () => SFX.zap(),
   miss: () => SFX.hurt(),
