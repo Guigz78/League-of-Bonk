@@ -908,7 +908,7 @@ export class Gfx {
     if (!c.open) {
       const near = Math.hypot(c.x - this.run.p.x, c.y - this.run.p.y) < 140;
       const hop = near ? Math.abs(Math.sin(t * 6)) * 3 : 0;
-      this.glowAdd(c.x, c.y - 14, gold ? 46 : 34, gold ? '#ffcf40' : '#ffb84a', gold ? 0.65 : 0.35 + Math.sin(t * 3) * 0.1);
+      this.glowAdd(c.x, c.y - 14, gold ? 46 : 36, gold ? '#c06aff' : '#5aa8ff', gold ? 0.7 : 0.4 + Math.sin(t * 3) * 0.1);
       this.spr(s, c.x, c.y - hop, 1 + hop * 0.01, 1 - hop * 0.01);
       if (Math.sin(t * 2.3 + c.x) > 0.93) this.sparkle(c.x + rand(-14, 14), c.y - 26, '#fff4b0');
     } else { this.g.globalAlpha = 0.85; this.spr(s, c.x, c.y); this.g.globalAlpha = 1; }
@@ -1486,11 +1486,11 @@ export class Gfx {
     };
     const pts = [];
     if (run.boss && !run.boss.dead) pts.push([run.boss, '#ff2a4a', 15]);
-    for (const c of run.dropChests) if (!c.open) pts.push([c, '#ffcf40', 11]);
+    for (const c of run.dropChests) if (!c.open) pts.push([c, '#c06aff', 11]);
     for (const e of run.enemies) if (e.elite && !e.dead) pts.push([e, '#c06aff', 10]);
     for (const s of run.shrines) if (!s.used && Math.hypot(s.x - p.x, s.y - p.y) < 1000) pts.push([s, '#4fd0ff', 9]);
     for (const T of run.totems || []) if (!T.used && Math.hypot(T.x - p.x, T.y - p.y) < 900) pts.push([T, TOTEMS[T.kind]?.color || '#ffffff', 9]);
-    for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 800) pts.push([c, '#ffb84a', 8]);
+    for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 800) pts.push([c, '#ffcf40', 8]);
     for (const it of run.pickups) if (it.type === 'loot' && !it.hidden && Math.hypot(it.x - p.x, it.y - p.y) < 900) pts.push([it, LOOT_GLOW[it.tier] || '#ffffff', 9]);
     g.lineJoin = 'round';
     for (const [o, col, size] of pts) {
@@ -1549,7 +1549,7 @@ export class Gfx {
     if (run.arena) { const [mx, my] = mp(run.arena.x, run.arena.y); g.strokeStyle = 'rgba(255,70,50,.9)'; g.lineWidth = 2; g.beginPath(); g.arc(mx, my, run.arena.R / range * R, 0, TAU); g.stroke(); }
     for (const e of run.enemies) if (!e.boss && Math.abs(e.x - p.x) < range && Math.abs(e.y - p.y) < range) dot(e.x, e.y, e.elite ? '#d08aff' : e.mad ? 'rgba(255,60,40,.85)' : 'rgba(255,90,90,.6)', e.elite ? 2.4 : 1.3);
     for (const ch of run.chests) if (!ch.open) dot(ch.x, ch.y, '#ffc83a', 3);
-    for (const ch of run.dropChests) if (!ch.open) dot(ch.x, ch.y, '#ffc83a', 3);
+    for (const ch of run.dropChests) if (!ch.open) dot(ch.x, ch.y, '#d08aff', 3.2);
     for (const sh of run.shrines) if (!sh.used) dot(sh.x, sh.y, '#4fd0ff', 3.2);
     for (const it of run.pickups) if (it.type === 'loot' && Math.abs(it.x - p.x) < range && Math.abs(it.y - p.y) < range) { const [mx, my] = mp(it.x, it.y); g.fillStyle = INK2; g.fillRect(mx - 3, my - 3, 6, 6); g.fillStyle = LOOT_GLOW[it.tier] || '#fff'; g.fillRect(mx - 2, my - 2, 4, 4); }
     for (const T of run.totems || []) {

@@ -148,9 +148,9 @@ function baseSprites(res) {
     g.strokeStyle = '#e8eef8'; g.beginPath(); g.moveTo(-7, -5); g.lineTo(-7, -2); g.moveTo(7, -5); g.lineTo(7, -2); g.stroke();
     g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.4; g.beginPath(); g.arc(0, -10, 7, Math.PI * 1.1, Math.PI * 1.5); g.stroke();
   }, { outline: 1.2 });
-  // coffres payants (bois) et coffres d'élite (or) : mêmes dessins que les coffres de butin
-  S.chest = [chestSpr(res, 0, false, 1.15), chestSpr(res, 0, true, 1.15)];
-  S.gchest = [chestSpr(res, 2, false, 1.15), chestSpr(res, 2, true, 1.15)];
+  // coffres d'amélioration de la partie (payants : bleus à pièce d'or ; d'élite : violets à étoile), à ne pas confondre avec le butin
+  S.chest = [upChest(res, false, false), upChest(res, false, true)];
+  S.gchest = [upChest(res, true, false), upChest(res, true, true)];
   // coffres de butin (bois, argent, or, mythique)
   S.loot = [0, 1, 2, 3].map(t => chestSpr(res, t, false, [0.95, 1, 1.08, 1.18][t]));
   S.shrine = bake(44, 34, 22, 30, res, g => {
@@ -250,6 +250,36 @@ function chestSpr(res, tier, open, s = 1) {
     g.fillStyle = C.ink; g.fill(ell(0, ly + 3, 1, 1)); g.fillRect(-0.45, ly + 3.3, 0.9, 2.2);
     g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(-2.3, ly + 1, 1.1, 2.4);
     if (tier === 3 && !open) { g.fillStyle = '#ff9ae8'; g.fill(ell(0, -25.5, 1.8, 1.4)); }
+  }, { outline: 1.2 });
+}
+
+// coffre d'amélioration (pendant la partie) : bois bleu cerclé d'or, emblème (pièce ou étoile) sur le couvercle
+function upChest(res, elite, open) {
+  const base = elite ? '#a04ae8' : '#3a7ae8', hi = elite ? '#e0a8ff' : '#9ac8ff', dk = elite ? '#5a1a98' : '#1a3a98', ink = elite ? '#2a0a4a' : '#0a1a4a';
+  return bake(40, 40, 20, 34, res, g => {
+    const trim = (p, y0, y1) => { g.fillStyle = vg(g, y0, y1, ['#fff2a8', '#ffc83a', '#b8780c']); g.fill(p); g.lineWidth = 0.9; g.strokeStyle = '#5a3a04'; g.stroke(p); };
+    if (open) {
+      const lid = poly([[-15, -16], [-13, -30], [13, -30], [15, -16]]);
+      g.fillStyle = vg(g, -30, -16, [dk, base]); g.fill(lid); g.lineWidth = 1; g.strokeStyle = ink; g.stroke(lid);
+      g.fillStyle = rg(g, 0, -16, 15, ['#ffffff', '#fff2a0', 'rgba(255,240,160,0)']); g.fill(ell(0, -16, 15, 4.4));
+    }
+    const body = rrect(-15, -16, 30, 16, 3);
+    g.fillStyle = vg(g, -16, 0, [base, dk]); g.fill(body); g.lineWidth = 1; g.strokeStyle = ink; g.stroke(body);
+    g.save(); g.clip(body); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(-15, -13, 30, 1.4); g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(-15, -3, 30, 3); g.restore();
+    for (const x of [-15, 11.5]) trim(rrect(x, -16, 3.5, 16, 1.2), -16, 0);
+    if (!open) {
+      const lid = P(); lid.moveTo(-16, -15); lid.lineTo(-16, -22); lid.bezierCurveTo(-16, -30, -9, -32, 0, -32); lid.bezierCurveTo(9, -32, 16, -30, 16, -22); lid.lineTo(16, -15); lid.closePath();
+      g.fillStyle = vg(g, -32, -15, [hi, base, dk]); g.fill(lid); g.lineWidth = 1; g.strokeStyle = ink; g.stroke(lid);
+      g.save(); g.clip(lid); for (const x of [-16, 12.5]) trim(rrect(x, -33, 3.5, 19, 1.2), -33, -14); g.restore();
+      g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(-12, -23); g.quadraticCurveTo(-10, -29, -3, -30); g.stroke();
+      // emblème : pièce d'or (coffre payant) ou étoile (coffre d'élite)
+      if (elite) { const st = P(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.6 : 6; if (i) st.lineTo(Math.cos(a) * r, -23.5 + Math.sin(a) * r); else st.moveTo(Math.cos(a) * r, -23.5 + Math.sin(a) * r); } st.closePath(); trim(st, -30, -18); }
+      else { trim(ell(0, -23.5, 5.4, 5.4), -29, -18); g.strokeStyle = '#b8780c'; g.lineWidth = 0.9; g.stroke(ell(0, -23.5, 3.4, 3.4)); }
+    }
+    trim(rrect(-17, -17.6, 34, 3.6, 1.2), -17.6, -14);
+    const ly = open ? -17 : -15;
+    const lock = rrect(-3.2, ly, 6.4, 7, 1.8); trim(lock, ly, ly + 7);
+    g.fillStyle = ink; g.fill(ell(0, ly + 2.8, 1, 1)); g.fillRect(-0.45, ly + 3.1, 0.9, 2.2);
   }, { outline: 1.2 });
 }
 
