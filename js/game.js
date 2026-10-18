@@ -883,7 +883,7 @@ function chestScreen(done, afterRun = false) {
   mount(`<div class="chest-screen">
     <h2 class="rs-title">${afterRun ? 'Butin de l\'expédition' : 'Coffres de butin'}</h2>
     <p class="center muted cs-hint">Touchez un coffre pour l'ouvrir</p>
-    <div class="chest-grid">${list.map((c, i) => `<button class="cg-card t${c.tier}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
+    <div class="chest-grid ${list.length <= 4 ? 'few' : ''}" style="--n:${Math.min(2, list.length)}">${list.map((c, i) => `<button class="cg-card t${c.tier}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
         <span class="cg-glow"></span><img class="cg-img" src="${chestURL(c.tier)}" alt="">
         <b>${esc(LOOT_TIERS[c.tier].name)}</b><small>${esc(ZONES[c.zone]?.name || '')}</small>
       </button>`).join('')}</div>

@@ -1155,3 +1155,10 @@ button.itile:active { transform: scale(.95); }
 .ach-got b { font: 400 15px var(--cr); text-shadow: var(--ol-s); }
 .ach-got em { display: flex; align-items: center; gap: 2px; font: 400 13px var(--cr); font-style: normal; color: var(--gold); text-shadow: var(--ol-s); }
 .rw > span small { display: block; width: auto; padding: 0; margin: 1px 0 0; }
+/* peu de coffres : grandes cartes au centre de l'écran */
+.chest-grid.few { grid-template-columns: repeat(var(--n), minmax(0, 168px)); justify-content: center; gap: 14px; margin: auto 0; }
+.chest-grid.few .cg-card { padding: 14px 6px 12px; }
+.chest-grid.few .cg-img { width: 128px; height: 120px; }
+.chest-grid.few .cg-card b { font-size: 17px; }
+.chest-grid.few .cg-card small { font-size: 12px; }
+.chest-grid.few + .cs-btns { margin-top: 0; }
