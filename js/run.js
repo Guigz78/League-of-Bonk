@@ -1808,14 +1808,14 @@ export class Run {
     const tiers = [Math.random() < 0.12 + 0.08 * this.diffId ? 3 : 2];
     for (let i = 0; i < this.diffId; i++) tiers.push(1);
     tiers.forEach((t, i) => { const a = -Math.PI / 2 + (i - (tiers.length - 1) / 2) * 0.7; this.dropLoot(A.x + Math.cos(a) * 95, A.y + Math.sin(a) * 95, t, { boss: true }); });
-    // portail vers le monde suivant (il s'ouvre en 1,5 s, puis on peut y entrer)
-    this.portal = { x: A.x, y: A.y, R: 60, charge: 0, t: 0 };
+    // portail vers le monde suivant : toujours au centre de la carte (là où la partie a commencé)
+    this.portal = { x: 0, y: 0, R: 60, charge: 0, t: 0 };
     this.nextElite = Math.max(this.nextElite, this.time + 25);
     this.emit('bossDeath', { e, x: e.x, y: e.y });
-    this.emit('portalOpen', { x: A.x, y: A.y });
+    this.emit('portalOpen', { x: 0, y: 0 });
     const bb = $('#bossbar'); if (bb) bb.hidden = true;
     const last = !ZONES[z.id + 1];
-    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${last ? 'Le dernier portail est ouvert !' : 'Le portail est ouvert ! Foncez-y !'}`, 2600, 'boss portal');
+    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${last ? 'Le dernier portail est ouvert au centre !' : 'Le portail s\'ouvre au centre de la carte !'}`, 2600, 'boss portal');
     this.shake = 16;
     p.inv = Math.max(p.inv, 1.5);
     stopMusic(); sfx('win'); sfx('portal'); buzz(100);
