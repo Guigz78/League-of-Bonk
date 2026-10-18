@@ -116,7 +116,7 @@ export const ELITE_MODS = {
 };
 
 // Zones : chaque partie = survivre aux vagues, puis battre le boss.
-export const ZONE_TIME = [180, 240, 240, 240, 270, 300]; // secondes avant l'arrivée du boss
+export const ZONE_TIME = [180, 240, 240, 240, 270, 300]; // durée du chrono de chaque monde (après : les monstres deviennent fous)
 export const ZONES = [
   {
     id: 0, name: 'Voie du Milieu', sub: 'Les sbires arrivent !', bg: 'lane',
@@ -128,7 +128,7 @@ export const ZONES = [
       { name: 'Sbire canon', ranged: true, body: 'golem', pal: ['#d88a4f', '#9a5a2d', '#ffc79e'], hp: 58, atk: 8, moves: ['atk', 'guard', 'heavy'] },
       { name: 'Super Sbire', body: 'golem', pal: ['#e05050', '#962d2d', '#ff9e9e'], hp: 80, atk: 9, moves: ['atk', 'heavy', 'enrage'], elite: true },
     ],
-    boss: null, // la zone 1 se termine contre le Super Sbire
+    boss: { name: 'Sbire Titan', title: 'Fléau de la Voie', body: 'humanoid', pal: ['#e0b040', '#9a6a1a', '#fff0a0'], hp: 190, atk: 13, moves: ['heavy', 'atk', 'enrage'] },
   },
   {
     id: 1, name: 'Jungle de la Faille', sub: 'Ça grouille dans les buissons…', bg: 'jungle',
@@ -240,7 +240,7 @@ export const ITEM_BASES = {
 
 // Objets légendaires uniques donnés par les boss
 export const BOSS_ITEMS = [
-  null,
+  { slot: 'trinket', name: 'Bannière du Titan', icon: 'shield', rarity: 'legendary', stat: { hp: 30, atk: 4 } },
   { slot: 'weapon', name: 'Lame du Brambleback', icon: 'sword', rarity: 'legendary', stat: { atk: 14, crit: 0.05 } },
   { slot: 'armor', name: 'Carapace du Héraut', icon: 'armor', rarity: 'legendary', stat: { hp: 80, regen: 3 } },
   { slot: 'trinket', name: 'Plume de Cryophénix', icon: 'gem', rarity: 'legendary', stat: { crit: 0.12, regen: 5 } },
@@ -275,3 +275,54 @@ export const ACHIEVEMENTS = [
   { id: 'hard1', name: 'Sueurs froides', desc: 'Terminer une zone en Difficile.', gold: 150 },
   { id: 'nightmare1', name: 'Cauchemar éveillé', desc: 'Terminer une zone en Cauchemar.', gold: 300 },
 ];
+
+// ---------- Expédition : mondes enchaînés, totems de défi, butin, forge, bonus ----------
+// Une partie traverse les mondes : battre le boss d'un monde ouvre un portail vers le monde suivant (plus difficile).
+// Quand le chrono d'un monde est écoulé, les monstres deviennent fous (de plus en plus).
+
+// Totems de défi posés dans chaque monde : les activer rend la partie plus dure mais rapporte tout de suite.
+export const TOTEMS = {
+  horde:  { name: 'Totem de la Horde', icon: 'skull', color: '#ff8a3a', curse: '+35 % de monstres dans ce monde', reward: 'De l\'or tout de suite, et +25 % d\'or dans ce monde' },
+  fureur: { name: 'Totem de Fureur', icon: 'i_enrage', color: '#ff3a5a', curse: 'Monstres +25 % dégâts et +12 % vitesse dans ce monde', reward: 'Un coffre de butin en argent (ou mieux)' },
+  elite:  { name: 'Totem des Champions', icon: 'crown', color: '#c06aff', curse: 'Un élite surgit, puis les élites arrivent 2 fois plus souvent', reward: 'Une bénédiction au choix' },
+  maudit: { name: 'Totem maudit', icon: 'i_poison', color: '#5ae8b8', curse: 'Monstres +20 % PV jusqu\'à la fin de la partie', reward: 'Une amélioration gratuite et des coffres de butin de meilleure qualité' },
+};
+
+// Coffres de butin : ramassés pendant la partie, ouverts après. Index = rang (0 bois … 3 mythique).
+// parts = [min, max] pièces d'équipement ; rar = chances commun/rare/épique/légendaire de chaque pièce ;
+// boost = chance d'un bonus ; item = chance d'un objet complet ; gold = [min, max] or (× (1 + 0,4 × zone)).
+export const LOOT_TIERS = [
+  { id: 'wood',   name: 'Coffre en bois',   color: '#c8874a', parts: [2, 3], rar: [0.85, 0.15, 0, 0],       boost: 0.25, item: 0,    gold: [10, 25] },
+  { id: 'silver', name: 'Coffre en argent', color: '#d0dcf0', parts: [3, 4], rar: [0.5, 0.42, 0.08, 0],     boost: 0.45, item: 0.2,  gold: [30, 60] },
+  { id: 'gold',   name: 'Coffre en or',     color: '#ffcf40', parts: [4, 5], rar: [0.15, 0.45, 0.33, 0.07], boost: 0.75, item: 0.35, gold: [80, 150] },
+  { id: 'mythic', name: 'Coffre mythique',  color: '#ff6ad8', parts: [5, 6], rar: [0, 0.2, 0.5, 0.3],       boost: 1,    item: 0.6,  gold: [200, 320] },
+];
+
+// Pièces d'équipement (une sorte par emplacement), rangées par rareté : servent à fabriquer et améliorer à la forge.
+export const RARITIES = ['common', 'rare', 'epic', 'legendary'];
+export const PARTS = {
+  weapon:  { name: 'Fragment de lame', plural: 'Fragments de lame', icon: 'sword' },
+  armor:   { name: 'Plaque d\'armure', plural: 'Plaques d\'armure', icon: 'armor' },
+  trinket: { name: 'Éclat de gemme', plural: 'Éclats de gemme', icon: 'gem' },
+};
+// craft : pièces + or pour fabriquer un objet de cette rareté ; fuse : pièces pour 1 pièce de la rareté au-dessus ;
+// upgrade : améliorer un objet (+12 % de stats par niveau, 5 niveaux), payé en pièces de sa rareté et en or.
+export const FORGE = {
+  craft: { parts: 5, gold: [40, 120, 320, 800] },
+  fuse: 4,
+  upgrade: { max: 5, per: 0.12, parts: [2, 2, 3, 3, 4], gold: [30, 60, 110, 180, 280] },
+  salvage: [2, 2, 3, 3],
+};
+
+// Bonus : consommables choisis avant une partie (2 au maximum), trouvés dans les coffres de butin ou achetés.
+export const BOOST_SLOTS = 2;
+export const BOOSTS = {
+  vigueur: { name: 'Potion de vigueur', icon: 'potion', desc: '+25 % PV max pendant la partie', price: 120 },
+  rage:    { name: 'Élixir de rage', icon: 'fist', desc: '+20 % de dégâts pendant la partie', price: 150 },
+  sagesse: { name: 'Parchemin de sagesse', icon: 'tome', desc: '+30 % d\'expérience pendant la partie', price: 120 },
+  fortune: { name: 'Bourse de fortune', icon: 'gold', desc: '+40 % d\'or et +30 % de rayon de ramassage', price: 100 },
+  egide:   { name: 'Égide', icon: 'shield', desc: 'Bloque les 3 premiers coups reçus', price: 140 },
+  depart:  { name: 'Départ éclair', icon: 'star', desc: 'Commence la partie au niveau 4', price: 180 },
+  phenix:  { name: 'Plume de phénix', icon: 'heart', desc: 'Revient une fois à la vie, sans publicité', price: 250 },
+  trefle:  { name: 'Trèfle à quatre feuilles', icon: 'crown', desc: 'Les coffres de butin trouvés sont de meilleure qualité', price: 160 },
+};

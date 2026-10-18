@@ -55,6 +55,14 @@ export function bake(W, H, ax, ay, res, draw, { outline = 2.2, variants = false,
     q.fillStyle = 'rgba(150,220,255,.62)'; q.fillRect(0, 0, cw, ch);
     spr.ice = compose(ice);
     spr.red = compose(sil('#ff3a4a'));
+    // variante « enragée » (monstres devenus fous après le chrono) : contour rouge et teinte chaude
+    const rg = cnv(cw, ch), rq = rg.getContext('2d'), redSil = sil('#ff2a3a'), rr = (outline + 0.8) * res;
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; rq.drawImage(redSil, Math.cos(a) * rr, Math.sin(a) * rr); }
+    rq.drawImage(ring, 0, 0);
+    const warm = cnv(cw, ch), wq = warm.getContext('2d');
+    wq.drawImage(art, 0, 0); wq.globalCompositeOperation = 'source-atop'; wq.fillStyle = 'rgba(255,60,40,.22)'; wq.fillRect(0, 0, cw, ch);
+    rq.drawImage(warm, 0, 0);
+    spr.rage = rg;
   }
   return spr;
 }

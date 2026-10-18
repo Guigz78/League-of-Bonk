@@ -451,7 +451,7 @@ export class Gfx {
     // regard vers le joueur (ou dans le sens de la charge)
     const sx = Math.sin(e.ang);
     if (sx > 0.2) e.g_face = 1; else if (sx < -0.2) e.g_face = -1; else e.g_face = e.g_face || 1;
-    const f = ((e.bob * 0.55) | 0) & 1;
+    const f = ((e.bob * 0.55) | 0) % set.f.length; // nombre d'images d'animation libre (2 à 6)
     const body = e.def.body, age = run.time - e.born;
     let sxs = 1, sys = 1, up = e.fly * 0.9, rot = 0;
     if (body === 'blob' || body === 'worm') { const h = Math.abs(Math.sin(e.bob * 0.7)); up += h * 5 * k; sxs = 1 + (1 - h) * 0.1; sys = 1 - (1 - h) * 0.1; }
