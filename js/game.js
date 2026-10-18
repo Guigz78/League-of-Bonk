@@ -35,7 +35,7 @@ function topbar() {
     <div class="gold">${iconImg('gold', 20)}<b id="goldN">${fmt(save.gold)}</b></div>
     <div class="logo-sm">League <span>of</span> Bonk</div>
     <button class="icon-btn account" data-act="settings" aria-label="Compte et options">
-      ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('crown', 20)}${dot}
+      ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 30)}${dot}
     </button>
   </header>`;
 }
@@ -261,7 +261,7 @@ function zoneRewards(i, k) {
   const D = DIFFICULTIES[k];
   return `<h4>Récompenses${k ? ' ' + esc(D.name) : ''}</h4>
     <div class="rewards">
-      <div class="rw">${iconImg('gold', 18)} Or${k ? ` <b>${mul(D.gold)}</b>` : ''} et objets${k ? ' plus rares et plus puissants' : ''}</div>
+      <div class="rw">${iconImg('gold', 18)}<span>Or${k ? ` <b>${mul(D.gold)}</b>` : ''}, coffres de butin et objets à bonus${k ? ', plus rares et plus puissants' : ''}</span></div>
       ${unlock}
     </div>
     <p class="muted di-note">${k ? 'Familier et objet de boss : seulement à la première victoire en Normal.' : 'Zone déjà terminée : rejouez-la pour gagner de l\'or et des objets.'}</p>`;

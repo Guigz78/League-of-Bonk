@@ -747,6 +747,14 @@ const VI = {
     const c = F(g, C(32, 32, 14), vLG(g, 18, 46, '#a8f06a', '#3a9a24'), 2.6);
     G(g, c, 27, 26, 4, 3, 0.5);
   },
+  gear(g) {
+    const p = new Path2D();
+    for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 - Math.PI / 16, r = i % 2 ? 22 : 28; p[i ? 'lineTo' : 'moveTo'](32 + Math.cos(a) * r, 32 + Math.sin(a) * r); }
+    p.closePath();
+    const o = F(g, p, vLG(g, 4, 60, '#ffffff', '#d8e2f0', '#9aa8c0', '#5a6680'), 3.2);
+    G(g, o, 22, 18, 10, 5, 0.5);
+    F(g, C(32, 32, 9), vLG(g, 23, 41, '#4a5670', '#1a2238'), 3);
+  },
   dodge(g) {
     for (const [y, w, col] of [[18, 40, '#e8fbff'], [32, 50, '#9ae8ff'], [46, 36, '#e8fbff']]) {
       const p = new Path2D(); p.moveTo(56 - w, y + 4); p.quadraticCurveTo(56 - w / 2, y - 6, 58, y); T(g, p, col, 5);

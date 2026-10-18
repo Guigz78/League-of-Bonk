@@ -1144,8 +1144,9 @@ button.itile:active { transform: scale(.95); }
 .evo-chain .evo-img { position: relative; display: grid; place-items: center; width: 100%; height: 50px; }
 .evo-img img { position: relative; width: 50px; height: 50px; filter: drop-shadow(0 2px 0 rgba(0,0,0,.4)); }
 .evo-chain .evo b { font: 400 11.5px/1.05 var(--cr); color: #fff; text-shadow: var(--ol-s); min-height: 2.1em; display: flex; align-items: center; }
-.evo.final { background: linear-gradient(#ffc84a, #e07a10); box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 3px 0 rgba(0,0,0,.35), 0 0 16px color-mix(in srgb, var(--aura) 70%, transparent); }
-.evo.final em { color: #fff; }
+.evo.final { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--aura) 35%, #3a1a78), #160a40 75%); box-shadow: inset 0 0 0 2px var(--aura), 0 3px 0 rgba(0,0,0,.35), 0 0 16px color-mix(in srgb, var(--aura) 70%, transparent); animation: pop .4s var(--d) both cubic-bezier(.2,1.6,.4,1), auraPulse 1.2s 1s ease-in-out infinite; }
+.evo-chain .evo.final b { color: var(--aura); }
+@keyframes auraPulse { 50% { box-shadow: inset 0 0 0 2px var(--aura), 0 3px 0 rgba(0,0,0,.35), 0 0 26px var(--aura); } }
 .evo.final .evo-img::before { content: ''; position: absolute; left: 50%; top: 50%; width: 58px; height: 64px; margin: -34px 0 0 -29px; border-radius: 50% 50% 45% 45%;
   background: radial-gradient(ellipse at 50% 60%, color-mix(in srgb, var(--aura) 85%, #fff), color-mix(in srgb, var(--aura) 40%, transparent) 55%, transparent 70%); animation: auraFlame .6s ease-in-out infinite alternate; }
 @keyframes auraFlame { from { transform: scale(.92, .95); opacity: .75; } to { transform: scale(1.08, 1.12) translateY(-3px); opacity: 1; } }
