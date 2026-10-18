@@ -28,15 +28,18 @@ export function bind(root, handlers) {
   };
 }
 
+// notifications : 2 à la fois au plus, les suivantes attendent leur tour
 let toastBox = null;
+const toastQ = [];
 export function toast(html, ms = 2200) {
   if (!toastBox) { toastBox = document.createElement('div'); toastBox.className = 'toasts'; document.body.appendChild(toastBox); }
+  if (toastBox.children.length >= 2) { toastQ.push([html, ms]); return; }
   const t = document.createElement('div');
   t.className = 'toast';
   t.innerHTML = html;
   toastBox.appendChild(t);
   setTimeout(() => t.classList.add('out'), ms);
-  setTimeout(() => t.remove(), ms + 400);
+  setTimeout(() => { t.remove(); if (toastQ.length) toast(...toastQ.shift()); }, ms + 400);
 }
 
 // buttons: [{ label, cls, value }]

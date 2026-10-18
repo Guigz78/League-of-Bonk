@@ -961,7 +961,7 @@ function summaryScreen(R, opened = []) {
         <span class="wr-t"><small>Monde ${w.n}</small><b>${esc(w.z.name)}</b></span>
         <span class="wr-ok">✓ Boss vaincu</span>
       </div>
-      <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l}</div>`).join('')}</div>
+      <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
   const title = R.final ? 'Le monde est sauvé !' : sum.win ? 'Expédition réussie !' : won ? 'Fin de l\'expédition' : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
@@ -982,6 +982,8 @@ function summaryScreen(R, opened = []) {
       ${heatLine}${chestLine}${pendLine}
     </div>
     ${R.found.length ? `<h3 class="section-t">Objets des boss <small>${R.found.length}</small></h3><div class="inv-grid found">${R.found.map(it => itemTile(it, { act: false })).join('')}</div>` : ''}
+    ${R.got?.length ? `<h3 class="section-t">Succès débloqués <small>+${fmt(R.got.reduce((n, a) => n + a.gold, 0))} or</small></h3>
+      <div class="ach-got">${R.got.map((a, i) => `<span style="--d:${(0.3 + i * 0.08).toFixed(2)}s">${iconImg('crown', 22)}<b>${esc(a.name)}</b><em>${iconImg('gold', 14)} ${a.gold}</em></span>`).join('')}</div>` : ''}
     ${sum.evo ? `<p class="center evo-reached">${iconImg('star', 16)} Évolution atteinte : <b>${esc(EVOLUTIONS[save.cls][sum.evo].name)}</b></p>` : ''}
     <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
     ${!won ? `<p class="center muted tip">${tipFor(sum, k)}</p>` : ''}
@@ -991,7 +993,7 @@ function summaryScreen(R, opened = []) {
     </div>
   </div>`);
   for (const it of R.found) delete it._eq;
-  for (const a of R.got || []) toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)`, 3200);
+  if (R.got?.length) sfx('loot');
   R.got = [];
   bind($('.reward-screen'), {
     home: () => home('adventure'),
