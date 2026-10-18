@@ -29,7 +29,7 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // bossHp : PV du boss = PV de base × bossHp × zone × difficulté × monde traversé ;
 // z* : renfort par zone (monde 1 à 6) ; st* : renfort par monde déjà traversé dans la partie ;
 // carry* : renfort selon le temps total de la partie (s)
-export const BAL = { bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.0, stDmg: 0.7, stBoss: 2.2, carryHp: 300, carryDmg: 700 };
+export const BAL = { bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.0, stDmg: 0.75, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
