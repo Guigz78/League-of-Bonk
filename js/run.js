@@ -349,6 +349,8 @@ export class Run {
       else if (e.phase === 'sweepW' || e.phase === 'sweep') w = Math.min(w, this.sweepEta(e));
     }
     w = w < 3 ? w : 0;
+    // première alerte de la partie : on rappelle le bouton
+    if (w > 0 && !this.jumpTold && !this.paused) { this.jumpTold = true; this.msgT = 0; this.msg('Attaque à sauter : touchez « Saut » !'); }
     if (w > 0 && !this.jumpWarn) this.jumpWarnDur = w;
     else if (w > this.jumpWarn + 0.3) this.jumpWarnDur = w; // nouvelle alerte plus lointaine
     if (!w) this.jumpWarnDur = 0;
@@ -599,7 +601,7 @@ export class Run {
     this.banner(final ? `<small>Forme ultime !</small>${esc(ev.name)}` : `<small>Votre champion évolue ! · stade ${p.evo + 1}/${evs.length}</small>${esc(ev.name)}`, final ? 3200 : 2600, final ? 'evo final' : 'evo');
     this.emit('evolve', { evo: p.evo, x: p.x, y: p.y, final, aura: ev.aura || null });
     this.renderEvo();
-    this.shake = Math.max(this.shake, 4 + 6 * k);
+    this.shake = Math.max(this.shake, 3 + 4 * k);
     sfx('evolve'); buzz(final ? 140 : 80);
   }
 
@@ -2177,7 +2179,8 @@ export class Run {
     const jb = this._jb || (this._jb = $('#jumpBtn')), warn = this.jumpWarn > 0;
     if (jb) {
       if (warn !== this._jw) { jb.classList.toggle('warn', warn); this._jw = warn; }
-      if (warn) jb.firstChild.firstChild.style.strokeDashoffset = 103.7 * (1 - Math.min(1, this.jumpWarn / Math.max(0.3, this.jumpWarnDur)));
+      const ring = this._jr || (this._jr = jb.querySelector('.jring circle'));
+      if (warn && ring) ring.style.strokeDashoffset = 103.7 * (1 - Math.min(1, this.jumpWarn / Math.max(0.3, this.jumpWarnDur)));
       jb.classList.toggle('air', p.h > 2);
     }
     this.hudT = (this.hudT || 0) + 1;
