@@ -6,7 +6,7 @@
 // Expédition : une partie enchaîne les mondes. Dans chaque monde, l'autel invoque le boss dans une arène ;
 // sa mort ouvre un portail vers le monde suivant (plus dur). Chrono écoulé : les monstres deviennent fous.
 // Totems de défi (plus dur contre des récompenses), coffres de butin ramassés pendant la partie, bonus de départ.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS } from './data.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS, AFFIXES, LEGEND_EFFECTS } from './data.js';
 import { save, playerStats } from './save.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -35,7 +35,45 @@ const OT_STEP = 15;     // secondes entre deux niveaux de folie après le chrono
 const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le chrono), le monde s'effondre
 const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
 const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', 'Néant'];
+const JUMP_V = 590, GRAV = 1650; // saut : ~0,7 s en l'air, plus de 40 de haut pendant ~0,55 s
+const LS_CAP = 0.04;    // vol de vie : au plus 4 % des PV max rendus par seconde
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+// nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
+const NB = ' ';
+const num = (v, d = 0) => { const k = 10 ** d; return (Math.round(v * k) / k).toLocaleString('fr-FR', { maximumFractionDigits: d }); };
+const pctS = (v, sign = true) => (sign && v > 0.0005 ? '+' : v < -0.0005 ? '−' : '') + num(Math.abs(v) * 100) + NB + '%';
+const secS = v => num(v, 2) + NB + 's';
+// fiches de niveau des armes : [clé de wstats(), libellé, format], par ordre d'importance
+const fI = v => fmt(v), fN = v => String(v), fP = v => (v ? `${v} ennemi${v > 1 ? 's' : ''}` : 'non'), fF = v => (v ? secS(v) : 'non');
+const D_ = (l = 'Dégâts par coup') => ['dmg', l, fI], CD = (l = 'Recharge') => ['cd', l, secS];
+const WLINES = {
+  beam: [D_('Dégâts par rayon'), CD(), ['n', 'Rayons', fN], ['w', 'Largeur du rayon', fI]],
+  arrows: [D_('Dégâts par flèche'), CD(), ['n', 'Flèches', fN], ['pierce', 'Transperce', fP]],
+  sword: [D_(), CD(), ['R', 'Portée', fI], ['n', 'Frappe', v => (v > 1 ? 'devant et derrière' : 'devant')]],
+  orbs: [D_('Dégâts par orbe'), ['n', 'Orbes', fN], ['R', 'Rayon', fI], CD('Frappe toutes les')],
+  aura: [D_('Dégâts par brûlure'), ['R', 'Rayon', fI], CD('Brûle toutes les')],
+  lightning: [D_('Dégâts par éclair'), CD(), ['n', 'Éclairs', fN], ['R', 'Zone', fI]],
+  boomerang: [D_('Dégâts par lame'), CD(), ['n', 'Lames', fN], ['R', 'Taille', fI]],
+  shrooms: [D_('Dégâts d\'explosion'), CD(), ['n', 'Champignons', fN], ['R', 'Explosion', fI]],
+  frost: [D_('Dégâts de l\'onde'), CD(), ['R', 'Rayon', fI], ['freeze', 'Gel', fF]],
+  daggers: [D_('Dégâts par dague'), CD(), ['n', 'Dagues', fN], ['pierce', 'Transperce', fP], ['v', 'Vitesse', fI]],
+  snowball: [D_('Dégâts par boule'), CD(), ['n', 'Boules', fN], ['R', 'Zone', fI]],
+};
+const WSIZE = { beam: 'w', sword: 'R', orbs: 'R', aura: 'R', lightning: 'R', boomerang: 'R', shrooms: 'R', frost: 'R', snowball: 'R' };
+// tomes et bénédictions -> caractéristique de derive() ; DLINES : [libellé, format(valeur, valeur de base)]
+const TOME_KEY = { power: 'dmgMul', haste: 'haste', boots: 'speed', vital: 'maxHp', magnet: 'magnet', crit: 'crit', armor: 'armor', wisdom: 'xpMul', area: 'area' };
+const BOON_KEY = { dmg: 'dmgMul', hp: 'maxHp', speed: 'speed', crit: 'crit', xp: 'xpMul', magnet: 'magnet', haste: 'haste' };
+const DLINES = {
+  dmgMul: ['Dégâts', v => pctS(v - 1)],
+  haste: ['Vitesse d\'attaque', v => pctS(1 / v - 1)],
+  speed: ['Vitesse de course', (v, z) => pctS(v / z - 1)],
+  maxHp: ['PV max', v => fmt(v)],
+  magnet: ['Rayon de ramassage', (v, z) => pctS(v / z - 1)],
+  crit: ['Chance de critique', v => pctS(v, false)],
+  armor: ['Dégâts subis', v => (v > 0.0005 ? '−' + num(v * 100) + NB + '%' : '0' + NB + '%')],
+  xpMul: ['Expérience', v => pctS(v - 1)],
+  area: ['Taille des attaques', v => pctS(v - 1)],
+};
 
 // ---------- Grille spatiale ----------
 class Grid {
@@ -64,20 +102,32 @@ export class Run {
     // bonus choisis avant la partie (déjà consommés par l'interface)
     this.boosts = [...new Set(boosts || [])].filter(id => BOOSTS[id]);
     const has = id => this.boosts.includes(id);
-    const st = playerStats();
+    const st = { ...playerStats() };
+    // caractéristiques de l'équipement (contrat : valeurs manquantes = 0, multiplicateurs de base = 1), plafonnées
+    const n = k => Math.max(0, +st[k] || 0), cap = (k, v) => (AFFIXES[k]?.max ? Math.min(AFFIXES[k].max, v) : v);
+    for (const k of ['hp', 'atk', 'crit', 'regen']) st[k] = n(k);
+    for (const k of ['speed', 'magnet', 'gold']) st[k] = +st[k] > 0 ? +st[k] : 1;
+    st.hp = Math.max(1, st.hp); st.atk = Math.max(1, st.atk);
     if (has('vigueur')) st.hp = Math.round(st.hp * 1.25);
     if (has('fortune')) { st.gold *= 1.4; st.magnet *= 1.3; }
     this.base = st;
+    this.it = {};
+    for (const k of ['critDmg', 'lifesteal', 'haste', 'area', 'armor', 'thorns', 'dodge', 'xp', 'ult']) this.it[k] = cap(k, n(k));
+    // effets uniques des objets légendaires (un même effet sur deux objets compte double)
+    this.leg = {};
+    for (const id of Array.isArray(st.effects) ? st.effects : []) if (LEGEND_EFFECTS[id]) this.leg[id] = (this.leg[id] || 0) + 1;
     this.bDmg = has('rage') ? 1.2 : 1; this.bXp = has('sagesse') ? 1.3 : 1;
     this.phoenix = has('phenix');
     this.p = {
       x: 0, y: 0, h: 0, vh: 0, r: 14, face: { x: 0, y: -1 },
       maxHp: st.hp, hp: st.hp, atk: st.atk, crit: st.crit, regen: st.regen * 0.1 * this.diff.heal,
       speed: 160 * st.speed, magnet: 95 * st.magnet * (save.pet === 'phenix' ? 1.4 : 1),
-      armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1,
+      armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1, critMul: 2,
       inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: 5, ult: 0,
       weapons: [], tomes: {}, boons: {}, evo: 0,
     };
+    this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
+    this.jumpWarn = 0; this.jumpWarnDur = 0;
     this.addWeapon(this.cls.weapon);
     this.recalc();
     this.grid = new Grid(64);
@@ -140,22 +190,23 @@ export class Run {
     const u = ULTS[this.cls.ult];
     mount(`<div class="run">
       <canvas id="cv"></canvas>
-      <div class="hud">
+      <div class="hud cr">
         <div class="hud-top">
-          <button class="icon-btn" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
-          <div class="timer"><span class="world-tag" id="worldTag"></span><b id="timer">0:00</b><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
+          <button class="icon-btn hud-pause" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
+          <div class="timer"><span class="world-tag" id="worldTag"></span><span class="t-plate" id="tPlate"><b id="timer">0:00</b></span><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
           <div class="hud-right">
-            <span>${iconImg('skull', 16)}<b id="killsN">0</b></span><span>${iconImg('gold', 16)}<b id="goldRun">0</b></span>
+            <span>${iconImg('skull', 16)}<b id="killsN">0</b></span><span class="hr-gold">${iconImg('gold', 16)}<b id="goldRun">0</b></span>
             <span class="hr-loot" id="lootPill"><i class="hud-chest"></i><b id="lootN">0</b></span><span class="hr-heat" id="heatPill" hidden>${iconImg('i_burn', 16)}<b id="heatN">0</b></span>
           </div>
         </div>
-        <div class="xpbar"><div class="fill" id="xpFill"></div><span id="lvl">Niv. 1</span></div>
+        <div class="xprow"><span class="lvl-badge"><small>Niv.</small><b id="lvl">1</b></span><div class="xpbar"><div class="fill" id="xpFill"></div></div></div>
         <div class="evo-line" id="evoLine"></div>
         <div class="loadout" id="loadout"></div>
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
         <div class="banner" id="banner"></div>
-        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir.<br>Touchez rapidement l'écran pour sauter.<br>Votre champion attaque tout seul !</div>
-        <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 30)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
+        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br><b>Saut</b> : touchez le bouton quand il devient <em>rouge</em>.</div>
+        <button class="jump-btn" id="jumpBtn" aria-label="Sauter"><svg class="jring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16.5"/></svg><svg class="jarrow" viewBox="0 0 24 24"><path d="M12 3.5l8.5 9.5h-5.2v7.5H8.7V13H3.5z"/></svg><small>Saut</small><i class="jwarn">!</i></button>
+        <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 32)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
       </div>
     </div>`);
     this.cv = $('#cv');
@@ -223,7 +274,7 @@ export class Run {
     cv.addEventListener('pointerdown', e => {
       e.preventDefault();
       cv.setPointerCapture?.(e.pointerId);
-      // un seul doigt : on glisse pour courir, on touche brièvement pour sauter
+      // un seul doigt : on glisse pour courir (le saut a son propre bouton)
       if (!this.joy) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: 0, yaw: this.yaw };
       $('#hintBubble')?.classList.add('out');
     });
@@ -231,14 +282,17 @@ export class Run {
       const j = this.joy;
       if (j && e.pointerId === j.id) { j.moved = Math.max(j.moved, Math.hypot(e.clientX - j.ox, e.clientY - j.oy)); j.x = e.clientX; j.y = e.clientY; }
     });
-    const up = e => {
-      const j = this.joy;
-      if (j && e.pointerId === j.id) {
-        if (j.moved < 14 && performance.now() - j.t0 < 260) this.jump();
-        this.joy = null;
-      }
-    };
+    const up = e => { if (this.joy && e.pointerId === this.joy.id) this.joy = null; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    // bouton Saut : réagit dès qu'on le touche (pas au relâchement)
+    const jb = $('#jumpBtn');
+    jb?.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      this.jump();
+      jb.classList.remove('press'); void jb.offsetWidth; jb.classList.add('press');
+      $('#hintBubble')?.classList.add('out');
+    });
+    jb?.addEventListener('click', e => e.preventDefault());
     this.kd = e => { this.keys.add(e.key.toLowerCase()); if (e.key === ' ') this.jump(); if (e.key.toLowerCase() === 'e') this.useUlt(); if (e.key === 'Escape') this.pause(); };
     this.ku = e => this.keys.delete(e.key.toLowerCase());
     window.addEventListener('keydown', this.kd); window.addEventListener('keyup', this.ku);
@@ -262,10 +316,73 @@ export class Run {
 
   jump() {
     const p = this.p;
-    if (this.paused || this.over || p.h > 2) return;
-    p.vh = 560; p.h = 1;
-    this.emit('jump', { x: p.x, y: p.y });
+    if (this.paused || this.over || this.dying || p.h > 2) return;
+    p.vh = JUMP_V; p.h = 1;
+    this.emit('jump', { x: p.x, y: p.y, warned: this.jumpWarn > 0 });
     sfx('jump');
+  }
+
+  // secondes avant le prochain coup qu'on évite en sautant (ondes de choc, rayon tournant du boss, sortie de terre
+  // sous le joueur) ; 0 quand rien n'arrive. jumpWarnDur = durée totale de l'alerte en cours (anneau du rendu).
+  updateJumpWarn() {
+    const p = this.p;
+    let w = 9;
+    for (const v of this.waves) { // onde de choc : elle touche quand son bord arrive à 26 du joueur
+      if (v.hit) continue;
+      const d = Math.hypot(p.x - v.x, p.y - v.y);
+      if (d + 26 > v.r && d - 26 < v.max) w = Math.min(w, Math.max(0.01, (d - 26 - v.r) / v.speed));
+    }
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const a = e.act;
+      if (a && !e.boss) {
+        if (a.kind === 'stomp' && a.stage === 0) { const d = Math.hypot(p.x - e.x, p.y - e.y); if (d - 26 < a.R) w = Math.min(w, Math.max(0, a.t) + Math.max(0, d - 26 - e.r) / 300); }
+        else if (a.kind === 'burrow' && a.stage === 2 && Math.hypot(p.x - a.x, p.y - a.y) < a.R + p.r + 30) w = Math.min(w, Math.max(0.01, a.t));
+        continue;
+      }
+      if (!e.boss) continue;
+      if (e.phase === 'stomp') { const d = Math.hypot(p.x - e.x, p.y - e.y); if (d - 26 < 540) w = Math.min(w, Math.max(0, e.phaseT) + Math.max(0, d - 26 - e.r) / 330); }
+      else if (e.phase === 'burrow' && e.bst === 2 && Math.hypot(p.x - e.bx, p.y - e.by) < 125 + p.r + 30) w = Math.min(w, Math.max(0.01, e.phaseT));
+      else if (e.phase === 'sweepW' || e.phase === 'sweep') w = Math.min(w, this.sweepEta(e));
+    }
+    w = w < 3 ? w : 0;
+    if (w > 0 && !this.jumpWarn) this.jumpWarnDur = w;
+    else if (w > this.jumpWarn + 0.3) this.jumpWarnDur = w; // nouvelle alerte plus lointaine
+    if (!w) this.jumpWarnDur = 0;
+    this.jumpWarn = w;
+  }
+
+  // temps avant que le rayon tournant du boss atteigne le joueur (9 = jamais)
+  sweepEta(e) {
+    const p = this.p, dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy);
+    if (d > e.sweepLen + p.r) return 9;
+    const s = SWEEP_ARC / e.sweepDur, half = Math.asin(Math.min(1, (e.sweepW / 2 + p.r * 0.6) / Math.max(1, d))), toP = Math.atan2(dy, dx);
+    const ahead = (from, dir) => { let a = (toP - from) * dir; a = Math.atan2(Math.sin(a), Math.cos(a)); return a; };
+    if (e.phase === 'sweepW') { const a = ahead(e.sweepA, e.sweepDir); return a + half > 0 && a - half < SWEEP_ARC ? e.phaseT + Math.max(0.01, (a - half) / s) : 9; }
+    const left = Math.max(0, e.phaseT), a = ahead(e.sweepA, e.sweepDir);
+    if (a + half > 0 && a - half < s * left) return Math.max(0.01, (a - half) / s);
+    if (e.sweeps > 1) { // il repart dans l'autre sens
+      const end = e.sweepA + e.sweepDir * s * left, b = ahead(end, -e.sweepDir);
+      if (b + half > 0 && b - half < SWEEP_ARC) return left + Math.max(0.01, (b - half) / s);
+    }
+    return 9;
+  }
+
+  // soins de l'équipement : vol de vie (plafonné à 4 % des PV max par seconde) et bulle des légendaires
+  updateHeal(dt) {
+    const p = this.p;
+    this.lsBudget = Math.min(p.maxHp * LS_CAP, this.lsBudget + p.maxHp * LS_CAP * dt);
+    if (this.lsPool > 0) {
+      const h = Math.min(this.lsPool * this.diff.heal, this.lsBudget, p.maxHp - p.hp);
+      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown = (this.lsShown || 0) + h; }
+      this.lsPool = 0;
+    }
+    this.lsT = (this.lsT || 0) - dt;
+    if (this.lsT <= 0 && this.lsShown >= 1) { this.text(p.x + 14, p.y, 54, '+' + fmt(this.lsShown), '#ff7ab0', 0.9); this.lsShown = 0; this.lsT = 1.2; }
+    if (this.leg.bubble && !p.shieldHit) {
+      this.bubbleT -= dt;
+      if (this.bubbleT <= 0) { p.shieldHit = 1; this.bubbleT = 10 / this.leg.bubble; this.emit('legend', { kind: 'bubble', x: p.x, y: p.y }); }
+    }
   }
 
   // ---------- Armes, tomes, autels ----------
@@ -282,19 +399,49 @@ export class Run {
     if (id === 'hp') this.p.hp = this.p.maxHp;
   }
 
+  // caractéristiques du héros pour un jeu de tomes / bénédictions / évolution donné (sans rien modifier :
+  // sert aussi aux fiches de niveau). Chaque stade d'évolution : +12 % dégâts, +15 % PV, +3 % vitesse ; forme ultime +10 % dégâts.
+  derive(t = this.p.tomes, b = this.p.boons, evo = this.p.evo) {
+    const B = this.base, I = this.it, last = evo > 0 && evo >= EVOLUTIONS[this.cls.id].length - 1;
+    return {
+      dmgMul: (1 + 0.15 * (t.power || 0) + 0.12 * (b.dmg || 0)) * (1 + 0.12 * evo + (last ? 0.1 : 0)) * this.bDmg,
+      // multiplicateur des recharges : tomes et autels (plancher 0,45), puis vitesse d'attaque de l'équipement
+      haste: Math.max(0.45, 1 - 0.1 * (t.haste || 0) - 0.08 * (b.haste || 0)) / (1 + I.haste),
+      speed: 160 * B.speed * (1 + 0.1 * (t.boots || 0) + 0.08 * (b.speed || 0) + 0.03 * evo),
+      magnet: 95 * B.magnet * (1 + 0.35 * (t.magnet || 0) + 0.3 * (b.magnet || 0)) * (save.pet === 'phenix' ? 1.4 : 1),
+      crit: Math.min(1, B.crit + 0.07 * (t.crit || 0) + 0.06 * (b.crit || 0)),
+      armor: Math.min(0.6, 0.06 * (t.armor || 0) + I.armor),
+      xpMul: (1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0)) * this.bXp * (1 + I.xp),
+      area: (1 + 0.12 * (t.area || 0)) * (1 + I.area),
+      maxHp: Math.round(B.hp * (1 + 0.2 * (t.vital || 0) + 0.15 * (b.hp || 0)) * (1 + 0.15 * evo)),
+    };
+  }
+
   recalc() {
-    const p = this.p, t = p.tomes, b = p.boons, evo = p.evo;
-    p.dmgMul = (1 + 0.15 * (t.power || 0) + 0.12 * (b.dmg || 0)) * (1 + 0.2 * evo) * this.bDmg;
-    p.haste = Math.max(0.45, 1 - 0.1 * (t.haste || 0) - 0.08 * (b.haste || 0));
-    p.speed = 160 * this.base.speed * (1 + 0.1 * (t.boots || 0) + 0.08 * (b.speed || 0) + 0.05 * evo);
-    p.magnet = 95 * this.base.magnet * (1 + 0.35 * (t.magnet || 0) + 0.3 * (b.magnet || 0)) * (save.pet === 'phenix' ? 1.4 : 1);
-    p.crit = this.base.crit + 0.07 * (t.crit || 0) + 0.06 * (b.crit || 0);
-    p.armor = Math.min(0.3, 0.06 * (t.armor || 0));
-    p.xpMul = (1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0)) * this.bXp;
-    p.area = 1 + 0.12 * (t.area || 0);
-    const old = p.maxHp;
-    p.maxHp = Math.round(this.base.hp * (1 + 0.2 * (t.vital || 0) + 0.15 * (b.hp || 0)) * (1 + 0.25 * evo));
+    const p = this.p, d = this.derive(), old = p.maxHp;
+    Object.assign(p, d);
+    p.critMul = 2 + this.it.critDmg;
     if (p.maxHp > old) p.hp += p.maxHp - old;
+  }
+
+  // Caractéristiques d'une arme à un niveau donné : source unique pour les attaques ET les fiches de niveau
+  // (dmg = dégâts par coup avant critique, cd = recharge en s, n = nombre de projectiles, R = taille…)
+  wstats(id, lv, p = this.p) {
+    const A = p.atk * p.dmgMul, ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+    switch (id) {
+      case 'beam': return { dmg: A * 1.8 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.95 : 1.25) * h, n: 1 + L(4), w: (L(3) ? 30 : 18) * ar, len: 320 * ar };
+      case 'arrows': return { dmg: A * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.4 : 0.52) * h, n: 1 + L(2) + L(5), pierce: L(4) * 2 };
+      case 'sword': return { dmg: A * 1.7 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.85 : 1.1) * h, R: (L(3) ? 112 : 86) * ar, n: 1 + L(4) };
+      case 'orbs': return { dmg: A * 0.8 * (L(3) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: 0.45 * h, n: 2 + L(2) + L(4) + L(5), R: (L(4) ? 100 : 80) * ar };
+      case 'aura': return { dmg: A * 0.55 * (L(3) ? 1.4 : 1) * (L(5) ? 1.5 : 1), cd: 0.5 * h, R: (64 + L(2) * 16 + L(4) * 20) * ar };
+      case 'lightning': return { dmg: A * 2.3 * (L(3) ? 1.3 : 1), cd: (L(4) ? 1.4 : 1.8) * h, n: 1 + L(2) + L(4) + L(5) * 2, R: 46 * ar };
+      case 'boomerang': return { dmg: A * 1.3 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 1.6 : 2) * h, n: 1 + L(3) + L(5), R: (L(4) ? 20 : 15) * ar };
+      case 'shrooms': return { dmg: A * 3 * (L(3) ? 1.4 : 1), cd: (L(5) ? 2 : 2.6) * h, n: 1 + L(2) + L(5), R: (L(4) ? 80 : 58) * ar };
+      case 'frost': return { dmg: A * 1.2 * (L(2) ? 1.3 : 1), cd: (L(4) ? 2.4 : 3.2) * h, R: (L(3) ? 150 : 115) * ar, freeze: L(5) };
+      case 'daggers': return { dmg: A * 0.9 * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.95 : 1.3) * h, n: 4 + L(2) * 2 + L(4) * 2, pierce: L(5) * 3, v: L(5) ? 540 : 440 };
+      case 'snowball': return { dmg: A * 2.4 * (L(2) ? 1.3 : 1), cd: (L(5) ? 1.7 : 2.2) * h, n: 1 + L(4) + L(5), R: (L(3) ? 76 : 56) * ar };
+    }
+    return { dmg: A, cd: 1 };
   }
 
   renderLoadout() {
@@ -318,7 +465,10 @@ export class Run {
   renderEvo() {
     const el = $('#evoLine'); if (!el) return;
     const evs = EVOLUTIONS[this.cls.id], next = evs[this.p.evo + 1];
-    el.innerHTML = `<b>${esc(evs[this.p.evo].name)}</b>${next ? ` <small>· évolue au niv. ${next.lvl}</small>` : ' <small>· forme ultime</small>'}`;
+    // pastilles : un point par stade d'évolution
+    const pips = evs.map((_, i) => `<i class="${i <= this.p.evo ? 'on' : ''}"></i>`).join('');
+    el.innerHTML = `<b>${esc(evs[this.p.evo].name)}</b><span class="evo-pips">${pips}</span>${next ? `<small>évolue au niv. ${next.lvl}</small>` : '<small class="max">forme ultime</small>'}`;
+    el.classList.toggle('final', !next);
   }
 
   choices(n = 3) {
@@ -336,6 +486,45 @@ export class Run {
     }
     if (!out.length) out.push({ kind: 'heal', id: 'heal', lv: 0 }, { kind: 'gold', id: 'gold', lv: 0 });
     return out;
+  }
+
+  // Fiche d'un choix (niveau, coffre, autel, totem) : ce qui change, avec les valeurs exactes avant → après.
+  // { lines: [{ label, from, to }] } (from = null pour une nouvelle arme / un nouveau tome)
+  choiceInfo(c) {
+    const p = this.p, lines = [], L = (label, from, to) => lines.push({ label, from, to });
+    if (!c) return { lines };
+    if (c.kind === 'weapon') {
+      const w = p.weapons.find(x => x.id === c.id), lv0 = w ? w.lv : 0, lv1 = Math.min(MAX_LEVEL, lv0 + 1);
+      const a = lv0 ? this.wstats(c.id, lv0) : null, b = this.wstats(c.id, lv1);
+      for (const [k, label, f] of WLINES[c.id] || []) {
+        if (b[k] == null) continue;
+        // nouvelle arme : ses valeurs de départ (sans les « 0 ») ; amélioration : seulement ce qui change
+        if (a ? Math.abs(a[k] - b[k]) < 1e-6 : !b[k] || (k === 'n' && b[k] < 2)) continue;
+        L(label, a ? f(a[k]) : null, f(b[k]));
+      }
+      if (!lines.length) L(WLINES[c.id]?.[0][1] || 'Dégâts', fmt(a?.dmg || 0), fmt(b.dmg));
+      return { lines: lines.slice(0, a ? 4 : 3) };
+    }
+    if (c.kind === 'tome' || c.kind === 'boon') {
+      const tome = c.kind === 'tome', cur = tome ? p.tomes : p.boons, lv0 = cur[c.id] || 0;
+      const nxt = { ...cur, [c.id]: lv0 + 1 };
+      const a = this.derive(p.tomes, p.boons, p.evo), b = tome ? this.derive(nxt, p.boons, p.evo) : this.derive(p.tomes, nxt, p.evo);
+      const z = this.derive({}, {}, 0), key = (tome ? TOME_KEY : BOON_KEY)[c.id], S = DLINES[key];
+      if (S) L(S[0], S[1](a[key], z[key]), S[1](b[key], z[key]));
+      // conséquence concrète sur l'arme principale (dégâts par coup, recharge)
+      const w0 = p.weapons[0];
+      if (w0 && (key === 'dmgMul' || key === 'haste' || key === 'area')) {
+        const wa = this.wstats(w0.id, w0.lv, { ...p, ...a }), wb = this.wstats(w0.id, w0.lv, { ...p, ...b });
+        const k = key === 'dmgMul' ? 'dmg' : key === 'haste' ? 'cd' : WSIZE[w0.id];
+        const f = (WLINES[w0.id] || []).find(x => x[0] === k);
+        if (f && wa[k] != null) L(`${WEAPONS[w0.id].name} · ${f[1].toLowerCase()}`, f[2](wa[k]), f[2](wb[k]));
+      }
+      if (c.kind === 'boon' && c.id === 'hp') L('PV', fmt(p.hp), fmt(b.maxHp));
+      return { lines };
+    }
+    if (c.kind === 'heal') { L('PV', fmt(p.hp), fmt(Math.min(p.maxHp, p.hp + p.maxHp * 0.3))); return { lines }; }
+    if (c.kind === 'gold') { const g = Math.round((25 + this.zone.id * 10) * this.diff.gold); L('Or', fmt(this.gold), fmt(this.gold + g)); return { lines }; }
+    return { lines };
   }
 
   boonChoices() {
@@ -388,23 +577,27 @@ export class Run {
     return next && this.p.level >= next.lvl;
   }
 
+  // 5 stades : l'effet grandit à chaque stade, la forme ultime (aura de super guerrier) fait trembler l'écran
   evolve() {
-    const p = this.p;
-    p.evo++;
-    const ev = EVOLUTIONS[this.cls.id][p.evo];
+    const p = this.p, evs = EVOLUTIONS[this.cls.id];
+    p.evo = Math.min(evs.length - 1, p.evo + 1);
+    const ev = evs[p.evo], final = p.evo === evs.length - 1, k = p.evo / (evs.length - 1), col = ev.aura || '#ffd54a';
     this.recalc();
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.5);
     p.ult = 100;
     this.addWeapon(this.cls.weapon);
-    this.evoFlash = 1.2;
-    p.inv = 2;
-    this.burst(p.x, p.y, 40, 60, '#ffe48a');
-    this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 260, life: 0.8, max: 0.8, color: '#ffd54a' });
-    for (const e of this.grid.query(p.x, p.y, 260)) if (!e.boss) { e.kx += (e.x - p.x) * 4; e.ky += (e.y - p.y) * 4; }
-    this.banner(`<small>Votre champion évolue !</small>${esc(ev.name)}`, 2600, 'evo');
-    this.emit('evolve', { evo: p.evo, x: p.x, y: p.y });
+    this.evoFlash = 1.2 + 0.4 * k;
+    p.inv = 2 + k;
+    const R = 220 + 160 * k;
+    this.burst(p.x, p.y, 30 + 30 * k, 60, '#ffe48a', 2 + 2 * k);
+    this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.8, max: 0.8, color: col });
+    if (final) this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R * 1.4, life: 1.1, max: 1.1, color: '#ffffff' });
+    for (const e of this.grid.query(p.x, p.y, R)) if (!e.boss) { e.kx += (e.x - p.x) * 4; e.ky += (e.y - p.y) * 4; }
+    this.banner(final ? `<small>Forme ultime !</small>${esc(ev.name)}` : `<small>Votre champion évolue ! · stade ${p.evo + 1}/${evs.length}</small>${esc(ev.name)}`, final ? 3200 : 2600, final ? 'evo final' : 'evo');
+    this.emit('evolve', { evo: p.evo, x: p.x, y: p.y, final, aura: ev.aura || null });
     this.renderEvo();
-    sfx('evolve'); buzz(80);
+    this.shake = Math.max(this.shake, 4 + 6 * k);
+    sfx('evolve'); buzz(final ? 140 : 80);
   }
 
   update(dt) {
@@ -444,9 +637,10 @@ export class Run {
       if (ad > m) { p.x = A.x + ax / ad * m; p.y = A.y + ay / ad * m; }
     }
     p.moving = ml > 0.05;
-    if (p.h > 0 || p.vh > 0) { p.vh -= 1700 * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) { p.vh = 0; this.emit('land', { x: p.x, y: p.y }); } }
+    if (p.h > 0 || p.vh > 0) { p.vh -= GRAV * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) { p.vh = 0; this.emit('land', { x: p.x, y: p.y }); } }
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
+    this.updateHeal(dt);
 
     this.spawn(dt);
     this.grid.clear();
@@ -460,6 +654,7 @@ export class Run {
     if (!this.entering) { this.updateInterest(dt); this.updateAltar(dt); this.updateTotems(dt); }
     this.updatePortal(dt);
     this.updatePet(dt);
+    this.updateJumpWarn();
     for (const f of this.fx) f.life -= dt;
     this.fx = this.fx.filter(f => f.life > 0);
     for (const t of this.texts) { t.life -= dt; t.z += 50 * dt; }
@@ -824,8 +1019,8 @@ export class Run {
       }
       case 'golem': { // les golems d'élite frappent le sol : onde de choc à sauter
         if (!e.elite || d > 125) break;
-        this.tele(e, 'stomp', 0.8, e.x, e.y, 0, 0, 170 + e.r);
-        this.warnRing(e.x, e.y, e.r * 1.6, 0.8, '#ff7a3a');
+        this.tele(e, 'stomp', 1, e.x, e.y, 0, 0, 170 + e.r); // assez tôt pour sauter (≥ 1 s)
+        this.warnRing(e.x, e.y, e.r * 1.6, 1, '#ff7a3a');
         this.acts++;
         return;
       }
@@ -872,9 +1067,9 @@ export class Run {
           e.jumpH = -170; mv.x = nx * 260; mv.y = ny * 260;
           if (a.t <= 0 && this.arena && !e.inArena) { e.burrowed = false; e.jumpH = 0; this.endAct(e); return; } // l'arène bloque
           if (a.t <= 0) {
-            a.stage = 2; a.t = 0.85; a.x = p.x; a.y = p.y;
-            this.emit('enemyTelegraph', { e, kind: 'emerge', x: a.x, y: a.y, dx: 0, dy: 0, dur: 0.85, R: a.R });
-            this.warnRing(a.x, a.y, a.R, 0.85);
+            a.stage = 2; a.t = 1.1; a.x = p.x; a.y = p.y;
+            this.emit('enemyTelegraph', { e, kind: 'emerge', x: a.x, y: a.y, dx: 0, dy: 0, dur: 1.1, R: a.R });
+            this.warnRing(a.x, a.y, a.R, 1.1);
           }
         } else if (a.stage === 2) {
           e.jumpH = -170;
@@ -985,7 +1180,7 @@ export class Run {
         return;
       }
       case 'stomp': {
-        const k = 1 - Math.max(0, e.phaseT) / 0.9;
+        const k = 1 - Math.max(0, e.phaseT) / 1.05;
         e.jumpH = Math.sin(k * Math.PI) * 140;
         mv.x *= 0.6; mv.y *= 0.6;
         if (e.phaseT <= 0) {
@@ -1039,9 +1234,9 @@ export class Run {
         else if (e.bst === 1) {
           e.jumpH = -260; mv.x = nx * 380; mv.y = ny * 380;
           if (e.phaseT <= 0) {
-            e.bst = 2; e.phaseT = 1; e.bx = p.x; e.by = p.y;
-            this.emit('enemyTelegraph', { e, kind: 'emerge', x: e.bx, y: e.by, dx: 0, dy: 0, dur: 1, R: 125 });
-            this.warnRing(e.bx, e.by, 125, 1);
+            e.bst = 2; e.phaseT = 1.15; e.bx = p.x; e.by = p.y;
+            this.emit('enemyTelegraph', { e, kind: 'emerge', x: e.bx, y: e.by, dx: 0, dy: 0, dur: 1.15, R: 125 });
+            this.warnRing(e.bx, e.by, 125, 1.15);
           }
         } else {
           e.jumpH = -260;
@@ -1088,10 +1283,10 @@ export class Run {
         this.bossAim(e, nx, ny, 0.9);
         break;
       case 'stomp':
-        e.phase = 'stomp'; e.phaseT = 0.9;
+        e.phase = 'stomp'; e.phaseT = 1.05;
         this.emit('bossJump', { e });
-        this.emit('enemyTelegraph', { e, kind: 'stomp', x: e.x, y: e.y, dx: 0, dy: 0, dur: 0.9, R: 540 });
-        this.msg('Sautez pour éviter l\'onde de choc !');
+        this.emit('enemyTelegraph', { e, kind: 'stomp', x: e.x, y: e.y, dx: 0, dy: 0, dur: 1.05, R: 540 });
+        this.msg('Onde de choc : touchez « Saut » !');
         break;
       case 'ring':
         e.phase = 'ringW'; e.phaseT = 0.6;
@@ -1138,7 +1333,7 @@ export class Run {
         e.sweeps = e.enraged ? 2 : 1; e.sweepDur = e.enraged ? 1.8 : 2.4;
         e.phase = 'sweepW'; e.phaseT = e.enraged ? 0.75 : 0.95;
         this.emit('enemyTelegraph', { e, kind: 'sweep', x: e.x, y: e.y, dx: Math.cos(e.sweepA), dy: Math.sin(e.sweepA), dur: e.phaseT, R: e.sweepLen });
-        this.msg('Rayon tournant : sautez par-dessus !');
+        this.msg('Rayon tournant : touchez « Saut » !');
         break;
       }
     }
@@ -1236,7 +1431,18 @@ export class Run {
   hurtPlayer(dmg, src) {
     const p = this.p;
     if (p.inv > 0 || this.over || this.dying) return;
-    if (save.pet === 'brambi' && src && !src.dead) this.hitEnemy(src, p.atk * 1.2, { noCrit: true, color: '#ff9a3a' });
+    // Esquive (équipement) : le coup est ignoré
+    if (this.it.dodge && Math.random() < this.it.dodge) {
+      p.inv = 0.3;
+      this.text(p.x, p.y, 62, 'Esquive !', '#9ae8ff', 1.15);
+      this.emit('dodge', { x: p.x, y: p.y });
+      sfx('swish');
+      return;
+    }
+    if (src && !src.dead) {
+      if (save.pet === 'brambi') this.hitEnemy(src, p.atk * 1.2, { noCrit: true, color: '#ff9a3a' });
+      if (this.it.thorns && !src.dead) this.hitEnemy(src, p.atk * this.it.thorns, { noCrit: true, quiet: true, color: '#c8ff7a' }); // Épines
+    }
     if (p.aegis > 0) { // bonus Égide : bloque les premiers coups
       p.aegis--; p.inv = 0.5;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 46, life: 0.45, max: 0.45, color: '#ffd54a' });
@@ -1280,144 +1486,136 @@ export class Run {
   updateWeapons(dt) {
     const p = this.p;
     for (const w of p.weapons) {
-      const lv = w.lv, A = p.atk * p.dmgMul, area = p.area;
+      const S = this.wstats(w.id, w.lv);
       w.t -= dt; w.a += dt;
       switch (w.id) {
         case 'beam': {
           if (w.t > 0) break;
           const t = this.nearest(360); if (!t) { w.t = 0.2; break; }
-          w.t = (lv >= 5 ? 0.95 : 1.25) * p.haste;
+          w.t = S.cd;
           const ang = Math.atan2(t.y - p.y, t.x - p.x);
-          const dmg = A * 1.8 * (lv >= 2 ? 1.3 : 1) * (lv >= 5 ? 1.4 : 1);
-          const width = (lv >= 3 ? 30 : 18) * area, len = 320 * area;
-          for (const a of lv >= 4 ? [ang, ang + Math.PI] : [ang]) this.beam(p.x, p.y, a, len, width, dmg);
+          for (let i = 0; i < S.n; i++) this.beam(p.x, p.y, ang + i * Math.PI, S.len, S.w, S.dmg);
           sfx('zap');
           break;
         }
         case 'arrows': {
           if (w.t > 0) break;
           const t = this.nearest(440); if (!t) { w.t = 0.2; break; }
-          w.t = (lv >= 5 ? 0.4 : 0.52) * p.haste;
-          const n = 1 + (lv >= 2) + (lv >= 5), ang = Math.atan2(t.y - p.y, t.x - p.x);
-          for (let i = 0; i < n; i++) {
-            const a = ang + (i - (n - 1) / 2) * 0.16;
+          w.t = S.cd;
+          const ang = Math.atan2(t.y - p.y, t.x - p.x);
+          for (let i = 0; i < S.n; i++) {
+            const a = ang + (i - (S.n - 1) / 2) * 0.16;
             if (i === 0) sfx('pew');
-            this.shots.push({ type: 'arrow', x: p.x, y: p.y, z: 30, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 8, dmg: A * (lv >= 3 ? 1.3 : 1), pierce: lv >= 4 ? 2 : 0, life: 0.9, hit: new Set() });
+            this.shots.push({ type: 'arrow', x: p.x, y: p.y, z: 30, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 8, dmg: S.dmg, pierce: S.pierce, life: 0.9, hit: new Set() });
           }
           break;
         }
         case 'sword': {
           if (w.t > 0) break;
-          const R = (lv >= 3 ? 112 : 86) * area;
+          const R = S.R;
           const tg = this.nearest(R + 70);
           if (!tg) { w.t = 0.15; break; }
-          w.t = (lv >= 5 ? 0.85 : 1.1) * p.haste;
-          const dmg = A * 1.7 * (lv >= 2 ? 1.3 : 1) * (lv >= 5 ? 1.4 : 1);
+          w.t = S.cd;
           const base = Math.atan2(tg.y - p.y, tg.x - p.x);
-          for (const a of lv >= 4 ? [base, base + Math.PI] : [base]) {
+          for (let i = 0; i < S.n; i++) {
+            const a = base + i * Math.PI;
             this.fx.push({ type: 'slash', x: p.x, y: p.y, a, r: R, life: 0.22, max: 0.22 });
             for (const e of this.grid.query(p.x, p.y, R + 40)) {
               const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
               if (d > R + e.r) continue;
               let da = Math.atan2(dy, dx) - a; da = Math.atan2(Math.sin(da), Math.cos(da));
-              if (Math.abs(da) < 1.25 || d < 26) this.hitEnemy(e, dmg, { knock: 260, kx: dx / (d || 1), ky: dy / (d || 1) });
+              if (Math.abs(da) < 1.25 || d < 26) this.hitEnemy(e, S.dmg, { knock: 260, kx: dx / (d || 1), ky: dy / (d || 1) });
             }
           }
           sfx('swish');
           break;
         }
         case 'orbs': {
-          const n = 2 + (lv >= 2) + (lv >= 4) + (lv >= 5), R = (lv >= 4 ? 100 : 80) * area, dmg = A * 0.8 * (lv >= 3 ? 1.3 : 1) * (lv >= 5 ? 1.3 : 1);
+          const R = S.R;
           w.orbs = [];
-          for (let i = 0; i < n; i++) {
-            const a = w.a * 3 + i / n * TAU, ox = p.x + Math.cos(a) * R, oy = p.y + Math.sin(a) * R;
+          for (let i = 0; i < S.n; i++) {
+            const a = w.a * 3 + i / S.n * TAU, ox = p.x + Math.cos(a) * R, oy = p.y + Math.sin(a) * R;
             w.orbs.push([ox, oy]);
             for (const e of this.grid.query(ox, oy, 40)) {
               if ((e.x - ox) ** 2 + (e.y - oy) ** 2 > (e.r + 12) ** 2) continue;
               if ((e.hitT.orb || 0) > this.time) continue;
-              e.hitT.orb = this.time + 0.45;
-              this.hitEnemy(e, dmg, { knock: 120, kx: (e.x - p.x) / R, ky: (e.y - p.y) / R });
+              e.hitT.orb = this.time + S.cd;
+              this.hitEnemy(e, S.dmg, { knock: 120, kx: (e.x - p.x) / R, ky: (e.y - p.y) / R });
             }
           }
           break;
         }
         case 'aura': {
-          w.R = (64 + (lv >= 2 ? 16 : 0) + (lv >= 4 ? 20 : 0)) * area;
+          w.R = S.R;
           if (w.t > 0) break;
-          w.t = 0.5;
-          const dmg = A * 0.55 * (lv >= 3 ? 1.4 : 1) * (lv >= 5 ? 1.5 : 1);
-          for (const e of this.grid.query(p.x, p.y, w.R + 30)) if (dist2(e, p) < (w.R + e.r * 0.6) ** 2) this.hitEnemy(e, dmg, { quiet: true, color: '#ffb04a' });
+          w.t = S.cd;
+          for (const e of this.grid.query(p.x, p.y, w.R + 30)) if (dist2(e, p) < (w.R + e.r * 0.6) ** 2) this.hitEnemy(e, S.dmg, { quiet: true, color: '#ffb04a' });
           break;
         }
         case 'lightning': {
           if (w.t > 0) break;
-          w.t = (lv >= 4 ? 1.4 : 1.8) * p.haste;
+          w.t = S.cd;
           const targets = this.onScreen();
-          const n = 1 + (lv >= 2) + (lv >= 4) + (lv >= 5 ? 2 : 0), dmg = A * 2.3 * (lv >= 3 ? 1.3 : 1);
-          for (let i = 0; i < n && targets.length; i++) {
+          for (let i = 0; i < S.n && targets.length; i++) {
             const t = targets.splice(Math.floor(Math.random() * targets.length), 1)[0];
             this.fx.push({ type: 'bolt', x: t.x, y: t.y, life: 0.25, max: 0.25 });
-            for (const e of this.grid.query(t.x, t.y, 60 * area)) if (dist2(e, t) < (46 * area) ** 2) this.hitEnemy(e, dmg, {});
+            for (const e of this.grid.query(t.x, t.y, S.R + 14)) if (dist2(e, t) < S.R ** 2) this.hitEnemy(e, S.dmg, {});
           }
-          if (n) sfx('thunder');
+          sfx('thunder');
           break;
         }
         case 'boomerang': {
           if (w.t > 0) break;
           const t = this.nearest(420);
-          w.t = (lv >= 4 ? 1.6 : 2) * p.haste;
-          const n = 1 + (lv >= 3) + (lv >= 5);
+          w.t = S.cd;
           const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.face.y, p.face.x);
-          for (let i = 0; i < n; i++) {
-            const a = base + i / n * TAU;
-            this.shots.push({ type: 'boom', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * 440, vy: Math.sin(a) * 440, r: (lv >= 4 ? 20 : 15) * area, dmg: A * 1.3 * (lv >= 2 ? 1.3 : 1) * (lv >= 5 ? 1.3 : 1), pierce: 999, life: 2.2, t0: 0, rehit: 0.35, spin: 0, id: Math.random() });
+          for (let i = 0; i < S.n; i++) {
+            const a = base + i / S.n * TAU;
+            this.shots.push({ type: 'boom', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * 440, vy: Math.sin(a) * 440, r: S.R, dmg: S.dmg, pierce: 999, life: 2.2, t0: 0, rehit: 0.35, spin: 0, id: Math.random() });
           }
           break;
         }
         case 'shrooms': {
           if (w.t > 0) break;
-          w.t = (lv >= 5 ? 2 : 2.6) * p.haste;
-          const n = 1 + (lv >= 2) + (lv >= 5);
-          for (let i = 0; i < n; i++) {
+          w.t = S.cd;
+          for (let i = 0; i < S.n; i++) {
             if (this.mines.length > 14) this.mines.shift();
             const a = Math.random() * TAU, r = rand(20, 80);
-            this.mines.push({ x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, life: 12, arm: 0.5, R: (lv >= 4 ? 80 : 58) * area, dmg: A * 3 * (lv >= 3 ? 1.4 : 1) });
+            this.mines.push({ x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, life: 12, arm: 0.5, R: S.R, dmg: S.dmg });
           }
           break;
         }
         case 'frost': {
           if (w.t > 0) break;
           sfx('freeze');
-          w.t = (lv >= 4 ? 2.4 : 3.2) * p.haste;
-          const R = (lv >= 3 ? 150 : 115) * area, dmg = A * 1.2 * (lv >= 2 ? 1.3 : 1);
+          w.t = S.cd;
+          const R = S.R;
           this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.45, max: 0.45, color: '#9ad8ff' });
           for (const e of this.grid.query(p.x, p.y, R + 30)) if (dist2(e, p) < (R + e.r * 0.5) ** 2) {
-            this.hitEnemy(e, dmg, { color: '#9ad8ff' });
-            e.slow = 2; if (lv >= 5 && !e.boss) e.freeze = 1;
+            this.hitEnemy(e, S.dmg, { color: '#9ad8ff' });
+            e.slow = 2; if (S.freeze && !e.boss) e.freeze = S.freeze;
           }
           break;
         }
         case 'daggers': {
           if (w.t > 0) break;
-          w.t = (lv >= 5 ? 0.95 : 1.3) * p.haste;
-          const n = 4 + (lv >= 2 ? 2 : 0) + (lv >= 4 ? 2 : 0);
+          w.t = S.cd;
           w.rot = (w.rot || 0) + 0.4;
           sfx('swish');
-          for (let i = 0; i < n; i++) {
-            const a = w.rot + i / n * TAU, sp = lv >= 5 ? 540 : 440;
-            this.shots.push({ type: 'dagger', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 8, dmg: A * 0.9 * (lv >= 3 ? 1.3 : 1), pierce: lv >= 5 ? 3 : 0, life: 0.75, hit: new Set() });
+          for (let i = 0; i < S.n; i++) {
+            const a = w.rot + i / S.n * TAU;
+            this.shots.push({ type: 'dagger', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * S.v, vy: Math.sin(a) * S.v, r: 8, dmg: S.dmg, pierce: S.pierce, life: 0.75, hit: new Set() });
           }
           break;
         }
         case 'snowball': {
           if (w.t > 0) break;
-          w.t = (lv >= 5 ? 1.7 : 2.2) * p.haste;
+          w.t = S.cd;
           const targets = this.onScreen();
-          const n = 1 + (lv >= 4) + (lv >= 5);
-          for (let i = 0; i < n; i++) {
+          for (let i = 0; i < S.n; i++) {
             const t = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
             const tx = t ? t.x : p.x + rand(-150, 150), ty = t ? t.y : p.y + rand(-150, 150);
-            this.shots.push({ type: 'snow', x: p.x, y: p.y, sx: p.x, sy: p.y, tx, ty, t: 0, dur: 0.6, z: 0, r: 0, R: (lv >= 3 ? 76 : 56) * area, dmg: A * 2.4 * (lv >= 2 ? 1.3 : 1), life: 1 });
+            this.shots.push({ type: 'snow', x: p.x, y: p.y, sx: p.x, sy: p.y, tx, ty, t: 0, dur: 0.6, z: 0, r: 0, R: S.R, dmg: S.dmg, life: 1 });
           }
           break;
         }
@@ -1504,24 +1702,64 @@ export class Run {
   hitEnemy(e, dmg, o = {}) {
     if (e.dead || e.burrowed) return;
     if (e.invuln > 0) { if (e.flash <= 0) e.flash = 0.05; return; } // boss qui rugit : invulnérable
-    const crit = !o.noCrit && Math.random() < this.p.crit;
-    const d = Math.max(1, Math.round(dmg * (crit ? 2 : 1) * rand(0.92, 1.08)));
+    const p = this.p, L = this.leg, raw = dmg >= 1e6; // raw : balayages (mort du boss, résurrection), sans effets
+    if (!raw && L.fury && p.hp < p.maxHp * 0.4) dmg *= 1 + 0.3 * L.fury; // Furie : +30 % sous 40 % de PV
+    const crit = !o.noCrit && Math.random() < p.crit;
+    const d = Math.max(1, Math.round(dmg * (crit ? p.critMul : 1) * rand(0.92, 1.08)));
+    if (!raw && this.it.lifesteal) this.lsPool += Math.min(d, Math.max(0, e.hp)) * this.it.lifesteal;
     e.hp -= d;
     e.flash = 0.09;
     this.emit('hit', { e, x: e.x, y: e.y, dmg: d, crit, color: o.color || null, quiet: !!o.quiet });
     if (o.knock && !e.boss) { const k = o.knock * e.knockMul * (e.elite ? 0.3 : 1); e.kx += (o.kx || 0) * k; e.ky += (o.ky || 0) * k; }
     if (this.texts.length < 60 && (!o.quiet || crit)) this.text(e.x + rand(-8, 8), e.y, e.r * 2.4 + e.fly, fmt(d), crit ? '#ffd54a' : (o.color || '#ffffff'), crit ? 1.4 : 1);
     if (!o.quiet) sfx(crit ? 'crit' : 'hit');
-    if (e.hp <= 0) this.kill(e);
+    if (!raw && !o.legend) {
+      // Gel : l'ennemi touché est figé 1 s (les boss sont seulement ralentis)
+      if (L.frost && e.hp > 0 && Math.random() < 0.08 * L.frost) {
+        if (e.boss) e.slow = Math.max(e.slow, 1); else e.freeze = Math.max(e.freeze, 1);
+        this.emit('legend', { kind: 'frost', x: e.x, y: e.y, e });
+      }
+      // Foudre en chaîne : un coup sur 8 rebondit sur 3 ennemis
+      if (L.chain && ++this.chainN >= Math.ceil(8 / L.chain)) { this.chainN = 0; this.chainBolt(e); }
+    }
+    if (e.hp <= 0) this.kill(e, raw ? { raw: true } : o);
   }
 
-  kill(e) {
+  // ---------- Effets des objets légendaires ----------
+  chainBolt(from) {
+    const p = this.p, dmg = p.atk * p.dmgMul * 1.2, pts = [[from.x, from.y]], hit = new Set([from]);
+    let cur = from;
+    for (let i = 0; i < 3; i++) {
+      let best = null, bd = 190 * 190;
+      for (const e of this.grid.query(cur.x, cur.y, 190)) { if (e.dead || e.burrowed || hit.has(e)) continue; const d = dist2(e, cur); if (d < bd) { bd = d; best = e; } }
+      if (!best) break;
+      hit.add(best); pts.push([best.x, best.y]);
+      this.fx.push({ type: 'bolt', x: best.x, y: best.y, life: 0.22, max: 0.22 });
+      this.hitEnemy(best, dmg, { legend: true, color: '#9ae8ff' });
+      cur = best;
+    }
+    if (pts.length > 1) { this.emit('legend', { kind: 'chain', x: from.x, y: from.y, pts }); sfx('zap'); }
+  }
+
+  // Explosion : l'ennemi vaincu blesse ses voisins (les morts de l'explosion n'explosent pas à leur tour)
+  legendBoom(e) {
+    const p = this.p, R = 70 + e.r * 0.8, dmg = p.atk * p.dmgMul * 1.6;
+    this.fx.push({ type: 'ring', x: e.x, y: e.y, r: R, life: 0.3, max: 0.3, color: '#ffb04a' });
+    this.burst(e.x, e.y, 10, 10, '#ffb04a', 3);
+    this.emit('legend', { kind: 'boom', x: e.x, y: e.y, R });
+    for (const o of this.grid.query(e.x, e.y, R + 30)) if (o !== e && !o.dead && dist2(o, e) < (R + o.r * 0.5) ** 2) this.hitEnemy(o, dmg, { legend: true, boom: true, quiet: true, color: '#ffb04a', knock: 160, kx: (o.x - e.x) / R, ky: (o.y - e.y) / R });
+    if (this.hitSfxT <= 0) { sfx('boom'); this.hitSfxT = 0.12; }
+  }
+
+  kill(e, o = {}) {
     e.dead = true;
     this.emit('kill', { e, x: e.x, y: e.y });
     this.kills++;
     if (!e.boss) sfx('kill');
-    const p = this.p, z = this.zone;
-    p.ult = Math.min(100, p.ult + (e.boss ? 0 : e.elite ? 8 : e.gen ? 0.25 : 0.5) * (save.pet === 'voidy' ? 2 : 1));
+    const p = this.p, z = this.zone, L = this.leg;
+    p.ult = Math.min(100, p.ult + (e.boss ? 0 : e.elite ? 8 : e.gen ? 0.25 : 0.5) * (save.pet === 'voidy' ? 2 : 1) * (1 + this.it.ult));
+    if (L.feast && !this.dying && !o.raw) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.005 * L.feast * this.diff.heal); // Festin
+    if (L.boom && !e.boss && !o.boom && !o.raw && Math.random() < 0.2 * L.boom) this.legendBoom(e);
     save.stats.seen[e.def.name] = (save.stats.seen[e.def.name] || 0) + 1;
     this.burst(e.x, e.y, e.boss ? 70 : e.elite ? 26 : 7, e.fly + 10, e.def.pal[0], e.scale);
     if (e.boss) return this.bossDown(e);
@@ -1746,16 +1984,19 @@ export class Run {
   updatePortal(dt) {
     const P = this.portal, p = this.p;
     if (!P) return;
-    P.t += dt;
+    // âge en temps réel (le ralenti de la mort du boss ne retarde pas l'ouverture)
+    const rt = dt / Math.max(0.3, this.slowmo);
+    P.t += rt;
     if (this.entering) {
       p.inv = Math.max(p.inv, 0.5);
-      if ((this.entering -= dt) <= 0) { this.entering = 0; this.portalReached(); }
+      if ((this.entering -= rt) <= 0) { this.entering = 0; this.portalReached(); }
       return;
     }
-    const inside = P.t > 1.5 && dist2(P, p) < P.R * P.R;
-    P.charge = clamp(P.charge + (inside ? dt / 0.8 : -dt / 1.5), 0, 1);
+    // il s'ouvre en 1 s, puis il suffit d'y rester ~0,7 s
+    const inside = P.t > 1 && dist2(P, p) < P.R * P.R;
+    P.charge = clamp(P.charge + (inside ? rt / 0.7 : -rt / 1.5), 0, 1);
     if (P.charge >= 1 && !this.paused && !this.dying) {
-      this.entering = 0.7;
+      this.entering = 0.6;
       p.inv = Math.max(p.inv, 1);
       this.emit('portalEnter', {});
       sfx('portal'); buzz(60);
@@ -1866,7 +2107,7 @@ export class Run {
     p.ult = 0;
     save.stats.ults++;
     sfx('ult'); buzz(50);
-    const A = p.atk * p.dmgMul * (1 + p.evo * 0.5);
+    const A = p.atk * p.dmgMul * (1 + p.evo * 0.3);
     this.ultFlash = 0.5;
     if (this.cls.ult === 'nova') {
       const R = 300 * p.area;
@@ -1929,6 +2170,13 @@ export class Run {
   // ---------- Interface ----------
   hud() {
     const p = this.p;
+    // bouton Saut : rouge et pulsant pendant l'alerte, l'anneau se vide jusqu'à l'impact (à chaque image)
+    const jb = this._jb || (this._jb = $('#jumpBtn')), warn = this.jumpWarn > 0;
+    if (jb) {
+      if (warn !== this._jw) { jb.classList.toggle('warn', warn); this._jw = warn; }
+      if (warn) jb.firstChild.firstChild.style.strokeDashoffset = 103.7 * (1 - Math.min(1, this.jumpWarn / Math.max(0.3, this.jumpWarnDur)));
+      jb.classList.toggle('air', p.h > 2);
+    }
     this.hudT = (this.hudT || 0) + 1;
     if (this.hudT % 3) return;
     const tm = $('#timer'), lbl = $('#timerLbl');
@@ -1960,10 +2208,13 @@ export class Run {
       this._heatN = this.heat;
     }
     $('#xpFill').style.width = (p.xp / p.xpNext * 100) + '%';
-    $('#lvl').textContent = 'Niv. ' + p.level;
+    if (p.level !== this._lvN) { $('#lvl').textContent = p.level; this._lvN = p.level; }
     const ub = $('#ultBtn');
     ub.querySelector('circle').style.strokeDashoffset = 100.5 * (1 - p.ult / 100);
     ub.classList.toggle('ready', p.ult >= 100);
+    $('#tPlate')?.classList.toggle('ot', ot);
+    $('#tPlate')?.classList.toggle('boss', fight && !ot);
+    $('#tPlate')?.classList.toggle('low', !ot && left < 20 && !fight);
     if (this.boss && !this.boss.dead) {
       const b = $('#bossbar');
       b.querySelector('.fill').style.width = Math.max(0, this.boss.hp / this.boss.maxHp * 100) + '%';
