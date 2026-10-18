@@ -215,42 +215,44 @@ export const PET_BY_ZONE = ['poro', 'brambi', 'herald', 'phenix', 'wisp', 'voidy
 // Équipement : 3 emplacements
 export const SLOTS = { weapon: 'Arme', armor: 'Armure', trinket: 'Bijou' };
 export const RARITY = {
-  common:    { name: 'Commun',     color: '#b8c0cc', mult: 1 },
-  rare:      { name: 'Rare',       color: '#4fa8ff', mult: 1.6 },
-  epic:      { name: 'Épique',     color: '#c06aff', mult: 2.4 },
-  legendary: { name: 'Légendaire', color: '#ffb52e', mult: 3.4 },
+  common:    { name: 'Commun',     color: '#a8bccc', mult: 1 },
+  rare:      { name: 'Rare',       color: '#ff9a2a', mult: 1.6 },
+  epic:      { name: 'Épique',     color: '#c25aff', mult: 2.4 },
+  legendary: { name: 'Légendaire', color: '#3ae8d0', mult: 3.4 },
 };
 
+// Modèles d'objets : main = caractéristique principale (arme : ATQ, armure : PV, bijou : au choix),
+// aff = bonus fétiche, toujours présent (il donne son caractère à l'objet). Les autres bonus sont tirés dans AFFIX_POOLS.
 export const ITEM_BASES = {
   weapon: [
-    { name: 'Épée longue', icon: 'sword', stat: { atk: 3 } },
-    { name: 'Grimoire runique', icon: 'tome', stat: { atk: 3 } },
-    { name: 'Arc courbé', icon: 'bow', stat: { atk: 2, crit: 0.03 } },
-    { name: 'Lame du voyageur', icon: 'sword', stat: { atk: 2, hp: 8 } },
-    { name: 'Bâton de foudre', icon: 'staff', stat: { atk: 4 } },
+    { name: 'Épée longue', icon: 'sword', main: 'atk', aff: 'critDmg' },
+    { name: 'Grimoire runique', icon: 'tome', main: 'atk', aff: 'area' },
+    { name: 'Arc courbé', icon: 'bow', main: 'atk', aff: 'crit' },
+    { name: 'Lame du voyageur', icon: 'sword', main: 'atk', aff: 'lifesteal' },
+    { name: 'Bâton de foudre', icon: 'staff', main: 'atk', aff: 'haste' },
   ],
   armor: [
-    { name: 'Cotte de mailles', icon: 'armor', stat: { hp: 16 } },
-    { name: 'Cape de brume', icon: 'cloak', stat: { hp: 12, regen: 1 } },
-    { name: 'Gilet d\'épines', icon: 'armor', stat: { hp: 14, atk: 1 } },
-    { name: 'Plastron du géant', icon: 'armor', stat: { hp: 20 } },
+    { name: 'Cotte de mailles', icon: 'armor', main: 'hp', aff: 'armor' },
+    { name: 'Cape de brume', icon: 'cloak', main: 'hp', aff: 'dodge' },
+    { name: 'Gilet d\'épines', icon: 'armor', main: 'hp', aff: 'thorns' },
+    { name: 'Plastron du géant', icon: 'armor', main: 'hp', aff: 'regen' },
   ],
   trinket: [
-    { name: 'Larme de fée', icon: 'gem', stat: { regen: 2 } },
-    { name: 'Gant de cogneur', icon: 'glove', stat: { crit: 0.05 } },
-    { name: 'Anneau du voyageur', icon: 'ring', stat: { regen: 1, atk: 1 } },
-    { name: 'Talisman ancien', icon: 'gem', stat: { hp: 8, crit: 0.02 } },
+    { name: 'Larme de fée', icon: 'gem', main: 'regen', aff: 'xp' },
+    { name: 'Gant de cogneur', icon: 'glove', main: 'crit', aff: 'haste' },
+    { name: 'Anneau du voyageur', icon: 'ring', main: 'atk', aff: 'gold' },
+    { name: 'Talisman ancien', icon: 'gem', main: 'hp', aff: 'ult' },
   ],
 };
 
-// Objets légendaires uniques donnés par les boss
+// Objets légendaires uniques donnés par les boss (première victoire) : bonus choisis et effet unique fixés
 export const BOSS_ITEMS = [
-  { slot: 'trinket', name: 'Couronne du Roi Gobelin', icon: 'crown', rarity: 'legendary', stat: { hp: 30, atk: 4 } },
-  { slot: 'weapon', name: 'Lame de Ronce-Brûlante', icon: 'sword', rarity: 'legendary', stat: { atk: 14, crit: 0.05 } },
-  { slot: 'armor', name: 'Carapace du Léviathan', icon: 'armor', rarity: 'legendary', stat: { hp: 80, regen: 3 } },
-  { slot: 'trinket', name: 'Plume de Cryophénix', icon: 'gem', rarity: 'legendary', stat: { crit: 0.12, regen: 5 } },
-  { slot: 'weapon', name: 'Faux du Geôlier', icon: 'staff', rarity: 'legendary', stat: { atk: 26, hp: 30 } },
-  { slot: 'armor', name: 'Écailles du Ver-Roi', icon: 'armor', rarity: 'legendary', stat: { hp: 160, atk: 10 } },
+  { slot: 'trinket', name: 'Couronne du Roi Gobelin', icon: 'crown', main: 'atk', affs: ['gold', 'lifesteal', 'crit', 'xp'], effect: 'feast' },
+  { slot: 'weapon', name: 'Lame de Ronce-Brûlante', icon: 'sword', main: 'atk', affs: ['critDmg', 'crit', 'lifesteal', 'area'], effect: 'boom' },
+  { slot: 'armor', name: 'Carapace du Léviathan', icon: 'armor', main: 'hp', affs: ['regen', 'armor', 'dodge', 'speed'], effect: 'bubble' },
+  { slot: 'trinket', name: 'Plume de Cryophénix', icon: 'gem', main: 'crit', affs: ['haste', 'speed', 'ult', 'magnet'], effect: 'frost' },
+  { slot: 'weapon', name: 'Faux du Geôlier', icon: 'staff', main: 'atk', affs: ['lifesteal', 'haste', 'critDmg', 'area'], effect: 'chain' },
+  { slot: 'armor', name: 'Écailles du Ver-Roi', icon: 'armor', main: 'hp', affs: ['armor', 'thorns', 'regen', 'dodge'], effect: 'fury' },
 ];
 
 // Améliorations permanentes (boutique, payées en or)
@@ -419,3 +421,13 @@ export const LEGEND_EFFECTS = {
   bubble:  { name: 'Bulle', desc: 'Un bouclier bloque un coup toutes les 10 s' },
   fury:    { name: 'Furie', desc: '+30 % de dégâts quand vous avez moins de 40 % de PV' },
 };
+
+// ---------- Contenu des coffres de butin (en plus de LOOT_TIERS) ----------
+// items = objets garantis, extra = chance d'un objet de plus, rar = chances commun/rare/épique/légendaire des objets,
+// upg = chance d'un niveau gratuit d'amélioration permanente (Boutique).
+export const CHEST_LOOT = [
+  { items: 0, extra: 0.7, rar: [0.62, 0.33, 0.05, 0],   upg: 0.04 },
+  { items: 1, extra: 0.3, rar: [0.25, 0.5, 0.22, 0.03], upg: 0.1 },
+  { items: 1, extra: 0.6, rar: [0, 0.4, 0.45, 0.15],    upg: 0.22 },
+  { items: 2, extra: 0.5, rar: [0, 0, 0.55, 0.45],      upg: 0.45 },
+];

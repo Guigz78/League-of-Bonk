@@ -1,5 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
-import { CLASSES, UPGRADES, ITEM_BASES, RARITY, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, FORGE, BOOSTS, BOOST_SLOTS, RENAMED } from './data.js';
+import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -128,9 +129,13 @@ export function resetSave() {
 }
 
 // ---------- Statistiques ----------
+const r3 = v => Math.round(v * 1000) / 1000;
+// champion + améliorations de la Boutique + objets équipés (caractéristique principale, bonus, niveau), plafonds appliqués.
+// speed, magnet et gold sont des multiplicateurs (1 = normal) ; les autres bonus valent 0 par défaut.
 export function playerStats(clsId = save.cls) {
   const c = CLASSES[clsId];
-  const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: 0, speed: c.speed, magnet: 1, gold: 1 };
+  const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: 0, speed: c.speed, magnet: 1, gold: 1,
+    critDmg: 0, lifesteal: 0, haste: 0, area: 0, armor: 0, thorns: 0, dodge: 0, xp: 0, ult: 0, effects: [] };
   for (const [k, lvl] of Object.entries(save.upgrades)) {
     const per = UPGRADES[k]?.per;
     if (!per) continue;
@@ -139,9 +144,12 @@ export function playerStats(clsId = save.cls) {
   for (const id of Object.values(save.equipped)) {
     const it = save.inventory.find(i => i.id === id);
     if (!it) continue;
-    for (const [sk, v] of Object.entries(it.stat)) st[sk] = (st[sk] || 0) + v;
+    for (const [sk, v] of Object.entries(it.stat || {})) if (typeof st[sk] === 'number') st[sk] += +v || 0;
+    if (LEGEND_EFFECTS[it.effect] && !st.effects.includes(it.effect)) st.effects.push(it.effect);
   }
-  st.crit = Math.min(st.crit, 0.75);
+  // plafonds : la vitesse plafonne le bonus au-dessus de celle du champion
+  for (const [k, A] of Object.entries(AFFIXES)) if (A.max != null) st[k] = k === 'speed' ? Math.min(st.speed, c.speed + A.max) : Math.min(st[k], A.max);
+  for (const k of Object.keys(st)) if (k !== 'effects') st[k] = r3(st[k]);
   st.hp = Math.round(st.hp); st.atk = Math.round(st.atk);
   return st;
 }
@@ -160,28 +168,56 @@ export function rollRarity(r, zone, boost = 0) {
   return 'common';
 }
 
+// valeur d'un bonus : roll de la rareté × zone (les bonus en % montent plus doucement) × hasard ±15 %.
+// Une régénération en caractéristique principale vaut double.
+function affixValue(k, ri, zone, mult, r, main = false) {
+  const A = AFFIXES[k];
+  const v = A.roll[ri] * mult * (0.85 + r() * 0.3) * (main && k === 'regen' ? 2 : 1);
+  if (A.fmt === 'pct') return Math.max(0.005, r3(v * (1 + zone * 0.12)));
+  return Math.max(1, Math.round(v * (1 + zone * 0.45)));
+}
+
+// objet : caractéristique principale + 1 (commun) à 4 (légendaire) bonus, + un effet unique sur les légendaires.
+// opts : slot, rarity, boost (rareté), mult (difficulté, forge), base (modèle imposé), crafted
 export function makeItem(r, zone, opts = {}) {
   const slots = Object.keys(ITEM_BASES);
   const slot = opts.slot || slots[Math.floor(r() * slots.length)];
   const list = ITEM_BASES[slot];
-  const base = list[Math.floor(r() * list.length)];
+  const B = opts.base || list[Math.floor(r() * list.length)];
   const rarity = opts.rarity || rollRarity(r, zone, opts.boost || 0);
-  const m = RARITY[rarity].mult * (1 + zone * 0.5) * (opts.mult || 1);
+  const ri = Math.max(0, RARITIES.indexOf(rarity)), m = opts.mult || 1;
   const stat = {};
-  for (const [k, v] of Object.entries(base.stat)) {
-    stat[k] = k === 'crit' ? Math.round(v * m * 100) / 100 : Math.max(1, Math.round(v * m));
-  }
-  return { id: save.nextId++, slot, name: base.name, icon: base.icon, rarity, stat, zone };
+  const add = (k, v) => { stat[k] = AFFIXES[k].fmt === 'pct' ? r3((stat[k] || 0) + v) : (stat[k] || 0) + v; };
+  add(B.main, affixValue(B.main, ri, zone, m, r, true));
+  // le bonus fétiche du modèle d'abord, puis des bonus au hasard (sans doublon ni caractéristique principale)
+  const want = (B.affs || [B.aff]).filter(k => AFFIXES[k]).slice(0, ri + 1);
+  const pool = AFFIX_POOLS[slot].filter(k => k !== B.main && !want.includes(k));
+  while (want.length < ri + 1 && pool.length) want.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+  for (const k of want) add(k, affixValue(k, ri, zone, m, r));
+  const it = { id: save.nextId++, slot, name: B.name, icon: B.icon, rarity, main: B.main, stat, base: { ...stat }, lv: 0, zone };
+  if (ri === RARITIES.length - 1) { const ids = Object.keys(LEGEND_EFFECTS); it.effect = LEGEND_EFFECTS[B.effect] ? B.effect : ids[Math.floor(r() * ids.length)]; }
+  if (opts.crafted) it.crafted = true;
+  return it;
 }
 
+// objet unique du boss d'une zone (légendaire, bonus et effet fixés)
+export function makeBossItem(zone) {
+  const B = BOSS_ITEMS[zone];
+  return B ? makeItem(Math.random, zone, { slot: B.slot, rarity: 'legendary', base: B, mult: 1.15 }) : null;
+}
+
+// puissance d'un objet (tri, comparaison, équipement automatique) : chaque bonus converti en « points »
+const POWER = { atk: 3, hp: 0.6, crit: 200, critDmg: 50, lifesteal: 500, haste: 170, speed: 150, area: 90, armor: 350,
+  regen: 2.5, thorns: 20, dodge: 350, xp: 50, magnet: 25, gold: 50, ult: 45 };
 export function itemPower(it) {
   if (!it) return 0;
-  const s = it.stat;
-  return (s.atk || 0) * 3 + (s.hp || 0) * 0.6 + (s.crit || 0) * 200 + (s.regen || 0) * 2.5;
+  let p = it.effect ? 30 : 0;
+  for (const [k, v] of Object.entries(it.stat || {})) p += (POWER[k] || 0) * (+v || 0);
+  return p;
 }
 
 export function sellValue(it) {
-  return Math.round(8 + itemPower(it) * 1.2);
+  return Math.round(5 + itemPower(it) * 0.5);
 }
 
 export function addItem(it) {
@@ -197,17 +233,20 @@ const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pickW = w => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < w.length; i++) if ((x -= w[i]) < 0) return i; return w.length - 1; };
 export const rarityIdx = it => Math.max(0, RARITIES.indexOf(it.rarity));
 
-// tire le contenu d'un coffre (pièces, bonus, objet, or) sans l'appliquer
+// tire le contenu d'un coffre sans l'appliquer : pièces, bonus, objets avec leurs caractéristiques,
+// parfois un niveau gratuit d'amélioration permanente, et un peu d'or
 export function rollChest({ tier = 0, zone = 0 }) {
-  const T = LOOT_TIERS[tier] || LOOT_TIERS[0], slots = Object.keys(PARTS), got = {};
+  const T = LOOT_TIERS[tier] || LOOT_TIERS[0], L = CHEST_LOOT[tier] || CHEST_LOOT[0], slots = Object.keys(PARTS), got = {};
   for (let n = rint(T.parts[0], T.parts[1]); n > 0; n--) { const k = slots[rint(0, slots.length - 1)] + ':' + pickW(T.rar); got[k] = (got[k] || 0) + 1; }
   const parts = Object.entries(got).map(([k, n]) => { const [slot, r] = k.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n);
   const ids = Object.keys(BOOSTS);
   const boost = Math.random() < T.boost ? ids[rint(0, ids.length - 1)] : null;
-  // objet complet : rareté tirée comme les pièces, un cran au-dessus
-  const item = Math.random() < T.item ? makeItem(Math.random, zone, { rarity: RARITIES[Math.min(RARITIES.length - 1, pickW(T.rar) + 1)] }) : null;
+  const items = [];
+  for (let n = L.items + (Math.random() < L.extra ? 1 : 0); n > 0; n--) items.push(makeItem(Math.random, zone, { rarity: RARITIES[pickW(L.rar)] }));
+  const ups = Object.keys(UPGRADES).filter(k => save.upgrades[k] < UPGRADES[k].max);
+  const upg = ups.length && Math.random() < L.upg ? ups[rint(0, ups.length - 1)] : null;
   const gold = Math.round(rint(T.gold[0], T.gold[1]) * (1 + 0.4 * zone));
-  return { tier, zone, parts, boost, item, gold };
+  return { tier, zone, parts, boost, items, upg, gold };
 }
 
 // ouvre le coffre en attente n° i : contenu ajouté à la sauvegarde et coffre retiré en même temps
@@ -218,7 +257,9 @@ export function openChest(i = 0) {
   save.pendingChests.splice(i, 1);
   for (const p of res.parts) save.parts[p.slot][p.r] += p.n;
   if (res.boost) save.boosts[res.boost] = (save.boosts[res.boost] || 0) + 1;
-  if (res.item) { res.item.isNew = true; res.equipped = addItem(res.item); }
+  for (const it of res.items) { it.isNew = true; addItem(it); }
+  res.eq = res.items.map(it => save.equipped[it.slot] === it.id); // équipés automatiquement (meilleurs)
+  if (res.upg) res.upgLv = ++save.upgrades[res.upg];
   save.gold += res.gold;
   save.stats.chests++;
   if (res.tier >= 3) save.stats.mythic++;
@@ -236,8 +277,8 @@ export function craftItem(slot, r) {
   if (!canCraft(slot, r)) return null;
   save.parts[slot][r] -= FORGE.craft.parts;
   save.gold -= FORGE.craft.gold[r];
-  const it = makeItem(Math.random, save.unlockedZone, { slot, rarity: RARITIES[r], mult: 1.1 });
-  it.crafted = true; it.isNew = true;
+  const it = makeItem(Math.random, save.unlockedZone, { slot, rarity: RARITIES[r], mult: 1.1, crafted: true });
+  it.isNew = true;
   const equipped = addItem(it);
   save.stats.crafted++;
   persist();
@@ -263,11 +304,12 @@ export function canUpgrade(it) {
   const c = itemUpgradeCost(it);
   return !!c && save.parts[c.slot][c.r] >= c.parts && save.gold >= c.gold;
 }
-// stats d'un objet au niveau lv : base × (1 + per × lv), au moins +1 par niveau
+// stats d'un objet au niveau lv : base × (1 + per × lv) ; ATQ et PV gagnent au moins 1 par niveau, les % au moins 0,5 %
 export function statsAt(base, lv) {
   const m = 1 + FORGE.upgrade.per * lv, out = {};
   for (const [k, v] of Object.entries(base)) {
-    out[k] = k === 'crit' ? Math.max(Math.round(v * m * 100) / 100, Math.round((v + 0.01 * lv) * 100) / 100) : Math.max(Math.round(v * m), v + lv);
+    if (AFFIXES[k]?.fmt === 'pct') out[k] = r3(Math.max(v * m, v + 0.005 * lv));
+    else out[k] = Math.max(Math.round(v * m), k === 'atk' || k === 'hp' ? v + lv : v);
   }
   return out;
 }
