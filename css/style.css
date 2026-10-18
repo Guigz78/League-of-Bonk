@@ -472,7 +472,8 @@ p { margin: .4em 0; }
 @font-face { font-family: 'Lilita One'; font-style: normal; font-weight: 400; font-display: swap; src: url(../fonts/lilita-one-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 .hud.cr { --cr: 'Lilita One', ui-rounded, system-ui, sans-serif; --ol: 0 2px 0 #160c2c, 1.5px 1.5px 0 #160c2c, -1.5px 1.5px 0 #160c2c, 1.5px -1.5px 0 #160c2c, -1.5px -1.5px 0 #160c2c; }
 .hud.cr .hud-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; padding: calc(var(--safe-t) + 8px) 10px 2px; }
-.hud.cr .hud-top > .icon-btn { justify-self: start; }
+.hud.cr .hud-left { justify-self: start; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.hud.cr .hl-row { display: flex; gap: 4px; }
 .hud.cr .hud-top > .hud-right { justify-self: end; }
 /* bouton pause : petit bouton bleu en relief */
 .hud.cr .hud-pause { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(#6ab8ff, #2a6ad8 55%, #1f55b8); box-shadow: inset 0 2px 0 rgba(255,255,255,.5), inset 0 -3px 0 rgba(0,0,0,.25), 0 0 0 2px #0f2a66, 0 4px 0 2px #0f2a66; }
@@ -493,14 +494,16 @@ p { margin: .4em 0; }
 .hud.cr .timer small.hot { color: #ffd04a; }
 .hud.cr .timer .diff-tag { margin-top: 4px; }
 /* compteurs : pastilles sombres, chiffres en Lilita */
-.hud.cr .hud-right { display: grid; grid-template-columns: auto auto; gap: 5px 4px; justify-items: end; }
-.hud.cr .hud-right span { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px 0 4px; border-radius: 99px; background: linear-gradient(rgba(22,18,52,.82), rgba(10,8,28,.82)); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14), 0 2px 0 rgba(0,0,0,.35); font: 15px/1 var(--cr); color: #fff; text-shadow: var(--ol); font-variant-numeric: tabular-nums; }
-.hud.cr .hud-right span b { font-weight: 400; }
-.hud.cr .hud-right span[hidden] { display: none; }
+.hud.cr .hud-right { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.hud.cr .hud-right span, .hud.cr .hl-row span { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px 0 4px; border-radius: 99px; background: linear-gradient(rgba(22,18,52,.82), rgba(10,8,28,.82)); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14), 0 2px 0 rgba(0,0,0,.35); font: 15px/1 var(--cr); color: #fff; text-shadow: var(--ol); font-variant-numeric: tabular-nums; }
+.hud.cr .hud-top span b { font-weight: 400; }
+.hud.cr .hud-top span[hidden] { display: none; }
 .hud.cr .hud-right .hr-gold b { color: #ffe066; }
-.hud.cr .hud-right .hr-loot { box-shadow: inset 0 0 0 1.5px rgba(255,207,64,.6), 0 2px 0 rgba(0,0,0,.35); }
-.hud.cr .hud-right .hr-heat { background: linear-gradient(rgba(150,20,40,.85), rgba(90,8,24,.85)); box-shadow: inset 0 0 0 1.5px rgba(255,120,130,.7), 0 2px 0 rgba(0,0,0,.35); }
-.hud.cr .hud-right .pop { animation: hudPop .45s cubic-bezier(.3,1.8,.5,1); }
+.hud.cr .hl-row span { height: 24px; font-size: 14px; padding: 0 8px 0 4px; }
+.hud.cr .hl-row .hr-loot { box-shadow: inset 0 0 0 1.5px rgba(255,207,64,.6), 0 2px 0 rgba(0,0,0,.35); }
+.hud.cr .hl-row .hr-heat { background: linear-gradient(rgba(150,20,40,.85), rgba(90,8,24,.85)); box-shadow: inset 0 0 0 1.5px rgba(255,120,130,.7), 0 2px 0 rgba(0,0,0,.35); }
+.hud.cr .hud-top .pop { animation: hudPop .45s cubic-bezier(.3,1.8,.5,1); }
+@media (max-width: 359px) { .hud.cr .world-tag { font-size: 10.5px; padding: 2px 8px 3px; } .hud.cr .t-plate b { font-size: 28px; } .hud.cr .t-plate { min-width: 92px; } }
 /* petit coffre dessiné en CSS (compteur de butin) */
 .hud-chest { position: relative; display: inline-block; width: 17px; height: 14px; margin: 0 1px; border-radius: 4px 4px 2px 2px; background: linear-gradient(#f0b060 0 40%, #3a1e08 40% 52%, #c07a30 52%); box-shadow: inset 0 0 0 1.5px #3a1e08, inset 0 2px 0 rgba(255,255,255,.35); }
 .hud-chest::after { content: ''; position: absolute; left: 6.5px; top: 4px; width: 4px; height: 5px; border-radius: 1px; background: #ffd54a; box-shadow: 0 0 0 1px #3a1e08; }

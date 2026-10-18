@@ -46,6 +46,7 @@ const NB = ' ';
 const num = (v, d = 0) => { const k = 10 ** d; return (Math.round(v * k) / k).toLocaleString('fr-FR', { maximumFractionDigits: d }); };
 const pctS = (v, sign = true) => (sign && v > 0.0005 ? '+' : v < -0.0005 ? '−' : '') + num(Math.abs(v) * 100) + NB + '%';
 const secS = v => num(v, 2) + NB + 's';
+const cnum = v => (v < 1e4 ? fmt(v) : v < 1e6 ? num(v / 1e3, v < 1e5 ? 1 : 0) + NB + 'k' : num(v / 1e6, 1) + NB + 'M'); // compteurs du HUD
 // fiches de niveau des armes : [clé de wstats(), libellé, format], par ordre d'importance
 const fI = v => fmt(v), fN = v => String(v), fP = v => (v ? `${v} ennemi${v > 1 ? 's' : ''}` : 'non'), fF = v => (v ? secS(v) : 'non');
 const D_ = (l = 'Dégâts par coup') => ['dmg', l, fI], CD = (l = 'Recharge') => ['cd', l, secS];
@@ -195,11 +196,13 @@ export class Run {
       <canvas id="cv"></canvas>
       <div class="hud cr">
         <div class="hud-top">
-          <button class="icon-btn hud-pause" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
+          <div class="hud-left">
+            <button class="icon-btn hud-pause" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
+            <div class="hl-row"><span class="hr-loot" id="lootPill"><i class="hud-chest"></i><b id="lootN">0</b></span><span class="hr-heat" id="heatPill" hidden>${iconImg('i_burn', 15)}<b id="heatN">0</b></span></div>
+          </div>
           <div class="timer"><span class="world-tag" id="worldTag"></span><span class="t-plate" id="tPlate"><b id="timer">0:00</b></span><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
           <div class="hud-right">
-            <span>${iconImg('skull', 16)}<b id="killsN">0</b></span><span class="hr-gold">${iconImg('gold', 16)}<b id="goldRun">0</b></span>
-            <span class="hr-loot" id="lootPill"><i class="hud-chest"></i><b id="lootN">0</b></span><span class="hr-heat" id="heatPill" hidden>${iconImg('i_burn', 16)}<b id="heatN">0</b></span>
+            <span>${iconImg('skull', 15)}<b id="killsN">0</b></span><span class="hr-gold">${iconImg('gold', 15)}<b id="goldRun">0</b></span>
           </div>
         </div>
         <div class="xprow"><span class="lvl-badge"><small>Niv.</small><b id="lvl">1</b></span><div class="xpbar"><div class="fill" id="xpFill"></div></div></div>
@@ -434,7 +437,7 @@ export class Run {
   wstats(id, lv, p = this.p) {
     const A = p.atk * p.dmgMul, ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
     switch (id) {
-      case 'beam': return { dmg: A * 1.8 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.95 : 1.25) * h, n: 1 + L(4), w: (L(3) ? 30 : 18) * ar, len: 320 * ar };
+      case 'beam': return { dmg: A * 1.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.9 : 1.15) * h, n: 1 + L(4), w: (L(3) ? 30 : 18) * ar, len: 320 * ar };
       case 'arrows': return { dmg: A * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.4 : 0.52) * h, n: 1 + L(2) + L(5), pierce: L(4) * 2 };
       case 'sword': return { dmg: A * 1.7 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.85 : 1.1) * h, R: (L(3) ? 112 : 86) * ar, n: 1 + L(4) };
       case 'orbs': return { dmg: A * 0.8 * (L(3) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: 0.45 * h, n: 2 + L(2) + L(4) + L(5), R: (L(4) ? 100 : 80) * ar };
@@ -769,10 +772,10 @@ export class Run {
       this.doomT = (this.doomT ?? 0) - dt;
       if (this.doomT <= 0) {
         const k = lv - DOOM_LV, p = this.p;
-        this.doomT = Math.max(0.3, 1.5 - k * 0.2);
-        for (let i = 0; i < 1 + (k >> 1); i++) {
+        this.doomT = Math.max(0.25, 1.4 - k * 0.25);
+        for (let i = 0; i < 1 + Math.ceil(k / 2); i++) {
           const lead = p.moving ? rand(30, 90) : 0, a = Math.random() * TAU, r = i ? rand(40, 140) : rand(0, 50);
-          this.addBomb({ x: p.x + p.face.x * lead + Math.cos(a) * r, y: p.y + p.face.y * lead + Math.sin(a) * r, R: 72, t: 1.05, dmg: p.maxHp * (0.12 + 0.04 * k), kind: 'meteor', e: null, doom: true });
+          this.addBomb({ x: p.x + p.face.x * lead + Math.cos(a) * r, y: p.y + p.face.y * lead + Math.sin(a) * r, R: 72, t: 1.05, dmg: p.maxHp * (0.14 + 0.06 * k), kind: 'meteor', e: null, doom: true });
         }
       }
     }
@@ -2200,8 +2203,8 @@ export class Run {
       : left < 30 ? 'Folie imminente !'
       : this.time < 25 ? 'Survivez !' : 'Trouvez l\'autel';
     lbl.classList.toggle('hot', ot || left < 30 || !!this.portal);
-    $('#killsN').textContent = fmt(this.kills);
-    $('#goldRun').textContent = fmt(this.gold);
+    $('#killsN').textContent = cnum(this.kills);
+    $('#goldRun').textContent = cnum(this.gold);
     if (this.loot.length !== this._lootN) {
       const pill = $('#lootPill');
       $('#lootN').textContent = this.loot.length;
