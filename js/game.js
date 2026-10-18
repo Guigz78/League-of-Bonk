@@ -263,9 +263,10 @@ async function zoneSheet(i) {
       <h4>Difficulté</h4>
       <div class="diff-pick" role="radiogroup" aria-label="Niveau de difficulté">${DIFFICULTIES.map((_, k) => btn(k)).join('')}</div>
       <div class="diff-info d${sel}">${diffInfo(i, sel)}</div>
-      ${goalBox(i)}
       <h4>Bonus pour la partie</h4>
       <div class="boost-box">${boostSlots()}</div>
+      <h4>Objectif</h4>
+      ${goalBox(i)}
       <div class="zone-rw">${zoneRewards(i, sel)}</div></div>`,
     buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: 'Partir !', cls: 'primary', value: true }],
     dismissable: true,
@@ -365,6 +366,7 @@ function startRun(z, diff = 0) {
     onPortal: (info, choose) => portalMenu(info, choose),
     onEnd: sum => endRun(zone, sum),
   });
+  run.onPortal ??= (info, choose) => portalMenu(info, choose);
   battle = run;
   window.__lobRun = run; // utile pour les tests automatisés
   run.start();
@@ -623,7 +625,7 @@ function lootAgg(results) {
 
 function lootCards(results) {
   const A = lootAgg(results), out = [];
-  for (const { it, eq } of A.items) out.push(`<div class="lc lc-item" style="--rc:${RARITY[it.rarity].color}"><em class="lc-tag">Objet</em>${iconImg(it.icon, 34)}<b>${esc(it.name)}</b><small>${RARITY[it.rarity].name}${eq ? ' · équipé' : ''}</small></div>`);
+  for (const { it, eq } of A.items) out.push(`<div class="lc lc-item" style="--rc:${RARITY[it.rarity].color}"><em class="lc-tag">Objet</em>${iconImg(it.icon, 44)}<b>${esc(it.name)}</b><small>${RARITY[it.rarity].name} · ${SLOTS[it.slot]}${eq ? ' · équipé !' : ''}</small><span class="lc-st">${statLine(it.stat)}</span></div>`);
   for (const [id, n] of Object.entries(A.boosts)) out.push(`<div class="lc lc-boost"><em class="lc-tag">Bonus</em>${iconImg(BOOSTS[id].icon, 34)}<b>${esc(BOOSTS[id].name)}</b>${n > 1 ? `<i class="lc-n">×${n}</i>` : ''}</div>`);
   for (const p of A.parts) out.push(`<div class="lc lc-part" style="--rc:${RARITY[RARITIES[p.r]].color}">${partIcon(p.slot, p.r, 30)}<b>${esc(PARTS[p.slot].name)}</b><small>${RARITY[RARITIES[p.r]].name}</small><i class="lc-n">×${p.n}</i></div>`);
   if (A.gold) out.push(`<div class="lc lc-gold">${iconImg('gold', 34)}<b>+${fmt(A.gold)}</b><small>Or</small></div>`);
@@ -634,7 +636,8 @@ function lootCards(results) {
 function revealStage(results, tier, title, { quick = false } = {}) {
   return new Promise(resolve => {
     const w = document.createElement('div');
-    w.className = `chest-stage t${tier}`;
+    const cards = lootCards(results);
+    w.className = `chest-stage t${tier}${cards.length > 6 ? ' many' : ''}`;
     w.style.setProperty('--tc', LOOT_TIERS[tier].color);
     w.innerHTML = `<h2 class="cst-title">${title}</h2>
       <div class="cst-chest"><i class="cst-rays"></i><img src="${chestURL(tier)}" alt=""><i class="cst-flash"></i><div class="cst-burst">${'<i></i>'.repeat(14)}</div></div>
@@ -654,7 +657,7 @@ function revealStage(results, tier, title, { quick = false } = {}) {
       w.classList.remove('shake'); w.classList.add('open');
       w.querySelector('.cst-chest img').src = chestURL(tier, true);
       sfx('chestOpen'); buzz(40);
-      const cards = lootCards(results), box = w.querySelector('.cst-loot');
+      const box = w.querySelector('.cst-loot');
       cards.forEach((html, i) => setTimeout(() => {
         box.insertAdjacentHTML('beforeend', html);
         const el = box.lastElementChild;
@@ -1044,7 +1047,7 @@ function forgeBody() {
         </div>`}
       </div>
     </div>
-    <p class="muted forge-note">${iconImg('upg', 14)} Améliorez (+1 à +${FORGE.upgrade.max}) ou recyclez vos objets depuis l'onglet <b>Équipement</b>.</p>`;
+    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1 à +${FORGE.upgrade.max}) ou recyclez vos objets depuis l'onglet <b>Équipement</b>.</span></p>`;
 }
 
 // met à jour la forge sur place (garde le défilement), l'or et les pastilles
@@ -1082,10 +1085,11 @@ function forgeAnim(result, { title = 'Objet forgé !', fuse = null } = {}) {
         sparks.appendChild(s); setTimeout(() => s.remove(), 600);
       }
     };
-    setTimeout(() => sfx('forge'), 380);
-    [380, 540, 700].forEach(t => setTimeout(hit, t));
-    setTimeout(() => { w.classList.add('done'); sfx(result.big ? 'win' : 'loot'); }, 1050);
-    setTimeout(() => { w.querySelector('.fa-ok').disabled = false; }, 1450);
+    const off = fuse ? 250 : 0; // la fusion commence par rassembler les pièces
+    setTimeout(() => sfx('forge'), 380 + off);
+    [380, 540, 700].forEach(t => setTimeout(hit, t + off));
+    setTimeout(() => { w.classList.add('done'); sfx(result.big ? 'win' : 'loot'); }, 1050 + off);
+    setTimeout(() => { w.querySelector('.fa-ok').disabled = false; }, 1450 + off);
     w.addEventListener('click', e => {
       const b = e.target.closest('.fa-ok'); if (!b || b.disabled) return;
       sfx('tap'); w.classList.add('out');

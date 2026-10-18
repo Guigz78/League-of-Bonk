@@ -591,7 +591,7 @@ p { margin: .4em 0; }
 /* scène d'ouverture d'un coffre */
 .chest-stage { position: absolute; inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; overflow-y: auto;
   padding: calc(var(--safe-t) + 26px) 16px calc(var(--safe-b) + 18px); opacity: 0; transition: opacity .2s;
-  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tc) 38%, #1a1030) 0%, rgba(8,5,18,.97) 62%); }
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tc) 38%, #1a1030) 0%, #08050f 62%); }
 .chest-stage.in { opacity: 1; }
 .chest-stage.out { opacity: 0; }
 .cst-title { font-size: 28px; text-align: center; color: color-mix(in srgb, var(--tc) 75%, #fff); text-shadow: 0 3px 0 rgba(0,0,0,.6), 0 0 18px color-mix(in srgb, var(--tc) 60%, transparent); animation: pop .35s cubic-bezier(.2,1.6,.4,1); }
@@ -674,7 +674,7 @@ p { margin: .4em 0; }
 
 /* animation de forge (marteau, étincelles, objet obtenu) */
 .forge-anim { position: absolute; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; opacity: 0; transition: opacity .18s; overflow: hidden;
-  background: radial-gradient(circle at 50% 46%, rgba(255,120,40,.42), rgba(8,5,16,.96) 60%); }
+  background: radial-gradient(circle at 50% 46%, rgba(255,120,40,.42), transparent 60%), #0b0716; }
 .forge-anim.in { opacity: 1; }
 .forge-anim.out { opacity: 0; }
 .fa-stage { position: relative; width: 300px; height: 240px; transition: transform .4s, opacity .4s; }
@@ -682,12 +682,13 @@ p { margin: .4em 0; }
 .fa-anvil { position: absolute; left: 50%; bottom: 10px; width: 210px; margin-left: -105px; }
 .fa-ingot { position: absolute; left: 50%; bottom: 112px; width: 66px; height: 16px; margin-left: -13px; border-radius: 8px; background: linear-gradient(#fff6c0, #ffb040 50%, #ff5a1a); box-shadow: 0 0 18px #ff8a2a, 0 0 40px rgba(255,90,30,.7); }
 .fa-ingot.hit { animation: ingotHit .2s; }
-.fa-hammer { position: absolute; left: calc(50% + 50px); bottom: 113px; width: 110px; transform-origin: 50% 94.5%; transform: rotate(-20deg); animation: forgeHit 1.05s forwards; }
+.fa-hammer { position: absolute; left: calc(50% + 66px); bottom: 136px; width: 110px; transform-origin: 50% 94.5%; transform: rotate(-20deg); animation: forgeHit 1.05s forwards; }
 .fa-sparks { position: absolute; left: calc(50% + 20px); bottom: 128px; }
 .fa-sparks i { position: absolute; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #fff2a0; box-shadow: 0 0 8px #ff9a30; animation: spark .55s ease-out forwards; }
 .fu-row { position: absolute; left: calc(50% + 20px); bottom: 150px; }
-.fu-p { position: absolute; left: 0; top: 0; transform: translate(calc(var(--x) - 50%), -50%); animation: fuseIn .4s .05s cubic-bezier(.6,0,.9,.5) forwards; }
-.forge-anim.fusing .fa-hammer { animation-delay: .1s; }
+.fu-p { position: absolute; left: 0; top: 0; transform: translate(calc(var(--x) - 50%), -50%); animation: fuPop .25s cubic-bezier(.2,1.6,.4,1) both, fuseIn .38s .25s cubic-bezier(.6,0,.9,.5) forwards; }
+@keyframes fuPop { from { transform: translate(calc(var(--x) - 50%), -50%) scale(0); } }
+.forge-anim.fusing .fa-hammer { animation-delay: .25s; }
 @keyframes forgeHit {
   0% { transform: rotate(-20deg); } 30% { transform: rotate(20deg); animation-timing-function: ease-in; }
   36% { transform: rotate(-88deg); } 44% { transform: rotate(-52deg); animation-timing-function: ease-in; }
@@ -707,7 +708,7 @@ p { margin: .4em 0; }
 .fa-card em { font-style: normal; color: var(--green); font-weight: 800; }
 .fa-eq { margin-top: 4px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; padding: 2px 10px; border-radius: 99px; background: var(--green); color: #0a2a10; }
 .fa-title { position: absolute; top: calc(var(--safe-t) + 48px); left: 0; right: 0; text-align: center; font-size: 30px; color: var(--gold); text-shadow: 0 3px 0 #6a4200, 0 0 20px rgba(255,200,80,.5); opacity: 0; }
-.fa-ok { position: absolute; left: 16px; right: 16px; bottom: calc(var(--safe-b) + 20px); width: auto; opacity: 0; transition: opacity .25s; }
+.forge-anim .fa-ok { position: absolute; left: 16px; right: 16px; bottom: calc(var(--safe-b) + 20px); width: auto; opacity: 0; transition: opacity .25s; }
 .forge-anim .fa-ok:disabled { filter: none; opacity: 0; }
 .forge-anim .fa-ok:not(:disabled) { opacity: 1; }
 .forge-anim.done .fa-stage { transform: scale(.55) translateY(40px); opacity: 0; }
@@ -741,13 +742,13 @@ p { margin: .4em 0; }
 .it-salv { width: 100%; margin-top: 8px; color: #ffb070; box-shadow: inset 0 0 0 2px rgba(255,140,60,.35); }
 
 /* bonus : équipement et boutique */
-.boost-inv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.bi-chip { display: flex; align-items: center; gap: 8px; background: var(--card); padding: 8px 9px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(63,208,232,.3); }
+.boost-inv { display: flex; flex-direction: column; gap: 6px; }
+.bi-chip { display: flex; align-items: center; gap: 10px; background: var(--card); padding: 8px 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(63,208,232,.3); }
 .bi-chip img { flex: none; }
 .bi-chip span { flex: 1; min-width: 0; }
-.bi-chip b { display: block; font-size: 12.5px; line-height: 1.15; }
-.bi-chip small { display: block; font-size: 10.5px; color: var(--muted); font-weight: 500; line-height: 1.2; }
-.bi-chip em { font-style: normal; font-weight: 900; color: #7ae8f8; }
+.bi-chip b { display: block; font-size: 14px; line-height: 1.2; }
+.bi-chip small { display: block; font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.2; }
+.bi-chip em { font-style: normal; font-weight: 900; font-size: 16px; color: #7ae8f8; }
 .bi-note { font-size: 12.5px; margin: 6px 2px 0; }
 .section-t.first { margin-top: 8px; }
 .section-t + .shop-intro { margin: -6px 2px 10px; font-size: 13px; }
@@ -776,3 +777,10 @@ p { margin: .4em 0; }
 .loot-sum { box-shadow: inset 3px 0 0 var(--purple); }
 .ls-chips { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; padding-left: 30px; }
 .ls-chips span { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.07); padding: 2px 8px; border-radius: 99px; font-size: 12.5px; }
+.lc-st { font-size: 12.5px; font-weight: 800; color: var(--green); }
+.chest-stage.many .cst-loot { grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
+.chest-stage.many .lc { padding: 11px 2px 6px; }
+.chest-stage.many .lc:not(.lc-item) b { font-size: 10.5px; }
+.chest-stage.many .lc:not(.lc-item) img { width: 26px; height: 26px; }
+.chest-stage.many .lc-n { font-size: 14px; right: 4px; }
+.chest-stage.many.open .cst-chest { transform: scale(.62); margin: -26px 0 -48px; }
