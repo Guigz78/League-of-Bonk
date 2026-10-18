@@ -27,8 +27,9 @@ const BODY0 = { hp: 1, knock: 1, dmg: 1 };
 const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // Réglages d'équilibre (exportés : le simulateur d'équilibrage peut les modifier)
 // bossHp : PV du boss = PV de base × bossHp × zone × difficulté × monde traversé ;
-// st* : renfort par monde déjà traversé dans la partie ; carry* : renfort selon le temps total de la partie (s)
-export const BAL = { bossHp: 42, bossDmg: 1.4, stHp: 1.3, stDmg: 1.0, stBoss: 2.5, carryHp: 300, carryDmg: 700 };
+// z* : renfort par zone (monde 1 à 6) ; st* : renfort par monde déjà traversé dans la partie ;
+// carry* : renfort selon le temps total de la partie (s)
+export const BAL = { bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.0, stDmg: 0.7, stBoss: 2.2, carryHp: 300, carryDmg: 700 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -354,7 +355,7 @@ export class Run {
     w = w < 3 ? w : 0;
     // première alerte de la partie : on rappelle le bouton
     if (w > 0 && !this.jumpTold && !this.paused) { this.jumpTold = true; this.msgT = 0; this.msg('Attaque à sauter : touchez « Saut » !'); }
-    if (w > 0 && !this.jumpWarn) this.jumpWarnDur = w;
+    if (w > 0 && !this.jumpWarn) { this.jumpWarnDur = w; buzz(12); } // petite vibration au début de l'alerte
     else if (w > this.jumpWarn + 0.3) this.jumpWarnDur = w; // nouvelle alerte plus lointaine
     if (!w) this.jumpWarnDur = 0;
     this.jumpWarn = w;
@@ -785,16 +786,16 @@ export class Run {
     const z = this.zone, t = Math.min(this.time, this.duration), D = this.diff, B = BODY[def.body] || BODY0, S = this.sk, ot = this.otLevel, W = this.wm;
     let x = o.x, y = o.y;
     if (x == null) [x, y] = this.spawnPoint();
-    const zm = 1 + z.id * 0.3;
+    const zm = 1 + z.id * BAL.zHp;
     // progression dans le temps : PV, dégâts et vitesse montent nettement au fil du monde ;
     // en plus : mondes déjà traversés (S), totems (W, runHp), folie après le chrono (ot, exponentielle)
     let hp = def.hp * 0.3 * (1 + t / 110 + (t / 240) ** 2) * zm * D.hp * B.hp * S.hp * this.runHp * 1.2 ** ot;
-    let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * 0.05) * D.dmg * B.dmg * S.dmg * W.dmg * 1.2 ** ot;
+    let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * BAL.zDmg) * D.dmg * B.dmg * S.dmg * W.dmg * 1.2 ** ot;
     let scale = 2.2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed * (1 + Math.min(0.22, t / 800)) * W.speed * Math.min(1.35, 1 + 0.06 * ot) * rand(0.9, 1.1);
     if (o.elite) { hp *= 12; dmg *= 1.6; scale = 3.6; speed *= 0.9; }
     if (o.boss) {
-      hp = Math.max(def.hp, 165) * BAL.bossHp * (1 + z.id * 0.9) * D.boss * S.boss * this.runHp;
-      dmg = def.atk * BAL.bossDmg * (1 + z.id * 0.1) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
+      hp = Math.max(def.hp, 165) * BAL.bossHp * (1 + z.id * BAL.zBoss) * D.boss * S.boss * this.runHp;
+      dmg = def.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
     }
     if (o.gen) { hp *= 0.32; dmg *= 0.6; scale *= 0.62; speed *= 1.18; } // petit morceau d'un blob divisé
     const e = {

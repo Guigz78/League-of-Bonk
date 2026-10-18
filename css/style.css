@@ -474,6 +474,9 @@ p { margin: .4em 0; }
 .hud.cr .hud-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; padding: calc(var(--safe-t) + 8px) 10px 2px; }
 .hud.cr .hud-left { justify-self: start; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
 .hud.cr .hl-row { display: flex; gap: 4px; }
+/* seuls les boutons captent le doigt : on peut commencer à glisser n'importe où ailleurs */
+.hud.cr .hud-top > .hud-left, .hud.cr .hud-top > .hud-right { pointer-events: none; }
+.hud.cr .hud-pause { pointer-events: auto; }
 .hud.cr .hud-top > .hud-right { justify-self: end; }
 /* bouton pause : petit bouton bleu en relief */
 .hud.cr .hud-pause { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(#6ab8ff, #2a6ad8 55%, #1f55b8); box-shadow: inset 0 2px 0 rgba(255,255,255,.5), inset 0 -3px 0 rgba(0,0,0,.25), 0 0 0 2px #0f2a66, 0 4px 0 2px #0f2a66; }
