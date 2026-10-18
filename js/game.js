@@ -1,7 +1,7 @@
 // Écrans du jeu et déroulé d'une expédition.
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, BOSS_COUNT, DIFFICULTIES, ELITE_MODS,
-  LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD } from './data.js';
-import { save, persist, playerStats, upgradeCost, makeItem, addItem, itemPower, sellValue, checkAchievements, resetSave, maxDiff,
+  LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES, LEGEND_EFFECTS } from './data.js';
+import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, checkAchievements, resetSave, maxDiff,
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
   buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
 import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
@@ -90,6 +90,7 @@ const handlers = {
   settings: () => settings(),
   zone: el => zoneSheet(+el.dataset.z),
   changeClass: () => classSelect(false),
+  allStats: () => statsSheet(),
   equip: el => equipItem(+el.dataset.id),
   item: el => itemSheet(+el.dataset.id),
   filter: el => { gearFilter = el.dataset.f; home(); },
@@ -103,21 +104,91 @@ const handlers = {
   buyBoost: el => doBuyBoost(el.dataset.id),
 };
 
+// ---------- Caractéristiques (objets et champion) ----------
+// icône et libellé court de chaque caractéristique (listes compactes)
+const AFX = {
+  atk: ['fist', 'ATQ'], hp: ['heart', 'PV'], crit: ['target', 'crit.'], critDmg: ['critdmg', 'dégâts crit.'], lifesteal: ['lifesteal', 'vol de vie'],
+  haste: ['haste', 'vit. d\'attaque'], speed: ['arrow', 'vitesse'], area: ['area', 'taille des attaques'], armor: ['shield', 'armure'],
+  regen: ['potion', 'PV/s'], thorns: ['thorns', 'épines'], dodge: ['dodge', 'esquive'], xp: ['tome', 'XP'], magnet: ['ring', 'ramassage'],
+  gold: ['gold', 'or'], ult: ['nova', 'ultime'],
+};
+const STAT_ORDER = Object.keys(AFX);
+const nf = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('fr-FR');
+// valeur d'un bonus : « +12 », « +2,5 % », « +0,3 PV/s »
+function affVal(k, v) {
+  const f = AFFIXES[k]?.fmt;
+  if (f === 'pct') { const p = v * 100; return `+${p >= 10 ? Math.round(p) : nf(p)} %`; }
+  if (f === 'regen') return `+${nf(v / 10)} PV/s`;
+  return `+${fmt(v)}`;
+}
+// « Vol de vie +2 % » ; épines : en % de l'ATQ
+const affLine = (k, v) => `${AFFIXES[k]?.name || k} ${affVal(k, v)}${k === 'thorns' ? ' de l\'ATQ' : ''}`;
+// version courte : « +12 ATQ », « +2 % vol de vie »
+const affShort = (k, v) => (AFFIXES[k]?.fmt === 'regen' ? affVal(k, v) : `${affVal(k, v)} ${AFX[k]?.[1] || k}`);
+const statKeys = it => { const ks = Object.keys(it.stat || {}); const m = it.main && ks.includes(it.main) ? it.main : ks[0]; return m ? [m, ...ks.filter(k => k !== m)] : []; };
+
+// lignes de caractéristiques d'un objet (principale en premier), avec l'écart par rapport à cmp (objet équipé)
+function statRows(it, { cmp = null, next = null } = {}) {
+  const ks = statKeys(it);
+  const rows = ks.map((k, i) => {
+    const v = it.stat[k];
+    let tail = '';
+    if (next) tail = `<i class="sr-arrow">›</i><b class="sr-next">${affVal(k, next[k] ?? v)}</b>`;
+    else if (cmp) {
+      const d = v - (cmp.stat?.[k] || 0), eps = AFFIXES[k]?.fmt === 'pct' ? 0.0005 : 0.5;
+      if (Math.abs(d) > eps) tail = `<i class="sr-d ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>`;
+    }
+    return `<span class="srow ${i === 0 ? 'main' : ''}">${iconImg(AFX[k]?.[0] || 'star', 18)}<span class="sr-l">${esc(AFFIXES[k]?.name || k)}${k === 'thorns' ? ' <small>(ATQ)</small>' : ''}</span><b class="sr-v">${affVal(k, v)}</b>${tail}</span>`;
+  });
+  // ce que l'objet équipé a en plus
+  if (cmp && !next) for (const k of statKeys(cmp)) if (!(k in it.stat)) rows.push(`<span class="srow lost">${iconImg(AFX[k]?.[0] || 'star', 18)}<span class="sr-l">${esc(AFFIXES[k]?.name || k)}</span><b class="sr-v">${affVal(k, cmp.stat[k]).replace('+', '−')}</b><i class="sr-d down">▼</i></span>`);
+  return rows.join('');
+}
+// encadré de l'effet unique d'un objet légendaire
+const effectBox = id => (LEGEND_EFFECTS[id] ? `<div class="fx-box"><b>${iconImg('star', 16)} ${esc(LEGEND_EFFECTS[id].name)}</b><small>${esc(LEGEND_EFFECTS[id].desc)}</small></div>` : '');
+
+// valeur d'une caractéristique du champion (fiche complète)
+function heroStat(k, st) {
+  const v = st[k] || 0;
+  if (k === 'hp' || k === 'atk') return fmt(v);
+  if (k === 'speed') return pct(v);
+  if (k === 'magnet' || k === 'gold') return `+${Math.round((v - 1) * 100)} %`;
+  if (k === 'critDmg') return `×${nf(2 + v, 2)}`;
+  return affVal(k, v);
+}
+
+async function statsSheet() {
+  const st = playerStats(), c = CLASSES[save.cls];
+  const shown = STAT_ORDER.filter(k => ['hp', 'atk', 'crit', 'critDmg', 'speed'].includes(k) || (k === 'magnet' || k === 'gold' ? st[k] > 1.0005 : st[k] > 0.0005));
+  const capped = k => AFFIXES[k]?.max != null && (k === 'speed' ? st.speed >= c.speed + AFFIXES[k].max - 0.0005 : st[k] >= AFFIXES[k].max - 0.0005);
+  await modal({
+    title: `Statistiques de ${esc(c.name)}`,
+    cls: 'stats-modal',
+    body: `<div class="hstats">${shown.map(k => `<div class="hs ${capped(k) ? 'cap' : ''}">${iconImg(AFX[k][0], 22)}<span>${esc(k === 'critDmg' ? 'Dégâts des critiques' : k === 'speed' ? 'Vitesse de course' : AFFIXES[k]?.name || k)}</span><b>${heroStat(k, st)}</b>${capped(k) ? '<em>max</em>' : ''}</div>`).join('')}</div>
+      ${st.effects.length ? `<h4>Effets légendaires</h4>${st.effects.map(effectBox).join('')}` : ''}
+      <p class="muted hs-note">Champion, améliorations de la Boutique et équipement réunis.</p>`,
+    buttons: [{ label: 'Fermer', cls: 'primary', value: true }],
+    dismissable: true,
+  });
+}
+
 function heroCard() {
   const c = CLASSES[save.cls], st = playerStats();
-  return `<section class="card hero-card">
+  const more = STAT_ORDER.filter(k => !['hp', 'atk', 'crit', 'speed'].includes(k) && (k === 'magnet' || k === 'gold' ? st[k] > 1.0005 : st[k] > 0.0005)).length + st.effects.length;
+  return `<section class="panel hero-card">
     <div class="hc-sprite"><canvas class="hc-3d"></canvas>
       ${save.pet ? `<img class="px spr hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}
     </div>
     <div class="hc-info">
       <div class="hc-name">${esc(c.name)} <small>${c.role}</small></div>
-      <div class="stats">
-        <span>${iconImg('heart', 16)}<b>${st.hp}</b></span>
-        <span>${iconImg('fist', 16)}<b>${st.atk}</b></span>
-        <span>${iconImg('target', 16)}<b>${pct(st.crit)}</b></span>
-        <span>${iconImg('arrow', 16)}<b>${pct(st.speed)}</b></span>
-      </div>
-      <button class="btn small ghost" data-act="changeClass">Changer de champion</button>
+      <button class="stats hc-stats" data-act="allStats" aria-label="Toutes les statistiques">
+        <span>${iconImg('heart', 18)}<b>${fmt(st.hp)}</b></span>
+        <span>${iconImg('fist', 18)}<b>${st.atk}</b></span>
+        <span>${iconImg('target', 18)}<b>${pct(st.crit)}</b></span>
+        <span>${iconImg('arrow', 18)}<b>${pct(st.speed)}</b></span>
+        <em class="hc-more">${more ? `+${more} bonus · ` : ''}Détails ›</em>
+      </button>
+      <button class="btn small blue" data-act="changeClass">Changer de champion</button>
     </div>
   </section>`;
 }
@@ -317,7 +388,10 @@ function classSelect(first) {
       <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span></button>`).join('')}</div>
       <section class="card cs-detail">
         <div class="cs-head"><canvas class="cs-3d"></canvas><div><h3>${esc(c.name)}</h3><div class="role">${c.role}</div><p>${esc(c.desc)}</p></div></div>
-        <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span>${i ? `<em>niv. ${e.lvl}</em>` : '<em>départ</em>'}<b>${esc(e.name)}</b></span>`).join('<i>›</i>')}</div>
+        <h4 class="evo-t">Évolutions pendant la partie</h4>
+        <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.07).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
+          <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
+          <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
         <div class="stats wide">
           <span>${iconImg('heart', 16)} PV <b>${c.hp}</b></span>
           <span>${iconImg('fist', 16)} ATQ <b>${c.atk}</b></span>
@@ -372,12 +446,34 @@ function startRun(z, diff = 0) {
   run.start();
 }
 
-function choiceInfo(c) {
-  if (c.kind === 'weapon') { const w = WEAPONS[c.id]; return { icon: w.icon, name: w.name, tag: c.lv === 1 ? 'Nouvelle arme' : `Arme · niv. ${c.lv}`, desc: c.lv === 1 ? w.desc : w.lv[c.lv - 1], cls: 'weapon' }; }
-  if (c.kind === 'tome') { const t = TOMES[c.id]; return { icon: t.icon, name: t.name, tag: c.lv === 1 ? 'Nouveau tome' : `Tome · niv. ${c.lv}`, desc: t.desc, cls: 'tome' }; }
+// présentation d'un choix (montée de niveau, coffre, autel)
+function choiceMeta(c) {
+  if (c.kind === 'weapon') { const w = WEAPONS[c.id]; return { icon: w.icon, name: w.name, tag: c.lv === 1 ? 'Nouvelle arme' : 'Arme', desc: c.lv === 1 ? w.desc : w.lv[c.lv - 1], cls: 'weapon', lv: c.lv }; }
+  if (c.kind === 'tome') { const t = TOMES[c.id]; return { icon: t.icon, name: t.name, tag: c.lv === 1 ? 'Nouveau tome' : 'Tome', desc: t.desc, cls: 'tome', lv: c.lv }; }
   if (c.kind === 'boon') { const b = BOONS[c.id]; return { icon: b.icon, name: b.name, tag: 'Bénédiction', desc: b.desc, cls: 'boon' }; }
-  if (c.kind === 'heal') return { icon: 'heart', name: 'Soin', tag: 'Bonus', desc: 'Récupère 30 % de vos PV', cls: 'tome' };
-  return { icon: 'gold', name: 'Bourse', tag: 'Bonus', desc: 'De l\'or en plus', cls: 'tome' };
+  if (c.kind === 'heal') return { icon: 'heart', name: 'Soin', tag: 'Bonus', desc: 'Récupère 30 % de vos PV', cls: 'heal' };
+  return { icon: 'gold', name: 'Bourse', tag: 'Bonus', desc: 'De l\'or en plus', cls: 'gold' };
+}
+
+// carte de choix : niveau, effet et caractéristiques touchées « avant → après » (run.choiceInfo)
+function choiceCard(c, i, tag = 'button') {
+  const f = choiceMeta(c);
+  let info = null;
+  try { info = run?.choiceInfo?.(c); } catch (e) { info = null; }
+  const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null).slice(0, 4);
+  const val = v => esc(typeof v === 'number' ? v.toLocaleString('fr-FR') : String(v));
+  const pips = f.lv ? `<span class="cu-pips" aria-label="Niveau ${f.lv}">${Array.from({ length: 5 }, (_, k) => `<i class="${k + 1 < f.lv ? 'on' : k + 1 === f.lv ? 'new' : ''}"></i>`).join('')}</span>` : '';
+  const isNew = f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome');
+  return `<${tag} class="card-up ${f.cls} ${isNew ? 'is-new' : ''}" data-i="${i}" style="--d:${(i * 0.08).toFixed(2)}s">
+    ${isNew ? '<i class="cu-ribbon">Nouveau !</i>' : ''}
+    <span class="cu-ic">${iconImg(f.icon, 44)}</span>
+    <span class="cu-txt">
+      <span class="cu-head"><em>${f.tag}${f.lv && !isNew ? ` · niv. ${f.lv}` : ''}</em>${pips}</span>
+      <b>${esc(f.name)}</b>
+      <small>${esc(f.desc)}</small>
+      ${lines.length ? `<span class="cu-lines">${lines.map(l => `<span class="cu-l"><span>${esc(l.label)}</span>${l.from != null && l.from !== '' ? `<s>${val(l.from)}</s><i>›</i>` : '<i class="nw">›</i>'}<b>${val(l.to)}</b></span>`).join('')}</span>` : ''}
+    </span>
+  </${tag}>`;
 }
 
 function overlay(html) {
@@ -389,37 +485,46 @@ function overlay(html) {
   return w;
 }
 
+// choix protégé contre les touches accidentelles : cartes inactives un court instant, et seul un appui
+// commencé sur la carte après son activation compte (le doigt qui déplaçait le héros ne choisit rien)
+function guardCards(w, sel, onPick, delay = 650) {
+  const btns = [...w.querySelectorAll(sel)];
+  let armed = null;
+  btns.forEach(b => b.disabled = true);
+  w.classList.add('locked');
+  setTimeout(() => { btns.forEach(b => b.disabled = false); w.classList.remove('locked'); }, delay);
+  w.addEventListener('pointerdown', e => { const b = e.target.closest(sel); armed = b && !b.disabled ? b : null; });
+  w.addEventListener('click', e => {
+    const b = e.target.closest(sel);
+    if (!b || b.disabled || b !== armed) return;
+    btns.forEach(x => x.disabled = true);
+    onPick(b);
+  });
+}
+
 function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration') {
   const w = overlay(`<div class="lvlup">
-    <h2>${esc(title)}</h2><p class="muted">${esc(subtitle)}</p>
-    <div class="cards">${opts.map((c, i) => { const f = choiceInfo(c); return `<button class="card-up ${f.cls}" data-i="${i}">
-      <span class="cu-ic">${iconImg(f.icon, 36)}</span>
-      <span class="cu-txt"><em>${f.tag}</em><b>${esc(f.name)}</b><small>${esc(f.desc)}</small></span>
-    </button>`; }).join('')}</div>
+    <h2 class="lu-title">${esc(title)}</h2><p class="lu-sub">${esc(subtitle)}</p>
+    <div class="cards">${opts.map((c, i) => choiceCard(c, i)).join('')}</div>
   </div>`);
-  // petite pause pour éviter un choix accidentel pendant qu'on joue
-  const btns = [...w.querySelectorAll('.card-up')];
-  btns.forEach(b => b.disabled = true);
-  setTimeout(() => btns.forEach(b => b.disabled = false), 450);
-  w.addEventListener('click', e => {
-    const b = e.target.closest('.card-up'); if (!b || b.disabled) return;
-    sfx('tap');
-    w.remove();
-    done(opts[+b.dataset.i]);
+  w.classList.add('lvl-ov');
+  guardCards(w, '.card-up', b => {
+    sfx('pick'); buzz(15);
+    b.classList.add('picked');
+    w.classList.add('picking');
+    setTimeout(() => { w.remove(); done(opts[+b.dataset.i]); }, 260);
   });
 }
 
 function chestMenu(c, gold, done) {
-  const f = choiceInfo(c);
   const w = overlay(`<div class="lvlup chest">
-    <h2>Coffre !</h2>
-    <div class="cards"><div class="card-up ${f.cls} open"><span class="cu-ic">${iconImg(f.icon, 36)}</span><span class="cu-txt"><em>${f.tag}</em><b>${esc(f.name)}</b><small>${esc(f.desc)}</small></span></div></div>
-    <p class="gold-t center">${iconImg('gold', 16)} +${fmt(gold)} or</p>
-    <button class="btn primary big" disabled>Super !</button>
+    <h2 class="lu-title">Coffre !</h2><p class="lu-sub">Amélioration gratuite</p>
+    <div class="cards">${choiceCard(c, 0, 'div')}</div>
+    <p class="lu-gold">${iconImg('gold', 22)} <b>+${fmt(gold)}</b> or</p>
+    <button class="btn primary big lu-ok">Super !</button>
   </div>`);
-  const b = w.querySelector('.btn');
-  setTimeout(() => b.disabled = false, 450);
-  b.addEventListener('click', () => { sfx('tap'); w.remove(); done(); });
+  w.classList.add('lvl-ov');
+  guardCards(w, '.lu-ok', () => { sfx('tap'); w.remove(); done(); }, 500);
 }
 
 // ---------- Portail entre deux mondes ----------
@@ -569,8 +674,8 @@ function endRun(z, sum) {
         const p = PETS[petId];
         lines.push(`<img class="px spr" src="${creatureURL('pet-' + petId, p.body, p.pal)}" width="26" height="26" alt=""> Familier : <b>${esc(p.name)}</b> <small>${esc(p.desc)}</small>`);
       }
-      const bi = BOSS_ITEMS[id];
-      if (bi) { const it = { ...bi, stat: { ...bi.stat }, id: save.nextId++, zone: id, isNew: true }; it._eq = addItem(it); found.push(it); }
+      const bi = makeBossItem(id);
+      if (bi) { bi.isNew = true; bi._eq = addItem(bi); found.push(bi); }
     }
     // butin d'objets du boss
     for (let n = 1 + (Math.random() < 0.35); n > 0; n--) {
@@ -604,84 +709,166 @@ function endRun(z, sum) {
 // ---------- Ouverture des coffres de butin ----------
 // tuile d'une pièce d'équipement (couleur de sa rareté)
 function partIcon(slot, r, size = 28) {
-  return `<span class="part-ic" style="--rc:${RARITY[RARITIES[r]].color}">${iconImg(PARTS[slot].icon, size)}</span>`;
+  return `<span class="part-ic r-${RARITIES[r]}">${iconImg(PARTS[slot].icon, size)}</span>`;
 }
 
 // regroupe le contenu de plusieurs coffres
 function lootAgg(results) {
-  const parts = {}, boosts = {}, items = [];
+  const parts = {}, boosts = {}, items = [], upgs = [];
   let gold = 0;
   for (const res of results) {
     for (const p of res.parts) parts[p.slot + ':' + p.r] = (parts[p.slot + ':' + p.r] || 0) + p.n;
     if (res.boost) boosts[res.boost] = (boosts[res.boost] || 0) + 1;
-    if (res.item) items.push({ it: res.item, eq: res.equipped });
+    for (const it of res.items || []) items.push(it);
+    if (res.upg) upgs.push({ key: res.upg, lv: res.upgLv });
     gold += res.gold;
   }
   return {
     parts: Object.entries(parts).map(([key, n]) => { const [slot, r] = key.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n),
-    boosts, items, gold,
+    boosts, items, upgs, gold,
   };
 }
 
-function lootCards(results) {
+// cartes à révéler une par une, comme dans les jeux de cartes : le plus commun d'abord, le meilleur pour la fin
+function lootSeq(results) {
   const A = lootAgg(results), out = [];
-  for (const { it, eq } of A.items) out.push(`<div class="lc lc-item" style="--rc:${RARITY[it.rarity].color}"><em class="lc-tag">Objet</em>${iconImg(it.icon, 44)}<b>${esc(it.name)}</b><small>${RARITY[it.rarity].name} · ${SLOTS[it.slot]}${eq ? ' · équipé !' : ''}</small><span class="lc-st">${statLine(it.stat)}</span></div>`);
-  for (const [id, n] of Object.entries(A.boosts)) out.push(`<div class="lc lc-boost"><em class="lc-tag">Bonus</em>${iconImg(BOOSTS[id].icon, 34)}<b>${esc(BOOSTS[id].name)}</b>${n > 1 ? `<i class="lc-n">×${n}</i>` : ''}</div>`);
-  for (const p of A.parts) out.push(`<div class="lc lc-part" style="--rc:${RARITY[RARITIES[p.r]].color}">${partIcon(p.slot, p.r, 30)}<b>${esc(PARTS[p.slot].name)}</b><small>${RARITY[RARITIES[p.r]].name}</small><i class="lc-n">×${p.n}</i></div>`);
-  if (A.gold) out.push(`<div class="lc lc-gold">${iconImg('gold', 34)}<b>+${fmt(A.gold)}</b><small>Or</small></div>`);
+  if (A.gold) out.push({ k: 'gold', n: A.gold });
+  for (const p of [...A.parts].sort((a, b) => a.r - b.r || a.n - b.n)) out.push({ k: 'part', ...p });
+  for (const [id, n] of Object.entries(A.boosts)) out.push({ k: 'boost', id, n });
+  for (const it of [...A.items].sort((a, b) => rarityIdx(a) - rarityIdx(b) || itemPower(a) - itemPower(b))) out.push({ k: 'item', it });
+  for (const u of A.upgs) out.push({ k: 'upg', ...u });
   return out;
 }
+const isEq = it => save.equipped[it.slot] === it.id;
 
-// scène plein écran : le coffre tremble, s'ouvre et son contenu jaillit
+// grande carte d'un objet (coffre, forge) : rareté, toutes ses caractéristiques, effet légendaire
+function itemCard(it, { ribbon = '' } = {}) {
+  const R = RARITY[it.rarity];
+  return `<div class="rcard icard r-${it.rarity}">
+    ${ribbon ? `<i class="rc-ribbon">${ribbon}</i>` : ''}
+    <span class="rc-rar">${R.name}</span>
+    <span class="rc-ic">${iconImg(it.icon, 64)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}</span>
+    <b class="rc-name">${esc(it.name)}</b>
+    <span class="rc-sub">${SLOTS[it.slot]}${it.crafted ? ' · forgé' : ''}</span>
+    <span class="rc-stats">${statRows(it)}</span>
+    ${it.effect ? effectBox(it.effect) : ''}
+    ${isEq(it) ? '<span class="rc-eq">Équipé !</span>' : ''}
+  </div>`;
+}
+
+function bigCard(x) {
+  if (x.k === 'item') return itemCard(x.it, { ribbon: 'Nouvel objet' });
+  if (x.k === 'gold') return `<div class="rcard rc-gold"><span class="rc-ic">${iconImg('gold', 76)}</span><b class="rc-n">+${fmt(x.n)}</b><span class="rc-name">Pièces d'or</span></div>`;
+  if (x.k === 'part') {
+    const rk = RARITIES[x.r], P = PARTS[x.slot];
+    return `<div class="rcard r-${rk}"><span class="rc-rar">${RARITY[rk].name}</span><span class="rc-ic">${partIcon(x.slot, x.r, 60)}</span>
+      <b class="rc-n">×${x.n}</b><span class="rc-name">${esc(x.n > 1 ? P.plural : P.name)}</span><small class="rc-desc">Pour fabriquer et améliorer à la Forge</small></div>`;
+  }
+  if (x.k === 'boost') {
+    const B = BOOSTS[x.id];
+    return `<div class="rcard rc-boost"><i class="rc-ribbon">Bonus</i><span class="rc-ic">${iconImg(B.icon, 64)}</span>
+      <b class="rc-n">×${x.n}</b><span class="rc-name">${esc(B.name)}</span><small class="rc-desc">${esc(B.desc)}</small></div>`;
+  }
+  return upgCard(x);
+}
+// niveau gratuit d'amélioration permanente
+function upgCard(x) {
+  const U = UPGRADES[x.key];
+  return `<div class="rcard rc-upg"><i class="rc-ribbon">Amélioration gratuite !</i><span class="rc-ic">${iconImg(U.icon, 64)}</span>
+    <b class="rc-name">${esc(U.name)}</b><span class="rc-lv"><s>Niv. ${x.lv - 1}</s><i>›</i><b>Niv. ${x.lv}</b></span><small class="rc-desc">${esc(U.desc)} · pour tous les champions</small></div>`;
+}
+
+// petite carte du récapitulatif
+function miniCard(x, i) {
+  const d = `style="--d:${(i * 0.06).toFixed(2)}s"`;
+  if (x.k === 'gold') return `<div class="mcard rc-gold" ${d}>${iconImg('gold', 36)}<b>+${fmt(x.n)}</b><small>Or</small></div>`;
+  if (x.k === 'part') return `<div class="mcard r-${RARITIES[x.r]}" ${d}>${partIcon(x.slot, x.r, 30)}<i class="mc-n">×${x.n}</i><small>${esc(PARTS[x.slot].name)}</small></div>`;
+  if (x.k === 'boost') return `<div class="mcard rc-boost" ${d}>${iconImg(BOOSTS[x.id].icon, 36)}<i class="mc-n">×${x.n}</i><small>${esc(BOOSTS[x.id].name)}</small></div>`;
+  if (x.k === 'item') return `<div class="mcard r-${x.it.rarity}" ${d}>${iconImg(x.it.icon, 36)}${isEq(x.it) ? '<i class="mc-eq">Équipé</i>' : ''}<small>${esc(x.it.name)}</small></div>`;
+  return `<div class="mcard rc-upg" ${d}>${iconImg(UPGRADES[x.key].icon, 36)}<i class="mc-n">niv. ${x.lv}</i><small>${esc(UPGRADES[x.key].name)}</small></div>`;
+}
+
+// scène d'ouverture façon jeu de cartes : le coffre tombe et rebondit, tremble quand on le touche, éclate,
+// puis son contenu sort carte par carte (touchez pour la suivante), avant un récapitulatif
 function revealStage(results, tier, title, { quick = false } = {}) {
   return new Promise(resolve => {
+    const seq = lootSeq(results);
     const w = document.createElement('div');
-    const cards = lootCards(results);
-    w.className = `chest-stage t${tier}${cards.length > 6 ? ' many' : ''}`;
+    w.className = `chest-stage t${tier}`;
     w.style.setProperty('--tc', LOOT_TIERS[tier].color);
     w.innerHTML = `<h2 class="cst-title">${title}</h2>
-      <div class="cst-chest"><i class="cst-rays"></i><img src="${chestURL(tier)}" alt=""><i class="cst-flash"></i><div class="cst-burst">${'<i></i>'.repeat(14)}</div></div>
-      <div class="cst-loot"></div>
-      <button class="btn primary big cst-ok" disabled>Super !</button>`;
+      <div class="cst-scene">
+        <i class="cst-rays"></i>
+        <div class="cst-card"></div>
+        <div class="cst-recap"></div>
+        <div class="cst-chest"><i class="cst-shadow"></i><i class="cst-dust"></i><img src="${chestURL(tier)}" alt=""><i class="cst-flash"></i>
+          <b class="cst-left"></b><div class="cst-burst">${'<i></i>'.repeat(16)}</div></div>
+      </div>
+      <p class="cst-hint">Touchez le coffre !</p>
+      <div class="cst-btns"><button class="btn small ghost cst-skip">Tout voir</button><button class="btn primary big cst-ok">Super !</button></div>`;
     w.querySelectorAll('.cst-burst i').forEach((p, i) => {
-      const a = i / 14 * Math.PI * 2 + Math.random() * 0.3, d = 90 + Math.random() * 90;
-      p.style.cssText = `--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 30}px;--s:${0.6 + Math.random() * 0.8}`;
+      const a = i / 16 * Math.PI * 2 + Math.random() * 0.3, d = 110 + Math.random() * 110;
+      p.style.cssText = `--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 40}px;--s:${0.6 + Math.random() * 0.9}`;
     });
     app.appendChild(w);
+    const $w = s => w.querySelector(s), hint = $w('.cst-hint'), left = $w('.cst-left'), cardBox = $w('.cst-card');
+    let state = 'drop', idx = -1, readyAt = 0;
     const T = [];
     const at = (ms, fn) => T.push(setTimeout(fn, ms));
-    let isOpen = false;
-    const open = () => {
-      if (isOpen) return;
-      isOpen = true; T.forEach(clearTimeout);
-      w.classList.remove('shake'); w.classList.add('open');
-      w.querySelector('.cst-chest img').src = chestURL(tier, true);
-      sfx('chestOpen'); buzz(40);
-      const box = w.querySelector('.cst-loot');
-      cards.forEach((html, i) => setTimeout(() => {
-        box.insertAdjacentHTML('beforeend', html);
-        const el = box.lastElementChild;
-        if (el.classList.contains('lc-item') || el.classList.contains('lc-boost')) sfx('loot');
-        else if (i % 2 === 0) sfx('coin');
-      }, 350 + i * (quick ? 70 : 120)));
-      setTimeout(() => { const b = w.querySelector('.cst-ok'); b.disabled = false; }, 450 + cards.length * (quick ? 70 : 120));
-    };
     requestAnimationFrame(() => w.classList.add('in'));
-    if (quick) at(250, open);
-    else {
-      at(300, () => { w.classList.add('shake'); sfx('chestShake'); });
-      at(700, () => sfx('chestShake'));
-      at(1050, () => { w.classList.add('shake2'); sfx('chestShake'); });
-      at(1400, open);
+    at(380, () => { sfx('boing'); buzz(15); });
+    at(650, () => { state = 'ready'; w.classList.add('ready'); if (quick) shake(); });
+    function shake() {
+      state = 'shake';
+      w.classList.remove('ready'); w.classList.add('shake');
+      hint.textContent = '';
+      sfx('chestShake'); buzz(20);
+      at(260, () => sfx('chestShake'));
+      at(520, burst);
     }
-    // toucher l'écran accélère l'ouverture
+    function burst() {
+      w.classList.remove('shake'); w.classList.add('open');
+      $w('.cst-chest img').src = chestURL(tier, true);
+      sfx('chestOpen'); buzz(50);
+      at(380, () => next());
+    }
+    function next() {
+      idx++;
+      if (idx >= seq.length) return recap();
+      const x = seq[idx], old = cardBox.firstElementChild;
+      if (old) { old.classList.add('gone'); setTimeout(() => old.remove(), 300); }
+      cardBox.insertAdjacentHTML('beforeend', `<div class="cst-slot">${bigCard(x)}</div>`);
+      const n = seq.length - idx - 1;
+      left.textContent = n; left.classList.toggle('none', !n);
+      left.classList.remove('bump'); void left.offsetWidth; left.classList.add('bump');
+      const legend = x.k === 'item' && x.it.rarity === 'legendary', epic = x.k === 'item' && x.it.rarity === 'epic';
+      w.classList.toggle('legend', legend); w.classList.toggle('epic', epic);
+      sfx(x.k === 'gold' ? 'coin' : x.k === 'part' ? (x.r >= 2 ? 'loot' : 'gem') : x.k === 'boost' ? 'pick' : x.k === 'upg' ? 'levelup' : legend || epic ? 'chest' : 'loot');
+      buzz(legend ? 60 : 15);
+      hint.textContent = n ? 'Touchez pour la carte suivante' : 'Touchez pour le récapitulatif';
+      w.classList.add('cards');
+      state = 'card'; readyAt = performance.now() + 380;
+    }
+    function recap() {
+      state = 'recap';
+      w.classList.remove('cards', 'legend', 'epic'); w.classList.add('recapping');
+      cardBox.innerHTML = '';
+      $w('.cst-recap').innerHTML = `<h3 class="cst-rt">Butin obtenu</h3><div class="cst-grid ${seq.length > 9 ? 'dense' : ''}">${seq.map(miniCard).join('')}</div>`;
+      hint.textContent = '';
+      sfx('win');
+      at(350, () => { state = 'done'; w.classList.add('done'); });
+    }
     w.addEventListener('click', e => {
-      if (!isOpen) { open(); return; }
-      const b = e.target.closest('.cst-ok');
-      if (!b || b.disabled) return;
-      sfx('tap');
-      w.classList.add('out');
-      setTimeout(() => { w.remove(); resolve(); }, 220);
+      if (e.target.closest('.cst-skip')) { if (state === 'card') { sfx('tap'); recap(); } return; }
+      if (e.target.closest('.cst-ok')) {
+        if (state !== 'done') return;
+        sfx('tap'); T.forEach(clearTimeout);
+        w.classList.add('out');
+        setTimeout(() => { w.remove(); resolve(); }, 220);
+        return;
+      }
+      if (state === 'ready') shake();
+      else if (state === 'card' && performance.now() >= readyAt) next();
     });
   });
 }
@@ -764,7 +951,7 @@ function summaryScreen(R, opened = []) {
   const pending = save.pendingChests.length;
   const chestLine = opened.length
     ? `<div class="rw loot-sum">${iconImg('chest', 22)} <b>${opened.length} coffre${opened.length > 1 ? 's' : ''} ouvert${opened.length > 1 ? 's' : ''}</b>
-        <span class="ls-chips">${nParts ? `<span>${iconImg('hammer', 14)} ${nParts} pièce${nParts > 1 ? 's' : ''}</span>` : ''}${nBoosts ? `<span>${iconImg('potion', 14)} ${nBoosts} bonus</span>` : ''}${A.items.length ? `<span>${iconImg('sword', 14)} ${A.items.length} objet${A.items.length > 1 ? 's' : ''}</span>` : ''}<span class="gold-t">${iconImg('gold', 14)} +${fmt(A.gold)}</span></span></div>`
+        <span class="ls-chips">${nParts ? `<span>${iconImg('hammer', 14)} ${nParts} pièce${nParts > 1 ? 's' : ''}</span>` : ''}${nBoosts ? `<span>${iconImg('potion', 14)} ${nBoosts} bonus</span>` : ''}${A.items.length ? `<span>${iconImg('sword', 14)} ${A.items.length} objet${A.items.length > 1 ? 's' : ''}</span>` : ''}${A.upgs.length ? `<span>${iconImg('upg', 14)} ${A.upgs.length} amélioration${A.upgs.length > 1 ? 's' : ''} gratuite${A.upgs.length > 1 ? 's' : ''}</span>` : ''}<span class="gold-t">${iconImg('gold', 14)} +${fmt(A.gold)}</span></span></div>`
     : '';
   const pendLine = pending ? `<div class="rw">${iconImg('chest', 22)} <span><b>${pending} coffre${pending > 1 ? 's' : ''}</b> à ouvrir plus tard, depuis l'onglet Aventure.</span></div>` : '';
   const heatLine = R.heat ? `<div class="rw heat-line">${iconImg('i_burn', 22)} Totems de défi ×${R.heat} : <b>+${fmt(R.heatGold)} or</b> <small>+${Math.round(HEAT_GOLD * 100)} % d'or par totem activé</small></div>` : '';
@@ -793,8 +980,8 @@ function summaryScreen(R, opened = []) {
     ${worldCards ? `<h3 class="section-t">Mondes vaincus <small>${cleared.length}</small></h3><div class="worlds-res">${worldCards}</div>` : ''}
     <div class="summary">
       ${heatLine}${chestLine}${pendLine}
-      ${R.found.map(it => `<div class="rw r-${it.rarity} loot-row">${iconImg(it.icon, 22)} <b style="color:${RARITY[it.rarity].color}">${esc(it.name)}</b> <small>${RARITY[it.rarity].name} · ${statLine(it.stat)}${it._eq ? ' · équipé' : ''}</small></div>`).join('')}
     </div>
+    ${R.found.length ? `<h3 class="section-t">Objets des boss <small>${R.found.length}</small></h3><div class="inv-grid found">${R.found.map(it => itemTile(it, { act: false })).join('')}</div>` : ''}
     ${sum.evo ? `<p class="center evo-reached">${iconImg('star', 16)} Évolution atteinte : <b>${esc(EVOLUTIONS[save.cls][sum.evo].name)}</b></p>` : ''}
     <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
     ${!won ? `<p class="center muted tip">${tipFor(sum, k)}</p>` : ''}
@@ -834,26 +1021,31 @@ function announceAchievements() {
 }
 
 // ---------- Équipement ----------
-function statLine(s) {
-  const p = [];
-  if (s.atk) p.push(`+${s.atk} ATQ`);
-  if (s.hp) p.push(`+${s.hp} PV`);
-  if (s.crit) p.push(`+${Math.round(s.crit * 100)} % crit`);
-  if (s.regen) p.push(`+${(s.regen / 10).toLocaleString('fr-FR')} PV/s`);
-  return p.join(' · ');
-}
-
 // nom d'un objet avec son niveau d'amélioration (+N)
 const itemName = it => `${esc(it.name)}${it.lv ? ` <em class="lvp">+${it.lv}</em>` : ''}`;
+const SLOT_IC = { weapon: 'sword', armor: 'armor', trinket: 'gem' };
+
+// carte d'objet (sac, emplacements, bilan) : rareté, caractéristique principale, icônes des bonus.
+// cur = objet équipé au même emplacement (flèche ▲ si celui-ci est meilleur)
+function itemTile(it, { act = true, cur, isNew = false } = {}) {
+  const ks = statKeys(it), m = ks[0], tag = act ? 'button' : 'div';
+  const better = cur !== undefined && cur !== it && (!cur || itemPower(it) > itemPower(cur));
+  return `<${tag} class="itile r-${it.rarity}" ${act ? `data-act="item" data-id="${it.id}"` : ''}>
+    ${isNew ? '<i class="it-new">Nouveau</i>' : ''}
+    <span class="it-ic">${iconImg(it.icon, 40)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}${better ? '<i class="it-better" aria-label="Meilleur">▲</i>' : ''}${it.crafted ? `<i class="it-forged">${iconImg('hammer', 12)}</i>` : ''}</span>
+    <b class="it-name">${esc(it.name)}</b>
+    ${m ? `<span class="it-main">${affShort(m, it.stat[m])}</span>` : ''}
+    <span class="it-aff">${ks.slice(1).map(k => iconImg(AFX[k]?.[0] || 'star', 14)).join('')}${it.effect ? '<i class="it-fx">★</i>' : ''}</span>
+  </${tag}>`;
+}
 
 function gearTab() {
   const eqIds = Object.values(save.equipped);
+  const fresh = new Set(save.inventory.filter(i => i.isNew).map(i => i.id));
   const slots = Object.entries(SLOTS).map(([k, label]) => {
     const it = save.inventory.find(i => i.id === save.equipped[k]);
-    return `<button class="slot ${it ? 'r-' + it.rarity : 'empty'}" ${it ? `data-act="item" data-id="${it.id}"` : ''}>
-      <small>${label}</small>
-      ${it ? `${iconImg(it.icon, 32)}<b>${itemName(it)}</b><em>${statLine(it.stat)}</em>` : `<span class="muted">Vide</span>`}
-    </button>`;
+    return `<div class="eq-slot"><span class="eq-l">${label}</span>${it ? itemTile(it, { isNew: fresh.has(it.id) })
+      : `<div class="itile empty">${iconImg(SLOT_IC[k], 34)}<small>Vide</small></div>`}</div>`;
   }).join('');
   const list = save.inventory
     .filter(i => !eqIds.includes(i.id))
@@ -875,51 +1067,48 @@ function gearTab() {
   return `${heroCard()}
     <h3 class="section-t">Équipé</h3>
     <div class="slots">${slots}</div>
+    <h3 class="section-t">Sac <small>${list.length} objet${list.length > 1 ? 's' : ''}</small></h3>
+    <div class="filters">${[['all', 'Tout'], ...Object.entries(SLOTS)].map(([k, l]) => `<button class="chip-btn ${gearFilter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${l}</button>`).join('')}
+      ${list.some(i => i.rarity === 'common' && !i.lv) ? '<button class="chip-btn sell" data-act="sellJunk">Vendre les communs</button>' : ''}</div>
+    ${list.length ? `<div class="inv-grid">${list.map(it => itemTile(it, { cur: save.inventory.find(i => i.id === save.equipped[it.slot]) || null, isNew: fresh.has(it.id) })).join('')}</div>`
+    : '<p class="muted center empty-note">Ouvrez des coffres de butin et battez des boss pour trouver de l\'équipement.</p>'}
     <h3 class="section-t">Familier <small>${save.pets.length}/6</small></h3>
     <div class="pets">${pets}</div>
     <h3 class="section-t">Bonus <small>${nB} en stock</small></h3>
-    ${boosts.length ? `<div class="boost-inv">${boosts.map(id => `<div class="bi-chip">${iconImg(BOOSTS[id].icon, 26)}<span><b>${esc(BOOSTS[id].name)}</b><small>${esc(BOOSTS[id].desc)}</small></span><em>×${save.boosts[id]}</em></div>`).join('')}</div>
+    ${boosts.length ? `<div class="boost-inv">${boosts.map(id => `<div class="bi-chip">${iconImg(BOOSTS[id].icon, 28)}<span><b>${esc(BOOSTS[id].name)}</b><small>${esc(BOOSTS[id].desc)}</small></span><em>×${save.boosts[id]}</em></div>`).join('')}</div>
       <p class="muted bi-note">Choisissez-les dans la fiche d'une zone, juste avant de partir.</p>`
-    : `<p class="muted bi-note">Aucun bonus. Trouvez-en dans les <b>coffres de butin</b> ou achetez-en à la <b>Boutique</b>.</p>`}
-    <h3 class="section-t">Sac <small>${list.length} objet${list.length > 1 ? 's' : ''}</small></h3>
-    <div class="filters">${[['all', 'Tout'], ...Object.entries(SLOTS)].map(([k, l]) => `<button class="chip-btn ${gearFilter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${l}</button>`).join('')}
-      ${list.some(i => i.rarity === 'common') ? '<button class="chip-btn sell" data-act="sellJunk">Vendre les communs</button>' : ''}</div>
-    <div class="inv">${list.length ? list.map(it => {
-      const cur = save.inventory.find(i => i.id === save.equipped[it.slot]);
-      const diff = itemPower(it) - itemPower(cur);
-      return `<button class="inv-item r-${it.rarity}" data-act="item" data-id="${it.id}">
-        ${iconImg(it.icon, 28)}
-        <div><b>${itemName(it)}${it.crafted ? ` <i class="forged">${iconImg('hammer', 12)}</i>` : ''}</b><small>${statLine(it.stat)}</small></div>
-        ${diff > 0 ? '<span class="up">▲</span>' : ''}
-      </button>`;
-    }).join('') : '<p class="muted center">Battez des monstres pour trouver de l\'équipement.</p>'}</div>`;
+    : `<p class="muted bi-note">Aucun bonus. Trouvez-en dans les <b>coffres de butin</b> ou achetez-en à la <b>Boutique</b>.</p>`}`;
 }
 
-// fiche d'un objet : équiper, vendre, améliorer (+N) et recycler en pièces
+// fiche d'un objet : caractéristiques (comparées à l'objet équipé), améliorer (+N) et recycler en pièces
 function itemBody(it, equipped, cur) {
   const r = RARITY[it.rarity], lv = it.lv || 0, c = itemUpgradeCost(it);
   const pips = Array.from({ length: FORGE.upgrade.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('');
+  const cmp = !equipped && cur ? cur : null;
   let up;
   if (c) {
     const have = save.parts[c.slot][c.r], next = statsAt(it.base || it.stat, c.lv);
     up = `<div class="it-up">
-      <div class="iu-h">${iconImg('upg', 18)}<b>Améliorer</b><small>+${lv} → <b>+${c.lv}</b></small></div>
-      <div class="iu-prev">${statLine(it.stat)} <i>›</i> <b>${statLine(next)}</b></div>
+      <div class="iu-h">${iconImg('upg', 20)}<b>Améliorer</b><span class="iu-lv">+${lv} <i>›</i> <b>+${c.lv}</b></span></div>
+      <div class="iu-prev">${statRows(it, { next })}</div>
       <div class="iu-row">
         <span class="iu-cost ${have >= c.parts ? '' : 'bad'}">${partIcon(c.slot, c.r, 16)} ${have}/${c.parts}</span>
-        <span class="iu-cost ${save.gold >= c.gold ? '' : 'bad'}">${iconImg('gold', 14)} ${fmt(c.gold)}</span>
-        <button class="btn primary small" data-v="up" ${canUpgrade(it) ? '' : 'disabled'}>${iconImg('hammer', 16)} Améliorer</button>
+        <span class="iu-cost ${save.gold >= c.gold ? '' : 'bad'}">${iconImg('gold', 16)} ${fmt(c.gold)}</span>
+        <button class="btn green small" data-v="up" ${canUpgrade(it) ? '' : 'disabled'}>${iconImg('hammer', 16)} Améliorer</button>
       </div>
       ${have < c.parts ? `<small class="iu-hint">Il faut des ${esc(PARTS[c.slot].plural.toLowerCase())} (${r.name.toLowerCase()}) : ouvrez des coffres de butin ou recyclez des objets.</small>` : ''}
     </div>`;
-  } else up = `<div class="it-up max">${iconImg('crown', 18)} <b>Amélioration maximale atteinte</b></div>`;
-  return `<div class="item-detail"><span class="id-ic" style="--rc:${r.color}">${iconImg(it.icon, 48)}</span><div>
-      <div style="color:${r.color}">${r.name} · ${SLOTS[it.slot]}${it.crafted ? ' · <span class="forged-t">Forgé</span>' : ''}</div>
-      <div class="big-stats">${statLine(it.stat)}</div>
-      <div class="lv-pips" aria-label="Niveau ${lv}">${pips}</div></div></div>
-    ${!equipped && cur ? `<p class="muted">Actuellement équipé : ${itemName(cur)} (${statLine(cur.stat)})</p>` : ''}
+  } else up = `<div class="it-up max">${iconImg('crown', 20)} <b>Amélioration maximale atteinte</b></div>`;
+  return `<div class="is-card r-${it.rarity}">
+      <span class="is-ic">${iconImg(it.icon, 56)}${lv ? `<em class="lv-badge">+${lv}</em>` : ''}</span>
+      <div class="is-head"><span class="rc-rar">${r.name}</span><span class="is-slot">${SLOTS[it.slot]}${it.crafted ? ' · <span class="forged-t">Forgé +10 %</span>' : ''}${equipped ? ' · <span class="eq-t">Équipé</span>' : ''}</span>
+        <div class="lv-pips" aria-label="Niveau ${lv}">${pips}</div></div>
+    </div>
+    <div class="is-stats">${statRows(it, { cmp })}</div>
+    ${it.effect ? effectBox(it.effect) : ''}
+    ${cmp ? `<p class="is-cmp"><i class="sr-d up">▲</i><i class="sr-d down">▼</i> par rapport à <b>${itemName(cmp)}</b>, équipé</p>` : ''}
     ${up}
-    ${equipped ? '' : `<button class="btn ghost small it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
+    ${equipped ? '' : `<button class="btn small ghost it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
 }
 
 async function itemSheet(id) {
@@ -927,15 +1116,15 @@ async function itemSheet(id) {
   if (!it) return;
   const equipped = save.equipped[it.slot] === id;
   const cur = save.inventory.find(i => i.id === save.equipped[it.slot]);
-  const r = RARITY[it.rarity];
   const wid = 'it-' + Date.now();
   let action = null, changed = false;
   const p = modal({
-    title: `<span class="it-title" style="color:${r.color}">${itemName(it)}</span>`,
+    title: `<span class="it-title r-${it.rarity}">${itemName(it)}</span>`,
+    cls: 'item-modal',
     body: `<div id="${wid}" class="it-sheet">${itemBody(it, equipped, cur)}</div>`,
     buttons: equipped
       ? [{ label: 'Fermer', cls: 'primary', value: null }]
-      : [{ label: `Vendre (${sellValue(it)} or)`, cls: 'ghost', value: 'sell' }, { label: 'Équiper', cls: 'primary', value: 'equip' }],
+      : [{ label: `Vendre ${iconImg('gold', 16)} ${sellValue(it)}`, cls: 'ghost', value: 'sell' }, { label: 'Équiper', cls: 'primary', value: 'equip' }],
     dismissable: true,
   });
   const box = document.getElementById(wid), wrap = box.closest('.modal-wrap');
@@ -949,9 +1138,9 @@ async function itemSheet(id) {
       box.innerHTML = itemBody(it, equipped, cur);
       wrap.querySelector('.it-title').innerHTML = itemName(it);
       const sell = wrap.querySelector('.modal-btns .btn.ghost');
-      if (sell) sell.textContent = `Vendre (${sellValue(it)} or)`;
-      box.querySelector('.id-ic').classList.add('bang');
-      box.querySelector('.big-stats').classList.add('bang');
+      if (sell) sell.innerHTML = `Vendre ${iconImg('gold', 16)} ${sellValue(it)}`;
+      box.querySelector('.is-ic').classList.add('bang');
+      box.querySelector('.is-stats').classList.add('bang');
       refreshTopbar();
       announceAchievements();
       return;
@@ -959,6 +1148,7 @@ async function itemSheet(id) {
     if (b.dataset.v === 'salvage') { sfx('tap'); action = 'salvage'; wrap.click(); }
   });
   const v = await p;
+  const r = RARITY[it.rarity];
   if (v === 'equip') return equipItem(id);
   if (v === 'sell') {
     save.gold += sellValue(it);
@@ -968,7 +1158,7 @@ async function itemSheet(id) {
   if (action === 'salvage') {
     const n = salvageValue(it), ri = rarityIdx(it);
     if (ri >= 2 || it.lv || it.crafted) {
-      const ok = await modal({ title: 'Recycler ?', body: `<p><b style="color:${r.color}">${itemName(it)}</b> sera détruit et donnera <b>${n} ${esc(PARTS[it.slot].plural.toLowerCase())}</b> (${r.name.toLowerCase()}).</p>`, buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Recycler', cls: 'danger', value: true }] });
+      const ok = await modal({ title: 'Recycler ?', body: `<p><b class="r-${it.rarity} rtxt">${itemName(it)}</b> sera détruit et donnera <b>${n} ${esc(PARTS[it.slot].plural.toLowerCase())}</b> (${r.name.toLowerCase()}).</p>`, buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Recycler', cls: 'danger', value: true }] });
       if (!ok) return home();
     }
     if (salvageItem(id)) {
@@ -1070,7 +1260,7 @@ function forgeAnim(result, { title = 'Objet forgé !', fuse = null } = {}) {
         <img class="fa-anvil" src="${anvilURL()}" alt=""><i class="fa-ingot"></i>
         <img class="fa-hammer" src="${hammerURL()}" alt=""><div class="fa-sparks"></div>
       </div>
-      <div class="fa-result" style="--rc:${result.color}"><i class="fa-rays"></i><div class="fa-card">${result.html}</div></div>
+      <div class="fa-result" style="--rc:${result.color}"><i class="fa-rays"></i><div class="fa-card ${result.bare ? 'bare' : ''}">${result.html}</div></div>
       <h2 class="fa-title">${title}</h2>
       <button class="btn primary big fa-ok" disabled>Super !</button>`;
     app.appendChild(w);
@@ -1104,7 +1294,7 @@ async function doCraft() {
   if (!res) return;
   const it = res.item, R = RARITY[it.rarity];
   renderForge();
-  await forgeAnim({ color: R.color, big: r >= 3, html: `${iconImg(it.icon, 56)}<b>${esc(it.name)}</b><small style="color:${R.color}">${R.name} · ${SLOTS[it.slot]}</small><em>${statLine(it.stat)}</em>${res.equipped ? '<span class="fa-eq">Équipé !</span>' : ''}` });
+  await forgeAnim({ color: R.color, big: r >= 3, bare: true, html: itemCard(it, { ribbon: 'Forgé !' }) });
   announceAchievements();
   renderForge();
 }
