@@ -66,7 +66,9 @@ export function toast(html, ms = 2200) {
   if (toastBox.children.length >= 2) { toastQ.push([html, ms]); return; }
   const t = document.createElement('div');
   t.className = 'toast';
-  t.innerHTML = html;
+  // pictogramme à gauche, texte d'un seul bloc (sinon chaque morceau devient un élément de la rangée)
+  const lead = (/^\s*(<img[^>]*>|<span class="part-ic[^>]*>[\s\S]*?<\/span>)/.exec(html) || [''])[0];
+  t.innerHTML = `${lead}<span class="t-txt">${html.slice(lead.length).trim()}</span>`;
   toastBox.appendChild(t);
   setTimeout(() => t.classList.add('out'), ms);
   setTimeout(() => { t.remove(); if (toastQ.length) toast(...toastQ.shift()); }, ms + 400);

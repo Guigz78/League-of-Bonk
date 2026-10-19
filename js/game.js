@@ -302,10 +302,12 @@ async function questSheet() {
   if (!battle) home();
 }
 
+// « Coffre en argent » -> « Argent » (étiquette courte d'une case de connexion)
+const chestShort = t => { const n = chestName(t).replace(/^Coffre\s+(en\s+)?/i, ''); return n.charAt(0).toUpperCase() + n.slice(1); };
 function loginReward(R, size = 30) {
-  if (R.chest != null) return `<img class="chest-i" src="${chestURL(R.chest)}" alt=""><b>${esc(chestName(R.chest).replace('Coffre ', ''))}${R.gold ? ` +${R.gold}` : ''}</b>`;
-  if (R.boost) return `${iconImg('potion', size)}<b>Bonus</b>`;
-  return `${iconImg('gold', size)}<b>${R.gold} or</b>`;
+  if (R.chest != null) return `<span class="ld-ic"><img class="chest-i" src="${chestURL(R.chest)}" alt=""></span><b style="--tc:${LOOT_TIERS[R.chest]?.color || '#fff'}">${esc(chestShort(R.chest))}</b>${R.gold ? `<small>+${R.gold} or</small>` : '<small>Coffre</small>'}`;
+  if (R.boost) return `<span class="ld-ic">${iconImg('potion', size)}</span><b>Bonus</b><small>au hasard</small>`;
+  return `<span class="ld-ic">${iconImg('gold', size)}</span><b>${R.gold}</b><small>or</small>`;
 }
 
 async function loginSheet() {
@@ -313,7 +315,7 @@ async function loginSheet() {
   const body = () => {
     const L = loginState(), cur = L.ready ? L.day : -1, got = L.ready ? L.day : (L.day || 7);
     return `<div class="login-track">${LOGIN_REWARDS.map((R, k) => `<div class="lday ${k < got ? 'got' : ''} ${k === cur ? 'today' : ''} ${k === 6 ? 'big' : ''}">
-        <em>Jour ${k + 1}</em>${loginReward(R)}</div>`).join('')}</div>
+        <em>Jour ${k + 1}</em>${loginReward(R)}${k < got ? `<i class="ld-ok" aria-label="Reçu">${iconImg('check', 14)}</i>` : ''}</div>`).join('')}</div>
       <p class="login-note">${L.ready ? 'Revenez chaque jour : le 7e jour donne un <b>coffre en or</b>.' : 'Récompense du jour reçue. Revenez demain !'}</p>`;
   };
   const L0 = loginState();
@@ -649,8 +651,10 @@ function choiceCard(c, i, tag = 'button') {
   let info = null;
   try { info = run?.choiceInfo?.(c); } catch (e) { info = null; }
   const f = choiceMeta(c, info);
-  const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null).slice(0, 4);
   const val = v => esc(typeof v === 'number' ? v.toLocaleString('fr-FR') : String(v));
+  // lignes « avant → après » (sans celles qui ne changent rien)
+  const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null && (l.from == null || l.from === '' || val(l.from) !== val(l.to))).slice(0, 4);
+  const hint = typeof info?.hint === 'string' && info.hint && c.kind !== 'evo' ? info.hint : '';
   const pips = f.lv && !(f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome')) ? `<span class="cu-pips" aria-label="Niveau ${f.lv}">${Array.from({ length: 5 }, (_, k) => `<i class="${k + 1 < f.lv ? 'on' : k + 1 === f.lv ? 'new' : ''}"></i>`).join('')}</span>` : '';
   const isNew = f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome');
   const ri = c.rarity ?? info?.rarity;
@@ -662,7 +666,8 @@ function choiceCard(c, i, tag = 'button') {
       <span class="cu-head"><em>${f.tag}${f.lv && !isNew ? ` · niv. ${f.lv}` : ''}${rar && c.kind !== 'evo' ? ` · <span class="cu-rar">${esc(rar.name)}</span>` : ''}</em>${pips}</span>
       <b>${esc(f.name)}</b>
       <small>${esc(f.desc)}</small>
-      ${lines.length ? `<span class="cu-lines">${lines.map(l => `<span class="cu-l"><span>${esc(l.label)}</span>${l.from != null && l.from !== '' ? `<s>${val(l.from)}</s><i>›</i>` : '<i class="nw">›</i>'}<b>${val(l.to)}</b></span>`).join('')}</span>` : ''}
+      ${lines.length ? `<span class="cu-lines">${lines.map(l => `<span class="cu-l ${String(l.to).length > 9 ? 'long' : ''}"><span>${esc(l.label)}</span>${l.from != null && l.from !== '' ? `<s>${val(l.from)}</s><i>›</i>` : '<i class="nw">›</i>'}<b>${val(l.to)}</b></span>`).join('')}</span>` : ''}
+      ${hint ? `<span class="cu-hint ${/possédé/.test(hint) ? 'ok' : ''}">${iconImg('star', 12)}<span><strong>Évolution</strong> ${esc(hint.replace(/^Évolution\s*:\s*/, ''))}</span></span>` : ''}
     </span>
   </${tag}>`;
 }
@@ -758,7 +763,7 @@ function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration
 
 function chestMenu(c, gold, done) {
   const w = overlay(`<div class="lvlup chest">
-    ${luHead('Coffre', c.kind === 'evo' ? 'Votre arme évolue !' : 'Amélioration gratuite', c.kind === 'evo' ? 'Évolution' : 'Coffre ouvert')}
+    ${luHead(c.kind === 'evo' ? 'Évolution' : 'Coffre ouvert', c.kind === 'evo' ? 'Votre arme atteint sa forme ultime' : 'Amélioration gratuite', 'Coffre')}
     <div class="cards">${choiceCard(c, 0, 'div')}</div>
     <p class="lu-gold">${iconImg('gold', 20)} <b>+${fmt(gold)}</b> or</p>
     <button class="btn primary big lu-ok">Continuer</button>
@@ -776,17 +781,18 @@ const bossImg = z => {
 
 function portalMenu(info, choose) {
   const from = ZONES[info.from] || ZONES[0], to = info.to == null ? null : ZONES[info.to];
-  const nW = (info.stage || 0) + 1, cleared = info.cleared?.length ? info.cleared : [from.id];
+  // numéros de monde : ceux de la carte (comme le HUD), pas le rang dans l'expédition
+  const nFrom = from.id + 1, cleared = info.cleared?.length ? info.cleared : [from.id];
   const stat = (ic, v, l) => `<div>${iconImg(ic, 18)}<b>${v}</b><small>${l}</small></div>`;
   const w = overlay(`<div class="portal-menu ${to ? '' : 'final'}">
     <div class="pm-vortex"><i></i><i></i><i></i><b>${iconImg(to ? 'portal' : 'crown', 34)}</b></div>
-    <span class="eyebrow">${to ? `Monde ${nW} vaincu · ${esc(from.name)}` : 'Les six mondes sont vaincus'}</span>
+    <span class="eyebrow">${to ? `Monde ${nFrom} vaincu · ${esc(from.name)}` : 'Les six mondes sont vaincus'}</span>
     <h2>${to ? 'Portail ouvert' : 'Victoire finale'}</h2>
     <p class="pm-sub">${to ? 'Continuez l\'expédition ou rentrez avec votre butin.' : 'Le monde est sauvé. Bravo, champion !'}</p>
     <div class="pm-stats">${stat('clock', fmtTime(info.time || 0), 'Temps')}${stat('skull', fmt(info.kills || 0), 'Monstres')}${stat('gold', fmt(info.gold || 0), 'Or')}${stat('chest', info.loot || 0, 'Coffres')}</div>
     <div class="pm-bosses">${cleared.map(id => `<span class="pm-b" title="${esc(ZONES[id].name)}">${bossImg(ZONES[id])}<i>✓</i></span>`).join('')}</div>
     ${to ? `<button class="pm-next" data-v="next" style="background-image:url(${zoneBannerURL(to)})">
-        <span class="pm-n">${String(nW + 1).padStart(2, '0')}</span>
+        <span class="pm-n">${String(to.id + 1).padStart(2, '0')}</span>
         <span class="pm-t"><small>Monde suivant</small><b>${esc(to.name)}</b><em>Plus dur, plus de butin</em></span>
         <span class="pm-boss">${bossImg(to)}</span><i class="pm-go">Entrer</i>
       </button>
@@ -809,16 +815,25 @@ function portalMenu(info, choose) {
 async function pauseMenu(resume) {
   const p = run.p, z = run.zone;
   const sw = (id, ic, label, on) => `<label class="set-row">${iconImg(ic, 20)}<span class="set-l">${label}</span><span class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></span></label>`;
+  // build : armes puis tomes, niveau en cases (1 à 5), bord de la rareté la plus haute obtenue
+  const pips = lv => `<span class="bl-pips" aria-label="Niveau ${lv}">${Array.from({ length: DATA.MAX_LEVEL || 5 }, (_, k) => `<i class="${k < lv ? 'on' : ''}"></i>`).join('')}</span>`;
+  const evoName = id => DATA.WEAPON_EVOS?.[id]?.name || WEAPONS[id].name;
+  const wRow = w => `<span class="bl r${w.r || 0} ${w.evo ? 'evo' : ''}">${iconImg(w.evo ? DATA.WEAPON_EVOS?.[w.id]?.icon || WEAPONS[w.id].icon : WEAPONS[w.id].icon, 20)}<span class="bl-t"><b>${esc(w.evo ? evoName(w.id) : WEAPONS[w.id].name)}</b>${w.evo ? '<small>Évolution</small>' : pips(w.lv)}</span></span>`;
+  const tRow = ([id, lv]) => `<span class="bl t r${p.tr?.[id] || 0}">${iconImg(TOMES[id].icon, 20)}<span class="bl-t"><b>${esc(TOMES[id].name)}</b>${pips(lv)}</span></span>`;
+  const tomes = Object.entries(p.tomes || {});
+  const hpK = Math.max(0, Math.min(1, p.hp / Math.max(1, p.maxHp)));
   const v = await modal({
-    title: `Pause ${run.diffId ? `<span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : ''}`,
+    title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1}/${ZONES.length} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
     body: `<div class="pz-sum">
-        <div><small>Monde</small><b>${(z?.id ?? 0) + 1}/${ZONES.length}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
-        <div><small>PV</small><b>${fmt(Math.max(0, p.hp))}/${fmt(p.maxHp)}</b></div><div><small>Or</small><b>${fmt(run.gold)}</b></div>
+        <div><small>Temps</small><b>${fmtTime(run.runTime ?? run.time ?? 0)}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
+        <div><small>Monstres</small><b>${fmt(run.kills || 0)}</b></div><div><small>Or</small><b class="gold-t">${fmt(run.gold)}</b></div>
       </div>
-      <h4>Équipement de la partie</h4>
-      <div class="cur-build">${p.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 18)} ${esc(WEAPONS[w.id].name)} <b>${w.lv}</b></span>`).join('')}${Object.entries(p.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 18)} ${esc(TOMES[id].name)} <b>${lv}</b></span>`).join('')}</div>
-      ${runBoosts.length ? `<h4>Bonus</h4><div class="cur-build boosts-on">${runBoosts.map(id => `<span>${iconImg(BOOSTS[id].icon, 18)} ${esc(BOOSTS[id].name)}</span>`).join('')}</div>` : ''}
+      <div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
+      <h4>Armes <small>${p.weapons.length}/${DATA.MAX_WEAPONS || 4}</small></h4>
+      <div class="cur-build">${p.weapons.map(wRow).join('')}</div>
+      ${tomes.length ? `<h4>Tomes <small>${tomes.length}/${DATA.MAX_TOMES || 4}</small></h4><div class="cur-build">${tomes.map(tRow).join('')}</div>` : ''}
+      ${runBoosts.length ? `<h4>Bonus</h4><div class="cur-build boosts-on">${runBoosts.map(id => `<span class="bl">${iconImg(BOOSTS[id].icon, 20)}<span class="bl-t"><b>${esc(BOOSTS[id].name)}</b></span></span>`).join('')}</div>` : ''}
       <h4>Options</h4>
       <div class="set-list">${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
       <details class="pz-help"><summary>${iconImg('info', 16)} Comment jouer</summary>
@@ -852,13 +867,16 @@ async function pauseMenu(resume) {
 }
 
 async function defeatMenu(canRevive) {
-  const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0;
-  const kept = nLoot ? `<p class="muted">Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b> et les mondes vaincus sont conservés.</p>` : '';
+  const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0, z = run.zone;
+  const kept = nLoot || run.cleared?.length ? `<p class="ko-kept">${iconImg('chest', 18)}<span>${nLoot ? `Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b>` : 'Vos mondes vaincus'}${nLoot && run.cleared?.length ? ' et les mondes vaincus sont conservés' : ' sont conservés'}.</span></p>` : '';
   const v = await modal({
-    title: 'K.O.',
+    title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span>K.O.`,
     cls: 'ko-modal',
-    body: `<div class="ko-big"><b>${t}</b><small>de survie · ${fmt(run.kills || 0)} monstres</small></div>` + (canRevive
-      ? `<p><b>Regardez une courte publicité</b> pour revenir avec tous vos PV. Les monstres autour de vous seront balayés.</p><p class="muted">Possible une fois par partie.</p>${kept}`
+    body: `<div class="pz-sum">
+        <div><small>Survie</small><b>${t}</b></div><div><small>Niveau</small><b>${run.p.level}</b></div>
+        <div><small>Monstres</small><b>${fmt(run.kills || 0)}</b></div><div><small>Or</small><b class="gold-t">${fmt(run.gold || 0)}</b></div>
+      </div>` + (canRevive
+      ? `<div class="ko-offer"><span class="ko-ic">${iconImg('heart', 26)}</span><span><b>Deuxième chance</b><small>Regardez une courte publicité pour revenir avec <b>tous vos PV</b>. Les monstres autour de vous sont balayés. Une fois par partie.</small></span></div>${kept}`
       : kept),
     buttons: canRevive
       ? [{ label: 'Terminer', cls: 'ghost', value: 'quit' }, { label: `${iconImg('heart', 16)} Revivre`, cls: 'primary', value: 'ad' }]
@@ -887,6 +905,7 @@ function endRun(z, sum) {
   for (const c of loot) save.pendingChests.push({ tier: c.tier | 0, zone: Math.max(0, Math.min(ZONES.length - 1, (c.zone ?? start.id) | 0)) });
   persist();
   st.kills += sum.kills;
+  const record = st.bestLevel > 0 && sum.level > st.bestLevel; // nouveau meilleur niveau atteint
   st.bestLevel = Math.max(st.bestLevel, sum.level);
   st.bestStage = Math.max(st.bestStage || 0, stage);
   st.totems = (st.totems || 0) + heat;
@@ -947,7 +966,7 @@ function endRun(z, sum) {
   persist();
   const got = checkAchievements();
   persist();
-  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got,
+  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record,
     final: sum.final ?? (sum.win && cleared.includes(ZONES.length - 1)), reached: ZONES[Math.min(ZONES.length - 1, start.id + stage)] };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
@@ -1131,7 +1150,7 @@ function chestScreen(done, afterRun = false) {
   mount(`<div class="chest-screen">
     <h2 class="rs-title">${afterRun ? 'Butin de l\'expédition' : 'Coffres de butin'}</h2>
     <p class="center muted cs-hint">Touchez un coffre pour l'ouvrir</p>
-    <div class="chest-grid ${list.length <= 4 ? 'few' : ''}" style="--n:${Math.min(2, list.length)}">${list.map((c, i) => `<button class="cg-card t${c.tier}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
+    <div class="chest-grid ${list.length <= 4 ? 'few' : ''} ${list.length === 3 ? 'n3' : ''}" style="--n:${list.length === 3 ? 3 : Math.min(2, list.length)}">${list.map((c, i) => `<button class="cg-card t${c.tier}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
         <span class="cg-glow"></span><img class="cg-img" src="${chestURL(c.tier)}" alt="">
         <b>${esc(LOOT_TIERS[c.tier].name)}</b><small>${esc(ZONES[c.zone]?.name || '')}</small>
       </button>`).join('')}</div>
@@ -1198,16 +1217,24 @@ function summaryScreen(R, opened = []) {
   const A = lootAgg(opened), nParts = A.parts.reduce((n, p) => n + p.n, 0), nBoosts = Object.values(A.boosts).reduce((n, v) => n + v, 0);
   const pending = save.pendingChests.length;
   const chestLine = opened.length
-    ? `<div class="rw loot-sum">${iconImg('chest', 22)} <b>${opened.length} coffre${opened.length > 1 ? 's' : ''} ouvert${opened.length > 1 ? 's' : ''}</b>
-        <span class="ls-chips">${nParts ? `<span>${iconImg('hammer', 14)} ${nParts} pièce${nParts > 1 ? 's' : ''}</span>` : ''}${nBoosts ? `<span>${iconImg('potion', 14)} ${nBoosts} bonus</span>` : ''}${A.items.length ? `<span>${iconImg('sword', 14)} ${A.items.length} objet${A.items.length > 1 ? 's' : ''}</span>` : ''}${A.upgs.length ? `<span>${iconImg('upg', 14)} ${A.upgs.length} amélioration${A.upgs.length > 1 ? 's' : ''} gratuite${A.upgs.length > 1 ? 's' : ''}</span>` : ''}<span class="gold-t">${iconImg('gold', 14)} +${fmt(A.gold)}</span></span></div>`
+    ? `<div class="rw loot-sum">${iconImg('chest', 22)}<span><b>${opened.length} coffre${opened.length > 1 ? 's' : ''} ouvert${opened.length > 1 ? 's' : ''}</b>
+        <span class="ls-chips">${nParts ? `<span>${iconImg('hammer', 14)} ${nParts} pièce${nParts > 1 ? 's' : ''}</span>` : ''}${nBoosts ? `<span>${iconImg('potion', 14)} ${nBoosts} bonus</span>` : ''}${A.items.length ? `<span>${iconImg('sword', 14)} ${A.items.length} objet${A.items.length > 1 ? 's' : ''}</span>` : ''}${A.upgs.length ? `<span>${iconImg('upg', 14)} ${A.upgs.length} amélioration${A.upgs.length > 1 ? 's' : ''} gratuite${A.upgs.length > 1 ? 's' : ''}</span>` : ''}<span class="gold-t">${iconImg('gold', 14)} +${fmt(A.gold)}</span></span></span></div>`
     : '';
-  const pendLine = pending ? `<div class="rw">${iconImg('chest', 22)} <span><b>${pending} coffre${pending > 1 ? 's' : ''}</b> à ouvrir plus tard, depuis l'onglet Aventure.</span></div>` : '';
-  const heatLine = R.heat ? `<div class="rw heat-line">${iconImg('i_burn', 22)} Totems de défi ×${R.heat} : <b>+${fmt(R.heatGold)} or</b> <small>+${Math.round(HEAT_GOLD * 100)} % d'or par totem activé</small></div>` : '';
+  const pendLine = pending ? `<div class="rw">${iconImg('chest', 22)}<span><b>${pending} coffre${pending > 1 ? 's' : ''}</b> à ouvrir plus tard, depuis l'onglet Aventure.</span></div>` : '';
+  const heatLine = R.heat ? `<div class="rw heat-line">${iconImg('i_burn', 22)}<span>Totems de défi ×${R.heat} : <b>+${fmt(R.heatGold)} or</b><small>+${Math.round(HEAT_GOLD * 100)} % d'or par totem activé</small></span></div>` : '';
+  // progression : les 6 mondes (vaincus, vaincus pendant cette expédition, débloqué, verrouillés) et leurs niveaux battus
+  const prog = `<div class="w-prog">${ZONES.map((z, i) => {
+    const now = cleared.includes(i), done = save.zoneCleared[i], open = i <= save.unlockedZone, n = save.diffCleared[i] || 0;
+    return `<span class="wp ${done ? 'done' : open ? 'open' : 'locked'} ${now ? 'now' : ''} ${R.newZone === i ? 'new' : ''}" title="${esc(z.name)}">
+      ${R.newZone === i ? '<em>Nouveau</em>' : now ? '<em>Vaincu</em>' : ''}<b>${String(i + 1).padStart(2, '0')}</b>
+      <i class="wp-st">${DIFFICULTIES.map((d, j) => `<i class="${j < n ? 'on' : ''}" style="--dc:${d.color}"></i>`).join('')}</i></span>`;
+  }).join('')}</div>`;
+  const nDone = save.zoneCleared.filter(Boolean).length;
   const worldCards = R.worlds.map((w, i) => `<div class="world-res" style="--d:${(0.15 + i * 0.12).toFixed(2)}s">
       <div class="wr-head" style="background-image:url(${zoneBannerURL(w.z)})">
         <span class="wr-boss">${bossImg(w.z)}</span>
-        <span class="wr-t"><small>Monde ${w.n}</small><b>${esc(w.z.name)}</b></span>
-        <span class="wr-ok">✓ Boss vaincu</span>
+        <span class="wr-t"><small>Monde ${w.z.id + 1}</small><b>${esc(w.z.name)}</b></span>
+        <span class="wr-ok">${iconImg('check', 12)} Boss vaincu</span>
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
@@ -1224,14 +1251,14 @@ function summaryScreen(R, opened = []) {
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
       <div><b class="cu" data-n="${sum.kills}">${fmt(sum.kills)}</b><small>Monstres</small></div>
-      <div><b>${sum.level}</b><small>Niveau</small></div>
+      <div class="${R.record ? 'rec' : ''}"><b>${sum.level}</b><small>${R.record ? 'Record' : 'Niveau'}</small></div>
       <div><b class="gold-t cu" data-n="${R.gold}">${fmt(R.gold)}</b><small>Or gagné</small></div>
     </div>
     ${worldCards ? `<h3 class="section-t">Mondes vaincus <small>${cleared.length}</small></h3><div class="worlds-res">${worldCards}</div>` : ''}
-    <div class="summary">
-      ${heatLine}${chestLine}${pendLine}
-    </div>
-    ${R.found.length ? `<h3 class="section-t">Objets des boss <small>${R.found.length}</small></h3><div class="inv-grid found">${R.found.map(it => itemTile(it, { act: false })).join('')}</div>` : ''}
+    ${heatLine || chestLine || pendLine ? `<div class="summary">${heatLine}${chestLine}${pendLine}</div>` : ''}
+    <h3 class="section-t">Progression <small>${nDone}/${ZONES.length} mondes</small></h3>
+    ${prog}
+    ${R.found.length ? `<h3 class="section-t">Objets trouvés <small>${R.found.length}</small></h3><div class="inv-grid found">${R.found.map(it => itemTile(it, { act: false })).join('')}</div>` : ''}
     ${R.got?.length ? `<h3 class="section-t">Succès débloqués <small>+${fmt(R.got.reduce((n, a) => n + a.gold, 0))} or</small></h3>
       <div class="ach-got">${R.got.map((a, i) => `<span style="--d:${(0.3 + i * 0.08).toFixed(2)}s">${iconImg('crown', 22)}<b>${esc(a.name)}</b><em>${iconImg('gold', 14)} ${a.gold}</em></span>`).join('')}</div>` : ''}
     <h3 class="section-t">Build <small>${sum.evo ? esc(EVOLUTIONS[save.cls][sum.evo].name) : `niveau ${sum.level}`}</small></h3>
@@ -1356,10 +1383,11 @@ function itemBody(it, equipped, cur) {
       <span class="is-ic">${iconImg(it.icon, 56)}${lv ? `<em class="lv-badge">+${lv}</em>` : ''}</span>
       <div class="is-head"><span class="rc-rar">${r.name}</span><span class="is-slot">${SLOTS[it.slot]}${it.crafted ? ' · <span class="forged-t">Forgé +10 %</span>' : ''}${equipped ? ' · <span class="eq-t">Équipé</span>' : ''}</span>
         <div class="lv-pips" aria-label="Niveau ${lv}">${pips}</div></div>
+      <span class="is-pow"><small>Puissance</small><b>${fmt(itemPower(it))}</b>${cmp ? (() => { const d = Math.round(itemPower(it) - itemPower(cmp)); return d ? `<i class="sr-d ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmt(Math.abs(d))}</i>` : ''; })() : ''}</span>
     </div>
     <div class="is-stats">${statRows(it, { cmp })}</div>
     ${it.effect ? effectBox(it.effect) : ''}
-    ${cmp ? `<p class="is-cmp"><i class="sr-d up">▲</i><i class="sr-d down">▼</i> par rapport à <b>${itemName(cmp)}</b>, équipé</p>` : ''}
+    ${cmp ? `<p class="is-cmp"><i class="sr-d up">▲</i><i class="sr-d down">▼</i><span>par rapport à <b>${itemName(cmp)}</b>, équipé</span></p>` : ''}
     ${up}
     ${equipped ? '' : `<button class="btn small ghost it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
 }
@@ -1516,8 +1544,10 @@ function forgeAnim(result, { title = 'Objet forgé', fuse = null } = {}) {
         <img class="fa-anvil" src="${anvilURL()}" alt=""><i class="fa-ingot"></i>
         <img class="fa-hammer" src="${hammerURL()}" alt=""><div class="fa-sparks"></div>
       </div>
-      <div class="fa-result" style="--rc:${result.color}"><i class="fa-rays"></i><div class="fa-card ${result.bare ? 'bare' : ''}">${result.html}</div></div>
-      <h2 class="fa-title">${title}</h2>
+      <p class="fa-wait eyebrow">${fuse ? 'Fusion en cours' : 'Forge en cours'}</p>
+      <div class="fa-result" style="--rc:${result.color}"><i class="fa-rays"></i>
+        <div class="fa-head"><span class="eyebrow">${fuse ? 'Forge · fusion' : 'Forge · fabrication'}</span><h2 class="fa-title">${title}</h2></div>
+        <div class="fa-card ${result.bare ? 'bare' : ''}">${result.html}</div></div>
       <button class="btn primary big fa-ok" disabled>Continuer</button>`;
     app.appendChild(w);
     requestAnimationFrame(() => w.classList.add('in'));
