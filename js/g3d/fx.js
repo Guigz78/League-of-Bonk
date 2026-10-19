@@ -645,6 +645,9 @@ export class Fx {
   // particules propres au rendu
   particles(dt) {
     const g = this.gfx, t = g.t;
+    // plafonds : on oublie les plus anciens (une avalanche d'événements ne doit jamais faire ramer)
+    const lite = g.lite ? 0.5 : 1, cap = (a, n) => { n = Math.round(n * lite); if (a.length > n) a.splice(0, a.length - n); };
+    cap(this.rings, 140); cap(this.pillars, 24); cap(this.bursts, 60); cap(this.bolts, 60); cap(this.halos, 24); cap(this.sparks, 200); cap(this.stars, 300); cap(this.puffs, 200); cap(this.debris, 200);
     // étincelles : petits traits
     let n = 0;
     for (const s of this.sparks) {

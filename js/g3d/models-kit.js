@@ -44,6 +44,27 @@ function wedge() { // prisme triangulaire (oreilles, dents, piquants plats) : ar
   const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.translate(0, 0, -0.5);
   return g;
 }
+// version allégée d'une primitive (monstres en très grand nombre) : moins de facettes, mêmes proportions
+const LOD = new Map();
+export function lodKey(key) {
+  let r = LOD.get(key);
+  if (r) return r;
+  const [k, a, b, c] = key.split(':'), n = (v, d) => +v || d;
+  switch (k) {
+    case 'rbox': r = 'box'; break;
+    case 'sph': r = `sph:${Math.max(4, n(a, 8) - 2)}:${Math.max(3, n(b, 6) - 2)}`; break;
+    case 'hemi': r = `hemi:${Math.max(5, n(a, 8) - 2)}:${Math.max(2, n(b, 4) - 1)}`; break;
+    case 'cyl': r = `cyl:${Math.max(4, n(a, 8) - 3)}`; break;
+    case 'cone': r = `cone:${Math.max(3, n(a, 6) - 1)}`; break;
+    case 'frust': r = `frust:${a}:${b}:${Math.max(4, n(c, 8) - 3)}`; break;
+    case 'tor': r = `tor:${n(a, 0.1)}:${Math.max(3, n(b, 4) - 1)}:${Math.max(6, n(c, 12) - 4)}`; break;
+    case 'cap': r = `cap:${n(a, 1)}:${Math.max(4, n(b, 6) - 2)}`; break;
+    case 'ico': r = 'ico:0'; break;
+    default: r = key;
+  }
+  LOD.set(key, r);
+  return r;
+}
 export function prim(key) {
   let g = PRIM.get(key);
   if (g) return g;
@@ -99,7 +120,7 @@ export class Shape {
   }
   // ajoute une primitive : grad = assombrit le bas (volume), glow = émission (0..1+)
   add(key, color, m, o = {}) {
-    const g = prim(key), P = g.attributes.position, grad = o.grad ?? 0.2, glow = o.glow || 0, cu = this.cur;
+    const g = prim(this.lod ? lodKey(key) : key), P = g.attributes.position, grad = o.grad ?? 0.2, glow = o.glow || 0, cu = this.cur;
     _c.set(color);
     if (this.tint) _c.lerp(_c2.set(this.tint[0]), this.tint[1]);
     const v = new THREE.Vector3();

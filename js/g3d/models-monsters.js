@@ -549,10 +549,10 @@ export const BOSS = {}; // rempli par models-bosses.js
 
 // ---------- Construction (mise en cache par type + variante) ----------
 const BUILT = new Map();
-function buildDef(def, v) {
-  const key = def.name + ':' + v;
+function buildDef(def, v, lod = false) {
+  const key = def.name + ':' + v + (lod ? ':lod' : '');
   if (BUILT.has(key)) return BUILT.get(key);
-  const s = new Shape(true); s.lo = v !== 'b';
+  const s = new Shape(true); s.lo = v !== 'b'; s.lod = lod; // lod : facettes réduites (foule de monstres)
   const P = { m: def.pal[0], d: def.pal[1], l: def.pal[2] };
   const c = { s, P, v, def, elite: v === 'e', boss: v === 'b', h: 2, body: [0.05, 0.05, 0, 0], ghost: 0, crown: () => {} };
   if (c.elite) c.crown = (x, y, z, w) => crown(s, x, y, z, w);
@@ -596,9 +596,12 @@ class Batch {
     this.max = max;
   }
   end() {
-    const m = this.mesh;
-    m.count = this.n; m.visible = this.n > 0;
-    if (this.n) { m.instanceMatrix.needsUpdate = true; this.iA.needsUpdate = true; this.iB.needsUpdate = true; }
+    const m = this.mesh, n = this.n;
+    m.count = n; m.visible = n > 0;
+    if (!n) return;
+    // n'envoie au GPU que les instances utilisées
+    const im = m.instanceMatrix; im.clearUpdateRanges(); im.addUpdateRange(0, n * 16); im.needsUpdate = true;
+    for (const at of [this.iA, this.iB]) { at.clearUpdateRanges(); at.addUpdateRange(0, n * 4); at.needsUpdate = true; }
   }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }
@@ -615,12 +618,17 @@ export class MonsterPool {
     this.extra = B.extra ? B.extra(this) : null; // boss : effets propres
     scene.add(this.mesh);
   }
-  get n() { return this.main.n + (this.fade ? this.fade.n : 0); }
-  begin() { this.main.n = 0; if (this.fade) this.fade.n = 0; }
+  get n() { return this.main.n + (this.fade ? this.fade.n : 0) + (this.lo ? this.lo.n : 0); }
+  begin() { this.main.n = 0; if (this.fade) this.fade.n = 0; if (this.lo) this.lo.n = 0; }
+  // lot allégé (moins de facettes) utilisé quand le moteur signale une foule (useLo) ; créé à la demande
+  loBatch() {
+    if (!this.lo) { this.baseLo = buildDef(this.def, 'n', true).s.geometry(); this.lo = new Batch(this, this.baseLo, this.main.max, false); this.lo.mesh.name += ':lod'; this.scene.add(this.lo.mesh); }
+    return this.lo;
+  }
   add(e, s) {
     // translucide (alpha < 0,85) → lot tramé ; sinon lot opaque
     const al = (s.alpha ?? 1) * this.alpha;
-    let L = this.main;
+    let L = this.useLo && this.v === 'n' && !this.extra ? this.loBatch() : this.main;
     if (al < 0.85) {
       if (al <= 0.02) return;
       if (!this.fade) { this.fade = new Batch(this, this.base, 16, true); this.scene.add(this.fade.mesh); }
@@ -640,19 +648,20 @@ export class MonsterPool {
     const act = e && e.act;
     if (act && act.stage === 0) pw = 1; else if (act) pw = 0.35;
     if (e && e.boss && (e.phase === 'intro' || e.phase === 'roar' || e.phase === 'aim' || e.phase === 'ringW' || e.phase === 'summonW')) pw = 1;
-    if (e && L === this.main) { e._m3p = (e._m3p || 0) + (pw - (e._m3p || 0)) * 0.25; pw = e._m3p; } else if (e) pw = e._m3p || 0;
+    if (e && L !== this.fade) { e._m3p = (e._m3p || 0) + (pw - (e._m3p || 0)) * 0.25; pw = e._m3p; } else if (e) pw = e._m3p || 0;
     const A = L.iA.array, Bb = L.iB.array, q = i * 4;
     A[q] = s.anim || 0; A[q + 1] = clamp((s.flash || 0) * (big ? 0.55 : 1), 0, 1); A[q + 2] = al; A[q + 3] = s.mad ? 0.8 : 0;
     Bb[q] = pw; Bb[q + 1] = s.freeze ? 1 : 0; Bb[q + 2] = s.mad ? 1 : 0; Bb[q + 3] = 0;
     if (this.extra) this.extra.add(e, s, i);
   }
   end() {
-    this.main.end(); if (this.fade) this.fade.end();
+    this.main.end(); if (this.fade) this.fade.end(); if (this.lo) this.lo.end();
     if (this.extra) this.extra.end(this.n);
   }
   dispose() {
     this.scene.remove(this.main.mesh); this.main.dispose();
     if (this.fade) { this.scene.remove(this.fade.mesh); this.fade.dispose(); }
+    if (this.lo) { this.scene.remove(this.lo.mesh); this.lo.dispose(); this.baseLo.dispose(); }
     this.base.dispose();
     if (this.extra) this.extra.dispose();
   }

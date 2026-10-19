@@ -29,13 +29,15 @@ export function supported() {
 }
 
 const FOV = 32, VIEW_W = 22; // ≈ 460 px de large au niveau du héros (écran portrait)
+const QSTEPS = [1, 0.85, 0.72, 0.6]; // paliers de résolution de la 3D
+let qLevel = 0, qLite = false;       // gardés d'un monde à l'autre (run.nextWorld recrée le rendu)
 
 export class Gfx {
   constructor(run, canvas) {
     this.run = run;
     this.cv = canvas;
     this.t = 0; this.dt = 0;
-    this.quality = 1; this.frameMs = 16; this.slowT = 0;
+    this.quality = QSTEPS[qLevel]; this.frameMs = 16; this.slowT = 0; this.fastT = 0; this.badT = []; this.lite = false;
     // toile WebGL sous la toile 2D (qui garde les entrées et l'interface dessinée)
     const c3 = this.c3 = document.createElement('canvas');
     c3.className = 'cv3d';
@@ -79,12 +81,14 @@ export class Gfx {
     this.pools = new Map();
     this.pops = [];
     for (const d of run.zone.monsters) { this.pool(d, 'n'); if (d.elite) this.pool(d, 'e'); }
+    for (const P of this.pools.values()) if (P.v === 'n' && !P.extra) P.loBatch?.(); // modèles allégés prêts avant la première foule
     this.ms = { x: 0, y: 0, z: 0, rot: 0, scale: 1, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
     // caméra
     this.cam = { x: p.x, y: p.y, lx: 0, ly: 0, z: 1 };
     this.v3 = new THREE.Vector3();
     this.overlay = new Overlay(this, canvas);
     this.resize();
+    if (qLite) this.setLite(true);
     this.world.refresh(p.x, p.y);
   }
 
@@ -112,15 +116,30 @@ export class Gfx {
     this.overlay.resize(vw, vh);
   }
 
-  // si l'appareil peine, on baisse la résolution de la 3D (l'interface reste nette)
+  // qualité automatique par paliers : résolution de la 3D (l'interface reste nette), puis mode allégé (moins de
+  // détails au sol et de particules). On remonte d'un palier quand l'appareil a de la marge un bon moment, mais
+  // jamais vers un palier qui a ramé il y a peu (pas de va-et-vient). Le palier est gardé d'un monde à l'autre.
   perf(dt) {
-    if (!dt) return;
+    if (!dt || dt > 0.25) return; // à-coup isolé (onglet en arrière-plan…) : ignoré
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
-    if (this.frameMs > 23 && this.quality > 0.62) {
-      this.slowT += dt;
-      if (this.slowT > 2.5) { this.slowT = 0; this.quality = Math.max(0.6, this.quality - 0.15); this.resize(); }
-    } else this.slowT = 0;
+    const n = QSTEPS.length;
+    if (this.frameMs > 24) {
+      this.slowT += dt; this.fastT = 0;
+      if (this.slowT > 2.5) {
+        this.slowT = 0; this.frameMs = 18;
+        this.badT[qLevel] = this.t;
+        if (qLevel < n - 1) { qLevel++; this.quality = QSTEPS[qLevel]; this.resize(); } else if (!this.lite) this.setLite(true);
+      }
+    } else if (this.frameMs < 17.5) {
+      this.slowT = 0; this.fastT += dt;
+      if (this.fastT > 8) {
+        this.fastT = 0;
+        if (this.lite) this.setLite(false);
+        else if (qLevel > 0 && this.t - (this.badT[qLevel - 1] ?? -1e9) > 45) { qLevel--; this.quality = QSTEPS[qLevel]; this.resize(); }
+      }
+    } else { this.slowT = 0; this.fastT = 0; }
   }
+  setLite(on) { this.lite = qLite = on; this.world.setLite(on); }
 
   // caméra haute fixe : suit le héros en douceur avec un peu d'avance, ne tourne jamais
   updateCamera(dt) {
@@ -261,12 +280,16 @@ export class Gfx {
   // ---------- Monstres (instanciés par type) ----------
   drawMonsters(dt) {
     const run = this.run, t = this.t, s = this.ms, fx = this.fx, cx = this.cam.x, cy = this.cam.y;
-    for (const P of this.pools.values()) P.begin();
+    // foule (beaucoup de monstres à l'écran) : modèles allégés, avec hystérésis pour ne pas clignoter
+    const lod = this.lodOn = this.nVis > 120 ? true : this.nVis < 85 ? false : !!this.lodOn;
+    for (const P of this.pools.values()) { P.begin(); P.useLo = lod; }
     const ot = run.overtime > 0;
+    let nVis = 0;
     for (const e of run.enemies) {
       if (e.dead) continue;
       const ex = e.x - cx, ey = e.y - cy;
-      if (ex < -420 || ex > 420 || ey < -980 || ey > 640) continue; // hors du champ
+      if (ex < -400 || ex > 400 || ey < -900 || ey > 640) continue; // hors du champ
+      nVis++;
       if (e.burrowed && e.jumpH < -40) { fx.mound(e); continue; }
       const P = this.pool(e.def, e.boss ? 'b' : e.elite ? 'e' : 'n');
       const body = e.def.body, age = run.time - e.born;
@@ -310,6 +333,7 @@ export class Gfx {
       P.add(e, s);
     }
     for (const P of this.pools.values()) P.end();
+    this.nVis = nVis;
   }
 
   dispose() {

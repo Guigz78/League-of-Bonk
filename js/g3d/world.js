@@ -15,7 +15,7 @@ export const LOOK = {
   jungle: { fog: '#5eae84', fogK: 0.9, sky: '#f0ffe0', grd: '#24401c', hemi: 1.6, sun: '#ffe8b0', sunI: 1.9, edge: '#1e4a1a', hill: '#2e6a28', rim: '#f4ffd8', rimW: 0.4,
     t: { g0: '#3f8c34', g1: '#347a2c', g2: '#54a242', tuft: '#286a22', tuft2: '#6cbc4e' } },
   river:  { fog: '#a4e0fc', fogK: 1, sky: '#f4fbff', grd: '#40705a', hemi: 1.5, sun: '#fff4dc', sunI: 2.2, edge: '#3a7050', hill: '#5a9a48', rim: '#f0fbff', rimW: 0.4,
-    t: { g0: '#64b049', g1: '#58a040', g2: '#7cc25c', tuft: '#428a32', tuft2: '#9cd876', pave: ['#cfc9ba', '#ebe5d6', '#99927f', '#827b6a'] } },
+    t: { g0: '#64b049', g1: '#58a040', g2: '#7cc25c', tuft: '#428a32', tuft2: '#9cd876', pave: ['#bab3a2', '#d6cfbd', '#8a8370', '#746d5c'] } },
   ice:    { fog: '#b8d2f0', fogK: 0.95, sky: '#ffffff', grd: '#6a88b0', hemi: 1.38, sun: '#fff6ea', sunI: 1.7, edge: '#8aa8c8', hill: '#c4d6ec', rim: '#ffffff', rimW: 0.55, rimD: 0.5,
     t: { g0: '#bccfe6', g1: '#aabfda', g2: '#d2e0f2', tuft: '#8eaacb', tuft2: '#e6f0fc', pave: ['#94aac4', '#bfd2e8', '#66809e', '#546e8e'] } },
   shadow: { fog: '#1c3834', fogK: 0.7, sky: '#9affe0', grd: '#14261f', hemi: 1.2, sun: '#b8d8ff', sunI: 0.95, edge: '#18302a', hill: '#22403a', dark: 1, rim: '#a8fff0', rimW: 0.6, rimD: 0.1 },
@@ -76,6 +76,21 @@ function waterTex(key, c1, c2, foam) {
     for (let i = 0; i < 26; i++) { g.fillStyle = r() < 0.6 ? c2 : foam; g.globalAlpha = r() < 0.6 ? 0.5 : 0.75; g.fillRect((r() * 32) | 0, (r() * 32) | 0, 3 + ((r() * 4) | 0), 1); }
     g.globalAlpha = 1;
   }, { nearest: true, repeat: true });
+}
+
+// touffe d'herbe légère : 5 brins triangulaires à deux faces, base sombre → pointe claire (couleurs par sommet)
+function tuftGeo(c0, c1, n = 5) {
+  const P = [], C = [], a0 = col(c0), a1 = col(c1);
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + 0.4, h = 0.6 + (i % 3) * 0.22, w = 0.12, ca = Math.cos(a), sa = Math.sin(a);
+    const v = [[ca * 0.1 + sa * w, 0, sa * 0.1 - ca * w], [ca * 0.1 - sa * w, 0, sa * 0.1 + ca * w], [ca * 0.34, h, sa * 0.34]];
+    for (const tri of [[0, 1, 2], [1, 0, 2]]) for (const k of tri) { P.push(...v[k]); const c = k === 2 ? a1 : a0; C.push(c.r, c.g, c.b); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+  g.computeVertexNormals(); g.computeBoundingSphere();
+  return g;
 }
 
 // ---------- Décor (modèles low-poly) ----------
@@ -546,18 +561,16 @@ export class World3D {
     // touffes d'herbe (ou neige)
     const tuft = new Build(5);
     if (bg === 'ice') { tuft.add(G.ico(0.32, 0), '#ffffff', T(0, 0.05, 0, 1.4, 0.45, 1.1), 0.05); tuft.add(G.ico(0.2, 0), '#e4f0fa', T(0.3, 0.04, 0.1, 1.2, 0.5, 1)); }
-    else for (let i = 0; i < 5; i++) { // touffe plus fournie : brins sombres à la base, pointes claires
-      const a = i / 5 * TAU + 0.4, h = 0.55 + (i % 3) * 0.2, tip = shade(T0.tuft2, 0.08);
-      tuft.add(new THREE.ConeGeometry(0.13, h, 3, 2, true), (x, y) => (y > h * 0.55 ? tip : y > h * 0.25 ? T0.tuft2 : T0.tuft), T(Math.cos(a) * 0.14, h / 2, Math.sin(a) * 0.14, 1, 1, 1, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4), 0.08);
-    }
-    add(tuft, 30);
+    if (bg === 'ice') add(tuft, 30);
+    else D.push({ g: tuftGeo(T0.tuft, shade(T0.tuft2, 0.1)), n: 30, free: true, s: [0.8, 1.3] }); // brins légers (10 triangles)
+    D[0].k = 0.5; // mode allégé : une touffe sur deux
     // fleurs
     const fl = T0.flowers || [];
     for (let v = 0; v < Math.min(3, fl.length); v++) {
       const b = new Build(8 + v);
       b.add(new THREE.ConeGeometry(0.2, 0.32, 3, 1, true), '#3a8a2a', T(0, 0.16, 0, 1, 1, 1, Math.PI));
       for (let i = 0; i < 3; i++) { const a = i * 2.1, d = i ? 0.2 : 0; b.add(G.oct(0.12), fl[(v + i) % fl.length], T(Math.cos(a) * d, 0.3 + (i ? 0 : 0.06), Math.sin(a) * d, 1, 0.6, 1)); }
-      add(b, 4);
+      add(b, 4); D[D.length - 1].k = 0; // fleurs : absentes en mode allégé
     }
     // cailloux
     const pb = new Build(12); pb.add(G.ico(0.22, 0), T0.rock[0], T(0, 0.06, 0, 1.2, 0.55, 1), 0.12, 0.2); pb.add(G.oct(0.13), T0.rock[1], T(0.25, 0.04, 0.12, 1, 0.6, 1), 0.1, 0.2);
@@ -596,8 +609,9 @@ export class World3D {
         if (P.light && gl) { const Lt = P.light, i = gl.put(p.x * S + Lt[0] * p.s, p.gy + Lt[1] * p.s, p.y * S, 0, Lt[4] * p.s); gl.tint(i, col(Lt[3]), dark); }
       }
       if (Math.max(Math.abs(gx * PCELL + PCELL / 2), Math.abs(gy * PCELL + PCELL / 2)) > HALF + 300) continue;
-      const c = this.detailCell(gx, gy), DP = this.dpools, PP = this.patchPool;
+      const c = this.detailCell(gx, gy), DP = this.dpools, PP = this.patchPool, DT = this.dtypes, lite = this.lite;
       for (let i = 0; i < c.length; i += 6) {
+        if (lite && (c[i] < 0 || (DT[c[i]].k < 1 && (!DT[c[i]].k || (i / 6) & 1)))) continue; // mode allégé
         if (c[i] < 0) { const R = c[i + 5], j = PP.put(c[i + 1], c[i + 2], c[i + 3], c[i + 4] * 1.7, R * 2, 1, R * 1.5); PP.tint(j, this.patchC[c[i + 4]]); }
         else DP[c[i]].put(c[i + 1], c[i + 2], c[i + 3], c[i + 4], c[i + 5]);
       }
@@ -611,6 +625,12 @@ export class World3D {
   }
   // à chaque image : on ne recalcule que si la caméra s'est assez déplacée
   follow(x, y) { if (this.rx == null || Math.abs(x - this.rx) > 180 || Math.abs(y - this.ry) > 180) this.refresh(x, y); }
+  // mode allégé (appareil qui peine) : ni taches de sol, ni fleurs, ni particules d'ambiance, moitié moins d'herbe
+  setLite(on) {
+    if (this.lite === on) return;
+    this.lite = on; this.rx = null;
+    if (this.patchPool) this.patchPool.mesh.visible = !on && this.patchPool.n > 0;
+  }
 
   // particules d'ambiance autour de la caméra (feuilles, lucioles, bulles, neige, brume, Néant)
   buildAmbient() {
@@ -633,6 +653,7 @@ export class World3D {
     if (!A) return;
     const P = A.pool, k = A.kind;
     P.begin();
+    if (this.lite) { P.end(); return; }
     for (const q of A.q) {
       if (k === 'snow') { q.y -= 2.2 * q.v * dt; q.x += Math.sin(t + q.ph) * 0.6 * dt; }
       else if (k === 'leaf') { q.y -= 1.0 * q.v * dt; q.x += (0.7 + Math.sin(t * 1.5 + q.ph)) * dt; }
