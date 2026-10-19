@@ -6,6 +6,7 @@ import { save } from '../save.js';
 import { fmt } from '../ui.js';
 import { iconURL } from '../art.js';
 import { heroSprites, monsterSprites, petSprites } from './sprites.js';
+import { heroRig } from './sprites.js';
 import { World2D, CH } from './world.js';
 import { itemSprites, glowTex, softTex, puffTex, swirlTex, beamTex, LOOT_GLOW, rune, shade as shadeHex } from './items.js';
 
@@ -1001,26 +1002,30 @@ export class Gfx {
 
   drawHero() {
     const run = this.run, p = run.p, hs = this.hs, t = this.t, dt = this.dt, g = this.g;
+    const cls = run.cls.id, evo = Math.max(0, Math.min(4, p.evo | 0));
+    // marionnette animée (morceaux peints à la première image de chaque stade)
+    const rigs = this.g_rigs || (this.g_rigs = []), rig = rigs[evo] || (rigs[evo] = heroRig(cls, evo));
     if (p.face.x > 0.15) hs.face = 1; else if (p.face.x < -0.15) hs.face = -1;
-    if (p.moving) { hs.ft += dt; if (hs.ft > 0.12) { hs.ft = 0; hs.frame ^= 1; } } else hs.frame = 0;
     let sx = 1, sy = 1, up = p.h * 0.9, rot = 0, ox = 0;
-    if (p.moving && p.h <= 0) { const b = Math.abs(Math.sin(t * 13)); up += b * 2.6; rot = Math.sin(t * 13) * 0.07; sy = 1 + b * 0.04; }
-    else if (!p.moving && p.h <= 0) sy = 1 + Math.sin(t * 3) * 0.025;
-    if (p.h > 0) { sy *= p.vh > 0 ? 1.12 : 1.04; sx *= p.vh > 0 ? 0.9 : 0.97; }
-    if (hs.land > 0) { const k = hs.land; sx *= 1 + k * 0.18; sy *= 1 - k * 0.16; hs.land = Math.max(0, hs.land - dt * 6); }
-    // attaque : petit élan vers la cible
+    if (p.h > 0) { sy *= p.vh > 0 ? 1.1 : 1.03; sx *= p.vh > 0 ? 0.92 : 0.98; }
+    if (hs.land > 0) { const k = hs.land; sx *= 1 + k * 0.16; sy *= 1 - k * 0.14; hs.land = Math.max(0, hs.land - dt * 6); }
+    // attaque : détectée sur les effets et les tirs du héros ; il se tourne vers sa cible
     for (const f of run.fx) if (!f.g_seen) { f.g_seen = 1; if (f.type === 'slash' || f.type === 'beam') { hs.atk = 1; hs.atkA = f.a; } }
-    for (const s of run.shots) if (!s.g_seen) { s.g_seen = 1; if (s.type === 'arrow' || s.type === 'crystal') { hs.atk = Math.max(hs.atk, 0.6); hs.atkA = Math.atan2(s.vy, s.vx); } }
-    if (hs.atk > 0) { const k = Math.sin(hs.atk * Math.PI); ox = Math.cos(hs.atkA) * 4 * k; up += Math.max(0, -Math.sin(hs.atkA)) * 2 * k; sx *= 1 + k * 0.08; sy *= 1 - k * 0.06; if (Math.cos(hs.atkA) * hs.face < -0.3 && hs.atk > 0.9) hs.face = -hs.face; hs.atk = Math.max(0, hs.atk - dt * 6); }
+    for (const s of run.shots) if (!s.g_seen) { s.g_seen = 1; if ((s.type === 'arrow' || s.type === 'crystal') && hs.atk < 0.9) { hs.atk = 1; hs.atkA = Math.atan2(s.vy, s.vx); } }
+    if (hs.atk > 0) {
+      if (Math.cos(hs.atkA) * hs.face < -0.3 && hs.atk > 0.9) hs.face = -hs.face;
+      const k = Math.sin(hs.atk * Math.PI); ox = Math.cos(hs.atkA) * 2 * k;
+      hs.atk = Math.max(0, hs.atk - dt * (cls === 'archer' ? 3 : cls === 'mage' ? 4 : 5));
+    }
     if (run.dying) { rot = 1.4 * hs.face; up = 0; }
-    const evo = Math.min(2, p.evo), set = this.hero[evo], s = set[hs.frame];
     // évolution : rayons de lumière derrière
     if (hs.evo > 0) {
       hs.evo -= dt;
       g.globalCompositeOperation = 'lighter';
       this.M(p.x, p.y - 22, 1, 1, t * 1.5);
-      const a = Math.min(1, hs.evo);
-      for (let i = 0; i < 10; i++) { g.rotate(TAU / 10); g.fillStyle = `rgba(255,228,138,${0.35 * a})`; g.beginPath(); g.moveTo(0, 0); g.lineTo(140, -12); g.lineTo(140, 12); g.fill(); }
+      const a = Math.min(1, hs.evo), n = 10 + evo * 2, L = 130 + evo * 30, w = 12 + evo * 2;
+      g.fillStyle = evo >= 4 && cls === 'archer' ? `rgba(150,240,255,${0.38 * a})` : `rgba(255,228,138,${(0.33 + evo * 0.03) * a})`;
+      for (let i = 0; i < n; i++) { g.rotate(TAU / n); g.beginPath(); g.moveTo(0, 0); g.lineTo(L, -w); g.lineTo(L, w); g.fill(); }
       g.globalCompositeOperation = 'source-over';
     }
     if (hs.lvl > 0) { // niveau gagné : colonne de lumière
@@ -1031,14 +1036,18 @@ export class Gfx {
       g.fillStyle = gr; g.fillRect(p.x - 18 - (1 - a) * 10, p.y - 140, 36 + (1 - a) * 20, 140);
       g.globalCompositeOperation = 'source-over';
     }
-    // invincibilité : clignote après un coup, brille pendant les longues
-    let img = s.c;
-    if (hs.hurt > 0) { img = s.white; hs.hurt -= dt; }
-    else if (p.inv > 0 && p.inv <= 0.5 && run.hurtFlash > 0 && Math.floor(t * 20) % 2) g.globalAlpha = 0.35;
+    // invincibilité : flash blanc au coup, clignote ensuite, brille pendant les longues
+    let hurt = 0, alpha = 1;
+    if (hs.hurt > 0) { hurt = Math.min(1, hs.hurt / 0.1); hs.hurt -= dt; }
+    else if (p.inv > 0 && p.inv <= 0.5 && run.hurtFlash > 0 && Math.floor(t * 20) % 2) alpha = 0.35;
     if (p.inv > 0.5 && !run.dying) this.glowAdd(p.x, p.y - 22 - up, 40, '#fff0b0', 0.35 + Math.sin(t * 12) * 0.15);
     if (p.shieldHit) { this.W(); g.strokeStyle = `rgba(168,216,255,${0.55 + Math.sin(t * 4) * 0.2})`; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y - 22 - up, 27, 0, TAU); g.stroke(); }
-    const sc = 1.05 + evo * 0.06;
-    this.spr(s, p.x + ox, p.y - up, sc * sx * hs.face, sc * sy, rot, img);
+    const sc = 1.02 + evo * 0.045, a = hs.face > 0 ? hs.atkA : Math.PI - hs.atkA;
+    this.M(p.x + ox, p.y - up, sc * sx * hs.face, sc * sy, rot);
+    rig.draw(g, {
+      t, moving: p.moving && !run.dying, speed01: 1, air: p.h, vy: p.vh, atk: hs.atk, atkA: Math.atan2(Math.sin(a), Math.cos(a)),
+      hurt, ouch: run.hurtFlash > 0 ? 1 : 0, dead: !!run.dying, alpha,
+    });
     g.globalAlpha = 1;
   }
 
