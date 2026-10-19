@@ -15,6 +15,7 @@ import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 import { questList, claimQuest, loginState, claimLogin, dailyBadge, LOGIN_REWARDS, ensureDaily } from './daily.js';
 
+const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
 let battle = null;
 let gearFilter = 'all';
@@ -228,7 +229,7 @@ function adventureTab() {
   const qs = questList(), qDone = qs.filter(q => q.prog >= q.n).length, qReady = qs.some(q => q.ready);
   const L = loginState(), pc = save.pendingChests;
   const quick = `<div class="quick">
-    <button class="qt ${qReady ? 'hot' : ''}" data-act="quests">${iconImg('quest', 22)}<span class="eyebrow">Quêtes du jour</span><b>${qDone}/${qs.length}</b><span class="pbar"><i style="width:${qDone / qs.length * 100}%"></i></span></button>
+    <button class="qt ${qReady ? 'hot' : ''}" data-act="quests">${iconImg('quest', 22)}<span class="eyebrow">Quêtes</span><b>${qDone}/${qs.length}</b><span class="pbar"><i style="width:${qDone / qs.length * 100}%"></i></span></button>
     <button class="qt ${L.ready ? 'hot' : ''}" data-act="login">${iconImg('calendar', 22)}<span class="eyebrow">Connexion</span><b>Jour ${L.ready ? L.day + 1 : L.day || 7}/7</b><span class="pbar cy"><i style="width:${(L.ready ? L.day : L.day || 7) / 7 * 100}%"></i></span></button>
     <button class="qt ${pc.length ? 'hot' : 'off'}" data-act="chests" ${pc.length ? '' : 'disabled'}>${iconImg('chest', 22)}<span class="eyebrow">Coffres</span><b>${pc.length ? `${pc.length} à ouvrir` : 'Aucun'}</b><span class="pbar"><i style="width:${pc.length ? 100 : 0}%"></i></span></button>
   </div>`;
@@ -1351,7 +1352,7 @@ function gearTab() {
     <div class="slots">${slots}</div>
     <h3 class="section-t">Sac <small>${list.length} objet${list.length > 1 ? 's' : ''}</small></h3>
     <div class="filters">${[['all', 'Tout'], ...Object.entries(SLOTS)].map(([k, l]) => `<button class="chip-btn ${gearFilter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${l}</button>`).join('')}
-      ${list.some(i => i.rarity === 'common' && !i.lv) ? '<button class="chip-btn sell" data-act="sellJunk">Vendre ou recycler les communs</button>' : ''}</div>
+      ${list.some(i => i.rarity === 'common' && !i.lv) ? '<button class="chip-btn sell" data-act="sellJunk">Trier les communs</button>' : ''}</div>
     ${list.length ? `<div class="inv-grid">${list.map(it => itemTile(it, { cur: save.inventory.find(i => i.id === save.equipped[it.slot]) || null, isNew: fresh.has(it.id) })).join('')}</div>`
     : '<p class="muted center empty-note">Ouvrez des coffres de butin et battez des boss pour trouver de l\'équipement.</p>'}
     <h3 class="section-t">Familier <small>${save.pets.length}/6</small></h3>
@@ -1608,7 +1609,7 @@ function shopTab() {
         ${iconImg(u.icon, 36)}
         <div class="u-txt"><b>${u.name}</b><small>${u.desc}</small>
           <div class="lvl"><span>Niv. ${lvl}/${u.max}</span>${u.max <= 12 ? `<div class="seg-bar">${Array.from({ length: u.max }, (_, k) => `<i class="${k < lvl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="lbar"><i style="width:${lvl / u.max * 100}%"></i></div>`}</div></div>
-        <button class="btn ${max ? 'ghost' : 'primary'} small" data-act="buy" data-k="${k}" ${max || save.gold < cost ? 'disabled' : ''}>
+        <button class="btn ${max ? 'ghost' : 'buy'} small" data-act="buy" data-k="${k}" ${max || save.gold < cost ? 'disabled' : ''}>
           ${max ? 'Max' : `${iconImg('gold', 14)} ${fmt(cost)}`}
         </button>
       </div>`;
@@ -1618,7 +1619,7 @@ function shopTab() {
     <div class="upgrades boost-shop">${Object.entries(BOOSTS).map(([id, b]) => `<div class="upgrade boost-card">
         <span class="bo-ic">${iconImg(b.icon, 32)}${save.boosts[id] ? `<i class="bo-n">×${save.boosts[id]}</i>` : ''}</span>
         <div class="u-txt"><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>
-        <button class="btn primary small" data-act="buyBoost" data-id="${id}" ${save.gold < b.price ? 'disabled' : ''}>${iconImg('gold', 14)} ${fmt(b.price)}</button>
+        <button class="btn buy small" data-act="buyBoost" data-id="${id}" ${save.gold < b.price ? 'disabled' : ''}>${iconImg('gold', 14)} ${fmt(b.price)}</button>
       </div>`).join('')}</div>`;
 }
 
@@ -1678,10 +1679,10 @@ async function settings() {
     off: '',
   }[cloud.status] || '';
   const acct = !cloud.available
-    ? `<p class="muted">La connexion Google n'est pas encore configurée sur cette version. Votre progression est sauvegardée sur cet appareil.</p>`
+    ? `<p class="muted set-note">La connexion Google n'est pas encore configurée sur cette version. Votre progression est sauvegardée sur cet appareil.</p>`
     : u
       ? `<div class="acct">${u.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : ''}<div><b>${esc(u.name || u.email)}</b><small>${esc(u.email || '')}</small><small class="sync-t ${cloud.status}">${statusTxt}</small></div></div>`
-      : `<p>Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
+      : `<p class="set-note">Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
          <button class="btn google" data-v="login"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg> Se connecter avec Google</button>`;
   const wrapId = 'set-' + Date.now();
   const S = save.settings;
@@ -1693,8 +1694,7 @@ async function settings() {
     title: 'Options',
     cls: 'settings-modal',
     body: `<div id="${wrapId}">
-      <h4>Compte</h4>${acct}
-      <h4>Jeu</h4>
+      <h4 class="first">Jeu</h4>
       <div class="set-list">
         ${row('cube', 'Graphismes', '3D façon arcade, ou 2D plus légère', seg('gfx', [['3d', '3D'], ['2d', '2D']]), true)}
         ${row('shake', 'Tremblements de l\'écran', '', seg('shake', [[0, 'Aucun'], [1, 'Faibles'], [2, 'Normaux']]), true)}
@@ -1708,12 +1708,14 @@ async function settings() {
         ${row('music', 'Musique', '', sw('sMus', S.music !== false))}
         ${row('vibrate', 'Vibrations', '', sw('sVib', S.vibrate))}
       </div>
+      <h4>Compte</h4>${acct}
       <h4>Installer sur iPhone</h4>
-      <p class="muted">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
+      <p class="muted set-note">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
       <div class="danger-zone">
         ${u ? '<button class="btn ghost small" data-v="logout">Se déconnecter</button>' : ''}
         <button class="btn ghost small danger" data-v="reset">Effacer la progression</button>
       </div>
+      <p class="ver">League of Bonk · ${APP_VERSION}</p>
     </div>`,
     buttons: [{ label: 'Fermer', cls: 'primary', value: 'close' }],
     dismissable: true,

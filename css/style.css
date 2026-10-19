@@ -85,6 +85,9 @@ b, strong { font-weight: 600; }
   clip-path: polygon(var(--ch) 0, 100% 0, 100% calc(100% - var(--ch)), calc(100% - var(--ch)) 100%, 0 100%, 0 var(--ch)); }
 .btn.green img { filter: brightness(0) opacity(.8); }
 .btn.blue { --bb: var(--s4); --bl: var(--ln3); }
+/* achat : sombre, prix en ambre (la couleur pleine reste pour l action principale de l écran) */
+.btn.buy { --bb: rgba(245,180,0,.08); --bt: var(--acc-hi); --bl: rgba(245,180,0,.55); font-variant-numeric: tabular-nums; }
+.btn.buy:active { --bb: rgba(245,180,0,.18); }
 .btn.ghost { --bb: rgba(255,255,255,.02); --bl: var(--ln3); }
 .btn.danger { --bb: var(--red); --bt: #fff; --bl: transparent; }
 .btn.ghost.danger, .btn.danger.ghost { --bb: rgba(255,77,94,.08); --bt: #ff8f9b; --bl: rgba(255,77,94,.45); }
@@ -169,7 +172,7 @@ b, strong { font-weight: 600; }
 .pc-ic img { width: 22px; height: 22px; filter: brightness(0) opacity(.85); margin-left: 3px; }
 .pc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .pc-txt b { display: flex; align-items: center; gap: 10px; font: 700 32px/1 var(--fd); letter-spacing: .12em; text-transform: uppercase; }
-.pc-dtag { padding: 3px 6px 2px; font: 700 10.5px/1 var(--fd); font-style: normal; letter-spacing: .14em; color: var(--acc-ink); box-shadow: inset 0 0 0 1.5px rgba(22,16,0,.55); }
+.pc-dtag { flex: none; white-space: nowrap; padding: 3px 6px 2px; font: 700 10.5px/1 var(--fd); font-style: normal; letter-spacing: .14em; color: var(--acc-ink); box-shadow: inset 0 0 0 1.5px rgba(22,16,0,.55); }
 .pc-dtag::before { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 5px 1px 0; background: var(--dc, #3ddc84); box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
 .pc-txt small { font: 700 11.5px/1.2 var(--fd); letter-spacing: .05em; text-transform: uppercase; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pc-diff { display: inline-block; width: 7px; height: 7px; margin: 0 2px 1px 0; background: var(--dc, #3ddc84); box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
@@ -244,6 +247,8 @@ b, strong { font-weight: 600; }
 .modal-body > :first-child { margin-top: 0; }
 .modal h4 { display: flex; align-items: center; gap: 8px; margin: 22px 0 10px; font: 700 12px/1 var(--fd); letter-spacing: .18em; text-transform: uppercase; color: var(--tx2); }
 .modal h4::after { content: ''; flex: 1; height: 1px; background: var(--ln); }
+.modal h4.first { margin-top: 0; }
+.set-note { font-size: 13.5px; line-height: 1.45; }
 .modal-btns { flex: none; display: flex; gap: 10px; padding: 12px 20px calc(var(--safe-b) + 14px); border-top: 1px solid var(--ln); background: var(--bg1); }
 .modal-btns .btn { flex: 1; padding: 0 10px; white-space: nowrap; }
 .modal-btns .btn.primary { flex: 1.4; }
@@ -933,7 +938,8 @@ button.itile:active { transform: translateY(1px); }
 .card-up.evo .cu-ic img { width: 52px; height: 52px; filter: drop-shadow(0 0 8px rgba(245,180,0,.8)); }
 .card-up.evo .cu-txt b { color: var(--acc-hi); font-size: 23px; }
 .card-up.evo::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255,240,190,.28), transparent); animation: sheen 2s .3s ease-in-out infinite; }
-.lu-foot { display: flex; gap: 8px; margin-top: 14px; }
+/* Relancer / Passer : toujours visibles en bas, même si les cartes défilent */
+.lu-foot { position: sticky; bottom: 0; z-index: 3; display: flex; gap: 8px; margin-top: 4px; padding-top: 10px; background: linear-gradient(180deg, rgba(4,6,10,0), rgba(4,6,10,.92) 40%); }
 .lu-foot .btn { flex: 1; }
 .lu-foot .btn b { font-weight: 700; color: var(--acc); }
 .lu-foot .btn:disabled b { color: inherit; }
@@ -946,6 +952,31 @@ button.itile:active { transform: translateY(1px); }
 .lu-gold b { font-size: 22px; color: var(--acc); }
 .lu-gold img { width: 20px; height: 20px; }
 .lvlup .lu-ok { width: 100%; }
+/* petits écrans (iPhone SE…) : cartes plus compactes pour que les 3 choix et les boutons tiennent */
+@media (max-height: 760px) {
+  .overlay.lvl-ov { padding-top: calc(var(--safe-t) + 10px); padding-bottom: calc(var(--safe-b) + 10px); }
+  .lu-head { gap: 2px; margin-bottom: 10px; }
+  .lu-title { font-size: 30px; }
+  .lu-sub { font-size: 11.5px; }
+  .lu-head::after { margin-top: 5px; }
+  .lvlup .cards { gap: 8px; }
+  .cu-ic { width: 60px; }
+  .cu-ic img { width: 34px; height: 34px; }
+  .card-up.evo .cu-ic { width: 68px; }
+  .card-up.evo .cu-ic img { width: 42px; height: 42px; }
+  .cu-txt { gap: 2px; padding: 8px 12px 9px; }
+  .cu-txt b { font-size: 18.5px; }
+  .card-up.evo .cu-txt b { font-size: 20px; }
+  .cu-txt small { font-size: 12px; line-height: 1.25; }
+  .cu-lines { gap: 1px; margin-top: 4px; padding-top: 5px; }
+  .cu-l { font-size: 12px; }
+  .cu-l b { font-size: 14px; }
+  .cu-l:nth-child(n+4) { display: none; }
+  .cu-hint { margin-top: 4px; padding: 3px 7px; }
+  .cu-hint > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lu-foot .btn { min-height: 44px; }
+  .lu-gold { margin: 10px 0; }
+}
 
 /* menu du portail */
 .overlay.portal-ov { background: radial-gradient(70% 40% at 50% 20%, rgba(168,85,247,.28), transparent 70%), rgba(4,6,10,.9); }
