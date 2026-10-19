@@ -6,7 +6,7 @@ import { THREE, PI, TAU, clamp, yawOf, shade, Shape, charMaterial } from './mode
 import { PETS } from '../data.js';
 
 export const MON_R = 16; // rayon (px) pour lequel les modèles sont construits : scale = e.r / 16
-const MON_K = 1.12;
+const MON_K = 1.25, BOSS_K = 1.1;
 const L2 = [[1, 0], [-1, PI]]; // côté, décalage de phase
 const GOLD = '#ffd54a', GOLD_D = '#c8901a', INK = '#1a1020', WOOD = '#8a5a30', WOOD_D = '#5a3a1e', IRON = '#5a5a6a', STEEL = '#c8ccd8';
 
@@ -559,7 +559,7 @@ function buildDef(def, v) {
   const fn = (v === 'b' && BOSS[def.name]) || MON[def.name] || BODY[def.body] || blob;
   fn(c);
   // un peu plus grands que leur rayon de collision (lisibilité, gabarit proche du héros)
-  const k = (c.k || 1) * (v === 'b' ? 1 : MON_K);
+  const k = (c.k || 1) * (v === 'b' ? BOSS_K : MON_K);
   if (k !== 1) { s.scaleAll(k); c.h *= k; c.body = c.body.map((x, i) => (i === 0 ? x * k : x)); }
   const out = { s, h: c.h, body: c.body, ghost: c.ghost, extra: c.extra || null };
   BUILT.set(key, out);
@@ -709,7 +709,7 @@ export function petModel(petId) {
     BUILT.set(def.name + ':p', { s, h: c.h, body: c.body, ghost: c.ghost });
   }
   const scene = new THREE.Group(), pool = new MonsterPool(scene, def, 'p', 1);
-  const SC = petId === 'voidy' ? 0.5 : 0.55, st = { yaw: PI / 2, ph: 0, t: 0 };
+  const SC = petId === 'voidy' ? 0.55 : 0.6, st = { yaw: PI / 2, ph: 0, t: 0 };
   const sObj = { x: 0, y: 0, z: 0, rot: PI / 2, scale: SC, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
   // les fantômes et les oiseaux flottent ; les autres sautillent
   const fly = petId === 'wisp' || petId === 'phenix';

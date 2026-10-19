@@ -24,7 +24,8 @@ const BONES = {
   float: ['body', 0, 1.5, 0],
 };
 const EVO_SCALE = [1, 1.05, 1.1, 1.15, 1.21];
-export const HERO_HEIGHT = 2.4; // hauteur au repos (stade 0, sans accessoires), en unités 3D
+const HERO_K = 1.22; // le héros est un peu plus grand que son rayon de collision : bien lisible sous la caméra haute
+export const HERO_HEIGHT = 2.4 * HERO_K; // hauteur au repos (stade 0, sans accessoires), en unités 3D
 
 export function heroColors(clsId, evo = 0) {
   const c = { ...CLASSES[clsId].colors, ...(EVOLUTIONS[clsId][evo]?.colors || {}) };
@@ -566,9 +567,10 @@ export function heroModel(clsId, evo = 0) {
       // évolution : petit bond de joie
       let pk = 1;
       if (st.pop > 0) { st.pop = Math.max(0, st.pop - dt * 1.6); pk = 1 + Math.sin((1 - st.pop) * PI * 3) * 0.18 * st.pop; }
-      const es = EVO_SCALE[cur] * pk;
+      const es = EVO_SCALE[cur] * pk * HERO_K;
       rig.root.scale.set(es * sx, es * sy, es * sx);
       b.body.position.y = air * (1 / 20) / es + by;
+      if (aura) aura.root.scale.setScalar(EVO_SCALE[cur] * HERO_K);
       // flash blanc (coup) / scintillement (invincible) ; lueurs qui pulsent en forme ultime
       const U = mat.userData.U;
       U.uFx.value.x = Math.max(hurt, pose.inv && !dead ? 0.22 + 0.18 * Math.sin(t * 28) : 0);
