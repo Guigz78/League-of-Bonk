@@ -226,7 +226,7 @@ export class Gfx {
     H.root.visible = !blink;
     H.root.position.set(p.x * S, 0, p.y * S); // le modèle gère lui-même la hauteur du saut (pose.air)
     H.update(dt, {
-      t: this.t, moving: p.moving && !run.dying, speed01: 1, air: p.h, vy: p.vh, atk: hs.atk, atkA: hs.atkA, dirA: hs.face,
+      t: this.t, moving: p.moving && !run.dying, speed01: Math.max(0.4, p.speed01 ?? 1), air: p.h, vy: p.vh, atk: hs.atk, atkA: hs.atkA, dirA: hs.face,
       hurt: hs.hurt > 0 ? Math.min(1, hs.hurt / 0.1) : 0, inv: p.inv > 0.5, dead: !!run.dying,
     });
     // ombre, anneau d'équipe bleu

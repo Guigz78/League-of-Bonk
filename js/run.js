@@ -148,6 +148,8 @@ export class Run {
     this.paused = false; this.over = false; this.revived = false;
     this.pending = 0;
     this.joy = null; this.look = null; this.yaw = 0;
+    this.mvx = 0; this.mvy = 0;   // déplacement lissé (accélération / freinage)
+    this.target = null;           // cible principale des armes (réticule du rendu)
     this.keys = new Set();
     this.shake = 0; this.hitSfxT = 0; this.msgT = 0;
     this.hurtFlash = 0; this.evoFlash = 0; this.ultFlash = 0;
@@ -234,8 +236,7 @@ export class Run {
     this.resize();
     window.addEventListener('resize', this.resize);
     this.bindInput();
-    $('#pauseBtn').addEventListener('click', () => this.pause());
-    $('#ultBtn').addEventListener('click', () => this.useUlt());
+    $('.run .hud')?.classList.toggle('lefty', !!save.settings?.lefty); // gaucher : Saut à droite, ultime à gauche
     this.onVis = () => { if (document.hidden && !this.paused && !this.over) this.pause(); };
     document.addEventListener('visibilitychange', this.onVis);
     this.renderLoadout();
@@ -303,15 +304,22 @@ export class Run {
     });
     const up = e => { if (this.joy && e.pointerId === this.joy.id) this.joy = null; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    // bouton Saut : réagit dès qu'on le touche (pas au relâchement)
-    const jb = $('#jumpBtn');
-    jb?.addEventListener('pointerdown', e => {
-      e.preventDefault(); e.stopPropagation();
-      this.jump();
-      jb.classList.remove('press'); void jb.offsetWidth; jb.classList.add('press');
-      $('#hintBubble')?.classList.add('out');
-    });
-    jb?.addEventListener('click', e => e.preventDefault());
+    // boutons (Saut, ultime, pause) : réagissent dès qu'on les touche (pas au relâchement), avec un autre doigt
+    // pendant que le premier tient le joystick (le joystick ne suit que son propre doigt)
+    const press = (sel, fn) => {
+      const b = $(sel); if (!b) return;
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        fn();
+        b.classList.remove('press'); void b.offsetWidth; b.classList.add('press');
+        $('#hintBubble')?.classList.add('out');
+      });
+      b.addEventListener('click', e => e.preventDefault());
+      b.addEventListener('contextmenu', e => e.preventDefault());
+    };
+    press('#jumpBtn', () => this.jump());
+    press('#ultBtn', () => this.useUlt());
+    press('#pauseBtn', () => this.pause());
     this.kd = e => { this.keys.add(e.key.toLowerCase()); if (e.key === ' ') this.jump(); if (e.key.toLowerCase() === 'e') this.useUlt(); if (e.key === 'Escape') this.pause(); };
     this.ku = e => this.keys.delete(e.key.toLowerCase());
     window.addEventListener('keydown', this.kd); window.addEventListener('keyup', this.ku);
@@ -726,12 +734,14 @@ export class Run {
     this.evoFlash = Math.max(0, this.evoFlash - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.ultFlash = Math.max(0, this.ultFlash - dt);
-    // déplacement dans le sens du doigt (caméra fixe, le haut de l'écran est toujours le nord)
+    // déplacement dans le sens du doigt (caméra fixe, le haut de l'écran est toujours le nord) :
+    // zone morte de 8 px, vitesse analogique jusqu'à ~42 px (× taille du joystick), la base suit le doigt au-delà
     let jx = 0, jy = 0;
     if (this.joy) {
+      const js = clamp(+save.settings?.joySize || 1, 0.7, 1.4), full = 42 * js, anchor = 54 * js;
       const dx = this.joy.x - this.joy.ox, dy = this.joy.y - this.joy.oy, d = Math.hypot(dx, dy);
-      if (d > 6) { const k = Math.min(1, d / 50); jx = dx / d * k; jy = dy / d * k; }
-      if (d > 60) { this.joy.ox = this.joy.x - dx / d * 60; this.joy.oy = this.joy.y - dy / d * 60; }
+      if (d > 8) { const k = Math.min(1, (d - 8) / (full - 8)); jx = dx / d * k; jy = dy / d * k; }
+      if (d > anchor) { this.joy.ox = this.joy.x - dx / d * anchor; this.joy.oy = this.joy.y - dy / d * anchor; }
     }
     const K = this.keys;
     if (K.has('arrowleft') || K.has('a') || K.has('q')) jx -= 1;
@@ -744,10 +754,15 @@ export class Run {
     let ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
     if (this.entering) { // aspiré par le portail : plus de contrôle, le héros glisse vers son centre
-      const P = this.portal; mx = 0; my = 0; ml = 0;
+      const P = this.portal; mx = 0; my = 0; ml = 0; this.mvx = this.mvy = 0;
       if (P) { const k = Math.min(1, dt * 6); p.x += (P.x - p.x) * k; p.y += (P.y - p.y) * k; }
     }
     if (ml > 0.05) p.face = { x: mx / ml, y: my / ml };
+    // vitesse lissée : accélère en ~0,07 s, freine en ~0,05 s (démarrages et arrêts nets mais pas secs)
+    const cl = Math.hypot(this.mvx, this.mvy), sk = 1 - Math.exp(-dt / (ml >= cl ? 0.07 : 0.05));
+    this.mvx += (mx - this.mvx) * sk; this.mvy += (my - this.mvy) * sk;
+    mx = this.mvx; my = this.mvy; ml = Math.hypot(mx, my);
+    p.speed01 = Math.min(1, ml);
     p.x = Math.max(-HALF + 80, Math.min(HALF - 80, p.x + mx * p.speed * dt));
     p.y = Math.max(-HALF + 80, Math.min(HALF - 80, p.y + my * p.speed * dt));
     const A = this.arena;
@@ -765,6 +780,7 @@ export class Run {
     this.grid.clear();
     for (const e of this.enemies) this.grid.add(e);
     this.updateEnemies(dt);
+    this.updateTarget();
     this.updateWeapons(dt);
     this.updateShots(dt);
     this.updateWaves(dt);
@@ -1639,6 +1655,39 @@ export class Run {
   }
 
   // ---------- Armes ----------
+  // Cible principale (visée automatique) : le boss à portée, sinon un élite proche, sinon la menace la plus proche,
+  // avec un léger biais vers la direction de course ; on garde la cible actuelle tant qu'elle reste presque aussi bonne.
+  updateTarget() {
+    const p = this.p, B = this.boss, R = 470;
+    if (B && !B.dead && !B.burrowed && dist2(B, p) < (R + B.r) ** 2) { this.target = B; return; }
+    const mv = p.moving, fx = p.face.x, fy = p.face.y;
+    const score = e => {
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
+      if (d > R + e.r) return Infinity;
+      let s = d;
+      if (mv && d > 1) s *= 1 - 0.22 * (dx * fx + dy * fy) / d;
+      if (e.elite) s = s * 0.4 - 80;                 // élites (et champion) prioritaires
+      if (e.act && e.act.stage === 0) s -= 25;       // il prépare une attaque
+      return s;
+    };
+    let best = null, bs = Infinity;
+    for (const e of this.enemies) {
+      if (e.dead || e.burrowed || e.boss) continue;
+      const s = score(e);
+      if (s < bs) { bs = s; best = e; }
+    }
+    const cur = this.target;
+    if (cur && cur !== best && !cur.dead && !cur.burrowed && !cur.boss && score(cur) <= bs + 30) best = cur;
+    this.target = best;
+  }
+
+  // cible d'une arme de portée maxD : la cible principale si elle est à portée, sinon le plus proche
+  aim(maxD) {
+    const t = this.target;
+    if (t && !t.dead && !t.burrowed && dist2(t, this.p) < (maxD + t.r) ** 2) return t;
+    return this.nearest(maxD);
+  }
+
   nearest(maxD = 400, from = this.p) {
     const B = this.boss;
     if (B && !B.dead && !B.burrowed && dist2(B, from) < (maxD + B.r) ** 2) return B;
@@ -1660,7 +1709,7 @@ export class Run {
       switch (w.id) {
         case 'beam': {
           if (w.t > 0) break;
-          const t = this.nearest(360); if (!t) { w.t = 0.2; break; }
+          const t = this.aim(360); if (!t) { w.t = 0.2; break; }
           w.t = S.cd;
           const ang = Math.atan2(t.y - p.y, t.x - p.x);
           // évolué (Prisme solaire) : 4 rayons en croix
@@ -1671,7 +1720,7 @@ export class Run {
         }
         case 'arrows': {
           if (w.t > 0) break;
-          const t = this.nearest(440); if (!t) { w.t = 0.2; break; }
+          const t = this.aim(440); if (!t) { w.t = 0.2; break; }
           w.t = S.cd;
           const ang = Math.atan2(t.y - p.y, t.x - p.x);
           for (let i = 0; i < S.n; i++) {
@@ -1686,7 +1735,7 @@ export class Run {
         case 'sword': {
           if (w.t > 0) break;
           const R = S.R;
-          const tg = this.nearest(R + 70);
+          const tg = this.aim(R + 70);
           if (!tg) { w.t = 0.15; break; }
           w.t = S.cd;
           const base = Math.atan2(tg.y - p.y, tg.x - p.x);
@@ -1757,7 +1806,7 @@ export class Run {
         }
         case 'boomerang': {
           if (w.t > 0) break;
-          const t = this.nearest(420);
+          const t = this.aim(420);
           w.t = S.cd;
           const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.face.y, p.face.x);
           for (let i = 0; i < S.n; i++) {
@@ -2272,7 +2321,7 @@ export class Run {
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.3);
     for (const w of p.weapons) w.orbs = null;
     if (this.pet) { this.pet.x = -30; this.pet.y = 10; }
-    this.slowmo = 1; this.celebT = 0; this.hitStop = 0; this.shake = 0; this.joy = null;
+    this.slowmo = 1; this.celebT = 0; this.hitStop = 0; this.shake = 0; this.joy = null; this.target = null; this.mvx = this.mvy = 0;
     // nouveau monde : nouveau décor (le rendu est recréé)
     if (this.cv) { this.gfx?.dispose(); this.gfx = createGfx(this, this.cv); this.gfx.resize(); }
     const bb = $('#bossbar'); if (bb) bb.hidden = true;
@@ -2353,7 +2402,7 @@ export class Run {
       this.burst(p.x, p.y, 50, 20, '#ffe48a');
       for (const e of this.grid.query(p.x, p.y, R + 40)) if (dist2(e, p) < R * R) this.hitEnemy(e, A * 10, { knock: 400, kx: (e.x - p.x) / R, ky: (e.y - p.y) / R });
     } else if (this.cls.ult === 'crystal') {
-      const t = this.nearest(650);
+      const t = this.aim(650);
       const a = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.face.y, p.face.x);
       this.shots.push({ type: 'crystal', x: p.x, y: p.y, z: 30, vx: Math.cos(a) * 720, vy: Math.sin(a) * 720, r: 40, dmg: A * 9, pierce: 999, life: 1.4, hit: new Set(), freeze: true, big: true });
     } else {

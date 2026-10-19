@@ -116,7 +116,7 @@ export class Gfx {
     this.updateCamera(dt);
     const g = this.g, dpr = this.dpr, vw = this.vw, vh = this.vh;
     const K = this.K = dpr * this.zoom;
-    const shk = Math.min(5, (run.shake || 0) * 0.45);
+    const shk = Math.min(5, (run.shake || 0) * 0.45) * ([0, 0.5, 1][save.settings?.shake ?? 2] ?? 1); // réglage : tremblements 0 / faible / normal
     const sx = shk ? Math.sin(this.t * 61) * shk : 0, sy = shk ? Math.cos(this.t * 47) * shk : 0;
     this.OX = dpr * (vw / 2 + sx) - this.cam.x * K;
     this.OY = dpr * (vh / 2 + sy) - this.cam.y * K;
@@ -180,6 +180,8 @@ export class Gfx {
         }
         if (ev.crit && this.sparks.length < 170) this.sparks.push({ x: e.x + rand(-6, 6), y: e.y - e.r - e.fly * 0.9, vx: 0, vy: -40, life: 0.22, max: 0.22, c: '#fff6a0', star: true, w: 2, big: 2.4 });
         if (ev.quiet && !ev.crit) break;
+        const mode = save.settings?.numbers || 'all'; // réglage : chiffres de dégâts tous / critiques / aucun
+        if (mode === 'none' || (mode === 'crit' && !ev.crit)) break;
         const n = this.numBy.get(e);
         if (n && n.t < 0.45 && n.life > 0.2) { n.v += ev.dmg; n.pop = 1; n.crit = n.crit || ev.crit; n.t = Math.min(n.t, 0.2); n.life = 0.7; }
         else if (this.nums.length < (ev.crit ? 48 : 30)) {
@@ -1061,7 +1063,7 @@ export class Gfx {
     const sc = 1.02 + evo * 0.045, a = hs.face > 0 ? hs.atkA : Math.PI - hs.atkA;
     this.M(p.x + ox, p.y - up, sc * sx * hs.face, sc * sy, rot);
     rig.draw(g, {
-      t, moving: p.moving && !run.dying, speed01: 1, air: p.h, vy: p.vh, atk: hs.atk, atkA: Math.atan2(Math.sin(a), Math.cos(a)),
+      t, moving: p.moving && !run.dying, speed01: Math.max(0.4, p.speed01 ?? 1), air: p.h, vy: p.vh, atk: hs.atk, atkA: Math.atan2(Math.sin(a), Math.cos(a)),
       hurt, ouch: run.hurtFlash > 0 ? 1 : 0, dead: !!run.dying, alpha,
     });
     g.globalAlpha = 1;
@@ -1348,6 +1350,18 @@ export class Gfx {
       const [x, y] = this.ws(e.x, e.y - e.r * 2.4 - e.fly);
       rbar(g, x - 24, y - 4, 48, 6, clamp(e.hp / e.maxHp, 0, 1), '#c06aff');
     }
+    // cible principale des armes (réticule rouge qui tourne)
+    const tg = run.target;
+    if (tg && !tg.dead && !run.dying && this.inView(tg.x, tg.y)) {
+      const [x, y] = this.ws(tg.x, tg.y - tg.r * 1.1 - (tg.fly || 0) * 0.9), R = clamp((tg.r * 1.3 + 8) * z, 16, 90);
+      g.save(); g.translate(x, y); g.rotate(t * 1.6); g.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        g.rotate(TAU / 4);
+        g.strokeStyle = INK2; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, R, -0.35, 0.35); g.stroke();
+        g.strokeStyle = '#ff4a3a'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, R, -0.35, 0.35); g.stroke();
+      }
+      g.restore();
+    }
     // prix des coffres
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
     for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 300) {
@@ -1401,11 +1415,11 @@ export class Gfx {
     if (this.flashA > 0) { g.fillStyle = `rgba(${this.flashC},${Math.min(0.85, this.flashA)})`; g.fillRect(0, 0, vw, vh); this.flashA -= dt * 1.5; }
     if (run.joy) {
       const j = run.joy, r = this.cv.getBoundingClientRect();
-      const ox = j.ox - r.left, oy = j.oy - r.top;
-      let kx = j.x - j.ox, ky = j.y - j.oy; const d = Math.hypot(kx, ky); if (d > 50) { kx *= 50 / d; ky *= 50 / d; }
+      const ox = j.ox - r.left, oy = j.oy - r.top, js = clamp(+save.settings?.joySize || 1, 0.7, 1.4), R = 50 * js; // réglage : taille du joystick
+      let kx = j.x - j.ox, ky = j.y - j.oy; const d = Math.hypot(kx, ky); if (d > R) { kx *= R / d; ky *= R / d; }
       g.fillStyle = 'rgba(255,255,255,.10)'; g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2;
-      g.beginPath(); g.arc(ox, oy, 54, 0, TAU); g.fill(); g.stroke();
-      g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.arc(ox + kx, oy + ky, 22, 0, TAU); g.fill();
+      g.beginPath(); g.arc(ox, oy, R + 4, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.arc(ox + kx, oy + ky, 22 * js, 0, TAU); g.fill();
     }
   }
 
