@@ -10,7 +10,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES
 import { save, playerStats } from './save.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
-import { Gfx } from './g2d/renderer.js';
+import { createGfx } from './visuals.js';
 import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
 
@@ -217,7 +217,7 @@ export class Run {
       </div>
     </div>`);
     this.cv = $('#cv');
-    this.gfx = new Gfx(this, this.cv);
+    this.gfx = createGfx(this, this.cv);
     this.resize = () => this.gfx.resize();
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -2046,7 +2046,7 @@ export class Run {
     if (this.pet) { this.pet.x = -30; this.pet.y = 10; }
     this.slowmo = 1; this.celebT = 0; this.hitStop = 0; this.shake = 0; this.joy = null;
     // nouveau monde : nouveau décor (le rendu est recréé)
-    if (this.cv) { this.gfx?.dispose(); this.gfx = new Gfx(this, this.cv); this.gfx.resize(); }
+    if (this.cv) { this.gfx?.dispose(); this.gfx = createGfx(this, this.cv); this.gfx.resize(); }
     const bb = $('#bossbar'); if (bb) bb.hidden = true;
     $('#timer')?.classList.remove('boss', 'ot', 'low');
     this.renderWorld();

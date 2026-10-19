@@ -5,13 +5,11 @@ import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addIte
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
   buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
 import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
-import { heroURL, creatureURL } from './g2d/sprites.js';
+import { heroURL, creatureURL, mountPreview, zoneBannerURL } from './visuals.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
 import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
 import { Run } from './run.js';
-import { mountPreview } from './g2d/preview.js';
-import { zoneBannerURL } from './g2d/world.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 
