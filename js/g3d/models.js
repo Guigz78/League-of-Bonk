@@ -11,4 +11,5 @@
 //  petModel(petId) → { root, update(dt, pose), dispose(), height } (pose : { t, moving, dirA })
 export { heroModel, heroColors, HERO_HEIGHT } from './models-heroes.js';
 export { MonsterPool, petModel, monsterHeight, MON_R } from './models-monsters.js';
+import './models-bosses.js'; // enregistre les boss uniques dans le MonsterPool (variante 'b')
 export { S } from './models-kit.js';

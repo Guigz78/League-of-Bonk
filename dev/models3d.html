@@ -119,9 +119,9 @@ if (V === 'heroes') {
 } else if (V === 'mons' || V === 'boss' || V === 'pets') {
   const list = [];
   if (V === 'mons') { const zs = (Q.get('zone') || '0,1,2,3,4,5').split(',').map(Number); for (const z of zs) ZONES[z].monsters.forEach((d, i) => list.push([d, 'n', z, i])); }
-  if (V === 'boss') for (const z of ZONES) if (z.boss) list.push([z.boss, 'b', z.id, 9]);
+  if (V === 'boss') for (const z of ZONES) if (z.boss && (Q.get('only') == null || Q.get('only').split(',').includes(String(z.id)))) list.push([z.boss, 'b', z.id, 9]);
   if (V === 'pets') for (const id in PETS) list.push([id, 'p', 0, 0]);
-  const cols = +(Q.get('cols') || 5), dx = V === 'boss' ? 9 : V === 'pets' ? 2.5 : 4.2, dz = V === 'boss' ? 9 : V === 'pets' ? 3 : 4.6;
+  const cols = +(Q.get('cols') || 5), dx = V === 'boss' ? 15 : V === 'pets' ? 2.5 : 4.2, dz = V === 'boss' ? 15 : V === 'pets' ? 3 : 4.6;
   const rowsN = Math.ceil(list.length / cols) * (V === 'mons' && Q.get('elite') ? 2 : 1);
   const pools = [], ents = [];
   list.forEach(([d, v, z, i], n) => {
