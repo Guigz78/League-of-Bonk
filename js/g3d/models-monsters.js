@@ -50,7 +50,7 @@ function goblinBody(c, o = {}) {
   s.put('rbox:0.3', '#3a2a1a', 0, 0.57, 0, 0.74, 0.1, 0.58, 0, 0, 0, { grad: 0 });
   s.put('box', cloth, 0, 0.42, 0.26, 0.34, 0.26, 0.04, -0.15, 0, 0, { grad: 0.1 });
   s.put('box', cloth, 0.06, 0.96, 0.02, 0.2, 0.7, 0.6, 0, 0, -0.75, { grad: 0.1 }); // écharpe en bandoulière
-  if (c.elite) { s.put('rbox:0.3', GOLD, 0, 0.57, 0.29, 0.16, 0.13, 0.04, 0, 0, 0, { grad: 0, glow: 0.3 }); s.sym('sph:6:4', GOLD, 0.42, 1.04, 0, 0.3, 0.22, 0.3, 0, 0, 0, { glow: 0.15 }); }
+  if (c.elite) { s.put('rbox:0.3', GOLD, 0, 0.57, 0.29, 0.16, 0.13, 0.04, 0, 0, 0, { grad: 0, glow: 0.3 }); s.sym('sph:6:4', GOLD_D, 0.42, 1.04, 0, 0.26, 0.18, 0.28, 0, 0, 0, { glow: 0.1 }); }
   // tête : grandes oreilles pointues, gros nez, sourire narquois
   s.part([0, 1.08, 0], { rx: 0.07, f: 2, off: 0.6 });
   s.put('rbox:0.42', skin, 0, 1.47, 0.02, 0.84, 0.7, 0.72, 0, 0, 0, { grad: 0.15 });
@@ -174,7 +174,7 @@ function ogre(c) {
   s.put('sph:7:5', shade(skin, 0.18), 0, 1.06, 0.3, 0.8, 0.62, 0.5);
   s.put('rbox:0.4', skin, 0, 1.62, -0.05, 1.3, 0.48, 0.8, 0, 0, 0, { grad: 0.1 }); // épaules
   s.put('box', '#6a4a2a', 0.1, 1.3, 0.0, 0.18, 1.0, 1.0, 0, 0, -0.7, { grad: 0.1 }); // bandoulière
-  if (c.elite) s.sym('sph:6:4', GOLD, 0.6, 1.78, 0, 0.42, 0.3, 0.46, 0, 0, -0.3, { glow: 0.2 });
+  if (c.elite) { s.sym('tor:0.2:4:8', GOLD_D, 0.6, 1.7, 0, 0.36, 0.36, 0.36, PI / 2, 0, -0.3, { glow: 0.15 }); s.put('rbox:0.3', GOLD, 0, 0.76, 0.42, 0.26, 0.2, 0.06, 0, 0, 0, { glow: 0.3 }); }
   s.part([0, 1.75, 0.12], { rx: 0.06, f: 2, off: 0.8, pose: [-0.35, 0, 0, 0.05] });
   s.put('rbox:0.35', skin, 0, 1.98, 0.18, 0.64, 0.56, 0.58, 0, 0, 0, { grad: 0.12 });
   s.put('rbox:0.35', shade(skin, -0.1), 0, 1.82, 0.36, 0.56, 0.24, 0.26, 0, 0, 0, { grad: 0 }); // mâchoire

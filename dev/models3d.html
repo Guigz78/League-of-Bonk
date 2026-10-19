@@ -130,7 +130,8 @@ if (V === 'heroes') {
     const vv = V === 'mons' && Q.get('elite') === '1' ? 'e' : v;
     const P = new MOD.MonsterPool(scene, d, vv, 4); pools.push(P);
     const sc = (vv === 'b' ? 8 : vv === 'e' ? 3.6 : 2.2) * 7 / 16;
-    ents.push({ P, d, s: { x, y: (d.body === 'bird' ? 34 : d.body === 'ghost' ? 26 : 0) * S * 0.9, z: zz, rot: Math.PI / 2 + (+(Q.get('turn') || 0.5)), scale: sc, flash: 0, freeze: false, mad: false, anim: 1, sq: 0, alpha: 1 }, e: { def: d, bob: 1, phase: 'chase', boss: vv === 'b', elite: vv === 'e' } });
+    const fx = Q.get('fx') || '';
+    ents.push({ P, d, s: { x, y: (d.body === 'bird' ? 34 : d.body === 'ghost' ? 26 : 0) * S * 0.9, z: zz, rot: Math.PI / 2 + (+(Q.get('turn') || 0.5)), scale: sc, flash: fx === 'flash' ? 1 : 0, freeze: fx === 'freeze', mad: fx === 'mad', anim: 1, sq: fx === 'sq' ? 1 : 0, alpha: 1 }, e: { def: d, bob: 1, phase: 'chase', boss: vv === 'b', elite: vv === 'e' } });
     shadow(x, zz, 0.75 * sc * 16 / 7 / 2.2);
     label(d.name + (vv === 'e' ? ' ★' : ''), x, 0, zz + (vv === 'b' ? 3.6 : 1.4));
   });

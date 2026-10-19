@@ -246,7 +246,7 @@ const FCOLOR = `#include <color_fragment>
   diffuseColor.a *= vFx.w;
 }`;
 const FEMIS = `#include <emissivemap_fragment>
-totalEmissiveRadiance += diffuseColor.rgb * vGlow + vec3(0.95, 0.95, 0.9) * vFx.x * 0.75 + vec3(0.25, 0.02, 0.0) * vFx.z * 0.35;`;
+totalEmissiveRadiance += diffuseColor.rgb * vGlow + vec3(0.95, 0.95, 0.9) * vFx.x * 0.6 + vec3(0.25, 0.02, 0.0) * vFx.z * 0.35;`;
 const FRIM = `{
   float lobR = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
   outgoingLight += diffuseColor.rgb * (lobR * lobR * lobR) * LOB_RIM;
