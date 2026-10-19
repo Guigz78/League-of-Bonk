@@ -424,12 +424,14 @@ export class Run {
     if (w) w.lv = Math.min(MAX_LEVEL, w.lv + 1); else this.p.weapons.push(w = { id, lv: 1, t: 0.4, a: 0, rb: 0, r: 0, evo: false });
     w.rb = (w.rb || 0) + (WEAPON_RARITY_DMG[r] || 0); w.r = Math.max(w.r || 0, r);
     this.renderLoadout?.();
+    this.evoTell?.();
   }
 
   addTome(id, r = 0) {
     const p = this.p;
     p.tomes[id] = (p.tomes[id] || 0) + 1; p.tv[id] = (p.tv[id] || 0) + LEVEL_RARITY[r].mult; p.tr[id] = Math.max(p.tr[id] || 0, r);
     this.recalc(); this.renderLoadout();
+    this.evoTell();
   }
   addBoon(id, r = 0) {
     this.p.boons[id] = (this.p.boons[id] || 0) + 1; this.p.bv[id] = (this.p.bv[id] || 0) + LEVEL_RARITY[r].mult;
@@ -440,6 +442,29 @@ export class Run {
   // ---------- Évolutions d'armes ----------
   // armes prêtes à évoluer : niveau 5 + tome associé possédé
   evoReady() { return this.p.weapons.filter(w => !w.evo && w.lv >= MAX_LEVEL && WEAPON_EVOS[w.id] && this.p.tomes[WEAPON_EVOS[w.id].tome]); }
+  // annonce (une fois par arme) qu'une évolution sera proposée à la prochaine montée de niveau ou au prochain coffre
+  evoTell() {
+    if (!this.cv) return;
+    for (const w of this.evoReady()) {
+      if (w.told) continue;
+      w.told = true;
+      this.banner(`<small>Évolution prête : au prochain niveau ou coffre</small>${esc(WEAPONS[w.id].name)} → ${esc(WEAPON_EVOS[w.id].name)}`, 2200, 'small evo-ready');
+      sfx('shrine');
+    }
+  }
+  // indice d'évolution pour les cartes : quelle arme / quel tome il manque
+  evoHint(c) {
+    const p = this.p;
+    if (c.kind === 'weapon') {
+      const E = WEAPON_EVOS[c.id]; if (!E) return '';
+      return `Évolution : niv. 5 + ${TOMES[E.tome].name} → ${E.name}${p.tomes[E.tome] ? ' (tome possédé)' : ''}`;
+    }
+    if (c.kind === 'tome') {
+      const w = p.weapons.find(x => !x.evo && WEAPON_EVOS[x.id]?.tome === c.id);
+      return w ? `Évolution : ${WEAPONS[w.id].name} niv. 5 + ce tome → ${WEAPON_EVOS[w.id].name}` : '';
+    }
+    return '';
+  }
   evoCard(w) {
     const E = WEAPON_EVOS[w.id];
     return { kind: 'evo', id: w.id, lv: MAX_LEVEL, rarity: 3, name: E.name, icon: E.icon, desc: E.desc, weapon: WEAPONS[w.id].name, tome: TOMES[E.tome].name };
@@ -604,7 +629,7 @@ export class Run {
         L(label, a ? f(a[k]) : null, f(b[k]));
       }
       if (!lines.length) L(WLINES[c.id]?.[0][1] || 'Dégâts', fmt(a?.dmg || 0), fmt(b.dmg));
-      return { lines: lines.slice(0, a ? 4 : 3), rarity: R.name };
+      return { lines: lines.slice(0, a ? 4 : 3), rarity: R.name, hint: this.evoHint(c) };
     }
     if (c.kind === 'tome' || c.kind === 'boon') {
       const tome = c.kind === 'tome', cur = tome ? p.tv : p.bv, v0 = cur[c.id] || 0;
@@ -621,7 +646,7 @@ export class Run {
         if (f && wa[k] != null) L(`${WEAPONS[w0.id].name} · ${f[1].toLowerCase()}`, f[2](wa[k]), f[2](wb[k]));
       }
       if (c.kind === 'boon' && c.id === 'hp') L('PV', fmt(p.hp), fmt(b.maxHp));
-      return { lines, rarity: R.name };
+      return { lines, rarity: R.name, hint: tome ? this.evoHint(c) : '' };
     }
     if (c.kind === 'heal') { L('PV', fmt(p.hp), fmt(Math.min(p.maxHp, p.hp + p.maxHp * 0.3 * mul))); return { lines, rarity: R.name }; }
     if (c.kind === 'gold') { L('Or', fmt(this.gold), fmt(this.gold + this.bonusGold(mul))); return { lines, rarity: R.name }; }
