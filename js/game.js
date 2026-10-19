@@ -820,7 +820,8 @@ async function pauseMenu(resume) {
   const evoName = id => DATA.WEAPON_EVOS?.[id]?.name || WEAPONS[id].name;
   const wRow = w => `<span class="bl r${w.r || 0} ${w.evo ? 'evo' : ''}">${iconImg(w.evo ? DATA.WEAPON_EVOS?.[w.id]?.icon || WEAPONS[w.id].icon : WEAPONS[w.id].icon, 20)}<span class="bl-t"><b>${esc(w.evo ? evoName(w.id) : WEAPONS[w.id].name)}</b>${w.evo ? '<small>Évolution</small>' : pips(w.lv)}</span></span>`;
   const tRow = ([id, lv]) => `<span class="bl t r${p.tr?.[id] || 0}">${iconImg(TOMES[id].icon, 20)}<span class="bl-t"><b>${esc(TOMES[id].name)}</b>${pips(lv)}</span></span>`;
-  const tomes = Object.entries(p.tomes || {});
+  const tomes = Object.entries(p.tomes || {}), nW = DATA.MAX_WEAPONS || 4, nT = DATA.MAX_TOMES || 4;
+  const free = n => Array.from({ length: Math.max(0, n) }, () => '<span class="bl empty"><i>Emplacement libre</i></span>').join('');
   const hpK = Math.max(0, Math.min(1, p.hp / Math.max(1, p.maxHp)));
   const v = await modal({
     title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1}/${ZONES.length} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : ''}</span>`,
@@ -830,9 +831,10 @@ async function pauseMenu(resume) {
         <div><small>Monstres</small><b>${fmt(run.kills || 0)}</b></div><div><small>Or</small><b class="gold-t">${fmt(run.gold)}</b></div>
       </div>
       <div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
-      <h4>Armes <small>${p.weapons.length}/${DATA.MAX_WEAPONS || 4}</small></h4>
-      <div class="cur-build">${p.weapons.map(wRow).join('')}</div>
-      ${tomes.length ? `<h4>Tomes <small>${tomes.length}/${DATA.MAX_TOMES || 4}</small></h4><div class="cur-build">${tomes.map(tRow).join('')}</div>` : ''}
+      <h4>Armes <small>${p.weapons.length}/${nW}</small></h4>
+      <div class="cur-build">${p.weapons.map(wRow).join('')}${free(nW - p.weapons.length)}</div>
+      <h4>Tomes <small>${tomes.length}/${nT}</small></h4>
+      <div class="cur-build">${tomes.map(tRow).join('')}${free(nT - tomes.length)}</div>
       ${runBoosts.length ? `<h4>Bonus</h4><div class="cur-build boosts-on">${runBoosts.map(id => `<span class="bl">${iconImg(BOOSTS[id].icon, 20)}<span class="bl-t"><b>${esc(BOOSTS[id].name)}</b></span></span>`).join('')}</div>` : ''}
       <h4>Options</h4>
       <div class="set-list">${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
