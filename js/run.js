@@ -30,7 +30,9 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // bossHp : PV du boss = PV de base × bossHp × zone × difficulté × monde traversé ;
 // z* : renfort par zone (monde 1 à 6) ; st* : renfort par monde déjà traversé dans la partie ;
 // carry* : renfort selon le temps total de la partie (s)
-export const BAL = { bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.0, stDmg: 0.75, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
+// WMUL : multiplicateur de dégâts par arme (équilibrage des classes : chaque champion commence avec la sienne)
+export const WMUL = {};
+export const BAL = { comboXp: 0.1, hp: 1, dmg: 1, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.0, stDmg: 0.75, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -118,7 +120,8 @@ export class Run {
     if (has('fortune')) { st.gold *= 1.4; st.magnet *= 1.3; }
     this.base = st;
     this.it = {};
-    for (const k of ['critDmg', 'lifesteal', 'haste', 'area', 'armor', 'thorns', 'dodge', 'xp', 'ult']) this.it[k] = cap(k, n(k));
+    // + talents de classe (CLASSES : armor = dégâts subis en moins, lifesteal = vol de vie)
+    for (const k of ['critDmg', 'lifesteal', 'haste', 'area', 'armor', 'thorns', 'dodge', 'xp', 'ult']) this.it[k] = cap(k, n(k) + (+this.cls[k] || 0));
     // effets uniques des objets légendaires (un même effet sur deux objets compte double)
     this.leg = {};
     for (const id of Array.isArray(st.effects) ? st.effects : []) if (LEGEND_EFFECTS[id]) this.leg[id] = (this.leg[id] || 0) + 1;
@@ -488,7 +491,7 @@ export class Run {
   // (dmg = dégâts par coup avant critique, cd = recharge en s, n = nombre de projectiles, R = taille…)
   // x = l'arme elle-même ({ rb : bonus de rareté, evo : évoluée }) quand on la connaît
   wstats(id, lv, p = this.p, x = null) {
-    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
     if (x?.evo) switch (id) { // armes évoluées : bien plus fortes, et un comportement à part (updateWeapons)
       case 'beam': return { dmg: A * 1.9 * 1.3 * 1.4 * 1.5, cd: 0.75 * h, n: 4, w: 44 * ar, len: 430 * ar };
       case 'arrows': return { dmg: A * 1.3 * 1.5, cd: 0.36 * h, n: 7, pierce: 4, big: A * 6 };
@@ -943,8 +946,8 @@ export class Run {
     const zm = 1 + z.id * BAL.zHp;
     // progression dans le temps : PV, dégâts et vitesse montent nettement au fil du monde ;
     // en plus : mondes déjà traversés (S), totems (W, runHp), folie après le chrono (ot, exponentielle)
-    let hp = def.hp * 0.3 * (1 + t / 110 + (t / 240) ** 2) * zm * D.hp * B.hp * S.hp * this.runHp * 1.2 ** ot;
-    let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * BAL.zDmg) * D.dmg * B.dmg * S.dmg * W.dmg * 1.2 ** ot;
+    let hp = def.hp * 0.3 * (1 + t / 110 + (t / 240) ** 2) * zm * D.hp * B.hp * S.hp * this.runHp * 1.2 ** ot * BAL.hp;
+    let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * BAL.zDmg) * D.dmg * B.dmg * S.dmg * W.dmg * 1.2 ** ot * BAL.dmg;
     let scale = 2.2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed * (1 + Math.min(0.22, t / 800)) * W.speed * Math.min(1.35, 1 + 0.06 * ot) * rand(0.9, 1.1);
     if (o.elite) { hp *= 12; dmg *= 1.6; scale = 3.6; speed *= 0.9; }
     if (o.mini) { hp *= 3.4; dmg *= 1.15; scale = 4.7; speed *= 0.95; }
@@ -2014,8 +2017,8 @@ export class Run {
     if (e.mini) this.miniDown(e);
     if (e.elite) {
       this.dropChest(e.x, e.y); sfx('honk'); this.hitStop = 0.08;
-      // coffre de butin (à ouvrir après la partie) : surtout en bois, meilleur en Difficile / Cauchemar
-      if (Math.random() < 0.35) {
+      // coffre de butin (à ouvrir après la partie) : surtout en bois, meilleur en Difficile / Cauchemar (le champion a le sien)
+      if (!e.mini && Math.random() < 0.35) {
         const d = this.diffId, x = Math.random(), gold = 0.07 + 0.065 * d, silver = 0.28 + 0.085 * d;
         this.dropLoot(e.x + rand(-30, 30), e.y + rand(20, 40), x < gold ? 2 : x < gold + silver ? 1 : 0);
       }
@@ -2029,10 +2032,11 @@ export class Run {
     const z = this.zone, p = this.p;
     this.mini = null;
     const mb = $('#minibar'); if (mb) mb.hidden = true;
-    this.pickups.push({ type: 'xp', x: e.x + 20, y: e.y, v: 45 * (1 + Math.floor(z.id / 2)) * (1 + this.stage * 0.5), spin: 0 });
+    this.pickups.push({ type: 'xp', x: e.x + 20, y: e.y, v: 25 * (1 + Math.floor(z.id / 2)) * (1 + this.stage * 0.5), spin: 0 });
     const g = Math.max(1, Math.round((3 + z.id * 1.5) * this.base.gold * this.diff.gold * this.wm.gold));
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; this.pickups.push({ type: 'gold', x: e.x + Math.cos(a) * 34, y: e.y + Math.sin(a) * 34, v: g }); }
-    this.dropLoot(e.x + rand(-30, 30), e.y + rand(30, 50), Math.random() < 0.25 + 0.1 * this.diffId ? 2 : 1);
+    const x = Math.random(), gold = 0.1 + 0.06 * this.diffId; // un coffre de butin (le plus souvent en argent)
+    this.dropLoot(e.x + rand(-30, 30), e.y + rand(30, 50), x < gold ? 2 : x < 0.6 + gold ? 1 : 0);
     this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 260, life: 0.6, max: 0.6, color: '#c06aff' });
     this.emit('miniDeath', { e, x: e.x, y: e.y });
     this.banner(`<small>${esc(e.name)}</small>Champion vaincu !`, 1800, 'mini down');
@@ -2047,10 +2051,10 @@ export class Run {
     const m = COMBO_STEPS[this.comboStep] ?? (Math.floor(this.combo / 1000) + 1) * 1000;
     if (this.combo < m) return;
     this.comboStep++;
-    // palier : or et expérience tout de suite (proportionnels au palier et au monde)
+    // palier : un peu d'or et d'expérience tout de suite (selon le palier et le monde)
     const z = this.zone.id, p = this.p;
-    const g = Math.max(1, Math.round(m * 0.25 * (1 + 0.5 * z) * this.diff.gold * this.base.gold * this.wm.gold));
-    const xp = Math.round(m * 0.3 * (1 + Math.floor(z / 2)));
+    const g = Math.max(1, Math.round((2 + m / 100) * (1 + 0.5 * z) * this.diff.gold * this.base.gold * this.wm.gold));
+    const xp = Math.round(m * BAL.comboXp * (1 + Math.floor(z / 2)));
     this.gold += g; this.gainXp(xp);
     this.text(p.x, p.y, 92, `Combo ${m} ! +${g} or`, '#ffd54a', 1.35);
     this.emit('combo', { n: m, x: p.x, y: p.y, gold: g, xp });

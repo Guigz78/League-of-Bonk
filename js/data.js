@@ -121,7 +121,7 @@ export const LEVEL_RARITY = [
   { name: 'Légendaire', mult: 2.67, w: 2, luck: 2.4 },
 ];
 // Bonus de dégâts propre à l'arme selon la rareté de la carte choisie (en plus du niveau)
-export const WEAPON_RARITY_DMG = [0, 0.1, 0.2, 0.35];
+export const WEAPON_RARITY_DMG = [0, 0.06, 0.12, 0.2];
 export const REROLLS = 2, SKIPS = 1;       // relances et « passer » par partie
 export const COMBO_WINDOW = 2;             // secondes pour enchaîner deux victimes
 export const COMBO_STEPS = [25, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000]; // paliers récompensés
