@@ -134,10 +134,10 @@ if (V === 'heroes') {
     shadow(x, zz, 0.75 * sc * 16 / 7 / 2.2);
     label(d.name + (vv === 'e' ? ' ★' : ''), x, 0, zz + (vv === 'b' ? 3.6 : 1.4));
   });
-  const w = cols * dx + 1, h = rowsN * dz + 2;
-  const k = Math.max(w / W, h / H * 1.25) / 2;
+  const w = cols * dx + 0.5, h = rowsN * dz + 1, el = +(Q.get('el') || 48) * Math.PI / 180;
+  const k = Math.max(w / W, h * Math.sin(el) / H * 1.15) / 2;
   cam = new THREE.OrthographicCamera(-W * k, W * k, H * k, -H * k, 0.1, 400);
-  cam.position.set(0, 30, 30 * 0.75); cam.lookAt(0, 1.0, 0);
+  cam.position.set(0, 40 * Math.sin(el), 40 * Math.cos(el)); cam.lookAt(0, 1.0, 0);
   let t = 0;
   const still = Q.get('still') === '1';
   anim = dt => {
@@ -147,6 +147,32 @@ if (V === 'heroes') {
       E.P.begin(); E.s.anim = still ? 1.1 : t * 8; E.e.bob = E.s.anim; E.P.add(E.e, E.s); E.P.end();
     }
   };
+}
+if (V === 'perf') {
+  // temps de construction de chaque pool + coût par image (250 monstres, héros)
+  const out = { build: [], heroBuild: {}, };
+  for (const z of ZONES) for (const d of [...z.monsters, z.boss]) for (const v of (d === z.boss ? ['b'] : ['n', 'e'])) {
+    const t0 = performance.now(); const P = new MOD.MonsterPool(scene, d, v, 300); const t1 = performance.now();
+    out.build.push([d.name + ':' + v, +(t1 - t0).toFixed(1), P.geo.attributes.position.count]); P.dispose();
+  }
+  for (const c of ['mage', 'archer', 'knight']) for (let e = 0; e < 5; e++) { const t0 = performance.now(); const m = MOD.heroModel(c, e); out.heroBuild[c + e] = +(performance.now() - t0).toFixed(1); m.dispose(); }
+  const pools = ZONES[0].monsters.map(d => new MOD.MonsterPool(scene, d, d.elite ? 'e' : 'n', 300));
+  const ents = Array.from({ length: 250 }, (_, i) => ({ k: i % 5, x: (Math.random() - 0.5) * 400, y: (Math.random() - 0.5) * 400, bob: Math.random() * 6, def: ZONES[0].monsters[i % 5] }));
+  const hero = MOD.heroModel('knight', 4); scene.add(hero.root);
+  const sO = { x: 0, y: 0, z: 0, rot: 0, scale: 1, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
+  let tp = 0, th = 0;
+  for (let f = 0; f < 200; f++) {
+    const t0 = performance.now();
+    for (const P of pools) P.begin();
+    for (const e of ents) { e.bob += 0.13; sO.x = e.x / 20; sO.z = e.y / 20; sO.rot = e.bob; sO.anim = e.bob; sO.flash = (f + e.k) % 9 === 0 ? 1 : 0; pools[e.k].add(e, sO); }
+    for (const P of pools) P.end();
+    const t1 = performance.now();
+    hero.update(1 / 60, { t: f / 60, moving: true, dirA: f * 0.01, atk: (f % 30) / 30, atkA: 1 });
+    th += performance.now() - t1; tp += t1 - t0;
+  }
+  out.poolFrameMs = +(tp / 200).toFixed(3); out.heroUpdateMs = +(th / 200).toFixed(3);
+  window.__perf = out;
+  cam = new THREE.PerspectiveCamera(40, W / H, 1, 400); cam.position.set(0, 30, 22); cam.lookAt(0, 0, 0);
 }
 cam.updateProjectionMatrix();
 const v3 = new THREE.Vector3();

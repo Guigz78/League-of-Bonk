@@ -44,7 +44,7 @@ function eyes(e, { col = '#2a3a8a', glow = 0, y = 1.8, x = 0.2, r = 0.1, tall = 
   for (const sd of [1, -1]) e.eye(x * sd, y, 0.42, r, { pupil: col, ry: 0.22 * sd, tall, glow, white, pr: 0.66 });
 }
 function brows(h, col, { y = 1.96, angry = 0.12, w = 0.2, th = 0.055 } = {}) {
-  h.sym('box', col, 0.2, y, 0.44, w, th, 0.06, 0, 0, -angry, { grad: 0 });
+  h.sym('box', col, 0.2, y, 0.44, w, th, 0.06, 0, 0, angry, { grad: 0 });
 }
 function mouth(h, kind = 'smile') {
   if (kind === 'smile') {

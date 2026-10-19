@@ -10,4 +10,5 @@
 //    Le modèle est construit pour un rayon de 16 px : scale = e.r / 16. .height = haut de la tête à scale 1.
 //  petModel(petId) → { root, update(dt, pose), dispose(), height } (pose : { t, moving, dirA })
 export { heroModel, heroColors, HERO_HEIGHT } from './models-heroes.js';
+export { MonsterPool, petModel, monsterHeight, MON_R } from './models-monsters.js';
 export { S } from './models-kit.js';

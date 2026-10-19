@@ -84,11 +84,17 @@ export function M(x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, 
 //  bob : > 0 → monte de bob·|sin| ; < 0 → soulève de −bob·max(0, sin) (pas)   sway : décalage latéral (x) en sin
 //  body : 1 = suit le corps (rebond, roulis, écrasement de l'instance), 0 = jambes (restent au sol)
 //  pose : [rx, rz, ry, lift] appliqués × poids de pose de l'instance (élan d'attaque, rugissement)
+export const NPART = 24; // parties animées max par modèle instancié
 const NOPART = { px: 0, py: 0, pz: 0, rx: 0, rz: 0, ry: 0, off: 0, f: 1, bob: 0, sway: 0, body: 1, pose: [0, 0, 0, 0] };
 export class Shape {
-  constructor(anim = false) { this.anim = anim; this.P = []; this.C = []; this.A = []; this.B = []; this.Cc = []; this.D = []; this.cur = NOPART; this.tint = null; }
+  constructor(anim = false) { this.anim = anim; this.P = []; this.C = []; this.A = []; this.G = []; this.parts = [NOPART]; this.cur = NOPART; this.ci = 0; this.tint = null; }
   part(pv, o = {}) {
-    this.cur = pv ? { px: pv[0], py: pv[1], pz: pv[2], rx: o.rx || 0, rz: o.rz || 0, ry: o.ry || 0, off: o.off || 0, f: o.f ?? 1, bob: o.bob || 0, sway: o.sway || 0, body: o.body ?? 1, pose: o.pose || NOPART.pose } : NOPART;
+    if (!pv) { this.cur = NOPART; this.ci = 0; return this; }
+    this.cur = { px: pv[0], py: pv[1], pz: pv[2], rx: o.rx || 0, rz: o.rz || 0, ry: o.ry || 0, off: o.off || 0, f: o.f ?? 1, bob: o.bob || 0, sway: o.sway || 0, body: o.body ?? 1, pose: o.pose || NOPART.pose };
+    if (this.anim) {
+      if (this.parts.length >= NPART) throw new Error('trop de parties animées');
+      this.ci = this.parts.length; this.parts.push(this.cur);
+    }
     return this;
   }
   // ajoute une primitive : grad = assombrit le bas (volume), glow = émission (0..1+)
@@ -103,12 +109,7 @@ export class Shape {
       v.applyMatrix4(m);
       this.P.push(v.x, v.y, v.z);
       this.C.push(_c.r * k, _c.g * k, _c.b * k);
-      this.A.push(cu.px, cu.py, cu.pz, glow);
-      if (this.anim) {
-        this.B.push(cu.rx, cu.rz, cu.ry, cu.off);
-        this.Cc.push(cu.f, cu.bob, cu.sway, cu.body);
-        this.D.push(cu.pose[0], cu.pose[1], cu.pose[2], cu.pose[3]);
-      }
+      if (this.anim) this.G.push(this.ci, glow); else this.A.push(cu.px, cu.py, cu.pz, glow);
     }
     return this;
   }
@@ -119,6 +120,14 @@ export class Shape {
     this.put(key, color, x, y, z, sx, sy, sz, rx, ry, rz, o);
     return this.put(key, color, -x, y, z, sx, sy, sz, rx, -ry, -rz, o);
   }
+  // primitive dont la base est posée en (x,y,z) et qui pousse dans l'axe +Y tourné (rx,ry,rz) : cornes, oreilles, becs, piquants
+  tip(key, color, x, y, z, rx, ry, rz, w, L, d = w, o) {
+    return this.add(key, color, M(x, y, z, rx, ry, rz).multiply(M(0, L / 2, 0, 0, 0, 0, w, L, d)), o);
+  }
+  symTip(key, color, x, y, z, rx, ry, rz, w, L, d = w, o) {
+    this.tip(key, color, x, y, z, rx, ry, rz, w, L, d, o);
+    return this.tip(key, color, -x, y, z, rx, -ry, -rz, w, L, d, o);
+  }
   // segment épais entre deux points (os, bâtons, pattes)
   seg(key, color, a, b, w, d = w, o) {
     const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz) || 1e-4;
@@ -128,30 +137,49 @@ export class Shape {
   }
   // œil de dessin animé tourné vers +z (ry pour l'orienter) : blanc, pupille, reflet
   eye(x, y, z, r, o = {}) {
-    const { pupil = '#1a1020', white = '#ffffff', ry = 0, tall = 1.15, glow = 0, look = 0, pr = 0.62, flat = 0.55 } = o;
+    const { pupil = '#1a1020', white = '#ffffff', ry = 0, tall = 1.15, glow = 0, look = 0, pr = 0.62, flat = 0.55 } = o, lo = this.lo;
     const cy = Math.cos(ry), sy = Math.sin(ry), at = dz => [x + sy * dz, z + cy * dz];
     let [ax, az] = at(0);
-    if (white) this.put('sph:8:6', white, ax, y, az, r * 2, r * 2 * tall, r * 2 * flat, 0, ry, 0, { grad: 0, glow: glow * 0.5 });
+    if (white) this.put(lo ? 'sph:6:4' : 'sph:8:6', white, ax, y, az, r * 2, r * 2 * tall, r * 2 * flat, 0, ry, 0, { grad: 0, glow: o.wglow ?? glow * 0.5 });
     [ax, az] = at(r * flat * 0.62);
-    this.put('sph:6:4', pupil, ax + cy * look * r * 0.35, y - r * 0.06, az, r * 2 * pr, r * 2 * pr * tall, r * 0.5, 0, ry, 0, { grad: 0, glow });
+    this.put(lo ? 'sph:5:3' : 'sph:6:4', pupil, ax + cy * look * r * 0.35, y - r * 0.06, az, r * 2 * pr, r * 2 * pr * tall, r * 0.5, 0, ry, 0, { grad: 0, glow });
     [ax, az] = at(r * flat * 0.9);
     if (!o.noHi) this.put('box', '#ffffff', ax - cy * r * 0.22, y + r * 0.3, az, r * 0.42, r * 0.42, r * 0.2, 0, ry, 0, { grad: 0, glow: 0.6 });
     return this;
   }
   get count() { return this.P.length / 3; }
+  // agrandit tout le modèle (positions et pivots) depuis le sol
+  scaleAll(k) {
+    for (let i = 0; i < this.P.length; i++) this.P[i] *= k;
+    for (let i = 0; i < this.A.length; i += 4) { this.A[i] *= k; this.A[i + 1] *= k; this.A[i + 2] *= k; }
+    this.parts = this.parts.map(p => (p === NOPART ? p : { ...p, px: p.px * k, py: p.py * k, pz: p.pz * k, bob: p.bob * k, sway: p.sway * k, pose: [p.pose[0], p.pose[1], p.pose[2], p.pose[3] * k] }));
+    return this;
+  }
+  // paramètres des parties animées → tableaux d'uniformes (pivot, rotations, fréquence/rebond/balancement, pose)
+  partUniforms() {
+    const U = [0, 1, 2, 3].map(() => Array.from({ length: NPART }, () => new THREE.Vector4()));
+    this.parts.forEach((p, i) => {
+      U[0][i].set(p.px, p.py, p.pz, 0); U[1][i].set(p.rx, p.rz, p.ry, p.off);
+      U[2][i].set(p.f, p.bob, p.sway, p.body); U[3][i].set(...p.pose);
+    });
+    return U;
+  }
   // géométrie finale ; off = pivot à soustraire (os d'une marionnette)
   geometry(off) {
     const g = new THREE.BufferGeometry(), P = new Float32Array(this.P);
     if (off) for (let i = 0; i < P.length; i += 3) { P[i] -= off[0]; P[i + 1] -= off[1]; P[i + 2] -= off[2]; }
     g.setAttribute('position', new THREE.BufferAttribute(P, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(this.C), 3));
-    const A = new Float32Array(this.A);
-    if (off) for (let i = 0; i < A.length; i += 4) { A[i] -= off[0]; A[i + 1] -= off[1]; A[i + 2] -= off[2]; }
-    g.setAttribute('aA', new THREE.BufferAttribute(A, 4));
     if (this.anim) {
-      g.setAttribute('aB', new THREE.BufferAttribute(new Float32Array(this.B), 4));
-      g.setAttribute('aC', new THREE.BufferAttribute(new Float32Array(this.Cc), 4));
-      g.setAttribute('aD', new THREE.BufferAttribute(new Float32Array(this.D), 4));
+      // sommets compacts : couleur en octets, (partie, lueur) ; le reste vient des uniformes de la partie
+      const C = new Uint8Array(this.C.length);
+      for (let i = 0; i < C.length; i++) C[i] = Math.round(clamp(this.C[i], 0, 1) * 255);
+      g.setAttribute('color', new THREE.BufferAttribute(C, 3, true));
+      g.setAttribute('aG', new THREE.BufferAttribute(new Float32Array(this.G), 2));
+    } else {
+      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(this.C), 3));
+      const A = new Float32Array(this.A);
+      if (off) for (let i = 0; i < A.length; i += 4) { A[i] -= off[0]; A[i + 1] -= off[1]; A[i + 2] -= off[2]; }
+      g.setAttribute('aA', new THREE.BufferAttribute(A, 4));
     }
     g.computeBoundingSphere();
     return g;
@@ -162,24 +190,31 @@ export class Shape {
 // Lambert à facettes (flatShading) + couleurs de sommets ; en plus :
 //  lueur par sommet (aA.w), reflet de bord (détache les personnages de l'herbe), flash blanc, gel, folie, transparence.
 // LOB_ANIM (monstres instanciés) : chaque sommet est animé dans le shader à partir de la phase de marche de l'instance.
-const VCOMMON = `#include <common>
-attribute vec4 aA;
+const VCOMMON0 = `#include <common>
 varying float vGlow;
 varying vec4 vFx;
 uniform vec4 uFx;
 uniform float uGlow;
-#ifdef LOB_ANIM
-attribute vec4 aB; attribute vec4 aC; attribute vec4 aD; attribute vec4 iA; attribute vec4 iB;
-uniform vec4 uBody;
+#ifndef LOB_ANIM
+attribute vec4 aA;
+#else
+attribute vec2 aG; attribute vec4 iA; attribute vec4 iB;
+uniform vec4 uBody; uniform vec4 uPA[${NPART}]; uniform vec4 uPB[${NPART}]; uniform vec4 uPC[${NPART}]; uniform vec4 uPD[${NPART}];
 vec3 lobRX(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(p.x, p.y * c - p.z * s, p.y * s + p.z * c); }
 vec3 lobRZ(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(p.x * c - p.y * s, p.x * s + p.y * c, p.z); }
 vec3 lobRY(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(p.x * c + p.z * s, p.y, -p.x * s + p.z * c); }
 #endif`;
 const VBEGIN = `vec3 transformed = vec3(position);
-vGlow = aA.w * uGlow;
+#ifdef USE_ALPHAHASH
+vPosition = vec3(position);
+#endif
 vFx = uFx;
-#ifdef LOB_ANIM
+#ifndef LOB_ANIM
+vGlow = aA.w * uGlow;
+#else
 {
+  int pi = int(aG.x + 0.5);
+  vec4 aA = uPA[pi], aB = uPB[pi], aC = uPC[pi], aD = uPD[pi];
   float ph = iA.x * aC.x + aB.w, sn = sin(ph), pw = iB.x;
   vec3 p = position - aA.xyz;
   p = lobRX(p, aB.x * sn + aD.x * pw);
@@ -195,7 +230,7 @@ vFx = uFx;
     p = lobRZ(p, uBody.y * sin(b));
   }
   transformed = p;
-  vGlow = aA.w * (1.0 + iA.w);
+  vGlow = aG.y * (1.0 + iA.w);
   vFx = vec4(iA.y, iB.y, iB.z, iA.z);
 }
 #endif`;
@@ -218,15 +253,16 @@ const FRIM = `{
 }
 #include <opaque_fragment>`;
 
-export function charMaterial({ anim = false, alphaHash = false, rim = 0.55 } = {}) {
+export function charMaterial({ anim = false, alphaHash = false, rim = 0.55, parts = null } = {}) {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, alphaHash });
   const U = { uFx: { value: new THREE.Vector4(0, 0, 0, 1) }, uGlow: { value: 1 }, uBody: { value: new THREE.Vector4(0, 0, 0, 0) } };
+  if (anim) { const P = parts || [0, 1, 2, 3].map(() => Array.from({ length: NPART }, () => new THREE.Vector4())); U.uPA = { value: P[0] }; U.uPB = { value: P[1] }; U.uPC = { value: P[2] }; U.uPD = { value: P[3] }; }
   m.userData.U = U;
   m.defines = { LOB_RIM: rim.toFixed(3) };
   if (anim) m.defines.LOB_ANIM = '';
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', VCOMMON).replace('#include <begin_vertex>', VBEGIN);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', VCOMMON0).replace('#include <begin_vertex>', VBEGIN);
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', FCOMMON).replace('#include <color_fragment>', FCOLOR)
       .replace('#include <emissivemap_fragment>', FEMIS).replace('#include <opaque_fragment>', FRIM);
   };
