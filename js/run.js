@@ -675,7 +675,8 @@ export class Run {
   // ---------- Boucle ----------
   frame(now) {
     if (this.over) return;
-    let dt = Math.min(0.05, (now - this.last) / 1000);
+    // jamais négatif : l'horodatage de requestAnimationFrame peut précéder le performance.now() pris juste avant
+    let dt = clamp((now - this.last) / 1000, 0, 0.05);
     this.last = now;
     if (!this.paused) {
       // court ralenti de célébration à la mort d'un boss
