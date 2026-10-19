@@ -269,7 +269,7 @@ b, strong { font-weight: 600; }
 .rw > span { flex: 1; min-width: 0; }
 .rw small { width: 100%; padding-left: 32px; margin-top: -4px; color: var(--tx2); font-size: 12px; }
 .rw > span small { display: block; width: auto; padding: 0; margin: 2px 0 0; }
-.rw img.spr { width: 24px; height: 24px; }
+.rw img.spr { width: 32px; height: 32px; margin: -4px 0; }
 
 .toasts { position: fixed; top: calc(var(--safe-t) + 64px); left: 0; right: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 16px; pointer-events: none; }
 .toast { display: flex; align-items: center; gap: 10px; max-width: 460px; padding: 10px 16px 10px 12px; font-size: 14px; background: rgba(17,23,37,.97); border: 1px solid var(--ln2); border-left: 3px solid var(--acc);
@@ -1174,8 +1174,10 @@ button.itile:active { transform: translateY(1px); }
 .cst-burst i:nth-child(3n) { background: var(--tc); }
 .cst-burst i:nth-child(3n+1) { width: 3px; height: 14px; background: var(--acc); }
 .chest-stage.open .cst-burst i { animation: burstOut .9s cubic-bezier(.1,.8,.3,1) forwards; }
-.cst-left { position: absolute; z-index: 4; right: 16px; top: 8px; min-width: 40px; height: 40px; padding: 0 8px; display: none; place-items: center; font: 700 22px/1 var(--fd); color: var(--tx); background: rgba(13,17,26,.9); box-shadow: inset 0 0 0 1px var(--ln2), inset 0 -2px 0 var(--tc); }
-.chest-stage.cards .cst-left { display: grid; }
+.cst-left { position: absolute; z-index: 4; right: 6px; top: 4px; min-width: 52px; padding: 5px 8px 6px; display: none; flex-direction: column; align-items: center; gap: 2px; color: var(--tx); background: rgba(13,17,26,.92); box-shadow: inset 0 0 0 1px var(--ln2), inset 0 -2px 0 var(--tc); }
+.cst-left b { font: 700 22px/1 var(--fd); font-variant-numeric: tabular-nums; }
+.cst-left small { font: 700 8.5px/1 var(--fd); letter-spacing: .14em; text-transform: uppercase; color: var(--tx3); }
+.chest-stage.cards .cst-left { display: flex; }
 .cst-left.none { transform: scale(0); transition: transform .2s; }
 .cst-left.bump { animation: bump .3s var(--ease); }
 .cst-card { position: absolute; z-index: 3; left: 0; right: 0; top: 0; bottom: 110px; display: grid; place-items: center; pointer-events: none; }
@@ -1275,7 +1277,7 @@ button.itile:active { transform: translateY(1px); }
 .fa-head { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .fa-head .eyebrow { color: var(--rc); letter-spacing: .24em; }
 .fa-wait { position: absolute; top: calc(var(--safe-t) + 48px); left: 0; right: 0; margin: 0; text-align: center; color: var(--tx2); letter-spacing: .3em; animation: hintPulse 1s ease-in-out infinite; transition: opacity .2s; }
-.forge-anim.done .fa-wait { opacity: 0; }
+.forge-anim.done .fa-wait { animation: none; opacity: 0; }
 .fa-rays { position: absolute; left: 50%; top: 50%; margin: -280px 0 0 -280px; width: 560px; height: 560px; opacity: .45; animation: spin 20s linear infinite;
   background: repeating-conic-gradient(color-mix(in srgb, var(--rc) 70%, #fff) 0deg 2deg, transparent 2deg 15deg); -webkit-mask: radial-gradient(circle, #000 8%, transparent 60%); mask: radial-gradient(circle, #000 8%, transparent 60%); }
 .fa-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 210px; max-width: 300px; padding: 18px 20px 16px; text-align: center; transform: scale(.6); opacity: 0;

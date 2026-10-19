@@ -1110,7 +1110,7 @@ function revealStage(results, tier, title, { quick = false } = {}) {
       if (old) { old.classList.add('gone'); setTimeout(() => old.remove(), 300); }
       cardBox.insertAdjacentHTML('beforeend', `<div class="cst-slot">${bigCard(x)}</div>`);
       const n = seq.length - idx - 1;
-      left.textContent = n; left.classList.toggle('none', !n);
+      left.innerHTML = `<b>${n}</b><small>restant${n > 1 ? "s" : ""}</small>`; left.classList.toggle("none", !n);
       left.classList.remove('bump'); void left.offsetWidth; left.classList.add('bump');
       const legend = x.k === 'item' && x.it.rarity === 'legendary', epic = x.k === 'item' && x.it.rarity === 'epic';
       w.classList.toggle('legend', legend); w.classList.toggle('epic', epic);
