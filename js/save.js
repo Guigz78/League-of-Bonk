@@ -23,15 +23,20 @@ export function freshSave() {
     inventory: [],
     equipped: { weapon: null, armor: null, trinket: null },
     stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {},
-      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0 },
+      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0, quests: 0, logins: 0 },
     // expédition : pièces d'équipement par rareté, bonus possédés et choisis, coffres pas encore ouverts
     parts: { weapon: [0, 0, 0, 0], armor: [0, 0, 0, 0], trinket: [0, 0, 0, 0] },
     boosts: {},
     boostSel: [null, null],
     pendingChests: [],
     achievements: {},
-    settings: { sound: true, music: true, vibrate: true },
+    // options : graphismes 3D/2D, tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
+    // taille du joystick (0,8 à 1,3), gaucher (saut à droite)
+    settings: { sound: true, music: true, vibrate: true, gfx: '3d', shake: 2, numbers: 'all', joySize: 1, lefty: false },
     tutorialDone: false,
+    lastZone: null,     // dernier monde lancé (bouton JOUER de l'accueil)
+    daily: null,        // quêtes du jour : { day, quests: [{ id, n, tier, gold, base, claimed }] }
+    login: { day: 0, last: '' }, // récompenses de connexion : prochain jour (0 à 6), dernière date réclamée
     run: null,
     nextId: 1,
   };
@@ -56,11 +61,23 @@ function migrate(s) {
   if (typeof out.stats?.kills === 'object') out.stats = { ...base.stats };
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
-  out.settings = { ...base.settings, ...s.settings };
+  out.settings = cleanSettings({ ...base.settings, ...s.settings });
+  out.login = { day: Math.max(0, Math.min(6, (s.login?.day | 0))), last: typeof s.login?.last === 'string' ? s.login.last : '' };
+  if (out.lastZone != null && !(out.lastZone >= 0 && out.lastZone <= 5)) out.lastZone = null;
   migrateDifficulty(out, base);
   migrateLoot(out, s);
   renameOld(out);
   return out;
+}
+
+// options toujours valides (sauvegardes anciennes ou venues du cloud)
+function cleanSettings(o) {
+  o.gfx = o.gfx === '2d' ? '2d' : '3d';
+  o.shake = [0, 1, 2].includes(+o.shake) ? +o.shake : 2;
+  o.numbers = ['all', 'crit', 'none'].includes(o.numbers) ? o.numbers : 'all';
+  o.joySize = Math.max(0.8, Math.min(1.3, +o.joySize || 1));
+  o.lefty = !!o.lefty;
+  return o;
 }
 
 // l'univers a changé de noms : bestiaire et objets des anciennes sauvegardes suivent
@@ -84,7 +101,7 @@ function migrateLoot(out, s) {
     .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5) }));
   const st = out.stats;
   if ((s.v || 1) < 3) st.worlds = Math.max(st.worlds || 0, st.wins || 0);
-  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic']) st[k] = int(st[k], 1e9);
+  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic', 'quests', 'logins']) st[k] = int(st[k], 1e9);
   if (!Array.isArray(out.inventory)) out.inventory = [];
 }
 
@@ -389,6 +406,8 @@ export function checkAchievements() {
     upgrade5: s.inventory.some(i => (i.lv || 0) >= 5),
     mythic: st.mythic >= 1,
     chests50: st.chests >= 50,
+    quests10: st.quests >= 10,
+    login7: st.logins >= 7,
   };
   for (const a of ACHIEVEMENTS) {
     if (!s.achievements[a.id] && cond[a.id]) {

@@ -13,14 +13,14 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const FONT = 'ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif';
 const INK = '#14081e';
 let LILITA = false;
-const tf = (px, w = 900) => (LILITA ? `${px}px 'Lilita One', ${FONT}` : `${w} ${px}px ${FONT}`);
+const tf = (px, w = 900) => (LILITA ? `700 ${Math.round(px * 1.12)}px 'Rajdhani', ${FONT}` : `${w} ${px}px ${FONT}`);
 try {
   const f = document.fonts;
   if (f) {
-    if (f.check("16px 'Lilita One'")) LILITA = true;
-    f.load("16px 'Lilita One'").then(l => {
+    if (f.check("700 16px 'Rajdhani'")) LILITA = true;
+    f.load("700 16px 'Rajdhani'").then(l => {
       if (l.length) LILITA = true;
-      else if (typeof FontFace === 'function') { const ff = new FontFace('Lilita One', 'url(fonts/lilita-one-latin.woff2)'); ff.load().then(x => { f.add(x); LILITA = true; }).catch(() => {}); }
+      else if (typeof FontFace === 'function') { const ff = new FontFace('Rajdhani', 'url(fonts/rajdhani-700.woff2)', { weight: '700' }); ff.load().then(x => { f.add(x); LILITA = true; }).catch(() => {}); }
     }).catch(() => {});
   }
 } catch (e) { /* police du système */ }
