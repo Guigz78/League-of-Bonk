@@ -42,6 +42,7 @@ export class Gfx {
     canvas.parentNode.insertBefore(c3, canvas);
     const R = this.renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: false, alpha: false, stencil: true, powerPreference: 'high-performance' });
     R.autoClear = false;
+    R.info.autoReset = false; // les statistiques couvrent toute l'image (3 passes)
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(FOV, 1, 2, 400);
     this.camera.rotation.set(-PITCH, 0, 0);
@@ -54,7 +55,7 @@ export class Gfx {
     this.sun = new THREE.DirectionalLight(col(L.sun), L.sunI);
     this.sun.position.set(-0.55, 1, 0.45);
     this.scene.add(this.hemi, this.sun);
-    if (L.dark) { this.lamp = new THREE.PointLight(col(L.dark && run.zone.bg === 'void' ? '#ffd0ff' : '#c8fff0'), 70, 18, 1.4); this.scene.add(this.lamp); }
+    if (L.dark) { this.lamp = new THREE.PointLight(col(L.dark && run.zone.bg === 'void' ? '#ffd0ff' : '#c8fff0'), 26, 16, 1.2); this.scene.add(this.lamp); }
     // monde : le décor évite les points d'intérêt (coffres, autels, totems, autel du boss, centre)
     const avoid = [...run.chests, ...run.shrines, ...(run.totems || []), ...run.pickups.filter(i => i.type === 'loot'), { x: 0, y: 0, r: 170 }, ...(run.altar ? [{ x: run.altar.x, y: run.altar.y, r: 200 }] : [])];
     this.world = new World3D(this.scene, run.zone, avoid);
@@ -65,6 +66,11 @@ export class Gfx {
     this.heroEvo = Math.max(0, Math.min(4, p.evo | 0));
     this.hero = M.heroModel(run.cls.id, this.heroEvo);
     this.scene.add(this.hero.root);
+    this.layer(this.hero.root);
+    // silhouette du héros quand le décor le cache (repère le pochoir des pixels où il est visible, puis
+    // dessine le reste de sa silhouette en bleu là où il est derrière quelque chose)
+    this.markMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthFunc: THREE.LessEqualDepth, fog: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
+    this.xrayMat = new THREE.MeshBasicMaterial({ color: col('#6ab8ff'), transparent: true, opacity: 0.6, depthWrite: false, depthFunc: THREE.GreaterDepth, fog: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
     this.hs = { hurt: 0, atk: 0, atkA: 0, face: -Math.PI / 2 };
     this.pet = null;
     if (run.pet) { try { this.pet = M.petModel(run.pet.id, PETS[run.pet.id]); this.scene.add(this.pet.root); } catch (e) { this.pet = null; } }
@@ -159,9 +165,26 @@ export class Gfx {
     this.fx.update(dt);
     this.fx.end();
     const R = this.renderer;
+    R.info.reset();
     R.clear();
     R.render(this.scene, this.camera);
+    this.xray();
     this.overlay.render(dt);
+  }
+
+  // le héros est aussi sur le calque 1 (passes de la silhouette)
+  layer(o) { o.traverse(c => c.layers.enable(1)); }
+  xray() {
+    const R = this.renderer, sc = this.scene, cam = this.camera, run = this.run;
+    if (run.dying || !this.hero.root.visible) return;
+    const bg = sc.background;
+    sc.background = null;
+    R.clearStencil();
+    cam.layers.set(1);
+    sc.overrideMaterial = this.markMat; R.render(sc, cam);
+    sc.overrideMaterial = this.xrayMat; R.render(sc, cam);
+    sc.overrideMaterial = null; cam.layers.set(0);
+    sc.background = bg;
   }
 
   onEvent(ev) {
@@ -184,14 +207,14 @@ export class Gfx {
     this.hemi.color.copy(col(L.sky)).lerp(col('#ff7a5a'), k * 0.55);
     this.hemi.intensity = L.hemi * (1 - k * 0.15);
     this.sun.color.copy(col(L.sun)).lerp(col('#ff6a4a'), k * 0.6);
-    if (this.lamp) { const p = run.p; this.lamp.position.set(p.x * S, 3.2, p.y * S + 1); }
+    if (this.lamp) { const p = run.p; this.lamp.position.set(p.x * S, 5, p.y * S + 2.5); }
   }
 
   // ---------- Héros et familier ----------
   drawHero(dt) {
     const run = this.run, p = run.p, hs = this.hs, H = this.hero, fx = this.fx;
     const evo = Math.max(0, Math.min(4, p.evo | 0));
-    if (evo !== this.heroEvo) { this.heroEvo = evo; H.setEvo?.(evo); }
+    if (evo !== this.heroEvo) { this.heroEvo = evo; H.setEvo?.(evo); this.layer(H.root); }
     // attaque : repérée sur les effets et les tirs du héros
     for (const f of run.fx) if (!f.g_seen) { f.g_seen = 1; if (f.type === 'slash' || f.type === 'beam') { hs.atk = 1; hs.atkA = f.a; } }
     for (const s of run.shots) if (!s.g_seen) { s.g_seen = 1; if ((s.type === 'arrow' || s.type === 'crystal') && hs.atk < 0.9) { hs.atk = 1; hs.atkA = Math.atan2(s.vy, s.vx); } }
@@ -278,6 +301,7 @@ export class Gfx {
       this.hero.dispose?.(); this.pet?.dispose?.();
       this.fx.dispose(); this.obj.dispose();
       this.world.dispose();
+      this.markMat.dispose(); this.xrayMat.dispose();
       this.renderer.dispose();
       this.renderer.forceContextLoss?.();
     } catch (e) { /* rien */ }
