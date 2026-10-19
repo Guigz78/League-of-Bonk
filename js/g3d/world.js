@@ -16,10 +16,10 @@ export const LOOK = {
     t: { g0: '#3f8c34', g1: '#347a2c', g2: '#54a242', tuft: '#286a22', tuft2: '#6cbc4e' } },
   river:  { fog: '#a4e0fc', fogK: 1, sky: '#f4fbff', grd: '#40705a', hemi: 1.5, sun: '#fff4dc', sunI: 2.2, edge: '#3a7050', hill: '#5a9a48', rim: '#f0fbff', rimW: 0.4,
     t: { g0: '#64b049', g1: '#58a040', g2: '#7cc25c', tuft: '#428a32', tuft2: '#9cd876', pave: ['#cfc9ba', '#ebe5d6', '#99927f', '#827b6a'] } },
-  ice:    { fog: '#c4dcf6', fogK: 0.95, sky: '#ffffff', grd: '#7a98bc', hemi: 1.55, sun: '#fff6ea', sunI: 1.75, edge: '#8aa8c8', hill: '#d0e0f2', rim: '#ffffff', rimW: 0.55,
-    t: { g0: '#c6d8ec', g1: '#b4c8e0', g2: '#dce8f6', tuft: '#9cb6d2', tuft2: '#f0f6ff', pave: ['#9fb4cc', '#c8daee', '#7088a6', '#5e7694'] } },
-  shadow: { fog: '#1c3834', fogK: 0.7, sky: '#9affe0', grd: '#14261f', hemi: 1.2, sun: '#b8d8ff', sunI: 0.95, edge: '#18302a', hill: '#22403a', dark: 1, rim: '#a8fff0', rimW: 0.6 },
-  void:   { fog: '#200e34', fogK: 0.7, sky: '#e0a8ff', grd: '#1a0a2a', hemi: 1.15, sun: '#ffb8f0', sunI: 1.0, edge: '#1a0c2a', hill: '#2a1640', dark: 1, rim: '#ffc8ff', rimW: 0.6,
+  ice:    { fog: '#b8d2f0', fogK: 0.95, sky: '#ffffff', grd: '#6a88b0', hemi: 1.38, sun: '#fff6ea', sunI: 1.7, edge: '#8aa8c8', hill: '#c4d6ec', rim: '#ffffff', rimW: 0.55, rimD: 0.5,
+    t: { g0: '#bccfe6', g1: '#aabfda', g2: '#d2e0f2', tuft: '#8eaacb', tuft2: '#e6f0fc', pave: ['#94aac4', '#bfd2e8', '#66809e', '#546e8e'] } },
+  shadow: { fog: '#1c3834', fogK: 0.7, sky: '#9affe0', grd: '#14261f', hemi: 1.2, sun: '#b8d8ff', sunI: 0.95, edge: '#18302a', hill: '#22403a', dark: 1, rim: '#a8fff0', rimW: 0.6, rimD: 0.1 },
+  void:   { fog: '#200e34', fogK: 0.7, sky: '#e0a8ff', grd: '#1a0a2a', hemi: 1.15, sun: '#ffb8f0', sunI: 1.0, edge: '#1a0c2a', hill: '#2a1640', dark: 1, rim: '#ffc8ff', rimW: 0.6, rimD: 0.12,
     t: { g0: '#2e1a4a', g1: '#26143e', g2: '#3c245e' } },
 };
 
@@ -201,6 +201,76 @@ const PROP = {
     b.add(G.dode(0.5), T0.rock[1], T(0, 0.1, 0, 1.4, 0.5, 1.4));
     return 2.6;
   },
+  // ---- petit décor du terrain de jeu (3D seulement) : bas, ne cache jamais les monstres ----
+  stump(b, T0, r) {
+    const tk = T0.trunk;
+    b.add(G.cyl(0.42, 0.52, 0.55, 7), tk, T(0, 0.27, 0), 0.08);
+    b.add(G.cyl(0.4, 0.4, 0.04, 7), shade(tk, 0.45), T(0, 0.56, 0));
+    b.add(G.cyl(0.22, 0.22, 0.05, 7), shade(tk, 0.25), T(0, 0.58, 0));
+    for (let i = 0; i < 4; i++) { const a = i * 1.6 + r(); b.add(G.box(0.5, 0.16, 0.18), shade(tk, -0.1), T(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5, 1, 1, 1, 0, -a, 0)); }
+    if (r() < 0.6) b.add(G.ico(0.18, 0), T0.moss, T(0.2, 0.6, 0.1, 1.3, 0.5, 1));
+    return 0.7;
+  },
+  log(b, T0, r) {
+    const tk = T0.trunk;
+    b.add(G.cyl(0.3, 0.3, 2.0, 7), tk, T(0, 0.3, 0, 1, 1, 1, 0, 0, Math.PI / 2), 0.08);
+    for (const s of [-1, 1]) b.add(G.cyl(0.27, 0.27, 0.04, 7), shade(tk, 0.45), T(s * 1.01, 0.3, 0, 1, 1, 1, 0, 0, Math.PI / 2));
+    b.add(G.box(0.12, 0.35, 0.1), tk, T(0.3, 0.6, 0.05, 1, 1, 1, 0, 0, 0.5));
+    b.add(G.ico(0.22, 0), T0.moss, T(-0.4, 0.55, 0, 1.6, 0.45, 1.1), 0.1);
+    return 0.6;
+  },
+  flowerbed(b, T0, r) {
+    const F = T0.flowers || ['#ffffff'];
+    for (let i = 0; i < 5; i++) { const a = r() * TAU, d = r() * 0.6; b.add(G.cone(0.22, 0.42, 3), i % 2 ? T0.tuft : T0.tuft2, T(Math.cos(a) * d, 0.2, Math.sin(a) * d, 1, 1, 1, 0, a, 0), 0.1); }
+    for (let i = 0; i < 9; i++) { const a = r() * TAU, d = 0.15 + r() * 0.7; b.add(G.oct(0.13), F[i % F.length], T(Math.cos(a) * d, 0.32 + r() * 0.15, Math.sin(a) * d, 1, 0.6, 1)); }
+    return 0.4;
+  },
+  pebbles(b, T0, r) {
+    const R = T0.rock;
+    for (let i = 0; i < 4; i++) { const a = i * 1.7 + r(), d = i ? 0.45 + r() * 0.3 : 0, s = i ? 0.22 + r() * 0.12 : 0.42; b.add(G.dode(s), R[i % 2], T(Math.cos(a) * d, s * 0.5, Math.sin(a) * d, 1.2, 0.75, 1), 0.1, 0.16); }
+    return 0.5;
+  },
+  fence(b, T0, r) {
+    const w = '#9a6a3a', d = '#6a4424';
+    for (let i = -1; i <= 1; i++) { b.add(G.box(0.16, 0.95, 0.16), d, T(i * 0.9, 0.47, 0, 1, 1, 1, 0, 0, (r() - 0.5) * 0.12)); b.add(G.cone(0.12, 0.16, 4), d, T(i * 0.9, 1.0, 0, 1, 1, 1, 0, Math.PI / 4)); }
+    for (const y of [0.35, 0.7]) b.add(G.box(1.95, 0.12, 0.08), w, T(0, y, 0.09, 1, 1, 1, 0, 0, (r() - 0.5) * 0.08));
+    return 1;
+  },
+  ferns(b, T0, r) {
+    const L = T0.leaf;
+    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + r() * 0.3; b.add(G.box(1.05, 0.05, 0.3), i % 2 ? L[0] : L[2], T(Math.cos(a) * 0.45, 0.3, Math.sin(a) * 0.45, 1, 1, 1, 0, -a, -0.45), 0.1); }
+    b.add(G.ico(0.18, 0), L[1], T(0, 0.15, 0));
+    return 0.6;
+  },
+  bones(b, T0, r) {
+    const c = '#e8e0d0';
+    b.add(G.ico(0.26, 1), c, T(0, 0.22, 0, 1, 0.9, 1.1));
+    for (const s of [-1, 1]) b.add(G.box(0.08, 0.08, 0.04), '#1a1418', T(s * 0.1, 0.26, 0.26));
+    for (let i = 0; i < 4; i++) { const a = r() * TAU; b.add(G.box(0.55, 0.07, 0.07), c, T(Math.cos(a) * 0.45, 0.05, Math.sin(a) * 0.45, 1, 1, 1, 0, -a, 0)); }
+    b.add(G.box(1.2, 0.08, 1.0), shade(T0.g0, -0.3), T(0, 0.02, 0.1));
+    return 0.5;
+  },
+  shardlet(b, T0, r) {
+    const C = T0.ice ? ['#a8e0fa', '#e0f6ff', '#ffffff'] : T0.leaf;
+    for (let i = 0; i < 3; i++) { const a = i * 2.1 + r(); b.add(G.oct(0.32), C[i % C.length], T(Math.cos(a) * 0.25 * (i > 0), 0.4 + (i ? 0 : 0.15), Math.sin(a) * 0.25 * (i > 0), 0.55, i ? 1.3 : 1.9, 0.55, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4), 0.12); }
+    b.add(G.dode(0.3), T0.rock[1], T(0, 0.05, 0, 1.3, 0.45, 1.3));
+    return 1;
+  },
+  snowpile(b, T0, r) {
+    b.add(G.ico(0.55, 1), '#e8f0fa', T(0, 0.12, 0, 1.4, 0.45, 1.1), 0.06);
+    b.add(G.ico(0.35, 1), '#eef6ff', T(0.5, 0.1, 0.2, 1.2, 0.5, 1), 0.04);
+    if (r() < 0.6) b.add(G.box(0.07, 0.6, 0.07), T0.trunk, T(-0.2, 0.35, 0, 1, 1, 1, 0.2, 0, 0.3));
+    return 0.4;
+  },
+};
+// petit décor par thème (3D) : [sorte, poids]
+const DECO = {
+  lane: [['stump', 1], ['log', 0.6], ['flowerbed', 1.6], ['pebbles', 1.2], ['fence', 0.6], ['bush', 0.5]],
+  jungle: [['ferns', 2], ['stump', 0.8], ['log', 0.8], ['flowerbed', 1], ['mushroom', 0.8], ['pebbles', 0.6]],
+  river: [['flowerbed', 1.4], ['pebbles', 1.4], ['log', 0.6], ['fence', 0.5], ['stump', 0.6], ['reeds', 0.6]],
+  ice: [['snowpile', 0.8], ['pebbles', 1.3], ['stump', 0.7], ['shardlet', 1]],
+  shadow: [['bones', 1.4], ['stump', 1], ['pebbles', 1], ['log', 0.6], ['ferns', 0.5]],
+  void: [['shardlet', 1.6], ['pebbles', 1.2], ['bones', 0.4]],
 };
 const PROP_LIGHT = { lantern: [0.6, 1.8, 0, '#a8ffc8', 3.2], vcrystal: [0, 1.4, 0, '#d070ff', 4], tree_crystal: [0, 2.6, 0, '#c070ff', 4.5] };
 
@@ -400,6 +470,21 @@ export class World3D {
           push({ x, y, kind, v: (r() * 3) | 0, s: (0.85 + r() * 0.35) * (edge ? 1.25 : 1) * (far ? 1.2 : 1), a: r() * TAU });
         }
       }
+      // petit décor bas du terrain de jeu (souches, rondins, massifs de fleurs, cailloux, barrières…)
+      const D = DECO[this.zone.bg] || DECO.lane, dt = D.reduce((s, d) => s + d[1], 0);
+      for (let gx = Math.floor(-HALF / PCELL); gx < Math.ceil(HALF / PCELL); gx++) for (let gy = Math.floor(-HALF / PCELL); gy < Math.ceil(HALF / PCELL); gy++) {
+        const r = rng(`q${this.zone.id}:${gx}:${gy}`), n = 2 + ((r() * 2.6) | 0);
+        for (let i = 0; i < n; i++) {
+          const x = (gx + r()) * PCELL, y = (gy + r()) * PCELL;
+          let q = r() * dt, kind = D[0][0];
+          for (const [k, w] of D) { q -= w; if (q <= 0) { kind = k; break; } }
+          const v = (r() * 2) | 0, s = 0.8 + r() * 0.45, a = r() * TAU;
+          if (Math.max(Math.abs(x), Math.abs(y)) > HALF - 90 || Math.hypot(x, y) < 210) continue;
+          if (kind === 'reeds' ? !this.onFeature(x, y, 40) : this.onFeature(x, y, 14)) continue;
+          if (this.avoid.some(o => Math.hypot(o.x - x, o.y - y) < (o.r || 80) * 0.8)) continue;
+          push({ x, y, kind, v, s, a, low: 1 });
+        }
+      }
     }
     this.props = all;
     // un groupe d'instances par sorte et variante
@@ -444,6 +529,12 @@ export class World3D {
         c.push(t, x * S, heightAt(x, y), y * S, a, s);
       }
     }
+    // taches de sol (herbe plus sombre ou plus claire, terre) : -1, x, y, z, couleur, rayon
+    if (this.patchPool) for (let i = 0; i < 3; i++) {
+      const x = (gx + r()) * PCELL, y = (gy + r()) * PCELL, ci = (r() * this.patchC.length) | 0, R = 45 + r() * 70;
+      if (Math.max(Math.abs(x), Math.abs(y)) > HALF + 100 || this.onFeature(x, y, 0)) continue;
+      c.push(-1, x * S, 0.03 + heightAt(x, y), y * S, ci, R * S);
+    }
     this.dcells.set(k, c);
     return c;
   }
@@ -455,8 +546,11 @@ export class World3D {
     // touffes d'herbe (ou neige)
     const tuft = new Build(5);
     if (bg === 'ice') { tuft.add(G.ico(0.32, 0), '#ffffff', T(0, 0.05, 0, 1.4, 0.45, 1.1), 0.05); tuft.add(G.ico(0.2, 0), '#e4f0fa', T(0.3, 0.04, 0.1, 1.2, 0.5, 1)); }
-    else for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.4; tuft.add(new THREE.ConeGeometry(0.09, 0.5 + (i % 2) * 0.22, 3, 1, true), i % 2 ? T0.tuft : T0.tuft2, T(Math.cos(a) * 0.12, 0.25, Math.sin(a) * 0.12, 1, 1, 1, Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35), 0.1); }
-    add(tuft, 34);
+    else for (let i = 0; i < 5; i++) { // touffe plus fournie : brins sombres à la base, pointes claires
+      const a = i / 5 * TAU + 0.4, h = 0.55 + (i % 3) * 0.2, tip = shade(T0.tuft2, 0.08);
+      tuft.add(new THREE.ConeGeometry(0.13, h, 3, 2, true), (x, y) => (y > h * 0.55 ? tip : y > h * 0.25 ? T0.tuft2 : T0.tuft), T(Math.cos(a) * 0.14, h / 2, Math.sin(a) * 0.14, 1, 1, 1, Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4), 0.08);
+    }
+    add(tuft, 30);
     // fleurs
     const fl = T0.flowers || [];
     for (let v = 0; v < Math.min(3, fl.length); v++) {
@@ -474,6 +568,11 @@ export class World3D {
     if (bg === 'shadow') { const b = new Build(2); b.add(G.box(0.08, 0.06, 0.5), '#e8e0d0', T(0, 0.04, 0, 1, 1, 1, 0, 0.4)); b.add(G.ico(0.13, 0), '#e8e0d0', T(0.1, 0.1, 0.3)); add(b, 3); }
     if (bg === 'void') { const b = new Build(2); b.add(G.oct(0.18), '#e070ff', T(0, 0.2, 0, 0.7, 1.8, 0.7), 0.1); add(b, 4.5); }
     this.dpools = D.map(d => new Pool(this.group, d.g, lowpoly(), Math.ceil((d.n + 1) * 1.2 * 7 * 9)));
+    // taches de sol douces (le sol n'est plus uniforme) : herbe sombre, herbe claire, terre
+    const pm = new THREE.MeshLambertMaterial({ map: TX.soft(), transparent: true, depthWrite: false, opacity: T0.dark ? 0.45 : 0.6 });
+    this.mats.push(pm);
+    this.patchC = [col(shade(T0.g1, -0.32)), col(shade(T0.g2, 0.2)), col(shade(T0.g1, -0.2)), col(bg === 'ice' || bg === 'void' ? shade(T0.g2, 0.2) : shade(T0.pave[3], 0.05))];
+    this.patchPool = new Pool(this.group, flatGeo(), pm, 3 * 7 * 9 + 8, { color: true, order: -3 });
   }
 
   // remplit les instances du décor et des détails autour d'un point (px) : appelé quand la caméra change de cellule
@@ -482,6 +581,7 @@ export class World3D {
     for (const p of this.propPool.values()) p.begin();
     this.shadowPool.begin(); this.glowPool?.begin();
     for (const p of this.dpools) p.begin();
+    this.patchPool?.begin();
     const SP = this.stonePool; SP?.begin();
     const sh = this.shadowPool, gl = this.glowPool, dark = this.L.dark ? 0.75 : 0.45;
     for (let gx = gx0; gx <= gx1; gx++) for (let gy = gy0; gy <= gy1; gy++) {
@@ -491,17 +591,21 @@ export class World3D {
       if (list) for (const p of list) {
         const P = p.pool, noRot = p.kind === 'tower' || p.kind === 'banner';
         P.put(p.x * S, p.gy, p.y * S, noRot ? 0 : p.a, p.s);
-        const w = (p.kind === 'tree' ? 3.6 : p.kind === 'tower' ? 3 : p.kind === 'bush' ? 2 : 1.8) * p.s;
+        const w = (p.kind === 'tree' ? 3.6 : p.kind === 'tower' ? 3 : p.kind === 'bush' ? 2 : p.kind === 'log' || p.kind === 'fence' ? 2.2 : p.low ? 1.4 : 1.8) * p.s;
         sh.put(p.x * S + 0.25 * p.s, p.gy + 0.08, p.y * S + 0.2 * p.s, 0, w, 1, w * 0.8);
         if (P.light && gl) { const Lt = P.light, i = gl.put(p.x * S + Lt[0] * p.s, p.gy + Lt[1] * p.s, p.y * S, 0, Lt[4] * p.s); gl.tint(i, col(Lt[3]), dark); }
       }
       if (Math.max(Math.abs(gx * PCELL + PCELL / 2), Math.abs(gy * PCELL + PCELL / 2)) > HALF + 300) continue;
-      const c = this.detailCell(gx, gy), DP = this.dpools;
-      for (let i = 0; i < c.length; i += 6) DP[c[i]].put(c[i + 1], c[i + 2], c[i + 3], c[i + 4], c[i + 5]);
+      const c = this.detailCell(gx, gy), DP = this.dpools, PP = this.patchPool;
+      for (let i = 0; i < c.length; i += 6) {
+        if (c[i] < 0) { const R = c[i + 5], j = PP.put(c[i + 1], c[i + 2], c[i + 3], c[i + 4] * 1.7, R * 2, 1, R * 1.5); PP.tint(j, this.patchC[c[i + 4]]); }
+        else DP[c[i]].put(c[i + 1], c[i + 2], c[i + 3], c[i + 4], c[i + 5]);
+      }
     }
     for (const p of this.propPool.values()) p.end();
     this.shadowPool.end(); this.glowPool?.end();
     for (const p of this.dpools) p.end();
+    this.patchPool?.end();
     SP?.end();
     this.rx = x; this.ry = y;
   }

@@ -49,7 +49,7 @@ export class Gfx {
     this.camera.rotation.set(-PITCH, 0, 0);
     // lumières : ciel + soleil chaud, brouillard pour la profondeur
     const L = this.look = LOOK[run.zone.bg] || LOOK.lane;
-    RIM.c.value.set(L.rim || '#fff4e0'); RIM.w.value = L.rimW ?? 0.35; // reflet de bord des personnages, par monde
+    RIM.c.value.set(L.rim || '#fff4e0'); RIM.w.value = L.rimW ?? 0.35; RIM.d.value = L.rimD ?? 0.25; // bords des personnages, par monde
     this.fogC = col(L.fog).clone(); this.skyC = col(L.sky).clone();
     this.scene.background = this.fogC.clone();
     this.scene.fog = new THREE.Fog(this.fogC.clone(), 80, 200);
@@ -323,7 +323,7 @@ export class Gfx {
       this.renderer.dispose();
       this.renderer.forceContextLoss?.();
     } catch (e) { /* rien */ }
-    RIM.c.value.set('#fff4e0'); RIM.w.value = 0.35; // menus : reflet neutre
+    RIM.c.value.set('#fff4e0'); RIM.w.value = 0.35; RIM.d.value = 0; // menus : reflet neutre
     this.c3.remove();
   }
 }

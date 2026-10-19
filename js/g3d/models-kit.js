@@ -238,7 +238,8 @@ const FCOMMON = `#include <common>
 varying float vGlow;
 varying vec4 vFx;
 uniform vec3 uRimC;
-uniform float uRimW;`;
+uniform float uRimW;
+uniform float uRimD;`;
 const FCOLOR = `#include <color_fragment>
 {
   vec3 c = diffuseColor.rgb;
@@ -251,15 +252,16 @@ const FEMIS = `#include <emissivemap_fragment>
 totalEmissiveRadiance += diffuseColor.rgb * vGlow + vec3(0.95, 0.95, 0.9) * vFx.x * 0.6 + vec3(0.25, 0.02, 0.0) * vFx.z * 0.35;`;
 const FRIM = `{
   float lobR = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+  outgoingLight *= 1.0 - uRimD * smoothstep(0.72, 0.97, lobR); // faces rasantes assombries : silhouette lisible sur sol clair
   outgoingLight += mix(diffuseColor.rgb, uRimC, uRimW) * (lobR * lobR * lobR) * LOB_RIM;
 }
 #include <opaque_fragment>`;
 
 // reflet de bord partagé par tous les personnages : couleur et part de cette couleur (le moteur la règle par monde)
-export const RIM = { c: { value: new THREE.Color('#fff4e0') }, w: { value: 0.35 } };
+export const RIM = { c: { value: new THREE.Color('#fff4e0') }, w: { value: 0.35 }, d: { value: 0 } };
 export function charMaterial({ anim = false, alphaHash = false, rim = 0.55, parts = null } = {}) {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, alphaHash });
-  const U = { uFx: { value: new THREE.Vector4(0, 0, 0, 1) }, uGlow: { value: 1 }, uBody: { value: new THREE.Vector4(0, 0, 0, 0) }, uRimC: RIM.c, uRimW: RIM.w };
+  const U = { uFx: { value: new THREE.Vector4(0, 0, 0, 1) }, uGlow: { value: 1 }, uBody: { value: new THREE.Vector4(0, 0, 0, 0) }, uRimC: RIM.c, uRimW: RIM.w, uRimD: RIM.d };
   if (anim) { const P = parts || [0, 1, 2, 3].map(() => Array.from({ length: NPART }, () => new THREE.Vector4())); U.uPA = { value: P[0] }; U.uPB = { value: P[1] }; U.uPC = { value: P[2] }; U.uPD = { value: P[3] }; }
   m.userData.U = U;
   m.defines = { LOB_RIM: rim.toFixed(3) };
@@ -270,7 +272,7 @@ export function charMaterial({ anim = false, alphaHash = false, rim = 0.55, part
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', FCOMMON).replace('#include <color_fragment>', FCOLOR)
       .replace('#include <emissivemap_fragment>', FEMIS).replace('#include <opaque_fragment>', FRIM);
   };
-  m.customProgramCacheKey = () => 'lobchar2';
+  m.customProgramCacheKey = () => 'lobchar3';
   return m;
 }
 

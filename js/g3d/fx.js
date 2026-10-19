@@ -157,7 +157,7 @@ export class Fx {
       case 'combo': this.comboFx(ev); break;
       case 'miniBoss': this.miniFx(ev.e); break;
       case 'miniDeath': this.miniDeathFx(ev); break;
-      case 'swarm': for (let i = 0; i < 2; i++) this.ring(p.x, p.y, 520, 150, i ? '#ffffff' : '#ff4a3a', 10, 0.7, -i * 0.12); break;
+      case 'swarm': for (let i = 0; i < 2; i++) this.ring(p.x, p.y, 520, 160, i ? '#ffffff' : '#ff4a3a', i ? 5 : 8, 0.7, -i * 0.12); break;
       case 'kill': {
         const e = ev.e;
         this.decal(e.x, e.y, e.r * (e.boss ? 1.6 : 1.1), shade(e.def.pal[1], -0.3), 0.45);
