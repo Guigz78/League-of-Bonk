@@ -215,10 +215,10 @@ export const PET_BY_ZONE = ['poro', 'brambi', 'herald', 'phenix', 'wisp', 'voidy
 // Équipement : 3 emplacements
 export const SLOTS = { weapon: 'Arme', armor: 'Armure', trinket: 'Bijou' };
 export const RARITY = {
-  common:    { name: 'Commun',     color: '#a8bccc', mult: 1 },
-  rare:      { name: 'Rare',       color: '#ff9a2a', mult: 1.6 },
-  epic:      { name: 'Épique',     color: '#c25aff', mult: 2.4 },
-  legendary: { name: 'Légendaire', color: '#3ae8d0', mult: 3.4 },
+  common:    { name: 'Commun',     color: '#9aa4b2', mult: 1 },
+  rare:      { name: 'Rare',       color: '#3b8cff', mult: 1.6 },
+  epic:      { name: 'Épique',     color: '#a855f7', mult: 2.4 },
+  legendary: { name: 'Légendaire', color: '#f59e0b', mult: 3.4 },
 };
 
 // Modèles d'objets : main = caractéristique principale (arme : ATQ, armure : PV, bijou : au choix),

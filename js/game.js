@@ -601,11 +601,10 @@ function tutorial(r) {
   };
   const end = () => {
     save.tutorialDone = true; persist({ touch: false });
-    w.classList.remove('in'); setTimeout(() => w.remove(), 200);
+    w.classList.add('out'); setTimeout(() => w.remove(), 200);
     if (!r.over) { r.paused = false; r.last = performance.now(); }
   };
   draw();
-  requestAnimationFrame(() => w.classList.add('in'));
   w.addEventListener('pointerdown', e => e.stopPropagation());
   w.addEventListener('click', e => {
     const b = e.target.closest('[data-t]'); if (!b) return;

@@ -21,14 +21,14 @@ const INK2 = '#1a1030';
 const SWEEP_ARC = 3.5; // le rayon tournant du boss balaie ~200° (comme run.js)
 // police des chiffres et étiquettes du jeu : Lilita One (déclarée dans le CSS), police ronde du système en attendant
 let LILITA = false;
-const tf = (px, w = 900) => (LILITA ? `${px}px 'Lilita One', ${FONT}` : `${w} ${px}px ${FONT}`);
+const tf = (px, w = 900) => (LILITA ? `700 ${Math.round(px * 1.12)}px 'Rajdhani', ${FONT}` : `${w} ${px}px ${FONT}`);
 try {
   const f = document.fonts;
   if (f) {
-    if (f.check("16px 'Lilita One'")) LILITA = true;
-    f.load("16px 'Lilita One'").then(l => {
+    if (f.check("700 16px 'Rajdhani'")) LILITA = true;
+    f.load("700 16px 'Rajdhani'").then(l => {
       if (l.length) LILITA = true;
-      else if (typeof FontFace === 'function') { const ff = new FontFace('Lilita One', 'url(fonts/lilita-one-latin.woff2)'); ff.load().then(x => { f.add(x); LILITA = true; }).catch(() => {}); }
+      else if (typeof FontFace === 'function') { const ff = new FontFace('Rajdhani', 'url(fonts/rajdhani-700.woff2)', { weight: '700' }); ff.load().then(x => { f.add(x); LILITA = true; }).catch(() => {}); }
     }).catch(() => {});
   }
 } catch { /* police du système */ }

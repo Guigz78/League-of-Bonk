@@ -746,7 +746,7 @@ button.itile:active { transform: translateY(1px); }
 .hud.cr .lo.t + .lo.bst, .hud.cr .lo.w + .lo.bst { margin-left: 4px; }
 .hud.cr .lo.bst.off { opacity: .4; filter: grayscale(1); }
 /* barre du boss : fine et large, sous la mini-carte */
-.hud.cr .bossbar { position: absolute; left: calc(var(--safe-l) + 12px); right: calc(var(--safe-r) + 12px); top: max(212px, calc(var(--safe-t) + 170px)); margin: 0; }
+.hud.cr .bossbar { position: absolute; left: calc(var(--safe-l) + 12px); right: calc(var(--safe-r) + 12px); top: max(222px, calc(var(--safe-t) + 182px)); margin: 0; }
 .hud.cr .bossbar[hidden] { display: none; }
 .hud.cr .bossbar .bn { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font: 700 14px/1 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: var(--tx); text-shadow: var(--ts); }
 .hud.cr .bossbar .tag.boss { margin: 0; padding: 2px 5px; font-size: 10px; }
@@ -976,9 +976,11 @@ button.itile:active { transform: translateY(1px); }
 .ko-big small { font: 700 11px var(--fd); letter-spacing: .16em; text-transform: uppercase; color: var(--tx3); }
 
 /* ---------- Tutoriel du premier lancement ---------- */
-.tuto { position: absolute; inset: 0; z-index: 46; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 16px calc(var(--safe-b) + 16px); background: linear-gradient(180deg, rgba(4,6,10,.2), rgba(4,6,10,.85) 55%); opacity: 0; transition: opacity .2s; touch-action: none; }
-.tuto.in { opacity: 1; }
-.tu-card { position: relative; padding: 18px 18px 16px; background: rgba(13,17,26,.97); border: 1px solid var(--ln2); border-top: 2px solid var(--cy); animation: fadeUp .25s var(--ease) both; }
+.tuto { position: absolute; inset: 0; z-index: 46; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 16px calc(var(--safe-b) + 16px); background: linear-gradient(180deg, rgba(4,6,10,.2), rgba(4,6,10,.85) 55%); touch-action: none; }
+.tuto.out { opacity: 0; transition: opacity .2s; }
+.run:has(.tuto) .hint-bubble { display: none; }
+.tu-card { position: relative; padding: 18px 18px 16px; background: rgba(13,17,26,.97); border: 1px solid var(--ln2); border-top: 2px solid var(--cy); animation: slideUp .22s var(--ease) both; }
+@keyframes slideUp { from { transform: translateY(10px); } }
 .tu-step { font: 700 11px var(--fd); letter-spacing: .2em; text-transform: uppercase; color: var(--cy); }
 .tu-card h3 { margin: 4px 0 6px; font: 700 24px/1.05 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
 .tu-card p { margin: 0; color: var(--tx2); font-size: 14.5px; line-height: 1.45; }
