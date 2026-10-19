@@ -6,7 +6,8 @@
 // Expédition : une partie enchaîne les mondes. Dans chaque monde, l'autel invoque le boss dans une arène ;
 // sa mort ouvre un portail vers le monde suivant (plus dur). Chrono écoulé : les monstres deviennent fous.
 // Totems de défi (plus dur contre des récompenses), coffres de butin ramassés pendant la partie, bonus de départ.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS, AFFIXES, LEGEND_EFFECTS } from './data.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS, AFFIXES, LEGEND_EFFECTS,
+  WEAPON_EVOS, LEVEL_RARITY, WEAPON_RARITY_DMG, REROLLS, SKIPS, COMBO_WINDOW, COMBO_STEPS } from './data.js';
 import { save, playerStats } from './save.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -130,7 +131,11 @@ export class Run {
       armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1, critMul: 2,
       inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: 5, ult: 0,
       weapons: [], tomes: {}, boons: {}, evo: 0,
+      tv: {}, bv: {}, tr: {}, // valeurs cumulées des tomes / bénédictions (selon la rareté des cartes), rareté max par tome
     };
+    // rareté des cartes : chance (trèfle, fortune de l'équipement, totem maudit) ; relances et « passer »
+    this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
+    this.rerolls = REROLLS; this.skips = SKIPS;
     this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
     this.jumpWarn = 0; this.jumpWarnDur = 0;
     this.addWeapon(this.cls.weapon);
@@ -395,22 +400,53 @@ export class Run {
   }
 
   // ---------- Armes, tomes, autels ----------
-  addWeapon(id) {
-    const w = this.p.weapons.find(x => x.id === id);
-    if (w) w.lv = Math.min(MAX_LEVEL, w.lv + 1); else this.p.weapons.push({ id, lv: 1, t: 0.4, a: 0 });
+  // r = rareté de la carte (0 à 3) : bonus de dégâts propre à l'arme ; rb = bonus cumulé, r = rareté max (bord du HUD)
+  addWeapon(id, r = 0) {
+    let w = this.p.weapons.find(x => x.id === id);
+    if (w) w.lv = Math.min(MAX_LEVEL, w.lv + 1); else this.p.weapons.push(w = { id, lv: 1, t: 0.4, a: 0, rb: 0, r: 0, evo: false });
+    w.rb = (w.rb || 0) + (WEAPON_RARITY_DMG[r] || 0); w.r = Math.max(w.r || 0, r);
     this.renderLoadout?.();
   }
 
-  addTome(id) { this.p.tomes[id] = (this.p.tomes[id] || 0) + 1; this.recalc(); this.renderLoadout(); }
-  addBoon(id) {
-    this.p.boons[id] = (this.p.boons[id] || 0) + 1;
+  addTome(id, r = 0) {
+    const p = this.p;
+    p.tomes[id] = (p.tomes[id] || 0) + 1; p.tv[id] = (p.tv[id] || 0) + LEVEL_RARITY[r].mult; p.tr[id] = Math.max(p.tr[id] || 0, r);
+    this.recalc(); this.renderLoadout();
+  }
+  addBoon(id, r = 0) {
+    this.p.boons[id] = (this.p.boons[id] || 0) + 1; this.p.bv[id] = (this.p.bv[id] || 0) + LEVEL_RARITY[r].mult;
     this.recalc();
     if (id === 'hp') this.p.hp = this.p.maxHp;
   }
 
+  // ---------- Évolutions d'armes ----------
+  // armes prêtes à évoluer : niveau 5 + tome associé possédé
+  evoReady() { return this.p.weapons.filter(w => !w.evo && w.lv >= MAX_LEVEL && WEAPON_EVOS[w.id] && this.p.tomes[WEAPON_EVOS[w.id].tome]); }
+  evoCard(w) {
+    const E = WEAPON_EVOS[w.id];
+    return { kind: 'evo', id: w.id, lv: MAX_LEVEL, rarity: 3, name: E.name, icon: E.icon, desc: E.desc, weapon: WEAPONS[w.id].name, tome: TOMES[E.tome].name };
+  }
+  evolveWeapon(id) {
+    const p = this.p, w = p.weapons.find(x => x.id === id), E = WEAPON_EVOS[id];
+    if (!w || w.evo || !E) return;
+    w.evo = true; w.r = 3; w.t = Math.min(w.t, 0.3); w.orbs = null;
+    this.evoFlash = Math.max(this.evoFlash, 0.9); p.inv = Math.max(p.inv, 1.5);
+    this.burst(p.x, p.y, 40, 40, '#ffe48a', 4);
+    this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 260, life: 0.7, max: 0.7, color: '#ffd54a' });
+    this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 380, life: 0.9, max: 0.9, color: '#ffffff' });
+    for (const e of this.grid.query(p.x, p.y, 260)) if (!e.boss) { e.kx += (e.x - p.x) * 3; e.ky += (e.y - p.y) * 3; }
+    this.emit('weaponEvolve', { id, name: E.name, x: p.x, y: p.y });
+    this.banner(`<small>Évolution d'arme ! · ${esc(WEAPONS[id].name)} + ${esc(TOMES[E.tome].name)}</small>${esc(E.name)}`, 2600, 'evo weapon');
+    this.shake = Math.max(this.shake, 7);
+    sfx('evolve'); buzz(90);
+    save.stats.weaponEvos = (save.stats.weaponEvos || 0) + 1;
+    this.renderLoadout();
+  }
+
   // caractéristiques du héros pour un jeu de tomes / bénédictions / évolution donné (sans rien modifier :
   // sert aussi aux fiches de niveau). Chaque stade d'évolution : +12 % dégâts, +15 % PV, +3 % vitesse ; forme ultime +10 % dégâts.
-  derive(t = this.p.tomes, b = this.p.boons, evo = this.p.evo) {
+  // t, b = valeurs des tomes / bénédictions (1 par carte commune, plus pour les cartes rares : LEVEL_RARITY.mult)
+  derive(t = this.p.tv, b = this.p.bv, evo = this.p.evo) {
     const B = this.base, I = this.it, last = evo > 0 && evo >= EVOLUTIONS[this.cls.id].length - 1;
     return {
       dmgMul: (1 + 0.15 * (t.power || 0) + 0.12 * (b.dmg || 0)) * (1 + 0.12 * evo + (last ? 0.1 : 0)) * this.bDmg,
@@ -435,8 +471,22 @@ export class Run {
 
   // Caractéristiques d'une arme à un niveau donné : source unique pour les attaques ET les fiches de niveau
   // (dmg = dégâts par coup avant critique, cd = recharge en s, n = nombre de projectiles, R = taille…)
-  wstats(id, lv, p = this.p) {
-    const A = p.atk * p.dmgMul, ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+  // x = l'arme elle-même ({ rb : bonus de rareté, evo : évoluée }) quand on la connaît
+  wstats(id, lv, p = this.p, x = null) {
+    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+    if (x?.evo) switch (id) { // armes évoluées : bien plus fortes, et un comportement à part (updateWeapons)
+      case 'beam': return { dmg: A * 1.9 * 1.3 * 1.4 * 1.5, cd: 0.75 * h, n: 4, w: 44 * ar, len: 430 * ar };
+      case 'arrows': return { dmg: A * 1.3 * 1.5, cd: 0.36 * h, n: 7, pierce: 4, big: A * 6 };
+      case 'sword': return { dmg: A * 1.7 * 1.3 * 1.4 * 1.5, cd: 0.8 * h, R: 150 * ar, n: 3 };
+      case 'orbs': return { dmg: A * 0.8 * 1.3 * 1.3 * 1.5, cd: 0.35 * h, n: 9, R: 125 * ar };
+      case 'aura': return { dmg: A * 0.55 * 1.4 * 1.5 * 1.6, cd: 0.4 * h, R: 150 * ar };
+      case 'lightning': return { dmg: A * 2.3 * 1.3 * 1.4, cd: 1.25 * h, n: 8, R: 80 * ar };
+      case 'boomerang': return { dmg: A * 1.3 * 1.3 * 1.3 * 1.4, cd: 1.25 * h, n: 6, R: 28 * ar };
+      case 'shrooms': return { dmg: A * 3 * 1.4 * 1.5, cd: 1.5 * h, n: 4, R: 125 * ar };
+      case 'frost': return { dmg: A * 1.2 * 1.3 * 1.6, cd: 1.7 * h, R: 230 * ar, freeze: 1.5 };
+      case 'daggers': return { dmg: A * 0.9 * 1.3 * 1.4, cd: 0.75 * h, n: 16, pierce: 6, v: 620 };
+      case 'snowball': return { dmg: A * 2.4 * 1.3 * 1.5, cd: 1.4 * h, n: 5, R: 110 * ar, freeze: 0.8 };
+    }
     switch (id) {
       case 'beam': return { dmg: A * 1.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.9 : 1.15) * h, n: 1 + L(4), w: (L(3) ? 30 : 18) * ar, len: 320 * ar };
       case 'arrows': return { dmg: A * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.4 : 0.52) * h, n: 1 + L(2) + L(5), pierce: L(4) * 2 };
@@ -456,8 +506,10 @@ export class Run {
   renderLoadout() {
     const el = $('#loadout'); if (!el) return;
     const p = this.p;
-    el.innerHTML = p.weapons.map(w => `<span class="lo w">${iconImg(WEAPONS[w.id].icon, 18)}<b>${w.lv}</b></span>`).join('') +
-      Object.entries(p.tomes).map(([id, lv]) => `<span class="lo t">${iconImg(TOMES[id].icon, 18)}<b>${lv}</b></span>`).join('') +
+    // classes r0…r3 = meilleure rareté choisie pour cet emplacement, evo = arme évoluée, ready = prête à évoluer
+    const ready = this.evoReady();
+    el.innerHTML = p.weapons.map(w => `<span class="lo w r${w.r || 0}${w.evo ? ' evo' : ''}${ready.includes(w) ? ' ready' : ''}">${iconImg(WEAPONS[w.id].icon, 18)}<b>${w.evo ? '★' : w.lv}</b></span>`).join('') +
+      Object.entries(p.tomes).map(([id, lv]) => `<span class="lo t r${p.tr[id] || 0}">${iconImg(TOMES[id].icon, 18)}<b>${lv}</b></span>`).join('') +
       // bonus de départ (l'égide affiche ses blocages restants, la plume de phénix s'éteint une fois utilisée)
       this.boosts.map(id => {
         const off = (id === 'egide' && !p.aegis) || (id === 'phenix' && !this.phoenix);
@@ -480,20 +532,34 @@ export class Run {
     el.classList.toggle('final', !next);
   }
 
+  // rareté d'une carte (0 Commun … 3 Légendaire) : la chance augmente les poids des cartes rares
+  rollRarity() {
+    const L = this.luck0 + this.lootLuck + 0.04 * this.stage;
+    let tot = 0;
+    for (const R of LEVEL_RARITY) tot += R.w * (1 + R.luck * L);
+    let x = Math.random() * tot;
+    for (let i = 0; i < LEVEL_RARITY.length; i++) { const R = LEVEL_RARITY[i]; if ((x -= R.w * (1 + R.luck * L)) <= 0) return i; }
+    return 0;
+  }
+
+  // n cartes d'amélioration ; une arme prête à évoluer est toujours proposée en premier
   choices(n = 3) {
-    const p = this.p, cands = [];
+    const p = this.p, cands = [], out = [];
+    const ev = this.evoReady();
+    if (ev.length) { out.push(this.evoCard(ev[Math.floor(Math.random() * ev.length)])); if (n === 1) return out; }
     for (const w of p.weapons) if (w.lv < MAX_LEVEL) cands.push({ kind: 'weapon', id: w.id, lv: w.lv + 1, wgt: 3 });
     if (p.weapons.length < MAX_WEAPONS) for (const id of Object.keys(WEAPONS)) if (!p.weapons.find(w => w.id === id)) cands.push({ kind: 'weapon', id, lv: 1, wgt: 1.6 });
     for (const [id, lv] of Object.entries(p.tomes)) if (lv < MAX_LEVEL) cands.push({ kind: 'tome', id, lv: lv + 1, wgt: 2 });
     if (Object.keys(p.tomes).length < MAX_TOMES) for (const id of Object.keys(TOMES)) if (!p.tomes[id]) cands.push({ kind: 'tome', id, lv: 1, wgt: 1.3 });
-    const out = [];
     while (out.length < n && cands.length) {
       const tot = cands.reduce((s, c) => s + c.wgt, 0);
       let x = Math.random() * tot, i = 0;
       while ((x -= cands[i].wgt) > 0) i++;
-      out.push(...cands.splice(i, 1));
+      const c = cands.splice(i, 1)[0];
+      delete c.wgt; c.rarity = this.rollRarity();
+      out.push(c);
     }
-    if (!out.length) out.push({ kind: 'heal', id: 'heal', lv: 0 }, { kind: 'gold', id: 'gold', lv: 0 });
+    if (!out.length) out.push({ kind: 'heal', id: 'heal', lv: 0, rarity: this.rollRarity() }, { kind: 'gold', id: 'gold', lv: 0, rarity: this.rollRarity() });
     return out;
   }
 
@@ -502,9 +568,17 @@ export class Run {
   choiceInfo(c) {
     const p = this.p, lines = [], L = (label, from, to) => lines.push({ label, from, to });
     if (!c) return { lines };
+    const R = LEVEL_RARITY[c.rarity || 0], mul = R.mult;
+    if (c.kind === 'evo') { // évolution : niveau 5 -> forme évoluée
+      const w = p.weapons.find(x => x.id === c.id);
+      if (!w) return { lines };
+      const a = this.wstats(c.id, w.lv, p, w), b = this.wstats(c.id, w.lv, p, { ...w, evo: true });
+      for (const [k, label, f] of WLINES[c.id] || []) if (b[k] != null && a[k] != null && Math.abs(a[k] - b[k]) > 1e-6) L(label, f(a[k]), f(b[k]));
+      return { lines: lines.slice(0, 4), rarity: R.name, evo: true };
+    }
     if (c.kind === 'weapon') {
       const w = p.weapons.find(x => x.id === c.id), lv0 = w ? w.lv : 0, lv1 = Math.min(MAX_LEVEL, lv0 + 1);
-      const a = lv0 ? this.wstats(c.id, lv0) : null, b = this.wstats(c.id, lv1);
+      const a = lv0 ? this.wstats(c.id, lv0, p, w) : null, b = this.wstats(c.id, lv1, p, { evo: false, rb: (w?.rb || 0) + (WEAPON_RARITY_DMG[c.rarity || 0] || 0) });
       for (const [k, label, f] of WLINES[c.id] || []) {
         if (b[k] == null) continue;
         // nouvelle arme : ses valeurs de départ (sans les « 0 ») ; amélioration : seulement ce qui change
@@ -512,41 +586,47 @@ export class Run {
         L(label, a ? f(a[k]) : null, f(b[k]));
       }
       if (!lines.length) L(WLINES[c.id]?.[0][1] || 'Dégâts', fmt(a?.dmg || 0), fmt(b.dmg));
-      return { lines: lines.slice(0, a ? 4 : 3) };
+      return { lines: lines.slice(0, a ? 4 : 3), rarity: R.name };
     }
     if (c.kind === 'tome' || c.kind === 'boon') {
-      const tome = c.kind === 'tome', cur = tome ? p.tomes : p.boons, lv0 = cur[c.id] || 0;
-      const nxt = { ...cur, [c.id]: lv0 + 1 };
-      const a = this.derive(p.tomes, p.boons, p.evo), b = tome ? this.derive(nxt, p.boons, p.evo) : this.derive(p.tomes, nxt, p.evo);
+      const tome = c.kind === 'tome', cur = tome ? p.tv : p.bv, v0 = cur[c.id] || 0;
+      const nxt = { ...cur, [c.id]: v0 + mul };
+      const a = this.derive(p.tv, p.bv, p.evo), b = tome ? this.derive(nxt, p.bv, p.evo) : this.derive(p.tv, nxt, p.evo);
       const z = this.derive({}, {}, 0), key = (tome ? TOME_KEY : BOON_KEY)[c.id], S = DLINES[key];
       if (S) L(S[0], S[1](a[key], z[key]), S[1](b[key], z[key]));
       // conséquence concrète sur l'arme principale (dégâts par coup, recharge)
       const w0 = p.weapons[0];
       if (w0 && (key === 'dmgMul' || key === 'haste' || key === 'area')) {
-        const wa = this.wstats(w0.id, w0.lv, { ...p, ...a }), wb = this.wstats(w0.id, w0.lv, { ...p, ...b });
+        const wa = this.wstats(w0.id, w0.lv, { ...p, ...a }, w0), wb = this.wstats(w0.id, w0.lv, { ...p, ...b }, w0);
         const k = key === 'dmgMul' ? 'dmg' : key === 'haste' ? 'cd' : WSIZE[w0.id];
         const f = (WLINES[w0.id] || []).find(x => x[0] === k);
         if (f && wa[k] != null) L(`${WEAPONS[w0.id].name} · ${f[1].toLowerCase()}`, f[2](wa[k]), f[2](wb[k]));
       }
       if (c.kind === 'boon' && c.id === 'hp') L('PV', fmt(p.hp), fmt(b.maxHp));
-      return { lines };
+      return { lines, rarity: R.name };
     }
-    if (c.kind === 'heal') { L('PV', fmt(p.hp), fmt(Math.min(p.maxHp, p.hp + p.maxHp * 0.3))); return { lines }; }
-    if (c.kind === 'gold') { const g = Math.round((25 + this.zone.id * 10) * this.diff.gold); L('Or', fmt(this.gold), fmt(this.gold + g)); return { lines }; }
+    if (c.kind === 'heal') { L('PV', fmt(p.hp), fmt(Math.min(p.maxHp, p.hp + p.maxHp * 0.3 * mul))); return { lines, rarity: R.name }; }
+    if (c.kind === 'gold') { L('Or', fmt(this.gold), fmt(this.gold + this.bonusGold(mul))); return { lines, rarity: R.name }; }
     return { lines };
   }
 
+  bonusGold(mul = 1) { return Math.round((25 + this.zone.id * 10) * this.diff.gold * mul); }
+
   boonChoices() {
-    return Object.keys(BOONS).sort(() => Math.random() - 0.5).slice(0, 3).map(id => ({ kind: 'boon', id, lv: (this.p.boons[id] || 0) + 1 }));
+    return Object.keys(BOONS).sort(() => Math.random() - 0.5).slice(0, 3).map(id => ({ kind: 'boon', id, lv: (this.p.boons[id] || 0) + 1, rarity: this.rollRarity() }));
   }
 
   applyChoice(c) {
-    if (c.kind === 'weapon') this.addWeapon(c.id);
-    else if (c.kind === 'tome') this.addTome(c.id);
-    else if (c.kind === 'boon') this.addBoon(c.id);
-    else if (c.kind === 'heal') this.p.hp = Math.min(this.p.maxHp, this.p.hp + this.p.maxHp * 0.3);
-    else if (c.kind === 'gold') this.gold += Math.round((25 + this.zone.id * 10) * this.diff.gold);
-    sfx('pick');
+    if (!c) return;
+    const r = c.rarity || 0, mul = LEVEL_RARITY[r].mult;
+    if (c.kind === 'weapon') this.addWeapon(c.id, r);
+    else if (c.kind === 'tome') this.addTome(c.id, r);
+    else if (c.kind === 'boon') this.addBoon(c.id, r);
+    else if (c.kind === 'evo') this.evolveWeapon(c.id);
+    else if (c.kind === 'heal') this.p.hp = Math.min(this.p.maxHp, this.p.hp + this.p.maxHp * 0.3 * mul);
+    else if (c.kind === 'gold') this.gold += this.bonusGold(mul);
+    if (c.kind !== 'evo') sfx('pick');
+    if (c.kind === 'tome' || c.kind === 'weapon') this.renderLoadout();
   }
 
   // ---------- Boucle ----------
@@ -570,16 +650,38 @@ export class Run {
     this.raf = requestAnimationFrame(t => this.frame(t));
   }
 
+  // montée de niveau : 3 cartes (rareté), et en option relancer les cartes / passer (contre un peu d'or).
+  // Contrat de l'interface : onLevelUp(titre, cartes, done(carte), sous-titre, { rerolls, skips, reroll() -> nouvelles cartes | null, skip() -> bool })
   levelUp() {
     this.paused = true; this.joy = null; this.look = null;
     this.pending--;
-    const opts = this.choices();
+    let opts = this.choices(), closed = false;
     sfx('levelup'); buzz(20);
-    this.onLevelUp(`Niveau ${this.p.level} !`, opts, c => {
+    const close = c => {
+      if (closed) return false;
+      closed = true;
       this.applyChoice(c);
       this.paused = false; this.last = performance.now();
-    });
+      this.renderLoadout();
+      return true;
+    };
+    const run = this;
+    const extra = {
+      get rerolls() { return run.rerolls; },
+      get skips() { return run.skips; },
+      skipGold: this.skipGold(),
+      reroll() { if (closed || run.rerolls <= 0) return null; run.rerolls--; opts = run.choices(); return opts; },
+      skip() {
+        if (closed || run.skips <= 0) return false;
+        run.skips--; const g = run.skipGold(); run.gold += g;
+        run.text(run.p.x, run.p.y, 70, '+' + g + ' or', '#ffd54a', 1.2); sfx('coin');
+        return close(null);
+      },
+    };
+    this.onLevelUp(`Niveau ${this.p.level} !`, opts, c => close(c), undefined, extra);
   }
+
+  skipGold() { return Math.round((12 + this.zone.id * 6) * this.diff.gold * this.base.gold); }
 
   evolveReady() {
     const next = EVOLUTIONS[this.cls.id][this.p.evo + 1];
@@ -1495,7 +1597,7 @@ export class Run {
   updateWeapons(dt) {
     const p = this.p;
     for (const w of p.weapons) {
-      const S = this.wstats(w.id, w.lv);
+      const S = this.wstats(w.id, w.lv, p, w), E = w.evo;
       w.t -= dt; w.a += dt;
       switch (w.id) {
         case 'beam': {
@@ -1503,7 +1605,9 @@ export class Run {
           const t = this.nearest(360); if (!t) { w.t = 0.2; break; }
           w.t = S.cd;
           const ang = Math.atan2(t.y - p.y, t.x - p.x);
-          for (let i = 0; i < S.n; i++) this.beam(p.x, p.y, ang + i * Math.PI, S.len, S.w, S.dmg);
+          // évolué (Prisme solaire) : 4 rayons en croix
+          for (let i = 0; i < S.n; i++) this.beam(p.x, p.y, ang + i * TAU / S.n, S.len, S.w, S.dmg);
+          if (E) this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 70, life: 0.25, max: 0.25, color: '#fff0a0' });
           sfx('zap');
           break;
         }
@@ -1513,10 +1617,12 @@ export class Run {
           w.t = S.cd;
           const ang = Math.atan2(t.y - p.y, t.x - p.x);
           for (let i = 0; i < S.n; i++) {
-            const a = ang + (i - (S.n - 1) / 2) * 0.16;
+            const a = ang + (i - (S.n - 1) / 2) * (E ? 0.12 : 0.16);
             if (i === 0) sfx('pew');
             this.shots.push({ type: 'arrow', x: p.x, y: p.y, z: 30, vx: Math.cos(a) * 560, vy: Math.sin(a) * 560, r: 8, dmg: S.dmg, pierce: S.pierce, life: 0.9, hit: new Set() });
           }
+          // évoluée (Pluie de flèches) : une salve sur 3 tire aussi une flèche de cristal géante
+          if (E && (w.vol = (w.vol || 0) + 1) % 3 === 0) this.shots.push({ type: 'crystal', x: p.x, y: p.y, z: 30, vx: Math.cos(ang) * 760, vy: Math.sin(ang) * 760, r: 24, dmg: S.big, pierce: 999, life: 0.85, hit: new Set(), evo: true });
           break;
         }
         case 'sword': {
@@ -1526,30 +1632,35 @@ export class Run {
           if (!tg) { w.t = 0.15; break; }
           w.t = S.cd;
           const base = Math.atan2(tg.y - p.y, tg.x - p.x);
+          // évoluée (Tourbillon du Titan) : 3 coups qui couvrent tout le tour, une onde dorée, gros recul
           for (let i = 0; i < S.n; i++) {
-            const a = base + i * Math.PI;
+            const a = base + i * TAU / S.n;
             this.fx.push({ type: 'slash', x: p.x, y: p.y, a, r: R, life: 0.22, max: 0.22 });
             for (const e of this.grid.query(p.x, p.y, R + 40)) {
               const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
               if (d > R + e.r) continue;
               let da = Math.atan2(dy, dx) - a; da = Math.atan2(Math.sin(da), Math.cos(da));
-              if (Math.abs(da) < 1.25 || d < 26) this.hitEnemy(e, S.dmg, { knock: 260, kx: dx / (d || 1), ky: dy / (d || 1) });
+              if (Math.abs(da) < (E ? TAU / S.n / 2 + 0.02 : 1.25) || d < 26) this.hitEnemy(e, S.dmg, { knock: E ? 340 : 260, kx: dx / (d || 1), ky: dy / (d || 1) });
             }
           }
+          if (E) this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.3, max: 0.3, color: '#ffd54a' });
           sfx('swish');
           break;
         }
         case 'orbs': {
           const R = S.R;
           w.orbs = [];
+          // évolués (Galaxie spirituelle) : 4 orbes sur un anneau intérieur, les autres dehors en sens contraire
+          const nIn = E ? 4 : 0;
           for (let i = 0; i < S.n; i++) {
-            const a = w.a * 3 + i / S.n * TAU, ox = p.x + Math.cos(a) * R, oy = p.y + Math.sin(a) * R;
+            const inner = i < nIn, k = inner ? i / nIn : (i - nIn) / (S.n - nIn), r = inner ? R * 0.55 : R;
+            const a = (inner ? -w.a * 3.6 : w.a * 3) + k * TAU, ox = p.x + Math.cos(a) * r, oy = p.y + Math.sin(a) * r;
             w.orbs.push([ox, oy]);
             for (const e of this.grid.query(ox, oy, 40)) {
               if ((e.x - ox) ** 2 + (e.y - oy) ** 2 > (e.r + 12) ** 2) continue;
               if ((e.hitT.orb || 0) > this.time) continue;
               e.hitT.orb = this.time + S.cd;
-              this.hitEnemy(e, S.dmg, { knock: 120, kx: (e.x - p.x) / R, ky: (e.y - p.y) / R });
+              this.hitEnemy(e, S.dmg, { knock: 120, kx: (e.x - p.x) / r, ky: (e.y - p.y) / r });
             }
           }
           break;
@@ -1558,7 +1669,10 @@ export class Run {
           w.R = S.R;
           if (w.t > 0) break;
           w.t = S.cd;
-          for (const e of this.grid.query(p.x, p.y, w.R + 30)) if (dist2(e, p) < (w.R + e.r * 0.6) ** 2) this.hitEnemy(e, S.dmg, { quiet: true, color: '#ffb04a' });
+          let burnt = 0;
+          for (const e of this.grid.query(p.x, p.y, w.R + 30)) if (dist2(e, p) < (w.R + e.r * 0.6) ** 2) { this.hitEnemy(e, S.dmg, { quiet: true, color: '#ffb04a' }); burnt++; }
+          // évoluée (Cœur de soleil) : chaque brûlure soigne un peu (plafond commun avec le vol de vie)
+          if (E && burnt) this.lsPool += Math.min(12, burnt) * p.maxHp * 0.0025;
           break;
         }
         case 'lightning': {
@@ -1566,9 +1680,19 @@ export class Run {
           w.t = S.cd;
           const targets = this.onScreen();
           for (let i = 0; i < S.n && targets.length; i++) {
-            const t = targets.splice(Math.floor(Math.random() * targets.length), 1)[0];
+            // la cible principale d'abord (boss, élite…), puis au hasard
+            const ti = i === 0 && this.target && targets.includes(this.target) ? targets.indexOf(this.target) : Math.floor(Math.random() * targets.length);
+            const t = targets.splice(ti, 1)[0];
             this.fx.push({ type: 'bolt', x: t.x, y: t.y, life: 0.25, max: 0.25 });
             for (const e of this.grid.query(t.x, t.y, S.R + 14)) if (dist2(e, t) < S.R ** 2) this.hitEnemy(e, S.dmg, {});
+            if (E) { // évoluée (Tempête divine) : l'éclair rebondit sur 2 voisins
+              let n = 0;
+              for (const o of this.grid.query(t.x, t.y, 170)) {
+                if (n >= 2 || o === t || o.dead || o.burrowed || dist2(o, t) < S.R ** 2) continue;
+                n++; this.fx.push({ type: 'bolt', x: o.x, y: o.y, life: 0.22, max: 0.22 });
+                this.hitEnemy(o, S.dmg * 0.6, { color: '#fff07a' });
+              }
+            }
           }
           sfx('thunder');
           break;
@@ -1600,6 +1724,7 @@ export class Run {
           w.t = S.cd;
           const R = S.R;
           this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.45, max: 0.45, color: '#9ad8ff' });
+          if (E) this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R * 0.6, life: 0.6, max: 0.6, color: '#ffffff' });
           for (const e of this.grid.query(p.x, p.y, R + 30)) if (dist2(e, p) < (R + e.r * 0.5) ** 2) {
             this.hitEnemy(e, S.dmg, { color: '#9ad8ff' });
             e.slow = 2; if (S.freeze && !e.boss) e.freeze = S.freeze;
@@ -1624,7 +1749,7 @@ export class Run {
           for (let i = 0; i < S.n; i++) {
             const t = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
             const tx = t ? t.x : p.x + rand(-150, 150), ty = t ? t.y : p.y + rand(-150, 150);
-            this.shots.push({ type: 'snow', x: p.x, y: p.y, sx: p.x, sy: p.y, tx, ty, t: 0, dur: 0.6, z: 0, r: 0, R: S.R, dmg: S.dmg, life: 1 });
+            this.shots.push({ type: 'snow', x: p.x, y: p.y, sx: p.x, sy: p.y, tx, ty, t: 0, dur: 0.6, z: 0, r: 0, R: S.R, dmg: S.dmg, life: 1, freeze: S.freeze || 0 });
           }
           break;
         }
@@ -1668,7 +1793,7 @@ export class Run {
           s.life = 0;
           this.fx.push({ type: 'ring', x: s.tx, y: s.ty, r: s.R, life: 0.35, max: 0.35, color: '#e8f4ff' });
           this.burst(s.tx, s.ty, 12, 0, '#ffffff');
-          for (const e of this.grid.query(s.tx, s.ty, s.R + 30)) if ((e.x - s.tx) ** 2 + (e.y - s.ty) ** 2 < (s.R + e.r * 0.5) ** 2) { this.hitEnemy(e, s.dmg, {}); e.slow = 1.5; }
+          for (const e of this.grid.query(s.tx, s.ty, s.R + 30)) if ((e.x - s.tx) ** 2 + (e.y - s.ty) ** 2 < (s.R + e.r * 0.5) ** 2) { this.hitEnemy(e, s.dmg, {}); e.slow = 1.5; if (s.freeze && !e.boss) e.freeze = Math.max(e.freeze, s.freeze); }
           sfx('splat');
         }
         continue;

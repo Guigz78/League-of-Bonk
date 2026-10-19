@@ -95,6 +95,36 @@ export const TOMES = {
   area:   { name: 'Chapeau de sorcier', icon: 'crown', desc: '+12 % taille des attaques' },
 };
 export const MAX_WEAPONS = 4, MAX_TOMES = 4, MAX_LEVEL = 5;
+
+// ---------- Gameplay : évolutions d'armes, rareté des améliorations, combo, champion ----------
+// Évolution d'arme : une arme au niveau 5 + son tome associé (n'importe quel niveau) -> la prochaine montée de niveau
+// (ou le prochain coffre) propose l'évolution (carte { kind: 'evo', id }). L'arme garde sa place, en bien plus forte.
+export const WEAPON_EVOS = {
+  beam:      { tome: 'area',   name: 'Prisme solaire',   icon: 'beam',     desc: '4 rayons géants en croix, plus larges et plus longs.' },
+  arrows:    { tome: 'crit',   name: 'Pluie de flèches', icon: 'arrow',    desc: 'Éventail de 7 flèches perçantes et une flèche de cristal géante.' },
+  sword:     { tome: 'armor',  name: 'Tourbillon du Titan', icon: 'sword', desc: 'Frappe tout autour de vous, très loin, et repousse fort.' },
+  orbs:      { tome: 'magnet', name: 'Galaxie spirituelle', icon: 'bind',  desc: '9 orbes sur deux anneaux qui tournent en sens contraire.' },
+  aura:      { tome: 'vital',  name: 'Cœur de soleil',   icon: 'cloak',    desc: 'Immense brasier qui brûle plus fort et vous soigne.' },
+  lightning: { tome: 'power',  name: 'Tempête divine',   icon: 'i_stun',   desc: '8 éclairs plus larges, qui rebondissent sur les voisins.' },
+  boomerang: { tome: 'haste',  name: 'Tornade de lames', icon: 'spin',     desc: '6 grandes lames qui tournent tout autour de vous.' },
+  shrooms:   { tome: 'wisdom', name: 'Bosquet explosif', icon: 'i_poison', desc: 'Champignons en série, explosions géantes.' },
+  frost:     { tome: 'boots',  name: 'Blizzard éternel', icon: 'frost',    desc: 'Onde de givre géante et fréquente qui gèle tout.' },
+  daggers:   { tome: 'crit',   name: 'Mille lames',      icon: 'volley',   desc: '16 dagues rapides qui transpercent tout.' },
+  snowball:  { tome: 'power',  name: 'Avalanche',        icon: 'heart',    desc: '5 énormes boules qui gèlent les ennemis touchés.' },
+};
+// Rareté des cartes d'amélioration (index = rarity de la carte, couleurs : RARITY[RARITIES[i]]).
+// mult = force de l'effet (tome +15 % -> +22 % -> +30 % -> +40 %) ; w = poids de base du tirage ; luck = gain de poids par point de chance.
+export const LEVEL_RARITY = [
+  { name: 'Commun', mult: 1, w: 62, luck: 0 },
+  { name: 'Rare', mult: 1.47, w: 27, luck: 1 },
+  { name: 'Épique', mult: 2, w: 9, luck: 1.6 },
+  { name: 'Légendaire', mult: 2.67, w: 2, luck: 2.4 },
+];
+// Bonus de dégâts propre à l'arme selon la rareté de la carte choisie (en plus du niveau)
+export const WEAPON_RARITY_DMG = [0, 0.1, 0.2, 0.35];
+export const REROLLS = 2, SKIPS = 1;       // relances et « passer » par partie
+export const COMBO_WINDOW = 2;             // secondes pour enchaîner deux victimes
+export const COMBO_STEPS = [25, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000]; // paliers récompensés
 export const HALF = 1600; // demi-taille de la carte (unités du monde)
 
 // Niveaux de difficulté, par zone (façon Megabonk) : Difficile se débloque en battant Normal,
