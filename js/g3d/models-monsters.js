@@ -632,12 +632,45 @@ export class MonsterPool {
 }
 
 // ---------- Familiers : versions bébés, un seul exemplaire ----------
+// bébé tout rond : gros yeux brillants, joues roses, petits pieds, accessoires propres à chaque familier
+function chibi(c, o = {}) {
+  const { s, P } = c, col = o.col || P.m, dk = o.dk || P.d, lt = o.lt || P.l, R = 0.62;
+  if (!o.float) { for (const [sd, off] of L2) { s.part([0.24 * sd, 0.24, 0.05], { rx: 0.5, off, body: 0 }); s.put('sph:6:4', dk, 0.25 * sd, 0.1, 0.12, 0.3, 0.2, 0.38); } s.part(null); }
+  const cy = R + 0.12;
+  s.put(o.ico ? 'ico:1' : 'sph:9:7', col, 0, cy, 0, R * 2.1, R * 1.95, R * 1.95, 0, 0, 0, { grad: 0.22, glow: o.glow || 0 });
+  s.put('sph:7:5', lt, 0, cy - 0.16, R * 0.55, R * 1.1, R * 1.0, R * 0.7, 0, 0, 0, { grad: 0.05, glow: o.glow || 0 });
+  eyes2(s, 0.25, cy + 0.08, R * 0.84, 0.15, { pr: 0.72, tall: 1.25, ry: 0.32, pupil: o.pupil || INK, glow: o.eyeGlow || 0 });
+  s.sym('sph:5:3', '#ff9ab0', 0.42, cy - 0.1, R * 0.74, 0.16, 0.08, 0.05, 0, 0.6, 0, { grad: 0 });
+  s.put('sph:5:3', '#7a2a3a', 0, cy - 0.14, R * 0.94, 0.12, 0.07, 0.05, 0, 0, 0, { grad: 0 });
+  if (o.extra) o.extra(s, cy, R, col, dk, lt);
+  if (o.wings) for (const [sd] of L2) { s.part([0.55 * sd, cy, 0], { rz: 0.7 * sd, f: 2.5 }); s.put('rbox:0.45', o.wings, 0.72 * sd, cy + 0.05, -0.05, 0.42, 0.1, 0.3, 0, 0, 0.35 * sd, { glow: 0.3 }); }
+  s.part(null);
+  c.body = [o.float ? 0.1 : 0.06, 0.06, 0.05, o.float ? 1 : 0];
+  c.h = cy + R + 0.2;
+}
 const PET = {
   poro: c => furball(c, { col: '#f8f8fc', col2: '#e0e4f0', horns: '#d8b080', R: 0.6 }),
-  brambi: c => golem(c, { col: '#c83a2a', dk: '#7a1f16', acc: '#ffb05a', moss: '#5aa83a', eye: '#ffe08a' }),
-  herald: c => beast(c, { spikes: '#d0a0ff', spikeGlow: 0.4, eye: '#ffffff', eyeGlow: 0.2, horns: '#f0e0ff' }),
-  phenix: c => bird(c, { crest: '#bff0ff', crestGlow: 0.6, angry: false, beak: '#ffd54a' }),
-  wisp: c => ghost(c, { flame: '#7affc8' }),
+  brambi: c => chibi(c, { extra: (s, cy, R) => {
+    for (let i = 0; i < 9; i++) { const a = i * 2.4, y = 0.5 - (i % 3) * 0.35; s.tip('cone:4', '#e8c8a0', Math.cos(a) * R * 0.95, cy + y * R, Math.sin(a) * R * 0.95 - 0.05, Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2, 0.08, 0.18, 0.08, { grad: 0 }); }
+    s.tip('cone:5', '#5aa83a', 0.1, cy + R * 0.9, 0, 0, 0, -0.5, 0.12, 0.3, 0.12); s.put('sph:5:3', '#7ad04a', 0.24, cy + R * 1.18, 0, 0.26, 0.1, 0.16, 0, 0, -0.4);
+    for (let i = -1; i <= 1; i++) s.tip('cone:4', i ? '#ff8a2a' : '#ffd54a', i * 0.12 - 0.12, cy + R * 0.85, 0.05, 0, 0, -i * 0.4, 0.14, 0.36 - Math.abs(i) * 0.12, 0.14, { glow: 1.2 });
+  } }),
+  herald: c => chibi(c, { extra: (s, cy, R, col, dk, lt) => {
+    s.symTip('cone:5', '#f0e0ff', 0.22, cy + R * 0.8, 0, -0.4, 0, -0.4, 0.1, 0.3, 0.1);
+    for (let i = 0; i < 3; i++) s.tip('wedge', '#ff6ad8', 0, cy + R * 0.7 - i * 0.25, -R * 0.6 - i * 0.08, -1.0 - i * 0.3, 0, 0, 0.06, 0.28, 0.24, { glow: 0.3 });
+    s.symTip('wedge', '#ff6ad8', R * 0.9, cy, 0, 0, 0, -1.3, 0.06, 0.32, 0.26, { glow: 0.3 });
+    s.part([0, 0.3, -R * 0.8], { ry: 0.5, f: 2 }); s.tip('cone:5', col, 0, 0.3, -R * 0.8, -1.4, 0, 0, 0.3, 0.5, 0.3); s.part(null);
+  } }),
+  phenix: c => chibi(c, { wings: '#bfeaff', float: true, extra: (s, cy, R) => {
+    for (let i = -1; i <= 1; i++) s.tip('oct', '#e0f8ff', i * 0.14, cy + R * 0.85, -0.05, -0.3, 0, -i * 0.4, 0.14, 0.38 - Math.abs(i) * 0.1, 0.14, { glow: 0.7 });
+    s.tip('cone:4', '#ffd54a', 0, cy - 0.04, R * 0.92, PI / 2 - 0.2, PI / 4, 0, 0.16, 0.2, 0.16);
+  } }),
+  wisp: c => chibi(c, { float: true, glow: 0.5, eyeGlow: 0.2, extra: (s, cy, R) => {
+    s.put('frust:0.22:0.3:6', '#3a3a30', 0, cy + R * 0.98, 0, 1, 0.12, 1, 0, 0, 0, { grad: 0 });
+    s.put('tor:0.15:4:8', '#3a3a30', 0, cy + R * 1.18, 0, 0.26, 0.26, 0.26, 0, 0, 0, { grad: 0 });
+    s.put('frust:0.32:0.22:6', '#3a3a30', 0, 0.16, 0, 1, 0.1, 1, 0, 0, 0, { grad: 0 });
+    for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + PI / 4; s.put('box', '#3a3a30', Math.cos(a) * R * 0.98, cy, Math.sin(a) * R * 0.98, 0.06, R * 1.9, 0.06, 0, 0, 0, { grad: 0 }); }
+  } }),
   voidy: c => worm(c, { segs: 4, antennae: true, eyeGlow: 0.2 }),
 };
 export function petModel(petId) {
@@ -649,10 +682,10 @@ export function petModel(petId) {
     BUILT.set(def.name + ':p', { s, h: c.h, body: c.body, ghost: c.ghost });
   }
   const scene = new THREE.Group(), pool = new MonsterPool(scene, def, 'p', 1);
-  const SC = 0.42, st = { yaw: PI / 2, ph: 0, t: 0 };
+  const SC = petId === 'voidy' ? 0.5 : 0.55, st = { yaw: PI / 2, ph: 0, t: 0 };
   const sObj = { x: 0, y: 0, z: 0, rot: PI / 2, scale: SC, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
   // les fantômes et les oiseaux flottent ; les autres sautillent
-  const fly = p.body === 'ghost' || p.body === 'bird';
+  const fly = petId === 'wisp' || petId === 'phenix';
   return {
     root: scene, height: pool.height * SC,
     update(dt, pose = {}) {
