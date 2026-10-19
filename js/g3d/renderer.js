@@ -56,7 +56,7 @@ export class Gfx {
     this.scene.add(this.hemi, this.sun);
     if (L.dark) { this.lamp = new THREE.PointLight(col(L.dark && run.zone.bg === 'void' ? '#ffd0ff' : '#c8fff0'), 70, 18, 1.4); this.scene.add(this.lamp); }
     // monde : le décor évite les points d'intérêt (coffres, autels, totems, autel du boss, centre)
-    const avoid = [...run.chests, ...run.shrines, ...(run.totems || []), { x: 0, y: 0, r: 170 }, ...(run.altar ? [{ x: run.altar.x, y: run.altar.y, r: 200 }] : [])];
+    const avoid = [...run.chests, ...run.shrines, ...(run.totems || []), ...run.pickups.filter(i => i.type === 'loot'), { x: 0, y: 0, r: 170 }, ...(run.altar ? [{ x: run.altar.x, y: run.altar.y, r: 200 }] : [])];
     this.world = new World3D(this.scene, run.zone, avoid);
     this.fx = new Fx(this);
     this.obj = new Objects(this);
@@ -120,6 +120,7 @@ export class Gfx {
     const k = 1 - Math.exp(-d * 2.4), lt = p.moving ? 38 : 0;
     c.lx += (p.face.x * lt - c.lx) * k; c.ly += (p.face.y * lt * 0.8 - c.ly) * k;
     const f = 1 - Math.exp(-d * 6.5);
+    if (Math.abs(p.x - c.x) > 600 || Math.abs(p.y - c.y) > 600) { c.x = p.x; c.y = p.y; c.lx = c.ly = 0; } // téléporté
     c.x += (p.x + c.lx - c.x) * f; c.y += (p.y + c.ly - c.y) * f;
     // très léger recul pendant le combat de boss (l'arène est grande), lent : jamais de pompage
     const zt = run.boss && !run.boss.dead ? 1.12 : 1;
@@ -200,7 +201,7 @@ export class Gfx {
     if (hs.hurt > 0) hs.hurt -= dt;
     const blink = p.inv > 0 && p.inv <= 0.5 && run.hurtFlash > 0 && Math.floor(this.t * 20) % 2;
     H.root.visible = !blink;
-    H.root.position.set(p.x * S, Math.max(0, p.h) * S, p.y * S);
+    H.root.position.set(p.x * S, 0, p.y * S); // le modèle gère lui-même la hauteur du saut (pose.air)
     H.update(dt, {
       t: this.t, moving: p.moving && !run.dying, speed01: 1, air: p.h, vy: p.vh, atk: hs.atk, atkA: hs.atkA, dirA: hs.face,
       hurt: hs.hurt > 0 ? Math.min(1, hs.hurt / 0.1) : 0, inv: p.inv > 0.5, dead: !!run.dying,
@@ -243,7 +244,7 @@ export class Gfx {
       const big = e.boss || e.elite;
       s.x = e.x * S; s.y = Math.max(0, up) * S; s.z = e.y * S;
       s.rot = Math.PI / 2 - e.ang; s.scale = k; s.anim = e.bob; s.sq = sq * (e.boss ? 0.25 : e.elite ? 0.5 : 1);
-      s.flash = e.flash > 0 ? (big ? 0.45 : 1) : 0;
+      s.flash = e.flash > 0 ? 1 : 0; // les gros monstres atténuent eux-mêmes le flash
       if (e.g_new > 0) { e.g_new -= dt * 1.5; s.flash = Math.max(s.flash, e.g_new); }
       s.freeze = e.freeze > 0; s.mad = !!(e.mad || (ot && !e.boss)); s.alpha = body === 'ghost' ? 0.88 : 1;
       P.add(e, s);

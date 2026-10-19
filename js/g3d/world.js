@@ -8,9 +8,9 @@ import { THEMES, World2D } from '../g2d/world.js';
 
 // ambiance 3D par thème : fond/brouillard, ciel et sol de la lumière d'ambiance, soleil
 export const LOOK = {
-  lane:   { fog: '#9ad8ff', fogK: 1, sky: '#fff6e0', grd: '#5a7a3a', hemi: 1.9, sun: '#fff0d0', sunI: 2.1, edge: '#3e6a2c', hill: '#4a8a34' },
+  lane:   { fog: '#9ad8ff', fogK: 1, sky: '#fff6e0', grd: '#4a6a2a', hemi: 1.55, sun: '#fff0d0', sunI: 2.3, edge: '#3e6a2c', hill: '#4a8a34' },
   jungle: { fog: '#6ab88a', fogK: 0.9, sky: '#f0ffe0', grd: '#2a4a20', hemi: 1.7, sun: '#ffe8b0', sunI: 1.9, edge: '#1e4a1a', hill: '#2e6a28' },
-  river:  { fog: '#a8e4ff', fogK: 1, sky: '#f4fbff', grd: '#4a7a5a', hemi: 1.95, sun: '#fff4dc', sunI: 2.1, edge: '#3a7050', hill: '#5a9a48' },
+  river:  { fog: '#a8e4ff', fogK: 1, sky: '#f4fbff', grd: '#4a7a5a', hemi: 1.6, sun: '#fff4dc', sunI: 2.3, edge: '#3a7050', hill: '#5a9a48' },
   ice:    { fog: '#cfe6ff', fogK: 0.95, sky: '#ffffff', grd: '#8aa8c8', hemi: 1.75, sun: '#fff8f0', sunI: 1.8, edge: '#8aa8c8', hill: '#d6e6f6' },
   shadow: { fog: '#1e3a36', fogK: 0.7, sky: '#9affe0', grd: '#14261f', hemi: 1.15, sun: '#b8d8ff', sunI: 0.9, edge: '#18302a', hill: '#22403a', dark: 1 },
   void:   { fog: '#24103a', fogK: 0.7, sky: '#e0a8ff', grd: '#1a0a2a', hemi: 1.1, sun: '#ffb8f0', sunI: 0.95, edge: '#1a0c2a', hill: '#2a1640', dark: 1 },
@@ -265,7 +265,7 @@ export class World3D {
       if (i) d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
       pos.push((x + nx) * S, y + heightAt(x + nx, z + ny), (z + ny) * S, (x - nx) * S, y + heightAt(x - nx, z - ny), (z - ny) * S);
       uv.push(d * S / uScale, 0, d * S / uScale, w * S / uScale);
-      if (i) { const o = (i - 1) * 2; idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2); }
+      if (i) { const o = (i - 1) * 2; idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3); }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -580,20 +580,20 @@ export function zoneBannerURL(zone) {
     scene.add(new THREE.HemisphereLight(col(L.sky), col(L.grd), L.hemi + (L.dark ? 0.6 : 0)));
     const sun = new THREE.DirectionalLight(col(L.sun), L.sunI + (L.dark ? 0.5 : 0)); sun.position.set(-4, 8, 5); scene.add(sun);
     // décor : chemin en diagonale à gauche (sous le texte), décor typique à droite
-    const x0 = -60, y0 = -40, bf = { lines: [], blobs: [], bridges: [], lim: 760, props: [], cx: 160, cy: -30, wx: 420, up: 320, down: 320 };
-    bf.lines.push({ pts: [[x0 - 80, y0 + 260], [x0 + 60, y0 + 90], [x0 + 150, y0 + 10], [x0 + 260, y0 - 130]], w: 70, kind: 'path' });
-    if (zone.bg === 'river') { bf.lines.push({ pts: [[200, -260], [260, -20], [300, 260]], w: 90, kind: 'water' }); bf.bridges.push({ x: 250, y: -60, a: -0.9, len: 150, w: 56 }); }
-    if (zone.bg === 'ice') bf.blobs.push({ x: 300, y: 40, rx: 90, ry: 50, rot: 0.1, kind: 'ice' });
-    if (zone.bg === 'shadow') bf.blobs.push({ x: 260, y: 50, rx: 80, ry: 40, rot: 0.1, kind: 'mist' });
-    if (zone.bg === 'void') bf.lines.push({ pts: [[100, 120], [170, 60], [250, 80], [320, 20], [400, 40]], w: 8, kind: 'crack' });
+    const bf = { lines: [], blobs: [], bridges: [], lim: 760, props: [], cx: 180, cy: -20, wx: 380, up: 300, down: 300 };
+    bf.lines.push({ pts: [[-140, 170], [-20, 60], [60, 0], [140, -90], [220, -190]], w: 70, kind: 'path' });
+    if (zone.bg === 'river') { bf.lines.push({ pts: [[105, -230], [118, -60], [140, 230]], w: 88, kind: 'water' }); bf.bridges.push({ x: 116, y: -64, a: -0.86, len: 205, w: 58 }); }
+    if (zone.bg === 'ice') bf.blobs.push({ x: 290, y: 50, rx: 80, ry: 42, rot: 0.1, kind: 'ice' });
+    if (zone.bg === 'shadow') bf.blobs.push({ x: 270, y: 50, rx: 76, ry: 36, rot: 0.1, kind: 'mist' });
+    if (zone.bg === 'void') bf.lines.push({ pts: [[120, 110], [180, 60], [250, 80], [320, 20], [400, 40]], w: 8, kind: 'crack' });
     const kinds = T0.props.map(p => p[0]).filter(k => k !== 'tower' && k !== 'banner' && k !== 'reeds');
     const r = rng('banner' + zone.id);
-    const spots = [[120, -120, 0.9], [200, 70, 1], [300, -110, 1.1, 'tree'], [400, 60, 1.2, 'tree'], [470, -90, 1.15, 'tree'], [520, 90, 1.1], [360, -20, 0.8]];
-    if (T0.props.some(p => p[0] === 'tower')) spots.push([250, -50, 0.75, 'tower']); else if (T0.props.some(p => p[0] === 'banner')) spots.push([250, -40, 0.9, 'banner']);
+    const spots = [[205, 40, 0.95], [262, -70, 1.05, 'tree'], [330, 55, 1.15, 'tree'], [385, -60, 1.2, 'tree'], [430, 70, 1.1], [300, -10, 0.85], [185, -110, 0.8]];
+    if (T0.props.some(p => p[0] === 'tower')) spots.push([235, -20, 0.7, 'tower']); else if (T0.props.some(p => p[0] === 'banner')) spots.push([235, -25, 0.9, 'banner']);
     for (const [x, y, s, k] of spots) bf.props.push({ x, y, kind: k || kinds[(r() * kinds.length) | 0], v: (r() * 3) | 0, s, a: r() * TAU });
     const w = new World3D(scene, zone, [], { banner: bf });
     const cam = new THREE.PerspectiveCamera(30, W / H, 1, 400);
-    const tx = 170 * S, tz = -10 * S, D = 26;
+    const tx = 190 * S, tz = -5 * S, D = 15.5;
     cam.position.set(tx, Math.sin(PITCH_B) * D, tz + Math.cos(PITCH_B) * D); cam.lookAt(tx, 0, tz);
     if (L.dark) scene.fog = null;
     bannerR.render(scene, cam);
@@ -609,4 +609,4 @@ export function zoneBannerURL(zone) {
   if (url) banners.set(zone.id, url);
   return url;
 }
-const PITCH_B = 0.8;
+const PITCH_B = 0.78;

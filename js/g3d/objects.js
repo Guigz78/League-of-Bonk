@@ -199,11 +199,11 @@ export class Objects {
       const P = gold ? (c.open ? this.chestPo : this.chestP) : (c.open ? this.chestBo : this.chestB);
       if (!c.open) {
         const d = Math.hypot(c.x - p.x, c.y - p.y), hop = d < 140 ? Math.abs(Math.sin(t * 6)) * 0.25 : 0;
-        P.put(c.x * S, hop, c.y * S, 0.25, 1 + hop * 0.1, 1 - hop * 0.12, 1 + hop * 0.1);
+        P.put(c.x * S, hop, c.y * S, 0.25, 1.35 * (1 + hop * 0.1), 1.35 * (1 - hop * 0.12), 1.35 * (1 + hop * 0.1));
         fx.glow3(c.x * S, 0.8, c.y * S, gold ? 4.2 : 3.2, gold ? '#c06aff' : '#5aa8ff', gold ? 0.55 : 0.35 + Math.sin(t * 3) * 0.08);
         fx.ringAt(c.x, c.y, 34, gold ? '#c06aff' : '#ffd54a', 0.5, 0.08, 0.08, 1, t * 0.3, 10, 0.4, 0.4);
         if (Math.sin(t * 2.3 + c.x) > 0.93) fx.sparkle(c.x + rand(-14, 14), c.y, 30, '#fff4b0');
-      } else P.put(c.x * S, 0, c.y * S, 0.25, 1);
+      } else P.put(c.x * S, 0, c.y * S, 0.25, 1.35);
       fx.shadow(c.x, c.y, 40, 0.3);
     }
     // ---- autels de bénédiction ----
@@ -215,7 +215,7 @@ export class Objects {
       fx.shadow(s.x, s.y, 56, 0.3);
       fx.ringAt(s.x, s.y, 58, s.used ? '#a0a0b4' : '#4fd0ff', s.used ? 0.25 : 0.6, 0.045, 0, 1, -t * 0.25, 18, 0.5, 0.3);
       if (!s.used) {
-        fx.glow3(s.x * S, 2.5 + bob, s.y * S, 3.4 + s.charge * 2.6, '#4fd0ff', 0.5 + s.charge * 0.4);
+        fx.glow3(s.x * S, 2.5 + bob, s.y * S, 2.6 + s.charge * 2.6, '#4fd0ff', 0.32 + s.charge * 0.4);
         if (s.charge > 0) { fx.ringAt(s.x, s.y, 58, '#4fd0ff', 0.22, 0.001, 1, 1, 0, 0, 0, 0, false, 0.06); fx.ringAt(s.x, s.y, 58 * s.charge, '#4fd0ff', 0.22, 0.001, 1, 1); this.chargeArc(s.x, s.y, 58, s.charge, '#4fd0ff'); }
       }
     }
@@ -224,7 +224,7 @@ export class Objects {
       if (!near(T0.x, T0.y, 120)) continue;
       const c = TOTEMS[T0.kind]?.color || '#ffffff', P = this.totem[T0.kind] || this.totem.horde;
       const ch = T0.charge, w = ch > 0 && !T0.used ? Math.sin(t * 30) * 0.03 * ch : 0;
-      const i = P.put(T0.x * S, 0, T0.y * S, 0.2, 1 + w, 1 - w, 1 + w);
+      const i = P.put(T0.x * S, 0, T0.y * S, 0.2, 1.25 * (1 + w), 1.25 * (1 - w), 1.25 * (1 + w));
       P.tint(i, col(T0.used ? '#7a7a8a' : '#ffffff'));
       fx.shadow(T0.x, T0.y, 50, 0.3);
       if (T0.used) { fx.ringAt(T0.x, T0.y, 55, '#9696aa', 0.3, 0.04); continue; }

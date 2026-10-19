@@ -52,6 +52,7 @@ export function heroModel(clsId, evo = 0) {
       const want = q.atk > 0.5 ? q.atkA : q.dirA;
       if (want != null) { let d = (Math.PI / 2 - want) - face; d = Math.atan2(Math.sin(d), Math.cos(d)); face += d * Math.min(1, dt * 14); }
       body.rotation.y = face;
+      body.position.y = Math.max(0, q.air || 0) / 20;
       const br = 1 + Math.sin(t * 3) * 0.02;
       body.scale.y = body.scale.x * (q.air > 0 ? (q.vy > 0 ? 1.1 : 1.03) : br);
       mat.emissive.setScalar(q.hurt > 0 ? q.hurt * 0.8 : 0);
@@ -107,7 +108,7 @@ export class MonsterPool {
     const c = this.tmp.copy(this.c1);
     if (s.mad) c.lerp(col('#ff3a2a'), 0.35);
     if (s.freeze) c.lerp(col('#bfeaff'), 0.6);
-    if (s.flash > 0) c.lerp(col('#ffffff'), Math.min(1, s.flash * 1.6));
+    if (s.flash > 0) c.lerp(col('#ffffff'), Math.min(1, s.flash * (this.v === 'n' ? 1.6 : 0.5)));
     this.body.tint(i, c);
     this.face.put(s.x, s.y, s.z, yaw, sx, sy, sx);
   }
