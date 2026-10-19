@@ -247,7 +247,6 @@ BOSS['Geôlier spectral'] = c => {
   }
   s.part(null);
   c.body = [0.16, 0.05, 0, 1];
-  c.ghost = 0.93;
   c.h = 3.3;
 };
 

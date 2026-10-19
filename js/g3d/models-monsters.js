@@ -481,7 +481,7 @@ function ghost(c, o = {}) {
   }
   s.part(null);
   c.body = [0.14, 0.05, 0, 1];
-  c.ghost = o.alpha ?? 0.84;
+  c.ghost = o.alpha ?? 1; // opaques et lumineux (un alpha < 0,85 passe dans le lot tramé)
   c.h = 1.5;
 }
 function worm(c, o = {}) {
@@ -569,25 +569,23 @@ export function monsterHeight(def, v = 'n') { return buildDef(def, v).h; }
 
 // ---------- Pool d'instances ----------
 const _m = new THREE.Matrix4();
-export class MonsterPool {
-  constructor(scene, def, variant = 'n', max = 64) {
-    const B = buildDef(def, variant);
-    this.def = def; this.v = variant; this.scene = scene; this.height = B.h; this.alpha = B.ghost || 1;
-    this.geo = B.s.geometry();
-    this.max = Math.max(1, max | 0);
-    this.iA = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 4), 4).setUsage(THREE.DynamicDrawUsage);
-    this.iB = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 4), 4).setUsage(THREE.DynamicDrawUsage);
-    this.geo.setAttribute('iA', this.iA); this.geo.setAttribute('iB', this.iB);
-    // fantômes : translucides (mélange) ; boss : fondu tramé possible (alpha) ; les autres sont opaques (alpha ignoré)
-    this.mat = charMaterial({ anim: true, alphaHash: variant === 'b' && !B.ghost, rim: 0.45, parts: B.s.partUniforms() });
-    if (B.ghost) this.mat.transparent = true;
-    this.mat.userData.U.uBody.value.set(...B.body);
-    this.mesh = new THREE.InstancedMesh(this.geo, this.mat, this.max);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.frustumCulled = false; this.mesh.count = 0;
-    this.mesh.name = 'mon:' + def.name + ':' + variant;
-    this.extra = B.extra ? B.extra(this) : null; // boss : effets propres
-    scene.add(this.mesh);
+// un lot = un InstancedMesh + ses attributs d'instance ; le pool en a deux : opaque (le plus courant) et « fondu »
+// (alpha tramé, créé à la demande pour les traînées de charge, les morts qui s'effacent, etc.)
+class Batch {
+  constructor(pool, base, max, fade) {
+    this.max = max;
+    const g = this.geo = new THREE.BufferGeometry();
+    for (const k in base.attributes) g.setAttribute(k, base.attributes[k]);
+    this.iA = new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4).setUsage(THREE.DynamicDrawUsage);
+    this.iB = new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4).setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('iA', this.iA); g.setAttribute('iB', this.iB);
+    g.boundingSphere = base.boundingSphere;
+    const mat = this.mat = charMaterial({ anim: true, alphaHash: fade, rim: 0.45, parts: pool.parts });
+    mat.userData.U.uBody.value.copy(pool.uBody);
+    const m = this.mesh = new THREE.InstancedMesh(g, mat, max);
+    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    m.frustumCulled = false; m.count = 0; m.visible = false;
+    m.name = 'mon:' + pool.def.name + ':' + pool.v + (fade ? ':fondu' : '');
     this.n = 0;
   }
   grow() {
@@ -597,10 +595,39 @@ export class MonsterPool {
     for (const k of ['iA', 'iB']) { const a = new THREE.InstancedBufferAttribute(new Float32Array(max * 4), 4).setUsage(THREE.DynamicDrawUsage); a.array.set(this[k].array); this[k] = a; this.geo.setAttribute(k, a); }
     this.max = max;
   }
-  begin() { this.n = 0; }
+  end() {
+    const m = this.mesh;
+    m.count = this.n; m.visible = this.n > 0;
+    if (this.n) { m.instanceMatrix.needsUpdate = true; this.iA.needsUpdate = true; this.iB.needsUpdate = true; }
+  }
+  dispose() { this.geo.dispose(); this.mat.dispose(); }
+}
+
+export class MonsterPool {
+  constructor(scene, def, variant = 'n', max = 64) {
+    const B = buildDef(def, variant);
+    this.def = def; this.v = variant; this.scene = scene; this.height = B.h; this.alpha = B.ghost || 1;
+    this.base = B.s.geometry();
+    this.parts = B.s.partUniforms(); this.uBody = new THREE.Vector4(...B.body);
+    this.main = new Batch(this, this.base, Math.max(1, max | 0), false);
+    this.fade = null;
+    this.mesh = this.main.mesh; this.geo = this.base;
+    this.extra = B.extra ? B.extra(this) : null; // boss : effets propres
+    scene.add(this.mesh);
+  }
+  get n() { return this.main.n + (this.fade ? this.fade.n : 0); }
+  begin() { this.main.n = 0; if (this.fade) this.fade.n = 0; }
   add(e, s) {
-    if (this.n >= this.max) this.grow();
-    const i = this.n++, te = this.mesh.instanceMatrix.array, o = i * 16;
+    // translucide (alpha < 0,85) → lot tramé ; sinon lot opaque
+    const al = (s.alpha ?? 1) * this.alpha;
+    let L = this.main;
+    if (al < 0.85) {
+      if (al <= 0.02) return;
+      if (!this.fade) { this.fade = new Batch(this, this.base, 16, true); this.scene.add(this.fade.mesh); }
+      L = this.fade;
+    }
+    if (L.n >= L.max) L.grow();
+    const i = L.n++, te = L.mesh.instanceMatrix.array, o = i * 16;
     const big = this.v !== 'n', sq = s.sq || 0, k = big ? (this.v === 'b' ? 0.3 : 0.6) : 1;
     const sc = s.scale || 1, sx = sc * (1 + sq * 0.16 * k), sy = sc * (1 - sq * 0.12 * k);
     const a = yawOf(s.rot || 0), cs = Math.cos(a), sn = Math.sin(a);
@@ -613,20 +640,20 @@ export class MonsterPool {
     const act = e && e.act;
     if (act && act.stage === 0) pw = 1; else if (act) pw = 0.35;
     if (e && e.boss && (e.phase === 'intro' || e.phase === 'roar' || e.phase === 'aim' || e.phase === 'ringW' || e.phase === 'summonW')) pw = 1;
-    if (e) { e._m3p = (e._m3p || 0) + (pw - (e._m3p || 0)) * 0.25; pw = e._m3p; }
-    const A = this.iA.array, Bb = this.iB.array, q = i * 4;
-    A[q] = s.anim || 0; A[q + 1] = clamp((s.flash || 0) * (big ? 0.55 : 1), 0, 1); A[q + 2] = (s.alpha ?? 1) * this.alpha; A[q + 3] = s.mad ? 0.8 : 0;
+    if (e && L === this.main) { e._m3p = (e._m3p || 0) + (pw - (e._m3p || 0)) * 0.25; pw = e._m3p; } else if (e) pw = e._m3p || 0;
+    const A = L.iA.array, Bb = L.iB.array, q = i * 4;
+    A[q] = s.anim || 0; A[q + 1] = clamp((s.flash || 0) * (big ? 0.55 : 1), 0, 1); A[q + 2] = al; A[q + 3] = s.mad ? 0.8 : 0;
     Bb[q] = pw; Bb[q + 1] = s.freeze ? 1 : 0; Bb[q + 2] = s.mad ? 1 : 0; Bb[q + 3] = 0;
     if (this.extra) this.extra.add(e, s, i);
   }
   end() {
-    this.mesh.count = this.n;
-    this.mesh.instanceMatrix.needsUpdate = true; this.iA.needsUpdate = true; this.iB.needsUpdate = true;
+    this.main.end(); if (this.fade) this.fade.end();
     if (this.extra) this.extra.end(this.n);
   }
   dispose() {
-    this.scene.remove(this.mesh);
-    this.geo.dispose(); this.mat.dispose(); this.mesh.dispose?.();
+    this.scene.remove(this.main.mesh); this.main.dispose();
+    if (this.fade) { this.scene.remove(this.fade.mesh); this.fade.dispose(); }
+    this.base.dispose();
     if (this.extra) this.extra.dispose();
   }
 }
