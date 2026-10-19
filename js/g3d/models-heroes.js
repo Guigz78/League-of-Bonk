@@ -327,7 +327,7 @@ function buildKnight(sh, C, evo) {
   }
   // épée (main droite) : lame large, garde dorée
   const blade = evo >= 4 ? '#fff8d0' : dark ? '#5a5a78' : evo === 2 ? '#f4f8ff' : steelL, bg = evo >= 3 ? 0.6 : 0.08, bl = 1.25 + evo * 0.07;
-  const Wm = new THREE.Matrix4().makeTranslation(-0.53, 0.8, 0.08).multiply(new THREE.Matrix4().makeRotationY(-0.4)).multiply(new THREE.Matrix4().makeRotationX(1.25));
+  const Wm = new THREE.Matrix4().makeTranslation(-0.53, 0.8, 0.08).multiply(new THREE.Matrix4().makeRotationY(-0.3)).multiply(new THREE.Matrix4().makeRotationX(1.9));
   const wput = (key, col, x, y, z, sx, sy, sz, o) => W.add(key, col, Wm.clone().multiply(new THREE.Matrix4().makeTranslation(x, y, z)).multiply(new THREE.Matrix4().makeScale(sx, sy, sz)), o);
   wput('cyl:6', LEATHER_D, 0, -0.02, 0, 0.1, 0.32, 0.1, { grad: 0 });
   wput('sph:6:4', gold, 0, -0.2, 0, 0.14, 0.14, 0.14, { grad: 0, glow: 0.2 });
@@ -529,7 +529,7 @@ export function heroModel(clsId, evo = 0) {
           b.armR.rotation.z = lerp(b.armR.rotation.z, -1.45, w * lift);
           b.armR.rotation.y = lerp(-0.7, 2.3, s) * w;
           b.armR.rotation.x = lerp(b.armR.rotation.x, 0, w);
-          b.wpn.rotation.x = 1.55 * w * lift;
+          b.wpn.rotation.x = 0.9 * w * lift;
           b.chest.rotation.y = lerp(-0.5, 0.75, s) * w; b.hips.rotation.y = lerp(-0.2, 0.3, s) * w;
           b.armL.rotation.x = lerp(b.armL.rotation.x, -0.9, w); b.armL.rotation.y = 0.3 * w;
         } else if (clsId === 'archer') {
