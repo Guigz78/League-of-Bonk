@@ -23,7 +23,7 @@ export function freshSave() {
     inventory: [],
     equipped: { weapon: null, armor: null, trinket: null },
     stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {},
-      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0 },
+      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0, quests: 0, logins: 0 },
     // expédition : pièces d'équipement par rareté, bonus possédés et choisis, coffres pas encore ouverts
     parts: { weapon: [0, 0, 0, 0], armor: [0, 0, 0, 0], trinket: [0, 0, 0, 0] },
     boosts: {},
@@ -101,7 +101,7 @@ function migrateLoot(out, s) {
     .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5) }));
   const st = out.stats;
   if ((s.v || 1) < 3) st.worlds = Math.max(st.worlds || 0, st.wins || 0);
-  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic']) st[k] = int(st[k], 1e9);
+  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic', 'quests', 'logins']) st[k] = int(st[k], 1e9);
   if (!Array.isArray(out.inventory)) out.inventory = [];
 }
 
@@ -406,6 +406,8 @@ export function checkAchievements() {
     upgrade5: s.inventory.some(i => (i.lv || 0) >= 5),
     mythic: st.mythic >= 1,
     chests50: st.chests >= 50,
+    quests10: st.quests >= 10,
+    login7: st.logins >= 7,
   };
   for (const a of ACHIEVEMENTS) {
     if (!s.achievements[a.id] && cond[a.id]) {

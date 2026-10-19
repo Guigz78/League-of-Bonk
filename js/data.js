@@ -289,6 +289,8 @@ export const ACHIEVEMENTS = [
   { id: 'upgrade5', name: 'Chef-d\'œuvre', desc: 'Améliorer un objet jusqu\'à +5.', gold: 200 },
   { id: 'mythic', name: 'Trésor mythique', desc: 'Ouvrir un coffre mythique.', gold: 150 },
   { id: 'chests50', name: 'Pilleur de coffres', desc: 'Ouvrir 50 coffres de butin.', gold: 200 },
+  { id: 'quests10', name: 'Toujours partant', desc: 'Réclamer 10 quêtes du jour.', gold: 150 },
+  { id: 'login7', name: 'Fidèle au poste', desc: 'Réclamer les 7 récompenses de connexion.', gold: 200 },
 ];
 
 // ---------- Expédition : mondes enchaînés, totems de défi, butin, forge, bonus ----------

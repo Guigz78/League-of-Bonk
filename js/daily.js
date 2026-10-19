@@ -61,6 +61,7 @@ export function claimQuest(i) {
   if (!q || !q.ready) return null;
   save.daily.quests[i].claimed = true;
   save.gold += q.gold;
+  save.stats.quests = (save.stats.quests || 0) + 1;
   giveChest(q.tier);
   persist();
   return { gold: q.gold, chest: q.tier };
@@ -83,6 +84,7 @@ export function claimLogin() {
     save.boosts[id] = (save.boosts[id] || 0) + 1; out.boostId = id;
   }
   save.login = { day: (st.day + 1) % 7, last: today() };
+  save.stats.logins = (save.stats.logins || 0) + 1;
   persist();
   return out;
 }

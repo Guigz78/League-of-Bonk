@@ -171,9 +171,9 @@ b, strong { font-weight: 600; }
 .pc-txt b { display: flex; align-items: center; gap: 10px; font: 700 32px/1 var(--fd); letter-spacing: .12em; text-transform: uppercase; }
 .pc-dtag { padding: 3px 6px 2px; font: 700 10.5px/1 var(--fd); font-style: normal; letter-spacing: .14em; color: var(--acc-ink); box-shadow: inset 0 0 0 1.5px rgba(22,16,0,.55); }
 .pc-dtag::before { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 5px 1px 0; background: var(--dc, #3ddc84); box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
-.pc-txt small { font: 700 12px/1.2 var(--fd); letter-spacing: .1em; text-transform: uppercase; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-txt small { font: 700 11.5px/1.2 var(--fd); letter-spacing: .05em; text-transform: uppercase; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pc-diff { display: inline-block; width: 7px; height: 7px; margin: 0 2px 1px 0; background: var(--dc, #3ddc84); box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
-.pc-boss { width: 60px; height: 60px; flex: none; filter: drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
+.pc-boss { width: 54px; height: 54px; flex: none; filter: drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
 
 /* tuiles rapides : quêtes, connexion, coffres */
 .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }

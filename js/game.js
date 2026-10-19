@@ -296,6 +296,7 @@ async function questSheet() {
     sfx('loot'); buzz(20);
     toast(`${iconImg('chest', 16)} <b>${esc(chestName(r.chest))}</b> et <b>+${r.gold} or</b>`);
     root.innerHTML = body();
+    announceAchievements();
   });
   await p;
   if (!battle) home();
@@ -325,6 +326,7 @@ async function loginSheet() {
       sfx('loot'); buzz(25);
       const what = r.chest != null ? `<b>${esc(chestName(r.chest))}</b>${r.gold ? ` et <b>+${r.gold} or</b>` : ''}` : r.boostId ? `Bonus : <b>${esc(BOOSTS[r.boostId].name)}</b>` : `<b>+${r.gold} or</b>`;
       toast(`${iconImg('calendar', 16)} Jour ${r.day + 1} : ${what}`, 2800);
+      announceAchievements();
     }
   }
   if (!battle) home();
