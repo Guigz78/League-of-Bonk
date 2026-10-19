@@ -2056,8 +2056,10 @@ export class Run {
     const g = Math.max(1, Math.round((2 + m / 100) * (1 + 0.5 * z) * this.diff.gold * this.base.gold * this.wm.gold));
     const xp = Math.round(m * BAL.comboXp * (1 + Math.floor(z / 2)));
     this.gold += g; this.gainXp(xp);
-    this.text(p.x, p.y, 92, `Combo ${m} ! +${g} or`, '#ffd54a', 1.35);
-    this.emit('combo', { n: m, x: p.x, y: p.y, gold: g, xp });
+    const rr = m >= 500 && m % 500 === 0 && this.rerolls < 5; // les très longs combos rendent une relance
+    if (rr) this.rerolls++;
+    this.text(p.x, p.y, 92, `Combo ${m} ! +${g} or${rr ? ' · +1 relance' : ''}`, '#ffd54a', 1.35);
+    this.emit('combo', { n: m, x: p.x, y: p.y, gold: g, xp, reroll: rr });
     sfx(m >= 100 ? 'loot' : 'coin'); if (m >= 100) buzz(25);
     this._comboPop = true;
   }
