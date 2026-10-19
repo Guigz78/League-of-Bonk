@@ -6,14 +6,21 @@ import { HALF } from '../data.js';
 import { rng } from '../pixel.js';
 import { THEMES, World2D } from '../g2d/world.js';
 
-// ambiance 3D par thème : fond/brouillard, ciel et sol de la lumière d'ambiance, soleil
+// ambiance 3D par thème : fond/brouillard, ciel et sol de la lumière d'ambiance, soleil, reflet de bord des
+// personnages (rim, rimW) ; t = couleurs du thème 2D remplacées en 3D (sol un peu plus profond et moins saturé
+// que les personnages, chemins plus sobres : héros et monstres ressortent mieux, comme sur le concept)
 export const LOOK = {
-  lane:   { fog: '#9ad8ff', fogK: 1, sky: '#fff6e0', grd: '#4a6a2a', hemi: 1.55, sun: '#fff0d0', sunI: 2.3, edge: '#3e6a2c', hill: '#4a8a34' },
-  jungle: { fog: '#6ab88a', fogK: 0.9, sky: '#f0ffe0', grd: '#2a4a20', hemi: 1.7, sun: '#ffe8b0', sunI: 1.9, edge: '#1e4a1a', hill: '#2e6a28' },
-  river:  { fog: '#a8e4ff', fogK: 1, sky: '#f4fbff', grd: '#4a7a5a', hemi: 1.6, sun: '#fff4dc', sunI: 2.3, edge: '#3a7050', hill: '#5a9a48' },
-  ice:    { fog: '#cfe6ff', fogK: 0.95, sky: '#ffffff', grd: '#8aa8c8', hemi: 1.75, sun: '#fff8f0', sunI: 1.8, edge: '#8aa8c8', hill: '#d6e6f6' },
-  shadow: { fog: '#1e3a36', fogK: 0.7, sky: '#9affe0', grd: '#14261f', hemi: 1.15, sun: '#b8d8ff', sunI: 0.9, edge: '#18302a', hill: '#22403a', dark: 1 },
-  void:   { fog: '#24103a', fogK: 0.7, sky: '#e0a8ff', grd: '#1a0a2a', hemi: 1.1, sun: '#ffb8f0', sunI: 0.95, edge: '#1a0c2a', hill: '#2a1640', dark: 1 },
+  lane:   { fog: '#a4dcf8', fogK: 1, sky: '#fff4dc', grd: '#40602a', hemi: 1.42, sun: '#fff0d0', sunI: 2.2, edge: '#3e6a2c', hill: '#4a8a34', rim: '#fff2d8', rimW: 0.4,
+    t: { g0: '#55a338', g1: '#478f30', g2: '#6db348', tuft: '#3e8a2c', tuft2: '#86cc58', pave: ['#cbb88c', '#e4d4ac', '#9a845e', '#836c4a'] } },
+  jungle: { fog: '#5eae84', fogK: 0.9, sky: '#f0ffe0', grd: '#24401c', hemi: 1.6, sun: '#ffe8b0', sunI: 1.9, edge: '#1e4a1a', hill: '#2e6a28', rim: '#f4ffd8', rimW: 0.4,
+    t: { g0: '#3f8c34', g1: '#347a2c', g2: '#54a242', tuft: '#286a22', tuft2: '#6cbc4e' } },
+  river:  { fog: '#a4e0fc', fogK: 1, sky: '#f4fbff', grd: '#40705a', hemi: 1.5, sun: '#fff4dc', sunI: 2.2, edge: '#3a7050', hill: '#5a9a48', rim: '#f0fbff', rimW: 0.4,
+    t: { g0: '#64b049', g1: '#58a040', g2: '#7cc25c', tuft: '#428a32', tuft2: '#9cd876', pave: ['#cfc9ba', '#ebe5d6', '#99927f', '#827b6a'] } },
+  ice:    { fog: '#c4dcf6', fogK: 0.95, sky: '#ffffff', grd: '#7a98bc', hemi: 1.55, sun: '#fff6ea', sunI: 1.75, edge: '#8aa8c8', hill: '#d0e0f2', rim: '#ffffff', rimW: 0.55,
+    t: { g0: '#c6d8ec', g1: '#b4c8e0', g2: '#dce8f6', tuft: '#9cb6d2', tuft2: '#f0f6ff', pave: ['#9fb4cc', '#c8daee', '#7088a6', '#5e7694'] } },
+  shadow: { fog: '#1c3834', fogK: 0.7, sky: '#9affe0', grd: '#14261f', hemi: 1.2, sun: '#b8d8ff', sunI: 0.95, edge: '#18302a', hill: '#22403a', dark: 1, rim: '#a8fff0', rimW: 0.6 },
+  void:   { fog: '#200e34', fogK: 0.7, sky: '#e0a8ff', grd: '#1a0a2a', hemi: 1.15, sun: '#ffb8f0', sunI: 1.0, edge: '#1a0c2a', hill: '#2a1640', dark: 1, rim: '#ffc8ff', rimW: 0.6,
+    t: { g0: '#2e1a4a', g1: '#26143e', g2: '#3c245e' } },
 };
 
 const PCELL = 256, EDGE = 640; // décor par cellules de 256 px ; collines jusqu'à 640 px au-delà du bord
@@ -201,8 +208,8 @@ const PROP_LIGHT = { lantern: [0.6, 1.8, 0, '#a8ffc8', 3.2], vcrystal: [0, 1.4, 
 export class World3D {
   constructor(scene, zone, avoid = [], { banner = null } = {}) {
     this.zone = zone;
-    this.T = THEMES[zone.bg] || THEMES.lane;
     this.L = LOOK[zone.bg] || LOOK.lane;
+    this.T = { ...(THEMES[zone.bg] || THEMES.lane), ...(this.L.t || {}) };
     this.group = new THREE.Group();
     scene.add(this.group);
     this.r = rng('w2d' + zone.id);

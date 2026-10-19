@@ -10,6 +10,7 @@ import { Overlay } from './overlay.js';
 import { save } from '../save.js';
 import { PETS } from '../data.js';
 import * as SI from './stand-in.js';
+import { RIM } from './models-kit.js';
 export { zoneBannerURL } from './world.js';
 
 // personnages : js/g3d/models.js (agent des personnages) s'il est là, sinon les modèles provisoires
@@ -48,6 +49,7 @@ export class Gfx {
     this.camera.rotation.set(-PITCH, 0, 0);
     // lumières : ciel + soleil chaud, brouillard pour la profondeur
     const L = this.look = LOOK[run.zone.bg] || LOOK.lane;
+    RIM.c.value.set(L.rim || '#fff4e0'); RIM.w.value = L.rimW ?? 0.35; // reflet de bord des personnages, par monde
     this.fogC = col(L.fog).clone(); this.skyC = col(L.sky).clone();
     this.scene.background = this.fogC.clone();
     this.scene.fog = new THREE.Fog(this.fogC.clone(), 80, 200);
@@ -172,8 +174,9 @@ export class Gfx {
     this.overlay.render(dt);
   }
 
-  // le héros est aussi sur le calque 1 (passes de la silhouette)
-  layer(o) { o.traverse(c => c.layers.enable(1)); }
+  // le héros est aussi sur le calque 1 (passes de la silhouette) : seulement ses pièces opaques (l'aura, son halo
+  // au sol et ses étincelles, transparents, dessineraient sinon un grand rectangle bleu derrière le chemin)
+  layer(o) { o.traverse(c => { if (c.isMesh && !c.material?.transparent) c.layers.enable(1); else c.layers.disable(1); }); }
   xray() {
     const R = this.renderer, sc = this.scene, cam = this.camera, run = this.run;
     if (run.dying || !this.hero.root.visible) return;
@@ -305,6 +308,7 @@ export class Gfx {
       this.renderer.dispose();
       this.renderer.forceContextLoss?.();
     } catch (e) { /* rien */ }
+    RIM.c.value.set('#fff4e0'); RIM.w.value = 0.35; // menus : reflet neutre
     this.c3.remove();
   }
 }
