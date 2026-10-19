@@ -1408,6 +1408,7 @@ async function settings() {
         <label class="toggle"><input type="checkbox" id="sSound" ${save.settings.sound ? 'checked' : ''}> Son</label>
         <label class="toggle"><input type="checkbox" id="sVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
         <label class="toggle"><input type="checkbox" id="sMus" ${save.settings.music !== false ? 'checked' : ''}> Musique</label>
+        <label class="toggle"><input type="checkbox" id="sGfx" ${save.settings.gfx !== '2d' ? 'checked' : ''}> Graphismes 3D (décochez pour la 2D, plus légère)</label>
       </div>
       <h4>Installer sur iPhone</h4>
       <p class="muted">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
@@ -1431,6 +1432,7 @@ async function settings() {
   await p;
   save.settings.sound = wrap.querySelector('#sSound').checked;
   save.settings.vibrate = wrap.querySelector('#sVib').checked;
+  save.settings.gfx = wrap.querySelector('#sGfx').checked ? '3d' : '2d';
   const mOn = wrap.querySelector('#sMus').checked;
   if (mOn !== save.settings.music) { save.settings.music = mOn; if (!mOn) stopMusic(); }
   persist({ touch: false });
