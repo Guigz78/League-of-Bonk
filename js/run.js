@@ -142,6 +142,8 @@ export class Run {
     this.recalc();
     this.grid = new Grid(64);
     this.kills = 0; this.gold = 0;
+    // combo : victimes enchaînées à moins de COMBO_WINDOW s d'écart ; paliers récompensés ; un coup reçu le brise
+    this.combo = 0; this.comboT = 0; this.comboBest = 0; this.comboStep = 0;
     this.mv = { x: 0, y: 0 }; // vitesse calculée par l'IA d'un monstre (réutilisée, pas d'allocation)
     this.paused = false; this.over = false; this.revived = false;
     this.pending = 0;
@@ -178,6 +180,9 @@ export class Run {
     this.eliteGap = (z.id ? 30 : 34) * D.elite;
     this.swarms = [0.25, 0.46, 0.66, 0.85].map(f => f * this.duration);
     this.swarmN = 0;
+    // rythme des vagues (calme -> montée -> pic -> répit) et champion de mi-parcours (~55 % du chrono)
+    this.phase = 'calm'; this.spikeT = 0; this.breathT = 0;
+    this.miniAt = this.duration * 0.55; this.miniDone = false; this.mini = null;
     this.cap = Math.min(HARD_CAP - 10, Math.round((150 + z.id * 16 + this.stage * 12) * (1 + (D.spawn - 1) * 0.6)));
     this.pack = 0; this.packX = 0; this.packY = 0;
     this.acts = 0;            // attaques spéciales en cours (limitées pour rester lisibles)
@@ -214,7 +219,9 @@ export class Run {
         <div class="xprow"><span class="lvl-badge"><small>Niv.</small><b id="lvl">1</b></span><div class="xpbar"><div class="fill" id="xpFill"></div></div></div>
         <div class="evo-line" id="evoLine"></div>
         <div class="loadout" id="loadout"></div>
+        <div class="combo" id="combo" hidden><b id="comboN">0</b><small>combo</small><i class="combo-t"><i id="comboT"></i></i></div>
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
+        <div class="minibar" id="minibar" hidden><div class="mb-n" id="miniName"></div><div class="mb-bar"><i id="miniFill"></i></div></div>
         <div class="banner" id="banner"></div>
         <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br><b>Saut</b> : touchez le bouton quand il devient <em>rouge</em>.</div>
         <button class="jump-btn" id="jumpBtn" aria-label="Sauter"><svg class="jring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16.5"/></svg><svg class="jarrow" viewBox="0 0 24 24"><path d="M12 3.5l8.5 9.5h-5.2v7.5H8.7V13H3.5z"/></svg><small>Saut</small><i class="jwarn">!</i></button>
@@ -715,6 +722,7 @@ export class Run {
     const p = this.p;
     this.time += dt; this.runTime += dt;
     this.hitSfxT -= dt; this.msgT -= dt;
+    if (this.comboT > 0 && (this.comboT -= dt) <= 0) this.endCombo(false);
     this.evoFlash = Math.max(0, this.evoFlash - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.ultFlash = Math.max(0, this.ultFlash - dt);
@@ -794,7 +802,7 @@ export class Run {
     if (t >= this.duration) this.updateOvertime(dt);
     const ot = this.otLevel, fight = this.boss && !this.boss.dead;
     // la cadence monte nettement avec le temps (zone 1 un peu plus douce), puis avec la folie après le chrono
-    let rate = (0.9 + Math.min(t, this.duration) / 18) * (1 + z.id * 0.12) * (1 + this.stage * 0.1) * D.spawn * this.wm.spawn * (1 + 0.3 * ot);
+    let rate = (0.9 + Math.min(t, this.duration) / 18) * (1 + z.id * 0.12) * (1 + this.stage * 0.1) * D.spawn * this.wm.spawn * (1 + 0.3 * ot) * this.director(dt);
     if (fight) rate *= this.boss.enraged ? 0.5 : 0.36;
     this.spawnAcc += rate * dt;
     const pool = Math.min(3, Math.floor(t / (this.duration / 4)));
@@ -813,9 +821,11 @@ export class Run {
       this.nextElite += this.eliteGap * this.wm.elite / (1 + 0.35 * ot);
       this.spawnElite();
     }
+    if (!this.miniDone && t >= this.miniAt && !this.arena && !this.bossSpawned) this.spawnMini();
     if (this.swarms.length && t >= this.swarms[0] && !this.arena) {
       this.swarms.shift();
       const wave = ++this.swarmN;
+      this.spikeT = 7; this.breathT = 0;
       this.emit('swarm', {});
       // hordes de plus en plus denses : un cercle (avec une brèche pour s'échapper), puis deux cercles de monstres différents
       const n = Math.round((10 + z.id * 2 + wave * 6) * (1 + (D.spawn - 1) * 0.8)), k = Math.min(pool, 3);
@@ -839,6 +849,32 @@ export class Run {
       this.banner(wave >= 3 ? 'Une énorme horde vous encercle !' : 'Une horde vous encercle !', 1500, 'warn');
       sfx('alarm');
     }
+  }
+
+  // Rythme des vagues, calé sur les hordes : calme, montée avant la horde, pic pendant 7 s, puis répit.
+  // Renvoie le multiplicateur de la cadence d'apparition (≈ 1 en moyenne). Pas de rythme pendant le boss ni la folie.
+  director(dt) {
+    let ph = 'calm', k = 0.8;
+    if (this.arena || this.time >= this.duration) ph = 'fight', k = 1;
+    else if (this.spikeT > 0) { ph = 'spike'; k = 1.7; if ((this.spikeT -= dt) <= 0) this.breathT = 7; }
+    else if (this.breathT > 0) { ph = 'breather'; k = 0.4; this.breathT -= dt; }
+    else if (this.swarms.length && this.swarms[0] - this.time < 18) { ph = 'build'; k = 0.85 + 0.6 * (1 - (this.swarms[0] - this.time) / 18); }
+    if (ph !== this.phase) { this.phase = ph; this.emit('director', { phase: ph }); }
+    return k;
+  }
+
+  // champion de mi-parcours : un gros élite à 2 pouvoirs, avec sa barre de vie en haut de l'écran
+  spawnMini() {
+    this.miniDone = true;
+    const p = this.p, mons = this.zone.monsters, a = Math.atan2(p.face.y, p.face.x) + rand(-0.9, 0.9), lim = HALF - 150;
+    const e = this.mini = this.addEnemy(mons[4], 4, { elite: true, mini: true, x: clamp(p.x + Math.cos(a) * 440, -lim, lim), y: clamp(p.y + Math.sin(a) * 440, -lim, lim) });
+    this.emit('elite', { e }); this.emit('miniBoss', { e });
+    const mb = $('#minibar');
+    if (mb) { mb.hidden = false; $('#miniName').innerHTML = `<em>Champion</em>${esc(e.name)}`; }
+    this.banner(`<small>Un champion de la horde arrive !</small><span class="tag elite">CHAMPION</span>${esc(e.name)}`, 2200, 'boss mini');
+    this.shake = Math.max(this.shake, 6);
+    sfx('honk'); sfx('alarm'); buzz(40);
+    return e;
   }
 
   spawnElite(o = {}) {
@@ -895,6 +931,7 @@ export class Run {
     let dmg = def.atk * 0.8 * (0.85 + t / 300 + (t / 260) ** 2) * (1 + z.id * BAL.zDmg) * D.dmg * B.dmg * S.dmg * W.dmg * 1.2 ** ot;
     let scale = 2.2, speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed * (1 + Math.min(0.22, t / 800)) * W.speed * Math.min(1.35, 1 + 0.06 * ot) * rand(0.9, 1.1);
     if (o.elite) { hp *= 12; dmg *= 1.6; scale = 3.6; speed *= 0.9; }
+    if (o.mini) { hp *= 3.4; dmg *= 1.15; scale = 4.7; speed *= 0.95; }
     if (o.boss) {
       hp = Math.max(def.hp, 165) * BAL.bossHp * (1 + z.id * BAL.zBoss) * D.boss * S.boss * this.runHp;
       dmg = def.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
@@ -910,6 +947,7 @@ export class Run {
       side: Math.random() < 0.5 ? 1 : -1, sideT: rand(0.5, 2), regen: 0, vamp: false, bomb: false, rage: 0, sumT: 0, enraged: false,
       // expédition : fou (après le chrono), enfermé dans l'arène (boss et ses renforts), phase du boss, invulnérable
       mad: ot > 0, inArena: !!o.inArena, bossPhase: o.boss ? 1 : 0, invuln: 0,
+      mini: !!o.mini, ringT: o.mini ? rand(3, 4.5) : 0,
     };
     if (o.elite) this.makeElite(e);
     this.enemies.push(e);
@@ -919,7 +957,7 @@ export class Run {
   // élite : 1 pouvoir tiré au hasard (2 en Cauchemar), affiché dans son nom
   makeElite(e) {
     const keys = Object.keys(ELITE_MODS), mods = [];
-    while (mods.length < Math.min(keys.length, this.diff.mods)) {
+    while (mods.length < Math.min(keys.length, this.diff.mods + (e.mini && this.diff.mods < 2 ? 1 : 0))) {
       const m = keys[Math.floor(Math.random() * keys.length)];
       if (!mods.includes(m)) mods.push(m);
     }
@@ -1047,6 +1085,13 @@ export class Run {
     const mv = this.mv, p = this.p;
     if (e.act) return this.enemyAct(e, e.act, dt, nx, ny, d, sp);
     const body = e.def.body;
+    if (e.mini && (e.ringT -= dt) <= 0 && d < 520) { // le champion lance une couronne de projectiles (annoncée)
+      e.ringT = rand(5, 7);
+      this.tele(e, 'ring', 0.7, e.x, e.y, 0, 0, 0);
+      this.warnRing(e.x, e.y, e.r * 1.6, 0.7, '#c06aff');
+      mv.x = 0; mv.y = 0;
+      return;
+    }
     let vx = nx * sp, vy = ny * sp;
     if (body === 'crab') { // les crabes filent de côté en zigzag
       e.sideT -= dt;
@@ -1203,6 +1248,18 @@ export class Run {
           this.burst(e.x, e.y, 16, 0, e.def.pal[1], 3);
           this.shake = Math.max(this.shake, 6); sfx('stomp');
           this.endAct(e, rand(4, 6) * e.cdMul);
+        }
+        return;
+      case 'ring':
+        if (a.t <= 0) {
+          const n = 12 + this.zone.id * 2, off = Math.random();
+          for (let i = 0; i < n && this.eshots.length < 220; i++) {
+            const an = (i + off) / n * TAU;
+            this.eshots.push({ x: e.x, y: e.y, z: 30, vx: Math.cos(an) * 150, vy: Math.sin(an) * 150, r: 9, dmg: e.dmg * 0.45, life: 4.5 });
+          }
+          this.burst(e.x, e.y, 14, 20, '#c06aff', 3);
+          sfx('zap');
+          this.endAct(e, e.cd);
         }
         return;
       case 'summon':
@@ -1566,6 +1623,7 @@ export class Run {
     const d = Math.max(1, Math.round(dmg * (1 - p.armor)));
     p.hp -= d;
     p.inv = 0.45;
+    this.endCombo(true);
     if (src && src.vamp && !src.dead) { // élite vampirique : se soigne en frappant
       const h = Math.round(src.maxHp * 0.12);
       src.hp = Math.min(src.maxHp, src.hp + h);
@@ -1889,6 +1947,7 @@ export class Run {
     e.dead = true;
     this.emit('kill', { e, x: e.x, y: e.y });
     this.kills++;
+    if (!o.raw) this.addCombo();
     if (!e.boss) sfx('kill');
     const p = this.p, z = this.zone, L = this.leg;
     p.ult = Math.min(100, p.ult + (e.boss ? 0 : e.elite ? 8 : e.gen ? 0.25 : 0.5) * (save.pet === 'voidy' ? 2 : 1) * (1 + this.it.ult));
@@ -1903,6 +1962,7 @@ export class Run {
     if (Math.random() < (e.elite ? 1 : 0.06)) this.pickups.push({ type: 'gold', x: e.x + rand(-10, 10), y: e.y + rand(-10, 10), v: Math.max(1, Math.round((1 + z.id * 0.5) * (e.elite ? 8 : 1) * luck)) });
     if (Math.random() < 0.0045 * (e.elite ? 8 : 1)) this.pickups.push({ type: 'heart', x: e.x, y: e.y });
     if (Math.random() < 0.003) this.pickups.push({ type: 'magnet', x: e.x, y: e.y });
+    if (e.mini) this.miniDown(e);
     if (e.elite) {
       this.dropChest(e.x, e.y); sfx('honk'); this.hitStop = 0.08;
       // coffre de butin (à ouvrir après la partie) : surtout en bois, meilleur en Difficile / Cauchemar
@@ -1913,6 +1973,49 @@ export class Run {
     }
     if (e.bomb) this.addBomb({ x: e.x, y: e.y, R: 115 + e.r * 0.5, t: 1, dmg: e.dmg * 1.6, kind: 'explode', e });
     if (e.def.body === 'blob' && !e.gen && !e.boss && !e.elite && this.enemies.length < HARD_CAP - 2) this.split(e);
+  }
+
+  // le champion de mi-parcours est vaincu : butin garanti (coffre de butin en argent ou mieux), or, grosse gemme
+  miniDown(e) {
+    const z = this.zone, p = this.p;
+    this.mini = null;
+    const mb = $('#minibar'); if (mb) mb.hidden = true;
+    this.pickups.push({ type: 'xp', x: e.x + 20, y: e.y, v: 45 * (1 + Math.floor(z.id / 2)) * (1 + this.stage * 0.5), spin: 0 });
+    const g = Math.max(1, Math.round((3 + z.id * 1.5) * this.base.gold * this.diff.gold * this.wm.gold));
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; this.pickups.push({ type: 'gold', x: e.x + Math.cos(a) * 34, y: e.y + Math.sin(a) * 34, v: g }); }
+    this.dropLoot(e.x + rand(-30, 30), e.y + rand(30, 50), Math.random() < 0.25 + 0.1 * this.diffId ? 2 : 1);
+    this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 260, life: 0.6, max: 0.6, color: '#c06aff' });
+    this.emit('miniDeath', { e, x: e.x, y: e.y });
+    this.banner(`<small>${esc(e.name)}</small>Champion vaincu !`, 1800, 'mini down');
+    this.shake = Math.max(this.shake, 10); buzz(60);
+    p.ult = Math.min(100, p.ult + 20);
+  }
+
+  // ---------- Combo ----------
+  addCombo() {
+    this.combo++; this.comboT = COMBO_WINDOW;
+    if (this.combo > this.comboBest) this.comboBest = this.combo;
+    const m = COMBO_STEPS[this.comboStep] ?? (Math.floor(this.combo / 1000) + 1) * 1000;
+    if (this.combo < m) return;
+    this.comboStep++;
+    // palier : or et expérience tout de suite (proportionnels au palier et au monde)
+    const z = this.zone.id, p = this.p;
+    const g = Math.max(1, Math.round(m * 0.25 * (1 + 0.5 * z) * this.diff.gold * this.base.gold * this.wm.gold));
+    const xp = Math.round(m * 0.3 * (1 + Math.floor(z / 2)));
+    this.gold += g; this.gainXp(xp);
+    this.text(p.x, p.y, 92, `Combo ${m} ! +${g} or`, '#ffd54a', 1.35);
+    this.emit('combo', { n: m, x: p.x, y: p.y, gold: g, xp });
+    sfx(m >= 100 ? 'loot' : 'coin'); if (m >= 100) buzz(25);
+    this._comboPop = true;
+  }
+
+  // fin du combo : temps écoulé, ou brisé par un coup reçu
+  endCombo(broken) {
+    if (!this.combo) return;
+    if (this.combo >= 10) this.emit('comboEnd', { n: this.combo, broken: !!broken });
+    if (broken && this.combo >= 10) this.text(this.p.x, this.p.y, 84, 'Combo brisé', '#ff9a8a', 1);
+    this.combo = 0; this.comboT = 0; this.comboStep = 0;
+    this._comboBroken = !!broken;
   }
 
   // le boss est vaincu : court ralenti, butin, l'arène tombe et le portail s'ouvre en son centre
@@ -2173,6 +2276,7 @@ export class Run {
     // nouveau monde : nouveau décor (le rendu est recréé)
     if (this.cv) { this.gfx?.dispose(); this.gfx = createGfx(this, this.cv); this.gfx.resize(); }
     const bb = $('#bossbar'); if (bb) bb.hidden = true;
+    const mb = $('#minibar'); if (mb) mb.hidden = true;
     $('#timer')?.classList.remove('boss', 'ot', 'low');
     this.renderWorld();
     music('zone' + next.id);
@@ -2298,6 +2402,7 @@ export class Run {
       weapons: this.p.weapons.map(w => ({ ...w })), tomes: { ...this.p.tomes }, revived: this.revived,
       startZone: this.startZone, cleared: [...this.cleared], stage: this.stage,
       loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone })), heat: this.heat, boosts: [...this.boosts],
+      combo: this.comboBest, evos: this.p.weapons.filter(w => w.evo).map(w => w.id),
     });
   }
 
@@ -2327,8 +2432,11 @@ export class Run {
       : fight ? 'Battez le boss !'
       : ot ? `Folie niv. ${this.otLevel}`
       : left < 30 ? 'Folie imminente !'
+      : this.mini && !this.mini.dead ? 'Battez le champion !'
+      : this.phase === 'build' && this.swarms.length && this.swarms[0] - this.time < 8 ? 'Une horde approche !'
+      : this.phase === 'breather' ? 'Répit…'
       : this.time < 25 ? 'Survivez !' : 'Trouvez l\'autel';
-    lbl.classList.toggle('hot', ot || left < 30 || !!this.portal);
+    lbl.classList.toggle('hot', ot || left < 30 || !!this.portal || (this.phase === 'build' && this.swarms.length > 0 && this.swarms[0] - this.time < 8));
     $('#killsN').textContent = cnum(this.kills);
     $('#goldRun').textContent = cnum(this.gold);
     if (this.loot.length !== this._lootN) {
@@ -2343,6 +2451,7 @@ export class Run {
       this._heatN = this.heat;
     }
     $('#xpFill').style.width = (p.xp / p.xpNext * 100) + '%';
+    this.hudCombo();
     if (p.level !== this._lvN) { $('#lvl').textContent = p.level; this._lvN = p.level; }
     const ub = $('#ultBtn');
     ub.querySelector('circle').style.strokeDashoffset = 100.5 * (1 - p.ult / 100);
@@ -2350,11 +2459,32 @@ export class Run {
     $('#tPlate')?.classList.toggle('ot', ot);
     $('#tPlate')?.classList.toggle('boss', fight && !ot);
     $('#tPlate')?.classList.toggle('low', !ot && left < 20 && !fight);
+    const M = this.mini;
+    if (M) {
+      if (M.dead) { this.mini = null; const mb = $('#minibar'); if (mb) mb.hidden = true; }
+      else $('#miniFill').style.width = Math.max(0, M.hp / M.maxHp * 100) + '%';
+    }
     if (this.boss && !this.boss.dead) {
       const b = $('#bossbar');
       b.querySelector('.fill').style.width = Math.max(0, this.boss.hp / this.boss.maxHp * 100) + '%';
       b.querySelector('.hpbar span').textContent = fmt(Math.max(0, this.boss.hp));
     }
+  }
+
+  // compteur de combo (visible à partir de 5 victimes enchaînées) et sa jauge de temps
+  hudCombo() {
+    const el = this._cb || (this._cb = $('#combo'));
+    if (!el) return;
+    const show = this.combo >= 5;
+    if (show !== !el.hidden) { el.hidden = !show; if (!show && this._comboBroken) { this._comboBroken = false; } }
+    if (!show) return;
+    if (this.combo !== this._cbN) {
+      this._cbN = this.combo;
+      $('#comboN').textContent = this.combo;
+      el.classList.toggle('hot', this.combo >= 50); el.classList.toggle('max', this.combo >= 200);
+    }
+    if (this._comboPop) { this._comboPop = false; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+    $('#comboT').style.width = Math.max(0, this.comboT / COMBO_WINDOW * 100) + '%';
   }
 
   // ---------- Rendu ----------

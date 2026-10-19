@@ -1251,3 +1251,28 @@ button.itile:active { transform: scale(.95); }
 .chest-grid.few .cg-card b { font-size: 17px; }
 .chest-grid.few .cg-card small { font-size: 12px; }
 .chest-grid.few + .cs-btns { margin-top: 0; }
+
+/* ===== Gameplay : ajouts HUD ===== */
+/* (combo, barre du champion de mi-parcours, gaucher ; le style général du HUD est ailleurs) */
+.hud .combo { position: absolute; right: 12px; top: calc(var(--safe-t) + 214px); min-width: 74px; padding: 4px 8px 6px; text-align: right; pointer-events: none;
+  font-family: 'Rajdhani', 'Lilita One', system-ui, sans-serif; color: #fff; background: linear-gradient(90deg, rgba(10,13,20,0), rgba(10,13,20,.62) 35%); border-right: 2px solid #f5b400; }
+.hud .combo[hidden] { display: none; }
+.hud .combo b { display: block; font-size: 30px; line-height: 1; font-weight: 700; letter-spacing: .5px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0,0,0,.55); }
+.hud .combo small { display: block; margin-top: 1px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #f5b400; }
+.hud .combo .combo-t { display: block; height: 2px; margin-top: 4px; background: rgba(255,255,255,.14); }
+.hud .combo .combo-t i { display: block; height: 100%; width: 100%; margin-left: auto; background: #f5b400; }
+.hud .combo.hot b { color: #ffd34d; }
+.hud .combo.max { border-right-color: #ff5a3c; }
+.hud .combo.max b { color: #ff8a3c; }
+.hud .combo.pop { animation: comboPop .22s ease-out; }
+@keyframes comboPop { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.hud .minibar { position: relative; margin: 6px auto 0; width: min(62%, 280px); pointer-events: none;
+  font-family: 'Rajdhani', 'Lilita One', system-ui, sans-serif; color: #fff; text-align: center; }
+.hud .minibar[hidden] { display: none; }
+.hud .minibar .mb-n { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 1px 2px #000; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud .minibar .mb-n em { font-style: normal; color: #c78bff; margin-right: 6px; }
+.hud .minibar .mb-bar { height: 6px; background: rgba(10,13,20,.75); box-shadow: 0 0 0 1px rgba(255,255,255,.14); }
+.hud .minibar .mb-bar i { display: block; height: 100%; width: 100%; background: #a855f7; transition: width .12s linear; }
+.hud.lefty .jump-btn { left: auto; right: 14px; }
+.hud.cr.lefty .ult-btn, .hud.lefty .ult-btn { right: auto; left: 14px; }
+.hud .jump-btn, .hud .ult-btn, .hud .hud-pause { touch-action: none; -webkit-user-select: none; user-select: none; }
