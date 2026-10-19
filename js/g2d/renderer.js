@@ -484,6 +484,22 @@ export class Gfx {
       g.strokeStyle = 'rgba(30,10,20,.45)'; g.lineWidth = 7; g.beginPath(); g.ellipse(p.x, p.y + 1.5, R, R * 0.62, 0, 0, TAU); g.stroke();
       g.strokeStyle = hot ? (Math.sin(t * 40) > 0 ? '#ff3a3a' : '#ffffff') : '#ffd54a'; g.lineWidth = 3.6; g.beginPath(); g.ellipse(p.x, p.y, R, R * 0.62, 0, 0, TAU); g.stroke();
     }
+    // chemin lumineux au sol jusqu'au portail : des chevrons qui filent vers lui
+    if (run.portal && run.portal.t > 0.5 && !run.dying) {
+      const P = run.portal, dx = P.x - p.x, dy = P.y - p.y, d = Math.hypot(dx, dy);
+      if (d > 90) {
+        const ux = dx / d, uy = dy / d, L = Math.min(d - 40, 460), off = (t * 110) % 44, ang = Math.atan2(uy, ux);
+        for (let k = 36 + off; k < L; k += 44) {
+          g.save(); g.translate(p.x + ux * k, p.y + uy * k); g.rotate(ang);
+          g.globalAlpha = 0.25 + 0.75 * clamp(1 - k / L, 0, 1);
+          g.lineJoin = 'round'; g.lineCap = 'round';
+          g.strokeStyle = 'rgba(30,8,60,.75)'; g.lineWidth = 10; g.beginPath(); g.moveTo(-8, -12); g.lineTo(6, 0); g.lineTo(-8, 12); g.stroke();
+          g.strokeStyle = '#d4a8ff'; g.lineWidth = 5.5; g.beginPath(); g.moveTo(-8, -12); g.lineTo(6, 0); g.lineTo(-8, 12); g.stroke();
+          g.restore();
+        }
+        g.globalAlpha = 1;
+      }
+    }
     // ombres de tout ce qui est au-dessus du sol
     g.globalAlpha = 0.3;
     const st = this.shadowTex;
@@ -1519,7 +1535,13 @@ export class Gfx {
     if (!tg) return;
     const [x, y] = this.ws(tg.x, tg.y - 40);
     if (x > 20 && x < vw - 20 && y > top - 60 && y < vh - 60) return;
-    const big = label === 'PORTAIL', [ax, ay, a] = toEdge(x, y, 34), s = (big ? 1.15 : 0.9) * (1 + Math.sin(t * 7) * 0.08), bb = Math.sin(t * 7) * 4;
+    const big = label === 'PORTAIL', s = (big ? 1.3 : 0.9) * (1 + Math.sin(t * 7) * 0.08), bb = Math.sin(t * 7) * 4;
+    let ax, ay, a;
+    if (big) { // le portail : grosse flèche près du héros (jamais cachée par les boutons du bas)
+      const [hx, hy] = this.ws(p.x, p.y - 22);
+      a = Math.atan2(y - hy, x - hx);
+      ax = clamp(hx + Math.cos(a) * 96, 40, vw - 40); ay = clamp(hy + Math.sin(a) * 96, top, vh - 200);
+    } else [ax, ay, a] = toEdge(x, y, 34);
     g.save(); g.translate(ax + Math.cos(a) * bb, ay + Math.sin(a) * bb); g.rotate(a); g.scale(s, s);
     g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55 + Math.sin(t * 7) * 0.2; g.drawImage(glowTex(c1), -40, -40, 80, 80);
     g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
@@ -1533,7 +1555,7 @@ export class Gfx {
     g.font = tf(big ? 15 : 13); const w1 = g.measureText(label).width;
     g.font = tf(12); const w2 = g.measureText(d).width;
     const W = Math.max(w1, w2) + 20, H = 38;
-    const lx = clamp(ax - Math.cos(a) * 58, W / 2 + 6, vw - W / 2 - 6), ly = clamp(ay - Math.sin(a) * 46, top - 30, bot + 10);
+    const lo = big ? -56 : 58, lx = clamp(ax - Math.cos(a) * lo, W / 2 + 6, vw - W / 2 - 6), ly = clamp(ay - Math.sin(a) * (big ? -48 : 46), top - 30, big ? vh - 190 : bot + 10);
     g.fillStyle = INK2; rr(g, lx - W / 2 - 2, ly - H / 2 - 2, W + 4, H + 4, 11); g.fill();
     const gb = g.createLinearGradient(0, ly - H / 2, 0, ly + H / 2); gb.addColorStop(0, shadeHex(c1, 0.15)); gb.addColorStop(1, shadeHex(c1, -0.35));
     g.fillStyle = gb; rr(g, lx - W / 2, ly - H / 2, W, H, 9); g.fill();
