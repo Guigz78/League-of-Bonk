@@ -650,7 +650,7 @@ function choiceCard(c, i, tag = 'button') {
   const f = choiceMeta(c, info);
   const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null).slice(0, 4);
   const val = v => esc(typeof v === 'number' ? v.toLocaleString('fr-FR') : String(v));
-  const pips = f.lv ? `<span class="cu-pips" aria-label="Niveau ${f.lv}">${Array.from({ length: 5 }, (_, k) => `<i class="${k + 1 < f.lv ? 'on' : k + 1 === f.lv ? 'new' : ''}"></i>`).join('')}</span>` : '';
+  const pips = f.lv && !(f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome')) ? `<span class="cu-pips" aria-label="Niveau ${f.lv}">${Array.from({ length: 5 }, (_, k) => `<i class="${k + 1 < f.lv ? 'on' : k + 1 === f.lv ? 'new' : ''}"></i>`).join('')}</span>` : '';
   const isNew = f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome');
   const ri = c.rarity ?? info?.rarity;
   const rar = ri != null && RARITIES[ri] ? RARITY[RARITIES[ri]] : null;
@@ -1052,7 +1052,7 @@ function revealStage(results, tier, title, { quick = false } = {}) {
           <b class="cst-left"></b><div class="cst-burst">${'<i></i>'.repeat(16)}</div></div>
       </div>
       <p class="cst-hint">Touchez le coffre !</p>
-      <div class="cst-btns"><button class="btn small ghost cst-skip">Tout voir</button><button class="btn primary big cst-ok">Super !</button></div>`;
+      <div class="cst-btns"><button class="btn small ghost cst-skip">Tout voir</button><button class="btn primary big cst-ok">Continuer</button></div>`;
     w.querySelectorAll('.cst-burst i').forEach((p, i) => {
       const a = i / 16 * Math.PI * 2 + Math.random() * 0.3, d = 110 + Math.random() * 110;
       p.style.cssText = `--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 40}px;--s:${0.6 + Math.random() * 0.9}`;
@@ -1505,7 +1505,7 @@ function renderForge() {
 }
 
 // animation de forge : le marteau frappe trois fois l'enclume, puis l'objet apparaît
-function forgeAnim(result, { title = 'Objet forgé !', fuse = null } = {}) {
+function forgeAnim(result, { title = 'Objet forgé', fuse = null } = {}) {
   return new Promise(resolve => {
     const w = document.createElement('div');
     w.className = 'forge-anim' + (fuse ? ' fusing' : '');
@@ -1517,7 +1517,7 @@ function forgeAnim(result, { title = 'Objet forgé !', fuse = null } = {}) {
       </div>
       <div class="fa-result" style="--rc:${result.color}"><i class="fa-rays"></i><div class="fa-card ${result.bare ? 'bare' : ''}">${result.html}</div></div>
       <h2 class="fa-title">${title}</h2>
-      <button class="btn primary big fa-ok" disabled>Super !</button>`;
+      <button class="btn primary big fa-ok" disabled>Continuer</button>`;
     app.appendChild(w);
     requestAnimationFrame(() => w.classList.add('in'));
     const sparks = w.querySelector('.fa-sparks'), ingot = w.querySelector('.fa-ingot');
@@ -1561,7 +1561,7 @@ async function doFuse(all = false) {
   if (!n) return;
   const R = RARITY[RARITIES[r + 1]];
   renderForge();
-  await forgeAnim({ color: R.color, html: `${partIcon(slot, r + 1, 48)}<b>${esc(PARTS[slot].name)} ×${n}</b><small style="color:${R.color}">${R.name}</small>` }, { title: 'Fusion réussie !', fuse: { slot, r } });
+  await forgeAnim({ color: R.color, html: `${partIcon(slot, r + 1, 48)}<b>${esc(PARTS[slot].name)} ×${n}</b><small style="color:${R.color}">${R.name}</small>` }, { title: 'Fusion réussie', fuse: { slot, r } });
   renderForge();
 }
 

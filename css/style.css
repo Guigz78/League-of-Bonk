@@ -1180,7 +1180,7 @@ button.itile:active { transform: translateY(1px); }
 .forge-anim.done .fa-stage { transform: scale(.6) translateY(40px); opacity: 0; }
 .forge-anim.done .fa-result { opacity: 1; }
 .forge-anim.done .fa-card { animation: cardPop .35s var(--ease) forwards; }
-.forge-anim.done .fa-title { animation: fadeUp .3s .1s var(--ease) forwards; }
+.forge-anim.done .fa-title { opacity: 1; animation: fadeUp .3s .1s var(--ease) both; }
 @keyframes cardPop { to { transform: none; opacity: 1; } }
 
 /* ---------- Bilan de l'expédition ---------- */
