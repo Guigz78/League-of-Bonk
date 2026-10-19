@@ -1,6 +1,7 @@
 // Écrans du jeu et déroulé d'une expédition.
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, BOSS_COUNT, DIFFICULTIES, ELITE_MODS,
   LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES, LEGEND_EFFECTS } from './data.js';
+import * as DATA from './data.js';
 import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, checkAchievements, resetSave, maxDiff,
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
   buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
@@ -8,32 +9,45 @@ import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
 import { heroURL, creatureURL, mountPreview, zoneBannerURL } from './visuals.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
-import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait } from './ui.js';
+import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } from './ui.js';
 import { Run } from './run.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
+import { questList, claimQuest, loginState, claimLogin, dailyBadge, LOGIN_REWARDS, ensureDaily } from './daily.js';
 
 let tab = 'adventure';
 let battle = null;
 let gearFilter = 'all';
+let loginShown = '';
 
 // ---------- Démarrage ----------
 export function boot() {
   cloud.onChange(() => { if (!battle) refreshTopbar(); });
   if (!save.cls) return classSelect(true);
   home();
+  autoLogin();
+}
+
+// récompense de connexion : proposée une fois par jour à l'arrivée sur l'accueil
+function autoLogin() {
+  const st = loginState();
+  if (!st.ready || loginShown === st.last + '|' + st.day || !save.stats.runs) return;
+  loginShown = st.last + '|' + st.day;
+  setTimeout(() => { if (!battle && $('.hub') && !$('.modal-wrap')) loginSheet(); }, 450);
 }
 
 // ---------- Barre du haut ----------
+const partsTotal = () => Object.values(save.parts).reduce((n, a) => n + a.reduce((x, y) => x + y, 0), 0);
 function topbar() {
   const u = cloud.user;
   const st = cloud.status;
   const dot = !u ? '' : `<i class="sync ${st}"></i>`;
   return `<header class="topbar">
-    <div class="gold">${iconImg('gold', 20)}<b id="goldN">${fmt(save.gold)}</b></div>
-    <div class="logo-sm">League <span>of</span> Bonk</div>
+    <div class="tb-brand">League<span>of Bonk</span></div>
+    <span class="cur" aria-label="Pièces de forge">${iconImg('part', 18)}<b id="partsN">${fmt(partsTotal())}</b></span>
+    <span class="cur gold" aria-label="Or">${iconImg('gold', 18)}<b id="goldN">${fmt(save.gold)}</b></span>
     <button class="icon-btn account" data-act="settings" aria-label="Compte et options">
-      ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 30)}${dot}
+      ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 22)}${dot}
     </button>
   </header>`;
 }
@@ -46,17 +60,17 @@ function refreshTopbar() {
 
 function nav() {
   const items = [
-    ['adventure', 'Aventure', 'star'],
+    ['adventure', 'Aventure', 'map'],
     ['gear', 'Équipement', 'armor'],
     ['forge', 'Forge', 'hammer'],
-    ['shop', 'Boutique', 'gold'],
-    ['trophies', 'Succès', 'crown'],
+    ['shop', 'Boutique', 'bag'],
+    ['trophies', 'Succès', 'trophy'],
   ];
-  const nChests = save.pendingChests.length;
+  const nAdv = save.pendingChests.length + dailyBadge();
   const badge = { gear: save.inventory.some(i => i.isNew), trophies: false, shop: canAffordUpgrade(), forge: canForgeSomething() };
   return `<nav class="tabs">${items.map(([id, label, ic]) => `
     <button class="tab ${tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}">
-      ${iconImg(ic, 22)}<span>${label}</span>${id === 'adventure' && nChests ? `<i class="badge count">${nChests}</i>` : badge[id] ? '<i class="badge"></i>' : ''}
+      ${iconImg(ic, 22)}<span>${label}</span>${id === 'adventure' && nAdv ? `<i class="badge count">${nAdv}</i>` : badge[id] ? '<i class="badge"></i>' : ''}
     </button>`).join('')}</nav>`;
 }
 
@@ -75,10 +89,12 @@ export function home(t) {
   battle = null;
   // même onglet : on garde la position de défilement (achats en bas de la boutique…)
   const keep = !t || t === tab ? $('#hubMain')?.scrollTop || 0 : 0;
+  const moved = t && t !== tab;
   if (t) tab = t;
   const body = { adventure: adventureTab, gear: gearTab, forge: forgeTab, shop: shopTab, trophies: trophiesTab }[tab]();
   mount(`<div class="hub">${topbar()}<main class="hub-main" id="hubMain">${body}</main>${nav()}</div>`);
   if (keep) $('#hubMain').scrollTop = keep;
+  if (moved) $('#hubMain').classList.add('scr-in');
   bind($('.hub'), handlers);
   mountPreview($('.hc-3d'), save.cls);
 }
@@ -86,6 +102,9 @@ export function home(t) {
 const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
+  play: () => zoneSheet(playZone()),
+  quests: () => questSheet(),
+  login: () => loginSheet(),
   zone: el => zoneSheet(+el.dataset.z),
   changeClass: () => classSelect(false),
   allStats: () => statsSheet(),
@@ -170,6 +189,7 @@ async function statsSheet() {
   });
 }
 
+// fiche compacte du champion (onglet Équipement)
 function heroCard() {
   const c = CLASSES[save.cls], st = playerStats();
   const more = STAT_ORDER.filter(k => !['hp', 'atk', 'crit', 'speed'].includes(k) && (k === 'magnet' || k === 'gold' ? st[k] > 1.0005 : st[k] > 0.0005)).length + st.effects.length;
@@ -180,49 +200,134 @@ function heroCard() {
     <div class="hc-info">
       <div class="hc-name">${esc(c.name)} <small>${c.role}</small></div>
       <button class="stats hc-stats" data-act="allStats" aria-label="Toutes les statistiques">
-        <span>${iconImg('heart', 18)}<b>${fmt(st.hp)}</b></span>
-        <span>${iconImg('fist', 18)}<b>${st.atk}</b></span>
-        <span>${iconImg('target', 18)}<b>${pct(st.crit)}</b></span>
-        <span>${iconImg('arrow', 18)}<b>${pct(st.speed)}</b></span>
-        <em class="hc-more">${more ? `+${more} bonus · ` : ''}Détails ›</em>
+        <span>${iconImg('heart', 16)}<b>${fmt(st.hp)}</b></span>
+        <span>${iconImg('fist', 16)}<b>${st.atk}</b></span>
+        <span>${iconImg('target', 16)}<b>${pct(st.crit)}</b></span>
+        <span>${iconImg('arrow', 16)}<b>${pct(st.speed)}</b></span>
+        <em class="hc-more">${more ? `+${more} bonus · ` : ''}Toutes les statistiques ›</em>
       </button>
-      <button class="btn small blue" data-act="changeClass">Changer de champion</button>
     </div>
   </section>`;
 }
 
+// monde proposé par le bouton JOUER : le dernier lancé, sinon le plus avancé débloqué
+function playZone() {
+  const last = save.lastZone;
+  if (last != null && last <= save.unlockedZone) return last;
+  return Math.min(save.unlockedZone, ZONES.length - 1);
+}
+
+const bossOf = z => (z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
+  : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal));
+
 function adventureTab() {
+  const c = CLASSES[save.cls], st = playerStats();
   const done = save.zoneCleared.filter(Boolean).length;
-  // coffres de butin pas encore ouverts (appli fermée en cours de route, ou « plus tard »)
-  const pc = save.pendingChests, best = pc.reduce((m, c) => Math.max(m, c.tier), 0);
-  const resume = pc.length ? `<button class="chest-cta" data-act="chests" style="--tc:${LOOT_TIERS[best].color}">
-      <img class="cc-img" src="${chestURL(best)}" alt="">
-      <div class="cc-txt"><b>${pc.length} coffre${pc.length > 1 ? 's' : ''} de butin</b><small>à ouvrir : pièces, bonus, objets et or !</small></div>
-      <span class="btn primary small">Ouvrir</span>
-    </button>` : '';
+  const pz = playZone(), Z = ZONES[pz], D = DIFFICULTIES[Math.min(save.diffSel?.[pz] || 0, maxDiff(pz))];
+  // tuiles rapides : quêtes du jour, connexion, coffres en attente
+  const qs = questList(), qDone = qs.filter(q => q.prog >= q.n).length, qReady = qs.some(q => q.ready);
+  const L = loginState(), pc = save.pendingChests;
+  const quick = `<div class="quick">
+    <button class="qt ${qReady ? 'hot' : ''}" data-act="quests">${iconImg('quest', 22)}<span class="eyebrow">Quêtes du jour</span><b>${qDone}/${qs.length}</b><span class="pbar"><i style="width:${qDone / qs.length * 100}%"></i></span></button>
+    <button class="qt ${L.ready ? 'hot' : ''}" data-act="login">${iconImg('calendar', 22)}<span class="eyebrow">Connexion</span><b>Jour ${L.ready ? L.day + 1 : L.day || 7}/7</b><span class="pbar cy"><i style="width:${(L.ready ? L.day : L.day || 7) / 7 * 100}%"></i></span></button>
+    <button class="qt ${pc.length ? 'hot' : 'off'}" data-act="chests" ${pc.length ? '' : 'disabled'}>${iconImg('chest', 22)}<span class="eyebrow">Coffres</span><b>${pc.length ? `${pc.length} à ouvrir` : 'Aucun'}</b><span class="pbar"><i style="width:${pc.length ? 100 : 0}%"></i></span></button>
+  </div>`;
   const zones = ZONES.map((z, i) => {
     const locked = i > save.unlockedZone;
     const cleared = save.zoneCleared[i];
     const stars = save.diffCleared[i] || 0;
-    const sprite = z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
-      : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal);
-    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === 0 && !save.stats.runs && !cleared ? 'cta' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${zoneBannerURL(z)})">
-      <div class="z-num">${i + 1}</div>
-      <div class="z-txt"><b>${esc(z.name)}</b>${i === 0 && !save.stats.runs && !cleared ? '<em class="start">Commencez ici !</em>' : ''}<small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small></div>
-      <div class="z-art">${locked ? iconImg('lock', 28) : `<img class="px spr" src="${sprite}" alt="">`}</div>
-      ${cleared ? zoneStars(stars) : ''}
+    const first = i === 0 && !save.stats.runs && !cleared;
+    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === pz ? 'cur' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${zoneBannerURL(z)})">
+      <div class="z-num">${String(i + 1).padStart(2, '0')}</div>
+      <div class="z-txt">${first ? '<em class="start">Commencez ici</em>' : ''}<b>${esc(z.name)}</b><small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small>${zoneStars(stars)}</div>
+      <div class="z-art">${locked ? iconImg('lock', 22) : `<img class="px spr" src="${bossOf(z)}" alt="">`}</div>
     </button>`;
   }).join('');
-  return `${heroCard()}${resume}
-    <h3 class="section-t">Carte des mondes <small>${done}/6 zones</small></h3>
+  return `<section class="showcase">
+      <div class="sc-stage"><canvas class="hc-3d"></canvas>
+        ${save.pet ? `<img class="px spr hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}</div>
+      <div class="sc-info">
+        <span class="sc-role">${esc(c.role)}</span>
+        <h2 class="sc-name">${esc(c.name)}</h2>
+        <button class="sc-stats" data-act="allStats" aria-label="Toutes les statistiques">
+          <span><small>PV</small><b>${fmt(st.hp)}</b></span><span><small>ATQ</small><b>${fmt(st.atk)}</b></span>
+          <span><small>Critique</small><b>${pct(st.crit)}</b></span><span><small>Vitesse</small><b>${pct(st.speed)}</b></span>
+        </button>
+        <div class="sc-links"><button class="link" data-act="changeClass">Changer</button><button class="link" data-act="allStats">Détails</button></div>
+      </div>
+    </section>
+    <button class="play-cta" data-act="play">
+      <span class="pc-ic">${iconImg('play', 22)}</span>
+      <span class="pc-txt"><b>Jouer <i class="pc-dtag" style="--dc:${D.color}">${esc(D.name)}</i></b><small>Monde ${pz + 1} · ${esc(Z.name)}</small></span>
+      <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
+    </button>
+    ${quick}
+    <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
     <div class="zones">${zones}</div>`;
 }
 
-// badge de la carte de zone : une icône par niveau de difficulté, allumée quand il est battu
+// cases de difficulté battues sous le nom du monde
 function zoneStars(n) {
-  const label = n >= DIFFICULTIES.length ? 'Zone maîtrisée' : `${DIFFICULTIES[n - 1].name} battu`;
+  const label = n >= DIFFICULTIES.length ? 'Zone maîtrisée' : n ? `${DIFFICULTIES[n - 1].name} battu` : 'Pas encore battu';
   return `<div class="z-done z-stars s${n}" aria-label="${esc(label)}">${DIFFICULTIES.map((d, k) =>
-    `<i class="zs ${k < n ? 'on' : ''}" style="--dc:${d.color}">${iconImg(d.icon, 13)}</i>`).join('')}</div>`;
+    `<i class="zs ${k < n ? 'on' : ''}" style="--dc:${d.color}"></i>`).join('')}</div>`;
+}
+
+// ---------- Quêtes du jour et connexion ----------
+const chestName = t => LOOT_TIERS[t]?.name || 'Coffre';
+async function questSheet() {
+  const id = 'qs-' + Date.now();
+  const body = () => {
+    const qs = questList();
+    return `<div class="quests">${qs.map(q => `<div class="quest ${q.claimed ? 'done' : ''} ${q.ready ? 'ready' : ''}">
+        ${iconImg(q.icon, 22)}
+        <div class="q-txt"><b>${esc(q.text)}</b>
+          <div class="q-row"><span class="pbar ${q.prog >= q.n ? 'green' : ''}"><i style="width:${q.prog / q.n * 100}%"></i></span><em>${fmt(q.prog)}/${fmt(q.n)}</em></div>
+          <span class="q-rw">${iconImg('chest', 14)} ${esc(chestName(q.tier))} · ${iconImg('gold', 14)} ${q.gold}</span></div>
+        ${q.claimed ? `<span class="q-claimed">${iconImg('check', 14)} Reçu</span>` : `<button class="btn ${q.ready ? 'primary' : 'ghost'} small" data-q="${q.i}" ${q.ready ? '' : 'disabled'}>Réclamer</button>`}
+      </div>`).join('')}</div>
+      <p class="q-reset">Nouvelles quêtes chaque jour à minuit</p>`;
+  };
+  const p = modal({ title: `${iconImg('quest', 22)} Quêtes du jour`, body: `<div id="${id}">${body()}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: true }], dismissable: true });
+  const root = document.getElementById(id);
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-q]'); if (!b || b.disabled) return;
+    const r = claimQuest(+b.dataset.q); if (!r) return;
+    sfx('loot'); buzz(20);
+    toast(`${iconImg('chest', 16)} <b>${esc(chestName(r.chest))}</b> et <b>+${r.gold} or</b>`);
+    root.innerHTML = body();
+  });
+  await p;
+  if (!battle) home();
+}
+
+function loginReward(R, size = 30) {
+  if (R.chest != null) return `<img class="chest-i" src="${chestURL(R.chest)}" alt=""><b>${esc(chestName(R.chest).replace('Coffre ', ''))}${R.gold ? ` +${R.gold}` : ''}</b>`;
+  if (R.boost) return `${iconImg('potion', size)}<b>Bonus</b>`;
+  return `${iconImg('gold', size)}<b>${R.gold} or</b>`;
+}
+
+async function loginSheet() {
+  const id = 'lg-' + Date.now();
+  const body = () => {
+    const L = loginState(), cur = L.ready ? L.day : -1, got = L.ready ? L.day : (L.day || 7);
+    return `<div class="login-track">${LOGIN_REWARDS.map((R, k) => `<div class="lday ${k < got ? 'got' : ''} ${k === cur ? 'today' : ''} ${k === 6 ? 'big' : ''}">
+        <em>Jour ${k + 1}</em>${loginReward(R)}</div>`).join('')}</div>
+      <p class="login-note">${L.ready ? 'Revenez chaque jour : le 7e jour donne un <b>coffre en or</b>.' : 'Récompense du jour reçue. Revenez demain !'}</p>`;
+  };
+  const L0 = loginState();
+  const v = await modal({ title: `${iconImg('calendar', 22)} Connexion`, body: `<div id="${id}">${body()}</div>`,
+    buttons: L0.ready ? [{ label: 'Plus tard', cls: 'ghost', value: false }, { label: `Réclamer · jour ${L0.day + 1}`, cls: 'primary', value: true }] : [{ label: 'Fermer', cls: 'ghost', value: false }],
+    dismissable: true });
+  if (v) {
+    const r = claimLogin();
+    if (r) {
+      sfx('loot'); buzz(25);
+      const what = r.chest != null ? `<b>${esc(chestName(r.chest))}</b>${r.gold ? ` et <b>+${r.gold} or</b>` : ''}` : r.boostId ? `Bonus : <b>${esc(BOOSTS[r.boostId].name)}</b>` : `<b>+${r.gold} or</b>`;
+      toast(`${iconImg('calendar', 16)} Jour ${r.day + 1} : ${what}`, 2800);
+    }
+  }
+  if (!battle) home();
 }
 
 const mul = v => '×' + String(Math.round(v * 100) / 100).replace('.', ',');
@@ -325,9 +430,9 @@ async function zoneSheet(i) {
     </button>`;
   };
   const p = modal({
-    title: esc(z.name),
+    title: `<span class="eyebrow">Monde ${String(i + 1).padStart(2, '0')}</span>${esc(z.name)}`,
     cls: 'zone-modal',
-    body: `<div id="${id}"><p class="muted">${esc(z.sub)}</p>
+    body: `<div id="${id}"><div class="zs-hero" style="background-image:url(${zoneBannerURL(z)})"><p>${esc(z.sub)}</p></div>
       <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px spr" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
       <h4>Difficulté</h4>
       <div class="diff-pick" role="radiogroup" aria-label="Niveau de difficulté">${DIFFICULTIES.map((_, k) => btn(k)).join('')}</div>
@@ -337,7 +442,7 @@ async function zoneSheet(i) {
       <h4>Objectif</h4>
       ${goalBox(i)}
       <div class="zone-rw">${zoneRewards(i, sel)}</div></div>`,
-    buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: 'Partir !', cls: 'primary', value: true }],
+    buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: `${iconImg('play', 16)} Partir`, cls: 'primary', value: true }],
     dismissable: true,
   });
   const root = document.getElementById(id);
@@ -371,7 +476,7 @@ async function zoneSheet(i) {
   });
   const ok = await p;
   if (save.diffSel[i] !== sel) { save.diffSel[i] = sel; persist({ touch: false }); }
-  if (ok) startRun(i, sel);
+  if (ok) { save.lastZone = i; startRun(i, sel); }
 }
 
 // ---------- Choix de la classe ----------
@@ -381,29 +486,29 @@ function classSelect(first) {
   const render = () => {
     const c = CLASSES[sel];
     mount(`<div class="class-select">
-      ${first ? `<div class="title-logo"><div class="l1">League</div><div class="l2">of</div><div class="l3">Bonk</div></div>` : '<h2 class="cs-title">Choisissez votre champion</h2>'}
-      ${first ? '<p class="cs-sub">Choisissez votre champion</p>' : ''}
+      ${first ? `<div class="title-logo"><div class="l1">League of</div><div class="l3">B<em>o</em>nk</div></div><p class="cs-sub">Choisissez votre champion</p>`
+        : `<div class="cs-bar"><button class="icon-btn" data-act="back" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Champions</h2></div>`}
+      <div class="cs-stage"><canvas class="cs-3d"></canvas><div class="cs-id"><span class="role">${esc(c.role)}</span><h3>${esc(c.name)}</h3></div></div>
       <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span></button>`).join('')}</div>
-      <section class="card cs-detail">
-        <div class="cs-head"><canvas class="cs-3d"></canvas><div><h3>${esc(c.name)}</h3><div class="role">${c.role}</div><p>${esc(c.desc)}</p></div></div>
-        <h4 class="evo-t">Évolutions pendant la partie</h4>
-        <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.07).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
-          <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
-          <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
+      <section class="cs-detail">
+        <p class="cs-desc">${esc(c.desc)}</p>
         <div class="stats wide">
-          <span>${iconImg('heart', 16)} PV <b>${c.hp}</b></span>
-          <span>${iconImg('fist', 16)} ATQ <b>${c.atk}</b></span>
-          <span>${iconImg('target', 16)} Crit <b>${pct(c.crit)}</b></span>
-          <span>${iconImg('arrow', 16)} Vitesse <b>${pct(c.speed)}</b></span>
+          <span>${iconImg('heart', 16)}PV<b>${c.hp}</b></span>
+          <span>${iconImg('fist', 16)}ATQ<b>${c.atk}</b></span>
+          <span>${iconImg('target', 16)}Critique<b>${pct(c.crit)}</b></span>
+          <span>${iconImg('arrow', 16)}Vitesse<b>${pct(c.speed)}</b></span>
         </div>
         <div class="cs-spells">
           <div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>Arme de départ · ${esc(WEAPONS[c.weapon].desc)}</small></div></div>
           <div class="cs-spell k-ult">${iconImg(ULTS[c.ult].icon, 26)}<div><b>${esc(ULTS[c.ult].name)}</b><small>Ultime · ${esc(ULTS[c.ult].desc)}</small></div></div>
         </div>
+        <h4 class="evo-t">Évolutions pendant la partie</h4>
+        <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
+          <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
+          <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
+        ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
       </section>
-      <button class="btn primary big" data-act="go">Jouer avec ${esc(c.name)}</button>
-      ${first ? '' : '<button class="btn ghost" data-act="back">Retour</button>'}
-      ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
+      <div class="cs-foot"><button class="btn primary big" data-act="go">${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}</button></div>
     </div>`);
     mountPreview($('.cs-3d'), sel);
     bind($('.class-select'), {
@@ -432,7 +537,7 @@ function startRun(z, diff = 0) {
     diff,
     boosts,
     onPause: resume => pauseMenu(resume),
-    onLevelUp: (title, opts, done, sub) => levelUpMenu(title, opts, done, sub),
+    onLevelUp: (title, opts, done, sub, extra) => levelUpMenu(title, opts, done, sub, extra),
     onChest: (c, gold, done) => chestMenu(c, gold, done),
     onDefeat: canRevive => defeatMenu(canRevive),
     onPortal: (info, choose) => portalMenu(info, choose),
@@ -442,31 +547,118 @@ function startRun(z, diff = 0) {
   battle = run;
   window.__lobRun = run; // utile pour les tests automatisés
   run.start();
+  $('.run')?.classList.toggle('lefty', !!save.settings.lefty);
+  hpBar(run);
+  if (!save.tutorialDone && save.stats.runs <= 1) tutorial(run);
+}
+
+// barre de PV du HUD (en haut, au-dessus de l'expérience) : suit les PV du champion à chaque image
+function hpBar(r) {
+  const row = $('.hud .xprow'), xp = row?.querySelector('.xpbar');
+  if (!row || !xp || row.querySelector('.hp-top, #hpFill, .hpbar-p')) return;
+  const el = document.createElement('div');
+  el.className = 'hp-top';
+  el.innerHTML = '<i class="lag"></i><i></i><b></b>';
+  xp.before(el);
+  const [lag, fill] = el.querySelectorAll('i'), txt = el.querySelector('b');
+  let last = -1, lastMax = -1;
+  const tick = () => {
+    if (r.over || !el.isConnected) return;
+    const hp = Math.max(0, Math.round(r.p?.hp || 0)), max = Math.max(1, Math.round(r.p?.maxHp || 1));
+    if (hp !== last || max !== lastMax) {
+      const w = `calc(${(hp / max * 100).toFixed(2)}% - 2px)`;
+      fill.style.width = w; lag.style.width = w;
+      txt.textContent = `${fmt(hp)} / ${fmt(max)}`;
+      el.classList.toggle('low', hp / max < 0.3);
+      last = hp; lastMax = max;
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+// ---------- Tutoriel (premier lancement) : 4 étapes courtes, la partie attend ----------
+const TUTO = [
+  { t: 'Bouger', ill: '<i class="ti-joy"></i><i class="ti-hero"></i>', p: 'Posez le doigt <b>n\'importe où</b> et glissez : votre champion court. Il <b>attaque tout seul</b> les monstres proches.' },
+  { t: 'Sauter', ill: '<i class="ti-wave"></i><i class="ti-body"></i><span class="ti-jump"><svg viewBox="0 0 24 24"><path d="M12 3.5l8.5 9.5h-5.2v7.5H8.7V13H3.5z"/></svg></span>', p: 'Touchez <b>Saut</b> pour passer par-dessus les monstres et les ondes de choc. Quand le bouton devient <b>rouge</b>, une attaque arrive : sautez !' },
+  { t: 'Monter de niveau', ill: '<i class="ti-xp"></i><div class="ti-cards"><i style="--d:0s"></i><i style="--d:.12s"></i><i style="--d:.24s"></i></div>', p: 'Ramassez les <b>cristaux bleus</b> pour gagner de l\'expérience. À chaque niveau, choisissez une <b>arme</b>, un <b>tome</b> ou une amélioration.' },
+  { t: 'Autel, boss, portail', ill: `<div class="ti-path"><span>${iconImg('skull', 34)}Autel</span><span>${iconImg('crown', 34)}Boss</span><span>${iconImg('portal', 34)}Portail</span></div>`, p: 'Suivez la flèche jusqu\'à l\'<b>autel au crâne rouge</b> pour invoquer le boss. Battu, il ouvre un <b>portail au centre de la carte</b> vers le monde suivant.' },
+];
+function tutorial(r) {
+  r.paused = true;
+  let k = 0;
+  const w = document.createElement('div');
+  w.className = 'tuto';
+  $('.run')?.appendChild(w);
+  const draw = () => {
+    const s = TUTO[k];
+    w.innerHTML = `<div class="tu-card" key="${k}">
+      <div class="tu-ill">${s.ill}</div>
+      <span class="tu-step">Étape ${k + 1} / ${TUTO.length}</span><h3>${s.t}</h3><p>${s.p}</p>
+      <div class="tu-foot"><span class="tu-dots">${TUTO.map((_, i) => `<i class="${i <= k ? 'on' : ''}"></i>`).join('')}</span>
+        <button class="btn ghost small" data-t="skip">Passer</button><button class="btn primary" data-t="next">${k < TUTO.length - 1 ? 'Suivant' : 'C\'est parti'}</button></div>
+    </div>`;
+  };
+  const end = () => {
+    save.tutorialDone = true; persist({ touch: false });
+    w.classList.remove('in'); setTimeout(() => w.remove(), 200);
+    if (!r.over) { r.paused = false; r.last = performance.now(); }
+  };
+  draw();
+  requestAnimationFrame(() => w.classList.add('in'));
+  w.addEventListener('pointerdown', e => e.stopPropagation());
+  w.addEventListener('click', e => {
+    const b = e.target.closest('[data-t]'); if (!b) return;
+    sfx('tap');
+    if (b.dataset.t === 'skip' || k >= TUTO.length - 1) return end();
+    k++; draw();
+  });
+}
+
+// évolution d'arme : cherche sa fiche dans les tables de data.js (nom de table libre), sinon nom par défaut
+let EVO_TABLES = null;
+function evoDef(c, info) {
+  EVO_TABLES ??= Object.entries(DATA).filter(([k, v]) => /EVO/i.test(k) && k !== 'EVOLUTIONS' && v && typeof v === 'object').map(([, v]) => v);
+  let d = null;
+  for (const T of EVO_TABLES) {
+    d = Array.isArray(T) ? T.find(e => e && (e.id === c.id || e.weapon === c.id || e.from === c.id)) : T[c.id] || Object.values(T).find(e => e && (e.weapon === c.id || e.from === c.id));
+    if (d) break;
+  }
+  const w = WEAPONS[c.weapon || c.from || c.id] || WEAPONS[d?.weapon] || null;
+  return {
+    name: info?.name || c.name || d?.name || (w ? `${w.name} ultime` : 'Évolution'),
+    desc: info?.desc || c.desc || d?.desc || 'Votre arme atteint sa forme ultime : bien plus puissante.',
+    icon: info?.icon || c.icon || d?.icon || w?.icon || 'star',
+  };
 }
 
 // présentation d'un choix (montée de niveau, coffre, autel)
-function choiceMeta(c) {
+function choiceMeta(c, info) {
+  if (c.kind === 'evo') { const e = evoDef(c, info); return { ...e, tag: 'Évolution d\'arme', cls: 'evo' }; }
   if (c.kind === 'weapon') { const w = WEAPONS[c.id]; return { icon: w.icon, name: w.name, tag: c.lv === 1 ? 'Nouvelle arme' : 'Arme', desc: c.lv === 1 ? w.desc : w.lv[c.lv - 1], cls: 'weapon', lv: c.lv }; }
   if (c.kind === 'tome') { const t = TOMES[c.id]; return { icon: t.icon, name: t.name, tag: c.lv === 1 ? 'Nouveau tome' : 'Tome', desc: t.desc, cls: 'tome', lv: c.lv }; }
   if (c.kind === 'boon') { const b = BOONS[c.id]; return { icon: b.icon, name: b.name, tag: 'Bénédiction', desc: b.desc, cls: 'boon' }; }
   if (c.kind === 'heal') return { icon: 'heart', name: 'Soin', tag: 'Bonus', desc: 'Récupère 30 % de vos PV', cls: 'heal' };
-  return { icon: 'gold', name: 'Bourse', tag: 'Bonus', desc: 'De l\'or en plus', cls: 'gold' };
+  if (c.kind === 'gold') return { icon: 'gold', name: 'Bourse', tag: 'Bonus', desc: 'De l\'or en plus', cls: 'gold' };
+  return { icon: info?.icon || 'star', name: info?.name || c.name || 'Amélioration', tag: 'Bonus', desc: info?.desc || c.desc || '', cls: 'gold' };
 }
 
-// carte de choix : niveau, effet et caractéristiques touchées « avant → après » (run.choiceInfo)
+// carte de choix : rareté (cadre), niveau, effet et caractéristiques « avant → après » (run.choiceInfo)
 function choiceCard(c, i, tag = 'button') {
-  const f = choiceMeta(c);
   let info = null;
   try { info = run?.choiceInfo?.(c); } catch (e) { info = null; }
+  const f = choiceMeta(c, info);
   const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null).slice(0, 4);
   const val = v => esc(typeof v === 'number' ? v.toLocaleString('fr-FR') : String(v));
   const pips = f.lv ? `<span class="cu-pips" aria-label="Niveau ${f.lv}">${Array.from({ length: 5 }, (_, k) => `<i class="${k + 1 < f.lv ? 'on' : k + 1 === f.lv ? 'new' : ''}"></i>`).join('')}</span>` : '';
   const isNew = f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome');
-  return `<${tag} class="card-up ${f.cls} ${isNew ? 'is-new' : ''}" data-i="${i}" style="--d:${(i * 0.08).toFixed(2)}s">
-    ${isNew ? '<i class="cu-ribbon">Nouveau !</i>' : ''}
+  const ri = c.rarity ?? info?.rarity;
+  const rar = ri != null && RARITIES[ri] ? RARITY[RARITIES[ri]] : null;
+  return `<${tag} class="card-up ${f.cls} ${rar ? 'r' + ri : ''} ${isNew ? 'is-new' : ''}" data-i="${i}" style="--d:${(i * 0.06).toFixed(2)}s">
+    ${isNew ? '<i class="cu-ribbon">Nouveau</i>' : c.kind === 'evo' ? '<i class="cu-ribbon">Évolution</i>' : ''}
     <span class="cu-ic">${iconImg(f.icon, 44)}</span>
     <span class="cu-txt">
-      <span class="cu-head"><em>${f.tag}${f.lv && !isNew ? ` · niv. ${f.lv}` : ''}</em>${pips}</span>
+      <span class="cu-head"><em>${f.tag}${f.lv && !isNew ? ` · niv. ${f.lv}` : ''}${rar && c.kind !== 'evo' ? ` · <span class="cu-rar">${esc(rar.name)}</span>` : ''}</em>${pips}</span>
       <b>${esc(f.name)}</b>
       <small>${esc(f.desc)}</small>
       ${lines.length ? `<span class="cu-lines">${lines.map(l => `<span class="cu-l"><span>${esc(l.label)}</span>${l.from != null && l.from !== '' ? `<s>${val(l.from)}</s><i>›</i>` : '<i class="nw">›</i>'}<b>${val(l.to)}</b></span>`).join('')}</span>` : ''}
@@ -500,28 +692,78 @@ function guardCards(w, sel, onPick, delay = 650) {
   });
 }
 
-function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration') {
+// en-tête des fenêtres de choix : « NIVEAU 9 » devient sur-titre + grand chiffre
+function luHead(title, sub, eyebrow) {
+  const m = /^Niveau (\d+)/.exec(title);
+  return `<div class="lu-head"><span class="eyebrow">${esc(eyebrow || (m ? 'Montée de niveau' : 'Récompense'))}</span>
+    <h2 class="lu-title">${m ? `Niveau ${m[1]}` : esc(title.replace(/\s*!$/, ''))}</h2><p class="lu-sub">${esc(sub)}</p></div>`;
+}
+
+// montée de niveau : 3 cartes ; « Relancer (N) » et « Passer » si la partie les propose (extra)
+function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration', extra = null) {
+  let cur = opts;
+  // compteurs : valeur fournie par la partie (nombre, ou fonction / accesseur à jour), décomptés ici sinon
+  const read = k => (extra ? Math.max(0, (typeof extra[k] === 'function' ? extra[k]() : extra[k]) | 0) : 0);
+  let nR = read('rerolls'), nS = read('skips');
+  const rr = () => nR, sk = () => nS;
+  const foot = () => (extra && (typeof extra.reroll === 'function' || typeof extra.skip === 'function') ? `<div class="lu-foot">
+      ${typeof extra.reroll === 'function' ? `<button class="btn ghost lu-act" data-x="reroll" ${rr() ? '' : 'disabled'}>${iconImg('reroll', 16)} Relancer <b>(${rr()})</b></button>` : ''}
+      ${typeof extra.skip === 'function' ? `<button class="btn ghost lu-act" data-x="skip" ${sk() ? '' : 'disabled'}>${iconImg('skip', 16)} Passer <b>(${sk()})</b></button>` : ''}
+    </div>` : '');
   const w = overlay(`<div class="lvlup">
-    <h2 class="lu-title">${esc(title)}</h2><p class="lu-sub">${esc(subtitle)}</p>
-    <div class="cards">${opts.map((c, i) => choiceCard(c, i)).join('')}</div>
+    ${luHead(title, subtitle)}
+    <div class="cards">${cur.map((c, i) => choiceCard(c, i)).join('')}</div>
+    ${foot()}
   </div>`);
   w.classList.add('lvl-ov');
+  if (cur.some(c => c.kind === 'evo')) sfx('levelup');
+  let busy = false;
   guardCards(w, '.card-up', b => {
+    if (busy) return;
+    busy = true;
+    w.querySelectorAll('.card-up, .lu-act').forEach(x => { x.disabled = true; });
     sfx('pick'); buzz(15);
     b.classList.add('picked');
     w.classList.add('picking');
-    setTimeout(() => { w.remove(); done(opts[+b.dataset.i]); }, 260);
+    setTimeout(() => { w.remove(); done(cur[+b.dataset.i]); }, 240);
+  });
+  // relancer : nouvelles cartes ; passer : la partie reprend (un peu d'or en échange)
+  w.addEventListener('click', e => {
+    const x = e.target.closest('.lu-act'); if (!x || x.disabled || busy || w.classList.contains('locked')) return;
+    if (x.dataset.x === 'reroll') {
+      if (!rr()) return;
+      let n = null;
+      try { n = extra.reroll(); } catch (err) { n = null; }
+      if (!Array.isArray(n) || !n.length) return;
+      const after = read('rerolls'); nR = after < nR ? after : nR - 1;
+      cur = n; sfx('chestShake'); buzz(10);
+      const box = w.querySelector('.cards');
+      box.innerHTML = cur.map((c, i) => choiceCard(c, i)).join('');
+      box.querySelectorAll('.card-up').forEach(b2 => { b2.style.animationDelay = '0s'; });
+      w.querySelector('.lu-foot').outerHTML = foot();
+      return;
+    }
+    if (x.dataset.x === 'skip') {
+      if (!sk()) return;
+      busy = true; sfx('coin'); nS--;
+      let res;
+      try { res = extra.skip(); } catch (err) { res = false; }
+      w.remove();
+      // si la partie ne reprend pas d'elle-même, on la relance sans rien choisir
+      if (res !== false && run && run.paused && !run.over && !$('.lvl-ov')) done({ kind: 'skip', id: 'skip', lv: 0 });
+    }
   });
 }
 
 function chestMenu(c, gold, done) {
   const w = overlay(`<div class="lvlup chest">
-    <h2 class="lu-title">Coffre !</h2><p class="lu-sub">Amélioration gratuite</p>
+    ${luHead('Coffre', c.kind === 'evo' ? 'Votre arme évolue !' : 'Amélioration gratuite', c.kind === 'evo' ? 'Évolution' : 'Coffre ouvert')}
     <div class="cards">${choiceCard(c, 0, 'div')}</div>
-    <p class="lu-gold">${iconImg('gold', 22)} <b>+${fmt(gold)}</b> or</p>
-    <button class="btn primary big lu-ok">Super !</button>
+    <p class="lu-gold">${iconImg('gold', 20)} <b>+${fmt(gold)}</b> or</p>
+    <button class="btn primary big lu-ok">Continuer</button>
   </div>`);
   w.classList.add('lvl-ov');
+  if (c.kind === 'evo') sfx('levelup');
   guardCards(w, '.lu-ok', () => { sfx('tap'); w.remove(); done(); }, 500);
 }
 
@@ -537,14 +779,15 @@ function portalMenu(info, choose) {
   const stat = (ic, v, l) => `<div>${iconImg(ic, 18)}<b>${v}</b><small>${l}</small></div>`;
   const w = overlay(`<div class="portal-menu ${to ? '' : 'final'}">
     <div class="pm-vortex"><i></i><i></i><i></i><b>${iconImg(to ? 'portal' : 'crown', 34)}</b></div>
-    <h2>${to ? 'Portail ouvert !' : 'Victoire finale !'}</h2>
-    <p class="pm-sub">${to ? `Monde ${nW} vaincu : <b>${esc(from.name)}</b>` : 'Les six mondes sont vaincus. Le monde est sauvé !'}</p>
-    <div class="pm-stats">${stat('star', fmtTime(info.time || 0), 'Temps')}${stat('skull', fmt(info.kills || 0), 'Monstres')}${stat('gold', fmt(info.gold || 0), 'Or')}${stat('chest', info.loot || 0, 'Coffres')}</div>
+    <span class="eyebrow">${to ? `Monde ${nW} vaincu · ${esc(from.name)}` : 'Les six mondes sont vaincus'}</span>
+    <h2>${to ? 'Portail ouvert' : 'Victoire finale'}</h2>
+    <p class="pm-sub">${to ? 'Continuez l\'expédition ou rentrez avec votre butin.' : 'Le monde est sauvé. Bravo, champion !'}</p>
+    <div class="pm-stats">${stat('clock', fmtTime(info.time || 0), 'Temps')}${stat('skull', fmt(info.kills || 0), 'Monstres')}${stat('gold', fmt(info.gold || 0), 'Or')}${stat('chest', info.loot || 0, 'Coffres')}</div>
     <div class="pm-bosses">${cleared.map(id => `<span class="pm-b" title="${esc(ZONES[id].name)}">${bossImg(ZONES[id])}<i>✓</i></span>`).join('')}</div>
     ${to ? `<button class="pm-next" data-v="next" style="background-image:url(${zoneBannerURL(to)})">
-        <span class="pm-n">${nW + 1}</span>
-        <span class="pm-t"><small>Monde suivant</small><b>${esc(to.name)}</b><em>Plus dur, plus de butin !</em></span>
-        <span class="pm-boss">${bossImg(to)}</span>
+        <span class="pm-n">${String(nW + 1).padStart(2, '0')}</span>
+        <span class="pm-t"><small>Monde suivant</small><b>${esc(to.name)}</b><em>Plus dur, plus de butin</em></span>
+        <span class="pm-boss">${bossImg(to)}</span><i class="pm-go">Entrer</i>
       </button>
       <button class="btn ghost pm-home" data-v="home">${iconImg('chest', 18)} Rentrer avec le butin</button>`
     : `<button class="btn primary big pm-home" data-v="home">${iconImg('crown', 20)} Rentrer en héros</button>`}
@@ -563,13 +806,21 @@ function portalMenu(info, choose) {
 }
 
 async function pauseMenu(resume) {
+  const p = run.p, z = run.zone;
+  const sw = (id, ic, label, on) => `<label class="set-row">${iconImg(ic, 20)}<span class="set-l">${label}</span><span class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></span></label>`;
   const v = await modal({
-    title: run.diffId ? `Pause <span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : 'Pause',
-    body: `<div class="toggles">
-        <label class="toggle"><input type="checkbox" id="pSound" ${save.settings.sound ? 'checked' : ''}> Son</label>
-        <label class="toggle"><input type="checkbox" id="pVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
-        <label class="toggle"><input type="checkbox" id="pMus" ${save.settings.music !== false ? 'checked' : ''}> Musique</label>
+    title: `Pause ${run.diffId ? `<span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : ''}`,
+    cls: 'pause-modal',
+    body: `<div class="pz-sum">
+        <div><small>Monde</small><b>${(z?.id ?? 0) + 1}/${ZONES.length}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
+        <div><small>PV</small><b>${fmt(Math.max(0, p.hp))}/${fmt(p.maxHp)}</b></div><div><small>Or</small><b>${fmt(run.gold)}</b></div>
       </div>
+      <h4>Équipement de la partie</h4>
+      <div class="cur-build">${p.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 18)} ${esc(WEAPONS[w.id].name)} <b>${w.lv}</b></span>`).join('')}${Object.entries(p.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 18)} ${esc(TOMES[id].name)} <b>${lv}</b></span>`).join('')}</div>
+      ${runBoosts.length ? `<h4>Bonus</h4><div class="cur-build boosts-on">${runBoosts.map(id => `<span>${iconImg(BOOSTS[id].icon, 18)} ${esc(BOOSTS[id].name)}</span>`).join('')}</div>` : ''}
+      <h4>Options</h4>
+      <div class="set-list">${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
+      <details class="pz-help"><summary>${iconImg('info', 16)} Comment jouer</summary>
       <div class="howto">
         <p>${iconImg('arrow', 20)}<span><b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</span></p>
         <p>${iconImg('sword', 20)}<span><b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</span></p>
@@ -583,10 +834,8 @@ async function pauseMenu(resume) {
         <p>${iconImg('i_atk', 20)}<span><b>Attaques spéciales</b> : un monstre qui clignote ou un cercle rouge au sol annonce une attaque. Écartez-vous vite !</span></p>
         <p>${iconImg('crown', 20)}<span><b>Élites</b> : leur nom indique leur pouvoir (${Object.values(ELITE_MODS).map(m => esc(m.name)).join(', ')}). Fuyez les Explosifs quand ils tombent !</span></p>
         <p>${iconImg('nova', 20)}<span><b>Ultime</b> : se charge en battant des monstres et se lance tout seul quand des ennemis sont proches (ou touchez le bouton).</span></p>
-      </div>
-      ${runBoosts.length ? `<div class="cur-build boosts-on">${runBoosts.map(id => `<span>${iconImg(BOOSTS[id].icon, 18)} ${esc(BOOSTS[id].name)}</span>`).join('')}</div>` : ''}
-      <div class="cur-build">${run.p.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 18)} ${esc(WEAPONS[w.id].name)} <b>${w.lv}</b></span>`).join('')}${Object.entries(run.p.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 18)} ${esc(TOMES[id].name)} <b>${lv}</b></span>`).join('')}</div>`,
-    buttons: [{ label: 'Abandonner', cls: 'danger ghost', value: 'quit' }, { label: 'Reprendre', cls: 'primary', value: 'resume' }],
+      </div></details>`,
+    buttons: [{ label: `${iconImg('exit', 16)} Abandonner`, cls: 'danger ghost', value: 'quit' }, { label: `${iconImg('play', 16)} Reprendre`, cls: 'primary', value: 'resume' }],
   });
   save.settings.sound = $('#pSound')?.checked ?? save.settings.sound;
   save.settings.vibrate = $('#pVib')?.checked ?? save.settings.vibrate;
@@ -605,13 +854,13 @@ async function defeatMenu(canRevive) {
   const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0;
   const kept = nLoot ? `<p class="muted">Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b> et les mondes vaincus sont conservés.</p>` : '';
   const v = await modal({
-    title: 'K.O. !',
+    title: 'K.O.',
     cls: 'ko-modal',
-    body: canRevive
-      ? `<p>Vous êtes tombé au combat après <b>${t}</b>.</p><p><b>Regardez une courte publicité</b> pour revenir avec tous vos PV. Les monstres autour de vous seront balayés.</p><p class="muted">Possible une fois par partie.</p>${kept}`
-      : `<p>Vous êtes tombé au combat après <b>${t}</b>.</p>${kept}`,
+    body: `<div class="ko-big"><b>${t}</b><small>de survie · ${fmt(run.kills || 0)} monstres</small></div>` + (canRevive
+      ? `<p><b>Regardez une courte publicité</b> pour revenir avec tous vos PV. Les monstres autour de vous seront balayés.</p><p class="muted">Possible une fois par partie.</p>${kept}`
+      : kept),
     buttons: canRevive
-      ? [{ label: 'Terminer', cls: 'ghost', value: 'quit' }, { label: `${iconImg('heart', 16)} Revivre (pub)`, cls: 'primary', value: 'ad' }]
+      ? [{ label: 'Terminer', cls: 'ghost', value: 'quit' }, { label: `${iconImg('heart', 16)} Revivre`, cls: 'primary', value: 'ad' }]
       : [{ label: 'Voir le bilan', cls: 'primary', value: 'quit' }],
   });
   if (v === 'ad') {
@@ -961,19 +1210,21 @@ function summaryScreen(R, opened = []) {
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
-  const title = R.final ? 'Le monde est sauvé !' : sum.win ? 'Expédition réussie !' : won ? 'Fin de l\'expédition' : 'Fin de partie';
+  const title = R.final ? 'Le monde est sauvé' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
+  const eyebrow = R.final ? 'Victoire finale' : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
   mount(`<div class="reward-screen ${won ? 'complete' : 'lost'}">
+    <span class="eyebrow rs-eyebrow">${eyebrow}</span>
     <h2 class="rs-title">${title}</h2>
-    <p class="center muted rs-zone">${route} <span class="diff-tag d${k}">${iconImg(D.icon, 14)}${esc(D.name)}</span></p>
+    <p class="rs-zone">${route} <span class="diff-tag d${k}">${esc(D.name)}</span></p>
     ${R.final ? `<p class="center finale">Le Ver-Roi du Néant est tombé. Vous avez vaincu les 6 boss. Bravo, champion !</p>` : ''}
-    <div class="run-stats card">
+    <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
-      <div><b>${fmt(sum.kills)}</b><small>Monstres</small></div>
+      <div><b class="cu" data-n="${sum.kills}">${fmt(sum.kills)}</b><small>Monstres</small></div>
       <div><b>${sum.level}</b><small>Niveau</small></div>
-      <div><b class="gold-t">${fmt(R.gold)}</b><small>Or gagné</small></div>
+      <div><b class="gold-t cu" data-n="${R.gold}">${fmt(R.gold)}</b><small>Or gagné</small></div>
     </div>
     ${worldCards ? `<h3 class="section-t">Mondes vaincus <small>${cleared.length}</small></h3><div class="worlds-res">${worldCards}</div>` : ''}
     <div class="summary">
@@ -982,14 +1233,15 @@ function summaryScreen(R, opened = []) {
     ${R.found.length ? `<h3 class="section-t">Objets des boss <small>${R.found.length}</small></h3><div class="inv-grid found">${R.found.map(it => itemTile(it, { act: false })).join('')}</div>` : ''}
     ${R.got?.length ? `<h3 class="section-t">Succès débloqués <small>+${fmt(R.got.reduce((n, a) => n + a.gold, 0))} or</small></h3>
       <div class="ach-got">${R.got.map((a, i) => `<span style="--d:${(0.3 + i * 0.08).toFixed(2)}s">${iconImg('crown', 22)}<b>${esc(a.name)}</b><em>${iconImg('gold', 14)} ${a.gold}</em></span>`).join('')}</div>` : ''}
-    ${sum.evo ? `<p class="center evo-reached">${iconImg('star', 16)} Évolution atteinte : <b>${esc(EVOLUTIONS[save.cls][sum.evo].name)}</b></p>` : ''}
+    <h3 class="section-t">Build <small>${sum.evo ? esc(EVOLUTIONS[save.cls][sum.evo].name) : `niveau ${sum.level}`}</small></h3>
     <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
-    ${!won ? `<p class="center muted tip">${tipFor(sum, k)}</p>` : ''}
+    ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns">
-      <button class="btn ghost" data-act="home">Carte</button>
+      <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
       <button class="btn primary" data-act="again">${nextLabel}</button>
     </div>
   </div>`);
+  $$('.reward-screen .cu').forEach(el => countUp(el, +el.dataset.n || 0, 900));
   for (const it of R.found) delete it._eq;
   if (R.got?.length) sfx('loot');
   R.got = [];
@@ -1319,10 +1571,10 @@ function shopTab() {
     <p class="muted shop-intro">Elles valent pour tous les champions.</p>
     <div class="upgrades">${Object.entries(UPGRADES).map(([k, u]) => {
       const lvl = save.upgrades[k], max = lvl >= u.max, cost = upgradeCost(k);
-      return `<div class="upgrade card">
+      return `<div class="upgrade">
         ${iconImg(u.icon, 36)}
         <div class="u-txt"><b>${u.name}</b><small>${u.desc}</small>
-          <div class="lvl"><span>Niv. ${lvl}/${u.max}</span><div class="lbar"><i style="width:${lvl / u.max * 100}%"></i></div></div></div>
+          <div class="lvl"><span>Niv. ${lvl}/${u.max}</span>${u.max <= 12 ? `<div class="seg-bar">${Array.from({ length: u.max }, (_, k) => `<i class="${k < lvl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="lbar"><i style="width:${lvl / u.max * 100}%"></i></div>`}</div></div>
         <button class="btn ${max ? 'ghost' : 'primary'} small" data-act="buy" data-k="${k}" ${max || save.gold < cost ? 'disabled' : ''}>
           ${max ? 'Max' : `${iconImg('gold', 14)} ${fmt(cost)}`}
         </button>
@@ -1330,7 +1582,7 @@ function shopTab() {
     }).join('')}</div>
     <h3 class="section-t">Bonus <small>pour une seule partie</small></h3>
     <p class="muted shop-intro">Choisissez-en jusqu'à ${BOOST_SLOTS} dans la fiche d'une zone avant de partir.</p>
-    <div class="upgrades boost-shop">${Object.entries(BOOSTS).map(([id, b]) => `<div class="upgrade card boost-card">
+    <div class="upgrades boost-shop">${Object.entries(BOOSTS).map(([id, b]) => `<div class="upgrade boost-card">
         <span class="bo-ic">${iconImg(b.icon, 32)}${save.boosts[id] ? `<i class="bo-n">×${save.boosts[id]}</i>` : ''}</span>
         <div class="u-txt"><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>
         <button class="btn primary small" data-act="buyBoost" data-id="${id}" ${save.gold < b.price ? 'disabled' : ''}>${iconImg('gold', 14)} ${fmt(b.price)}</button>
@@ -1360,7 +1612,7 @@ function trophiesTab() {
   const n = Object.keys(save.achievements).length;
   const st = save.stats;
   const seen = Object.keys(st.seen).length;
-  return `<div class="stat-grid card">
+  return `<div class="stat-grid">
       <div><b>${fmt(st.wins)}</b><small>Boss vaincus</small></div>
       <div><b>${seen}/${MONSTER_COUNT + BOSS_COUNT}</b><small>Bestiaire</small></div>
       <div><b>${fmt(st.kills || 0)}</b><small>Monstres vaincus</small></div>
@@ -1399,16 +1651,29 @@ async function settings() {
       : `<p>Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
          <button class="btn google" data-v="login"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg> Se connecter avec Google</button>`;
   const wrapId = 'set-' + Date.now();
+  const S = save.settings;
+  const seg = (k, opts) => `<div class="seg" data-k="${k}">${opts.map(([v, l]) => `<button data-sv="${v}" class="${String(S[k]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const row = (ic, label, sub, ctrl, col = false) => `<div class="set-row ${col ? 'col' : ''}">${iconImg(ic, 20)}<span class="set-l">${label}${sub ? `<small>${sub}</small>` : ''}</span>${ctrl}</div>`;
+  const sw = (id, on) => `<label class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></label>`;
+  const joyTxt = v => `${Math.round(v * 100)} %`;
   const p = modal({
-    title: 'Compte & options',
+    title: 'Options',
+    cls: 'settings-modal',
     body: `<div id="${wrapId}">
       <h4>Compte</h4>${acct}
-      <h4>Options</h4>
-      <div class="toggles">
-        <label class="toggle"><input type="checkbox" id="sSound" ${save.settings.sound ? 'checked' : ''}> Son</label>
-        <label class="toggle"><input type="checkbox" id="sVib" ${save.settings.vibrate ? 'checked' : ''}> Vibrations</label>
-        <label class="toggle"><input type="checkbox" id="sMus" ${save.settings.music !== false ? 'checked' : ''}> Musique</label>
-        <label class="toggle"><input type="checkbox" id="sGfx" ${save.settings.gfx !== '2d' ? 'checked' : ''}> Graphismes 3D (décochez pour la 2D, plus légère)</label>
+      <h4>Jeu</h4>
+      <div class="set-list">
+        ${row('cube', 'Graphismes', '3D façon arcade, ou 2D plus légère', seg('gfx', [['3d', '3D'], ['2d', '2D']]), true)}
+        ${row('shake', 'Tremblements de l\'écran', '', seg('shake', [[0, 'Aucun'], [1, 'Faibles'], [2, 'Normaux']]), true)}
+        ${row('numbers', 'Chiffres de dégâts', '', seg('numbers', [['all', 'Tous'], ['crit', 'Critiques'], ['none', 'Aucun']]), true)}
+        ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
+        ${row('hand', 'Mode gaucher', 'Bouton Saut à droite', sw('sLefty', S.lefty))}
+      </div>
+      <h4>Son</h4>
+      <div class="set-list">
+        ${row('sound', 'Effets sonores', '', sw('sSound', S.sound))}
+        ${row('music', 'Musique', '', sw('sMus', S.music !== false))}
+        ${row('vibrate', 'Vibrations', '', sw('sVib', S.vibrate))}
       </div>
       <h4>Installer sur iPhone</h4>
       <p class="muted">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
@@ -1422,20 +1687,33 @@ async function settings() {
   });
   // boutons internes
   const wrap = document.getElementById(wrapId);
+  const o = { gfx: S.gfx, shake: S.shake, numbers: S.numbers };
   let action = null;
   wrap.addEventListener('click', e => {
+    const sv = e.target.closest('[data-sv]');
+    if (sv) {
+      const g = sv.closest('.seg'), k = g.dataset.k;
+      o[k] = k === 'shake' ? +sv.dataset.sv : sv.dataset.sv;
+      g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === sv));
+      sfx('tap'); return;
+    }
     const b = e.target.closest('[data-v]');
     if (!b) return;
     action = b.dataset.v;
     wrap.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
   });
+  wrap.querySelector('#sJoy').addEventListener('input', e => { wrap.querySelector('#sJoyV').textContent = joyTxt(+e.target.value); });
   await p;
-  save.settings.sound = wrap.querySelector('#sSound').checked;
-  save.settings.vibrate = wrap.querySelector('#sVib').checked;
-  save.settings.gfx = wrap.querySelector('#sGfx').checked ? '3d' : '2d';
+  const was3d = S.gfx;
+  S.sound = wrap.querySelector('#sSound').checked;
+  S.vibrate = wrap.querySelector('#sVib').checked;
+  S.lefty = wrap.querySelector('#sLefty').checked;
+  S.joySize = Math.max(0.8, Math.min(1.3, +wrap.querySelector('#sJoy').value || 1));
+  Object.assign(S, o);
   const mOn = wrap.querySelector('#sMus').checked;
-  if (mOn !== save.settings.music) { save.settings.music = mOn; if (!mOn) stopMusic(); }
+  if (mOn !== S.music) { S.music = mOn; if (!mOn) stopMusic(); }
   persist({ touch: false });
+  if (was3d !== S.gfx) toast(`${iconImg('cube', 16)} Graphismes <b>${S.gfx === '2d' ? '2D' : '3D'}</b> activés`);
   if (action === 'login') return cloud.signIn();
   if (action === 'logout') {
     const ok = await modal({ title: 'Se déconnecter ?', body: '<p>Votre progression reste sur cet appareil et dans votre compte.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Se déconnecter', cls: 'primary', value: true }] });

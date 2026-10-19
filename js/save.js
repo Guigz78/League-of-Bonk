@@ -30,8 +30,13 @@ export function freshSave() {
     boostSel: [null, null],
     pendingChests: [],
     achievements: {},
-    settings: { sound: true, music: true, vibrate: true },
+    // options : graphismes 3D/2D, tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
+    // taille du joystick (0,8 à 1,3), gaucher (saut à droite)
+    settings: { sound: true, music: true, vibrate: true, gfx: '3d', shake: 2, numbers: 'all', joySize: 1, lefty: false },
     tutorialDone: false,
+    lastZone: null,     // dernier monde lancé (bouton JOUER de l'accueil)
+    daily: null,        // quêtes du jour : { day, quests: [{ id, n, tier, gold, base, claimed }] }
+    login: { day: 0, last: '' }, // récompenses de connexion : prochain jour (0 à 6), dernière date réclamée
     run: null,
     nextId: 1,
   };
@@ -56,11 +61,23 @@ function migrate(s) {
   if (typeof out.stats?.kills === 'object') out.stats = { ...base.stats };
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
-  out.settings = { ...base.settings, ...s.settings };
+  out.settings = cleanSettings({ ...base.settings, ...s.settings });
+  out.login = { day: Math.max(0, Math.min(6, (s.login?.day | 0))), last: typeof s.login?.last === 'string' ? s.login.last : '' };
+  if (out.lastZone != null && !(out.lastZone >= 0 && out.lastZone <= 5)) out.lastZone = null;
   migrateDifficulty(out, base);
   migrateLoot(out, s);
   renameOld(out);
   return out;
+}
+
+// options toujours valides (sauvegardes anciennes ou venues du cloud)
+function cleanSettings(o) {
+  o.gfx = o.gfx === '2d' ? '2d' : '3d';
+  o.shake = [0, 1, 2].includes(+o.shake) ? +o.shake : 2;
+  o.numbers = ['all', 'crit', 'none'].includes(o.numbers) ? o.numbers : 'all';
+  o.joySize = Math.max(0.8, Math.min(1.3, +o.joySize || 1));
+  o.lefty = !!o.lefty;
+  return o;
 }
 
 // l'univers a changé de noms : bestiaire et objets des anciennes sauvegardes suivent
