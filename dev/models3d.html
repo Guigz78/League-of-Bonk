@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Modèles 3D</title>
+<style>
+  html, body { margin: 0; background: #5a8a3a; overflow: hidden; font: 12px sans-serif; color: #fff; }
+  canvas { display: block; }
+  #c3 { image-rendering: pixelated; }
+  #lab { position: absolute; left: 0; top: 0; pointer-events: none; }
+  #lab div { position: absolute; transform: translate(-50%, 0); text-shadow: 0 1px 2px #000; white-space: nowrap; font-weight: bold; }
+</style>
+</head>
+<body>
+<canvas id="c3"></canvas>
+<div id="lab"></div>
+<script type="module">
+// Planche de test des personnages 3D.
+//  ?v=heroes&cls=mage,archer,knight&evo=0,1,2,3,4&poses=idle,walk,jump,atk,hurt   grande planche
+//  ?v=game                                                                           taille réelle (caméra du jeu)
+//  ?v=mons&zone=0  / ?v=boss / ?v=pets                                                monstres, boss, familiers
+import * as THREE from '../vendor/three.module.min.js';
+import * as MOD from '../js/g3d/models.js';
+import { ZONES, PETS } from '../js/data.js';
+const Q = new URLSearchParams(location.search), V = Q.get('v') || 'heroes';
+const W = innerWidth, H = innerHeight, PR = +(Q.get('pr') || (V === 'game' ? 0.6 * devicePixelRatio : Math.min(2, devicePixelRatio)));
+const canvas = document.getElementById('c3');
+const R = new THREE.WebGLRenderer({ canvas, antialias: V !== 'game', preserveDrawingBuffer: true });
+R.setPixelRatio(PR); R.setSize(W, H);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#79b85a');
+scene.fog = new THREE.Fog('#9fd0e8', 60, 140);
+scene.add(new THREE.HemisphereLight('#dff0ff', '#4a6a2a', 2.2));
+const sun = new THREE.DirectionalLight('#fff0d8', 2.6); sun.position.set(-6, 12, 7); scene.add(sun);
+// sol : carreaux d'herbe
+const gC = document.createElement('canvas'); gC.width = gC.height = 64; const g2 = gC.getContext('2d');
+for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { g2.fillStyle = (i + j) % 2 ? '#6aa84a' : '#62a044'; g2.fillRect(i * 8, j * 8, 8, 8); }
+const gt = new THREE.CanvasTexture(gC); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(40, 40); gt.magFilter = THREE.NearestFilter; gt.colorSpace = THREE.SRGBColorSpace;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({ map: gt }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+const blobM = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
+const blobG = new THREE.CircleGeometry(0.5, 12); blobG.rotateX(-Math.PI / 2);
+const shadow = (x, z, r) => { const m = new THREE.Mesh(blobG, blobM); m.position.set(x, 0.02, z); m.scale.setScalar(r * 2); scene.add(m); };
+const lab = document.getElementById('lab'), labels = [];
+const label = (txt, x, y, z) => { const d = document.createElement('div'); d.textContent = txt; lab.appendChild(d); labels.push([d, new THREE.Vector3(x, y, z)]); };
+const errs = []; window.__errs = errs;
+const S = 1 / 20;
+
+const POSES = {
+  idle: { t: 1.0 }, walk: { t: 1.0, moving: true, speed01: 1, walkT: 0.2 }, walk2: { t: 1.0, moving: true, speed01: 1, walkT: 0.48 },
+  jump: { t: 1.0, air: 26, vy: 120 }, fall: { t: 1, air: 20, vy: -100 }, atk: { t: 1, atk: 0.82 }, atk2: { t: 1, atk: 0.55 },
+  hurt: { t: 1, hurt: 1 }, dead: { t: 1, dead: true }, inv: { t: 1, inv: true },
+};
+function posed(m, name, dirA = Math.PI / 2, atkA = Math.PI / 2 + 0.6) {
+  const P = POSES[name] || POSES.idle, n = name === 'dead' ? 40 : 30;
+  for (let i = 0; i < n; i++) {
+    const p = { ...P, dirA, atkA, t: 0.5 + i / 60 };
+    if (P.atk) p.atk = i < n - 8 ? 0 : 1 - (i - (n - 8)) / 8 * (1 - P.atk);
+    if (P.moving && i === n - 1) p.t = 0.5;
+    m.update(1 / 60, p);
+  }
+  if (P.walkT) { m.update(P.walkT * 0.5, { ...P, dirA }); }
+}
+
+let cam, anim = null;
+if (V === 'heroes') {
+  const CLS = (Q.get('cls') || 'mage,archer,knight').split(','), EV = (Q.get('evo') || '0,1,2,3,4').split(',').map(Number);
+  const PO = (Q.get('poses') || 'idle,walk,jump,atk,hurt').split(','), dir = +(Q.get('dir') ?? 90) * Math.PI / 180;
+  const rows = [];
+  for (const c of CLS) for (const e of EV) rows.push([c, e]);
+  const dx = 3.4, dz = +(Q.get('dz') || 5.4);
+  rows.forEach(([c, e], r) => PO.forEach((po, i) => {
+    const m = MOD.heroModel(c, e), x = (i - (PO.length - 1) / 2) * dx, z = (r - (rows.length - 1) / 2) * dz;
+    m.root.position.set(x, 0, z); scene.add(m.root); posed(m, po, dir); shadow(x, z, 0.7);
+    if (i === 0) label(c + ' ' + e, x - dx * 0.55, 0.2, z);
+  }));
+  const w = PO.length * dx + 1, h = rows.length * dz + 0.5, el = +(Q.get('el') || 50) * Math.PI / 180;
+  const k = Math.max(w / W, h * Math.sin(el) / H * 1.1) / 2;
+  cam = new THREE.OrthographicCamera(-W * k, W * k, H * k, -H * k, 0.1, 400);
+  cam.position.set(0, 40 * Math.sin(el), 40 * Math.cos(el)); cam.lookAt(0, 1.0, 0);
+} else if (V === 'game') {
+  // vue du jeu : caméra haute de trois quarts fixe, ~440 px de large au niveau du héros
+  const fov = 40, A = W / H, width = 22, d = width / 2 / (Math.tan(fov / 2 * Math.PI / 180) * A);
+  cam = new THREE.PerspectiveCamera(fov, A, 1, 400);
+  const el = 54 * Math.PI / 180;
+  cam.position.set(0, Math.sin(el) * d, Math.cos(el) * d); cam.lookAt(0, 0, 0);
+  const hero = MOD.heroModel(Q.get('cls') || 'knight', +(Q.get('evo') || 0));
+  scene.add(hero.root); shadow(0, 0, 0.7);
+  const others = [['mage', 0, -5, -6], ['archer', 0, 5, -6], ['knight', 4, -5, 6], ['mage', 4, 5, 6], ['archer', 2, 0, -9]].map(([c, e, x, z]) => {
+    const m = MOD.heroModel(c, e); m.root.position.set(x * 0.9, 0, z * 0.9); scene.add(m.root); shadow(x * 0.9, z * 0.9, 0.7); return m;
+  });
+  let pools = [];
+  if (MOD.MonsterPool) {
+    const z0 = ZONES[+(Q.get('zone') || 0)];
+    pools = z0.monsters.map((def, i) => new MOD.MonsterPool(scene, def, def.elite ? 'e' : 'n', 40));
+    window.__mons = [];
+    for (let i = 0; i < 30; i++) {
+      const k = i % pools.length, a = i * 2.4, r = 4 + (i % 7) * 1.3;
+      window.__mons.push({ k, x: Math.cos(a) * r * 20, y: Math.sin(a) * r * 20 + 20, bob: Math.random() * 6, el: z0.monsters[k].elite });
+    }
+  }
+  let t = 0;
+  anim = dt => {
+    t += dt;
+    const p = Q.get('pose') || 'run';
+    hero.update(dt, { t, moving: p === 'run', speed01: 1, dirA: -Math.PI / 2 + Math.sin(t * 0.5) * 0.8, atk: p === 'atk' ? 1 - (t * 2.2 % 1) : 0, atkA: Math.PI / 2 + 0.5, air: p === 'jump' ? 26 : 0 });
+    others.forEach((m, i) => m.update(dt, { t: t + i, moving: i % 2 === 0, dirA: Math.atan2(-m.root.position.z, -m.root.position.x), atk: i % 2 ? 1 - ((t * 1.7 + i * 0.3) % 1) : 0, atkA: Math.PI / 2 }));
+    for (const P of pools) P.begin();
+    for (const e of (window.__mons || [])) {
+      e.bob += dt * 8;
+      const a = Math.atan2(-e.y, -e.x), sc = (e.el ? 3.6 : 2.2) * 7 / 16;
+      pools[e.k].add(e, { x: e.x * S, y: 0, z: e.y * S, rot: a, scale: sc, flash: 0, freeze: false, mad: false, anim: e.bob, sq: 0, alpha: 1 });
+    }
+    for (const P of pools) P.end();
+  };
+  // ombres des monstres
+  for (const e of (window.__mons || [])) shadow(e.x * S, e.y * S, e.el ? 1.1 : 0.7);
+} else if (V === 'mons' || V === 'boss' || V === 'pets') {
+  const list = [];
+  if (V === 'mons') { const zs = (Q.get('zone') || '0,1,2,3,4,5').split(',').map(Number); for (const z of zs) ZONES[z].monsters.forEach((d, i) => list.push([d, 'n', z, i])); }
+  if (V === 'boss') for (const z of ZONES) if (z.boss && (Q.get('only') == null || Q.get('only').split(',').includes(String(z.id)))) list.push([z.boss, 'b', z.id, 9]);
+  if (V === 'pets') for (const id in PETS) list.push([id, 'p', 0, 0]);
+  const cols = +(Q.get('cols') || 5), dx = V === 'boss' ? 15 : V === 'pets' ? 2.5 : 4.2, dz = V === 'boss' ? 15 : V === 'pets' ? 3 : 4.6;
+  const rowsN = Math.ceil(list.length / cols) * (V === 'mons' && Q.get('elite') ? 2 : 1);
+  const pools = [], ents = [];
+  list.forEach(([d, v, z, i], n) => {
+    const c = n % cols, r = Math.floor(n / cols), x = (c - (cols - 1) / 2) * dx, zz = (r - (rowsN - 1) / 2) * dz;
+    if (v === 'p') { const m = MOD.petModel(d); m.root.position.set(x, 0, zz); scene.add(m.root); ents.push({ pet: m }); shadow(x, zz, 0.45); label(PETS[d].name, x, 0, zz + 1); return; }
+    const vv = V === 'mons' && Q.get('elite') === '1' ? 'e' : v;
+    const P = new MOD.MonsterPool(scene, d, vv, 4); pools.push(P);
+    const sc = (vv === 'b' ? 8 : vv === 'e' ? 3.6 : 2.2) * 7 / 16;
+    const fx = Q.get('fx') || '';
+    ents.push({ P, d, s: { x, y: (d.body === 'bird' ? 34 : d.body === 'ghost' ? 26 : 0) * S * 0.9, z: zz, rot: Math.PI / 2 + (+(Q.get('turn') || 0.5)), scale: sc, flash: fx === 'flash' ? 1 : 0, freeze: fx === 'freeze', mad: fx === 'mad', anim: 1, sq: fx === 'sq' ? 1 : 0, alpha: 1 }, e: { def: d, bob: 1, phase: 'chase', boss: vv === 'b', elite: vv === 'e' } });
+    shadow(x, zz, 0.75 * sc * 16 / 7 / 2.2);
+    label(d.name + (vv === 'e' ? ' ★' : ''), x, 0, zz + (vv === 'b' ? 3.6 : 1.4));
+  });
+  const w = cols * dx + 0.5, h = rowsN * dz + 1, el = +(Q.get('el') || 48) * Math.PI / 180;
+  const k = Math.max(w / W, h * Math.sin(el) / H * 1.15) / 2;
+  cam = new THREE.OrthographicCamera(-W * k, W * k, H * k, -H * k, 0.1, 400);
+  cam.position.set(0, 40 * Math.sin(el), 40 * Math.cos(el)); cam.lookAt(0, 1.0, 0);
+  let t = 0;
+  const still = Q.get('still') === '1';
+  anim = dt => {
+    t += dt;
+    for (const E of ents) {
+      if (E.pet) { E.pet.update(dt, { t, moving: !still, dirA: Math.PI / 2 + 0.4 }); continue; }
+      E.P.begin(); E.s.anim = still ? 1.1 : t * 8; E.e.bob = E.s.anim; E.P.add(E.e, E.s); E.P.end();
+    }
+  };
+}
+if (V === 'perf') {
+  // temps de construction de chaque pool + coût par image (250 monstres, héros)
+  const out = { build: [], heroBuild: {}, };
+  for (const z of ZONES) for (const d of [...z.monsters, z.boss]) for (const v of (d === z.boss ? ['b'] : ['n', 'e'])) {
+    const t0 = performance.now(); const P = new MOD.MonsterPool(scene, d, v, 300); const t1 = performance.now();
+    out.build.push([d.name + ':' + v, +(t1 - t0).toFixed(1), P.geo.attributes.position.count]); P.dispose();
+  }
+  for (const c of ['mage', 'archer', 'knight']) for (let e = 0; e < 5; e++) { const t0 = performance.now(); const m = MOD.heroModel(c, e); out.heroBuild[c + e] = +(performance.now() - t0).toFixed(1); m.dispose(); }
+  const pools = ZONES[0].monsters.map(d => new MOD.MonsterPool(scene, d, d.elite ? 'e' : 'n', 300));
+  const ents = Array.from({ length: 250 }, (_, i) => ({ k: i % 5, x: (Math.random() - 0.5) * 400, y: (Math.random() - 0.5) * 400, bob: Math.random() * 6, def: ZONES[0].monsters[i % 5] }));
+  const hero = MOD.heroModel('knight', 4); scene.add(hero.root);
+  const sO = { x: 0, y: 0, z: 0, rot: 0, scale: 1, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
+  let tp = 0, th = 0;
+  for (let f = 0; f < 200; f++) {
+    const t0 = performance.now();
+    for (const P of pools) P.begin();
+    for (const e of ents) { e.bob += 0.13; sO.x = e.x / 20; sO.z = e.y / 20; sO.rot = e.bob; sO.anim = e.bob; sO.flash = (f + e.k) % 9 === 0 ? 1 : 0; pools[e.k].add(e, sO); }
+    for (const P of pools) P.end();
+    const t1 = performance.now();
+    hero.update(1 / 60, { t: f / 60, moving: true, dirA: f * 0.01, atk: (f % 30) / 30, atkA: 1 });
+    th += performance.now() - t1; tp += t1 - t0;
+  }
+  out.poolFrameMs = +(tp / 200).toFixed(3); out.heroUpdateMs = +(th / 200).toFixed(3);
+  window.__perf = out;
+  cam = new THREE.PerspectiveCamera(40, W / H, 1, 400); cam.position.set(0, 30, 22); cam.lookAt(0, 0, 0);
+}
+if (V === 'ui') {
+  // portraits (images mises en cache) + aperçus animés des menus, sur fond d'interface
+  canvas.style.display = 'none';
+  document.body.style.background = '#1b2240';
+  const P = await import('../js/g3d/portraits.js'), PV = await import('../js/g3d/preview.js');
+  const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:8px;align-items:flex-end';
+  document.body.appendChild(box);
+  const t0 = performance.now(); let n = 0;
+  const img = (src, w, h, tip) => { const i = new Image(); i.src = src; i.width = w; i.height = h; i.title = tip; i.style.cssText = 'object-fit:contain;background:#2a3460;border-radius:8px'; box.appendChild(i); n++; };
+  for (const c of ['mage', 'archer', 'knight']) for (let e = 0; e < 5; e++) img(P.heroURL(c, null, e), 60, 76, c + e);
+  for (const z of ZONES) { z.monsters.forEach((m, k) => img(P.creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal), 64, 64, m.name)); img(P.creatureURL(`${z.id}-5-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true }), 88, 88, z.boss.name); }
+  for (const id in PETS) img(P.creatureURL('pet-' + id, PETS[id].body, PETS[id].pal), 46, 46, id);
+  window.__portraitMs = +(performance.now() - t0).toFixed(0) + ' ms / ' + n;
+  const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;padding:8px'; document.body.appendChild(row);
+  for (const [c, e, w, h] of [['knight', 0, 88, 96], ['mage', 4, 110, 130], ['archer', 2, 110, 130], ['knight', 4, 110, 130]]) {
+    const cv = document.createElement('canvas'); cv.style.cssText = `width:${w}px;height:${h}px;background:#24305a;border-radius:10px`; row.appendChild(cv); PV.mountPreview(cv, c, e);
+  }
+  cam = new THREE.PerspectiveCamera(40, 1, 1, 10);
+}
+cam.updateProjectionMatrix();
+const v3 = new THREE.Vector3();
+function frame(dt) {
+  if (anim) anim(dt);
+  R.render(scene, cam);
+  for (const [d, p] of labels) { v3.copy(p).project(cam); d.style.left = ((v3.x + 1) / 2 * W) + 'px'; d.style.top = ((1 - v3.y) / 2 * H) + 'px'; }
+}
+window.__step = (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(dt); return R.info.render.calls; };
+frame(1 / 60); frame(1 / 60);
+window.__ready = true;
+if (Q.get('live')) { let l = performance.now(); const loop = n => { frame(Math.min(0.05, (n - l) / 1000)); l = n; requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+</script>
+</body>
+</html>
