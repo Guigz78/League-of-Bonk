@@ -285,7 +285,8 @@ async function questSheet() {
         <div class="q-txt"><b>${esc(q.text)}</b>
           <div class="q-row"><span class="pbar ${q.prog >= q.n ? 'green' : ''}"><i style="width:${q.prog / q.n * 100}%"></i></span><em>${fmt(q.prog)}/${fmt(q.n)}</em></div>
           <span class="q-rw">${iconImg('chest', 14)} ${esc(chestName(q.tier))} · ${iconImg('gold', 14)} ${q.gold}</span></div>
-        ${q.claimed ? `<span class="q-claimed">${iconImg('check', 14)} Reçu</span>` : `<button class="btn ${q.ready ? 'primary' : 'ghost'} small" data-q="${q.i}" ${q.ready ? '' : 'disabled'}>Réclamer</button>`}
+        ${q.claimed ? `<span class="q-claimed">${iconImg('check', 14)} Reçu</span>` : q.ready ? `<button class="btn primary small" data-q="${q.i}">Réclamer</button>`
+          : `<span class="q-chest" aria-hidden="true"><img src="${chestURL(q.tier)}" alt=""></span>`}
       </div>`).join('')}</div>
       <p class="q-reset">Nouvelles quêtes chaque jour à minuit</p>`;
   };
@@ -1265,7 +1266,8 @@ function summaryScreen(R, opened = []) {
     ${R.got?.length ? `<h3 class="section-t">Succès débloqués <small>+${fmt(R.got.reduce((n, a) => n + a.gold, 0))} or</small></h3>
       <div class="ach-got">${R.got.map((a, i) => `<span style="--d:${(0.3 + i * 0.08).toFixed(2)}s">${iconImg('crown', 22)}<b>${esc(a.name)}</b><em>${iconImg('gold', 14)} ${a.gold}</em></span>`).join('')}</div>` : ''}
     <h3 class="section-t">Build <small>${sum.evo ? esc(EVOLUTIONS[save.cls][sum.evo].name) : `niveau ${sum.level}`}</small></h3>
-    <div class="build">${sum.weapons.map(w => `<span>${iconImg(WEAPONS[w.id].icon, 20)}<b>${w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span>${iconImg(TOMES[id].icon, 20)}<b>${lv}</b></span>`).join('')}</div>
+    <div class="build">${sum.weapons.map(w => `<span class="b-w r${w.r || 0} ${w.evo ? 'evo' : ''}">${iconImg(w.evo ? DATA.WEAPON_EVOS?.[w.id]?.icon || WEAPONS[w.id].icon : WEAPONS[w.id].icon, 22)}<b>${w.evo ? '★' : w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span class="b-t">${iconImg(TOMES[id].icon, 18)}<b>${lv}</b></span>`).join('')}</div>
+    ${sum.combo >= 10 || sum.evos?.length ? `<p class="build-sub">${sum.combo >= 10 ? `<span>Meilleur combo <b>${fmt(sum.combo)}</b></span>` : ''}${sum.evos?.length ? `<span>Évolution${sum.evos.length > 1 ? 's' : ''} <b>${sum.evos.map(id => esc(DATA.WEAPON_EVOS?.[id]?.name || WEAPONS[id]?.name || id)).join(', ')}</b></span>` : ''}</p>` : ''}
     ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns">
       <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
