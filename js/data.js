@@ -17,8 +17,8 @@ export const CLASSES = {
   },
   knight: {
     id: 'knight', name: 'Brok', role: 'Chevalier',
-    desc: 'Très résistant : son épée balaie tout ce qui s\'approche.',
-    hp: 135, atk: 12, crit: 0.06, speed: 0.95,
+    desc: 'Très résistant (−12 % de dégâts subis) : son épée balaie tout ce qui s\'approche.',
+    hp: 135, atk: 12, crit: 0.06, speed: 0.95, armor: 0.12, // talent : armure de classe (run.js)
     weapon: 'sword', ult: 'justice',
     colors: { 1: '#c9ced8', 2: '#878fa0', 3: '#f2f4f8', a: '#e6b422', h: '#7a4a24', s: '#ffd9b8', d: '#e9b48f', c: '#2f55b8' },
   },
