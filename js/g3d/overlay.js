@@ -117,7 +117,7 @@ export class Overlay {
     const tg = run.target;
     if (tg && !tg.dead && !run.dying) {
       const [x, y, ok] = gfx.ws(tg.x, tg.y, tg.r * 1.1 + (tg.fly || 0));
-      if (ok) this.reticle(g, x, y, (tg.r * 1.3 + 8) * gfx.ppu(), t);
+      if (ok) this.reticle(g, x, y, (tg.r * 1.3 + 8) * gfx.ppu(), t, tg);
     }
     // prix des coffres
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -192,16 +192,19 @@ export class Overlay {
     g.fillStyle = gr; g.beginPath(); g.arc(ox + kx, oy + ky, 23 * js, 0, TAU); g.fill();
   }
 
-  reticle(g, x, y, R, t) {
-    R = clamp(R, 16, 90);
-    g.save(); g.translate(x, y); g.rotate(t * 1.6);
-    g.lineCap = 'round';
-    for (let i = 0; i < 4; i++) {
-      g.rotate(TAU / 4);
-      g.strokeStyle = INK; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, R, -0.35, 0.35); g.stroke();
-      g.strokeStyle = '#ff4a3a'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, R, -0.35, 0.35); g.stroke();
-    }
-    g.restore();
+  // réticule carré (coins en équerre) : se resserre d'un coup quand la cible change (verrouillage)
+  reticle(g, x, y, R, t, tg) {
+    if (tg !== this.tgLast) { this.tgLast = tg; this.tgT = 0; }
+    this.tgT = Math.min(1, (this.tgT || 0) + this.dt / 0.16);
+    const lock = 1 - this.tgT, big = tg.boss || tg.elite;
+    R = clamp(R, 16, 90) * (1 + lock * 0.6) * (1 + Math.sin(t * 6) * 0.03);
+    const L = Math.max(6, R * 0.42);
+    g.save(); g.translate(x, y); g.globalAlpha = 0.55 + 0.45 * this.tgT;
+    g.lineCap = 'square'; g.lineJoin = 'miter';
+    const corners = w => { g.lineWidth = w; g.beginPath(); for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { g.moveTo(sx * R, sy * (R - L)); g.lineTo(sx * R, sy * R); g.lineTo(sx * (R - L), sy * R); } g.stroke(); };
+    g.strokeStyle = 'rgba(10,6,20,.8)'; corners(5.5);
+    g.strokeStyle = big ? '#ffd54a' : '#ff4a3a'; corners(2.6);
+    g.restore(); g.globalAlpha = 1;
   }
 
   // pastilles des totems (icône dans un rond de leur couleur) au-dessus de chacun

@@ -7,6 +7,7 @@ import { TOTEMS } from '../data.js';
 import { LOOT_GLOW } from '../g2d/items.js';
 
 const SWEEP_ARC = 3.5;
+const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
 const VX = 0, VY = -Math.sin(PITCH), VZ = -Math.cos(PITCH); // direction du regard de la caméra (fixe)
 const UPX = 0, UPY = Math.cos(PITCH), UPZ = -Math.sin(PITCH); // « haut » de l'écran dans le monde
 const W = '#ffffff';
@@ -51,15 +52,22 @@ export class Fx {
     this.rock = mk(b => { b.add(G.dode(0.8), '#5a3a2a', T(), 0.15, 0.18); b.add(G.dode(0.35), '#8a6a4a', T(-0.3, 0.45, 0.3), 0.1, 0.1); }, 30);
     this.mball = mk(b => { b.add(G.ico(0.45, 1), '#2a2a38', T(), 0.08); b.add(G.cyl(0.08, 0.08, 0.25, 5), '#8a6a3a', T(0, 0.48, 0)); }, 30);
     this.mnd = mk(b => { b.add(G.sph(1, 8, 3), '#7a5a3a', T(0, 0, 0, 1, 0.5, 1), 0.15, 0.1); for (let k = 0; k < 5; k++) { const a = k * 1.25; b.add(G.dode(0.22), '#5a4028', T(Math.cos(a) * 0.9, 0.08, Math.sin(a) * 0.9), 0.1, 0.2); } }, 40, lowpoly(), { color: true });
+    // éclats de glace qui jaillissent du sol (givre, blizzard), teintés par instance
+    this.shard = mk(b => {
+      b.add(G.oct(0.5), (x, y) => (y > 0.75 ? '#f4fcff' : y > 0.35 ? '#a8e2ff' : '#6ec0f0'), T(0, 0.7, 0, 0.6, 1.9, 0.6), 0.22);
+      b.add(G.oct(0.4), (x, y) => (y > 0.4 ? '#e8f8ff' : '#7ac8f4'), T(0.3, 0.35, 0.1, 0.5, 1.3, 0.5, 0, 0, -0.55), 0.1);
+      b.add(G.oct(0.3), '#bfeaff', T(-0.25, 0.25, -0.08, 0.45, 0.9, 0.45, 0, 0, 0.6), 0.1);
+    }, 120, basic({ vertexColors: true, transparent: false, depthWrite: true }), { color: true }); // non éclairés : la glace reste vive
     // mur des ondes de choc : anneau vertical (dégradé terre → lumière)
     const wg = new THREE.CylinderGeometry(1, 1, 1, 48, 1, true); wg.translate(0, 0.5, 0);
     this.wave = new Pool(sc, wg, basic({ map: waveTex(), side: THREE.DoubleSide, blending: THREE.NormalBlending }), 24, { order: 4 });
     // bulle de protection
     this.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), basic({ color: col('#a8d8ff'), blending: ADD, opacity: 0.25 }));
     this.bubble.visible = false; sc.add(this.bubble);
-    this.pools = [this.sh, this.dec, this.rg, this.ra, this.ln, this.gl, this.st, this.pf, this.bm, this.sk, this.ry, this.cu, this.cuB, this.arrow, this.dagger, this.boom, this.snow, this.crys, this.orb, this.eball, this.ecore, this.shroom, this.rock, this.mball, this.mnd, this.wave];
+    this.pools = [this.sh, this.dec, this.rg, this.ra, this.ln, this.gl, this.st, this.pf, this.bm, this.sk, this.ry, this.cu, this.cuB, this.arrow, this.dagger, this.boom, this.snow, this.crys, this.orb, this.eball, this.ecore, this.shroom, this.rock, this.mball, this.mnd, this.wave, this.shard];
     // particules propres au rendu
     this.sparks = []; this.stars = []; this.puffs = []; this.debris = []; this.rings = []; this.pillars = []; this.bursts = []; this.bolts = []; this.rays = []; this.decals = []; this.teles = []; this.embers = [];
+    this.halos = []; this.shards = []; this.orbPrev = []; this.evoW = {}; this.hitN = 0;
     this.lvl = 0; this.evo = 0;
     this.tc = new THREE.Color();
     // arrivée dans le monde par le portail
@@ -137,9 +145,19 @@ export class Fx {
           const a = Math.random() * TAU, v = rand(140, 320) * (ev.crit ? 1.4 : 1);
           this.sparks.push({ x: e.x, y: e.y, z: h, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: rand(-60, 200), life: rand(0.12, 0.25), max: 0.25, c: ev.crit ? '#ffd54a' : ev.color || W, w: ev.crit ? 3 : 2 });
         }
-        if (ev.crit) { this.stars.push({ x: e.x, y: e.y, z: h + 6, vx: 0, vy: 0, vz: 40, life: 0.25, max: 0.25, c: '#fff6a0', s: 3 }); this.glowPulse(e.x, e.y, h, 28, '#ffe48a'); }
+        // éclair d'impact blanc (bref) sur le monstre touché ; coup critique : étoile jaune, onde et éclats
+        if (this.hitN < 14 && this.stars.length < 300 && !ev.quiet) { this.hitN++; this.stars.push({ x: e.x + rand(-4, 4), y: e.y + 2, z: h * 0.8, vx: 0, vy: 0, vz: 0, life: 0.1, max: 0.1, c: W, s: 1.1 + Math.min(1, e.r / 30) }); }
+        if (ev.crit) {
+          this.stars.push({ x: e.x, y: e.y, z: h + 6, vx: 0, vy: 0, vz: 40, life: 0.28, max: 0.28, c: '#fff6a0', s: 3.6 });
+          this.glowPulse(e.x, e.y, h, 34, '#ffe48a');
+        }
         break;
       }
+      case 'weaponEvolve': this.weaponEvoFx(ev); break;
+      case 'combo': this.comboFx(ev); break;
+      case 'miniBoss': this.miniFx(ev.e); break;
+      case 'miniDeath': this.miniDeathFx(ev); break;
+      case 'swarm': for (let i = 0; i < 2; i++) this.ring(p.x, p.y, 520, 150, i ? '#ffffff' : '#ff4a3a', 10, 0.7, -i * 0.12); break;
       case 'kill': {
         const e = ev.e;
         this.decal(e.x, e.y, e.r * (e.boss ? 1.6 : 1.1), shade(e.def.pal[1], -0.3), 0.45);
@@ -151,7 +169,7 @@ export class Fx {
       }
       case 'jump': this.puff(p.x, p.y, 4, 8, 0.5); break;
       case 'land': this.puff(p.x, p.y, 6, 10, 0.5); this.ring(p.x, p.y, 8, 40, '#ffffff', 4, 0.25); break;
-      case 'levelup': this.lvl = 1; this.bursts.push({ x: p.x, y: p.y, h: 20, r: 70, t: 0, max: 0.5, c: '#ffe48a' }); this.burstStars(p.x, p.y, 30, 14, '#ffe48a', 200); this.ring(p.x, p.y, 10, 120, '#ffe48a', 8, 0.5); break;
+      case 'levelup': this.lvl = 1; this.bursts.push({ x: p.x, y: p.y, h: 20, r: 70, t: 0, max: 0.5, c: '#ffe48a' }); this.burstStars(p.x, p.y, 30, 14, '#ffe48a', 200); this.ring(p.x, p.y, 10, 120, '#ffe48a', 8, 0.5); this.halo('#ffe48a', 3); break;
       case 'evolve': this.evolveFx(ev); break;
       case 'pickup':
         if (ev.kind === 'loot') { this.lootFx(ev); break; }
@@ -238,14 +256,72 @@ export class Fx {
   evolveFx(ev) {
     const p = this.run.p, k = clamp((ev.evo || 1) / 4, 0, 1), c = ev.aura || '#ffe48a';
     this.evo = 1.4 + k * 0.8; this.evoC = c;
-    this.bursts.push({ x: p.x, y: p.y, h: 20, r: 200 + 160 * k, t: 0, max: 0.9, c: '#ffe48a' });
+    this.bursts.push({ x: p.x, y: p.y, h: 20, r: 120 + 110 * k, t: 0, max: 0.8, c: '#ffe48a' });
     for (let i = 0; i < 2 + (ev.evo || 1); i++) this.ring(p.x, p.y, 20, 160 + 90 * i * (0.6 + k), i % 2 ? W : c, 8 + 4 * k, 0.7, -i * 0.12);
-    this.pillars.push({ x: p.x, y: p.y, w: 80 + 100 * k, h: 400 + 500 * k, t: 0, max: 1 + k * 0.6, c });
+    this.pillars.push({ x: p.x, y: p.y, w: 60 + 60 * k, h: 400 + 500 * k, t: 0, max: 1 + k * 0.6, c });
     this.burstStars(p.x, p.y, 24, 16 + 30 * k, c, 260 + 200 * k);
+    this.halo(c, 3 + Math.round(k * 2));
     if (ev.final) {
-      this.rays.push({ t: 0, max: 2.2, c });
+      this.rays.push({ t: 0, max: 1.8, c, s: 26 });
       for (let i = 0; i < 70; i++) this.confetti();
       for (let i = 0; i < 2; i++) this.ring(p.x, p.y, 40, 620, '#ffd54a', 16, 0.9, -0.3 - i * 0.2);
+      this.rockBurst(p.x, p.y, 16, '#8a7a6a', 300);
+      this.decal(p.x, p.y, 90, '#2a1a08', 0.45);
+    }
+  }
+  // anneaux de lumière qui montent le long du héros (niveau, évolutions)
+  halo(c, n = 3) { for (let i = 0; i < n; i++) this.halos.push({ t: -i * 0.12, max: 0.75, c }); }
+  // couronne d'éclats de glace qui jaillissent du sol (givre)
+  shardRing(x, y, R, n, c = '#ffffff', life = 0.9) {
+    for (let i = 0; i < n && this.shards.length < 110; i++) {
+      const a = i / n * TAU + rand(-0.15, 0.15), d = R * rand(0.75, 1.02);
+      this.shards.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.95, a: rand(0, TAU), tilt: a, s: rand(0.7, 1.25) * clamp(R / 140, 0.7, 1.5), t: -i / n * 0.12, life, c: col(c) });
+    }
+  }
+  // évolution d'arme : colonne dorée, ondes, étoiles, rayons brefs, anneaux qui montent
+  weaponEvoFx(ev) {
+    const p = this.run.p;
+    this.bursts.push({ x: p.x, y: p.y, h: 20, r: 150, t: 0, max: 0.7, c: '#ffd54a' });
+    for (let i = 0; i < 3; i++) this.ring(p.x, p.y, 20, 220 + i * 110, i === 1 ? W : '#ffb02a', 12, 0.7, -i * 0.12);
+    this.pillars.push({ x: p.x, y: p.y, w: 110, h: 800, t: 0, max: 1.2, c: '#ffd54a' });
+    this.burstStars(p.x, p.y, 30, 34, '#ffd54a', 420);
+    this.rays.push({ t: 0, max: 1.1, c: '#ffd54a', s: 16 });
+    this.halo('#ffd54a', 4);
+    if (ev.id === 'frost') this.shardRing(p.x, p.y, 150, 18);
+  }
+  // paliers de combo : onde dorée autour du héros, de plus en plus grosse
+  comboFx(ev) {
+    const p = this.run.p, k = clamp(Math.log2(Math.max(1, ev.n / 25)) / 4, 0, 1), c = ev.n >= 200 ? '#ff7a2a' : ev.n >= 100 ? '#ffb02a' : '#ffd54a';
+    this.ring(p.x, p.y, 20, 160 + 220 * k, c, 9 + 6 * k, 0.5);
+    this.ring(p.x, p.y, 20, 110 + 160 * k, W, 6, 0.45, -0.08);
+    this.burstStars(p.x, p.y, 40, 10 + Math.round(20 * k), c, 260 + 200 * k);
+    if (ev.n >= 100) { this.pillars.push({ x: p.x, y: p.y, w: 70 + 50 * k, h: 500, t: 0, max: 0.8, c }); this.halo(c, 2); }
+  }
+  // champion de la horde : il tombe du ciel dans une colonne violette (le rendu le fait chuter) et fend le sol
+  miniFx(e) {
+    if (!e) return;
+    e.g_mini = 1;
+    this.pillars.push({ x: e.x, y: e.y, w: e.r * 4, h: 700, t: 0, max: 1.1, c: '#c06aff' });
+    this.ring(e.x, e.y, e.r * 3, e.r, '#d08aff', 8, 0.45);
+  }
+  miniLand(e) {
+    for (let i = 0; i < 3; i++) this.ring(e.x, e.y, e.r, 200 + i * 90, i === 1 ? '#ffd54a' : '#c06aff', 11, 0.65, -i * 0.12);
+    this.decal(e.x, e.y, e.r * 2.2, '#1a0820', 0.5);
+    this.puff(e.x, e.y, 12, e.r, 0.8, '#b8a0c8');
+    this.rockBurst(e.x, e.y, 14, '#6a5a6a', 240);
+    this.burstStars(e.x, e.y, e.r, 16, '#d08aff', 300);
+    this.gfx.kick = Math.max(this.gfx.kick || 0, 7); // secousse propre au rendu (la partie n'est pas touchée)
+  }
+  miniDeathFx(ev) {
+    const c = '#ffd54a';
+    for (let i = 0; i < 3; i++) this.ring(ev.x, ev.y, 20, 240 + i * 100, i % 2 ? W : c, 12, 0.75, -i * 0.1);
+    this.pillars.push({ x: ev.x, y: ev.y, w: 150, h: 700, t: 0, max: 1.2, c: '#e0a0ff' });
+    this.bursts.push({ x: ev.x, y: ev.y, h: 30, r: 220, t: 0, max: 0.7, c });
+    this.burstStars(ev.x, ev.y, 40, 32, c, 460);
+    this.rockBurst(ev.x, ev.y, 14, '#8a7a6a', 260);
+    for (let i = 0; i < 18 && this.debris.length < 220; i++) {
+      const a = Math.random() * TAU, v = rand(120, 360);
+      this.debris.push({ x: ev.x, y: ev.y, z: 30, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7, vz: rand(300, 560), r: 4.5, c: col(i % 3 ? '#ffd54a' : '#fff0a0'), rot: Math.random() * TAU, vr: rand(-16, 16), life: rand(1, 1.5), conf: 1, g: 700 });
     }
   }
   legendFx(ev) {
@@ -273,6 +349,12 @@ export class Fx {
       const R = e.r * (e.boss ? 1.25 : 1.15);
       this.ringAt(e.x, e.y, R, e.boss ? '#ff3a3a' : '#c06aff', 0.9, 0.14, 0.16, 1, 0, 0, 0, 0.5);
       if (e.elite || e.enraged) this.glow(e.x, e.y, e.r * 0.9 + up, e.r * 2.2 * (1 + Math.sin(t * 5) * 0.08), e.enraged ? '#ff3a3a' : '#d08aff', e.enraged ? 0.55 : 0.4);
+      // champion : couronne d'or qui tourne au sol, lueur dorée au-dessus de la tête
+      if (e.mini) {
+        this.ringAt(e.x, e.y, e.r * 1.75, '#ffd54a', 0.9, 0.05, 0, 1, t * 0.7, 12, 0.6, 0.6, true);
+        this.glow(e.x, e.y, e.r * 2.5 + up, e.r * 1.4 * (1 + Math.sin(t * 6) * 0.1), '#ffd54a', 0.55);
+        if (Math.random() < 0.12) this.sparkle(e.x + rand(-e.r, e.r), e.y, e.r * 2 + up, '#ffe48a');
+      }
     }
     const a = e.act;
     if (a && a.stage === 0 && (a.kind === 'shoot' || a.kind === 'volley')) {
@@ -303,8 +385,14 @@ export class Fx {
   // ---------- Image ----------
   update(dt) {
     const run = this.run, p = run.p, t = this.gfx.t, g = this.gfx;
+    this.hitN = 0;
+    for (const k in this.evoW) this.evoW[k] = false;
+    for (const w of p.weapons) this.evoW[w.id] = !!w.evo; // armes évoluées : effets plus riches
     this.shots(dt);
     this.gameFx(dt);
+    // cible principale : marque rouge au sol (4 tirets qui tournent), le réticule est dessiné par le calque 2D
+    const tg = run.target;
+    if (tg && !tg.dead && !tg.burrowed && !run.dying) this.ringAt(tg.x, tg.y, tg.r * 1.45 + 6, '#ff3a3a', 0.85, 0.09, 0.05, 1, t * 1.4, 4, 0, 0.45);
     this.alerts(dt);
     this.heroFx(dt);
     this.particles(dt);
@@ -318,17 +406,31 @@ export class Fx {
 
   shots(dt) {
     const run = this.run, t = this.gfx.t, p = run.p;
-    // orbes qui tournent autour du héros
-    for (const w of p.weapons) if (w.id === 'orbs' && w.orbs) for (const [x, y] of w.orbs) {
-      this.orb.put(x * S, 1.3, y * S, t * 3, 1);
-      this.glow(x, y, 26, 26, '#c08aff', 0.85);
-      this.shadow(x, y, 16, 0.25);
+    // orbes qui tournent autour du héros (évolués : galaxie, anneau intérieur cyan, traînées de comète)
+    const EW = this.evoW, OP = this.orbPrev;
+    for (const w of p.weapons) if (w.id === 'orbs' && w.orbs) {
+      const ev = w.evo, nIn = ev ? 4 : 0;
+      w.orbs.forEach(([x, y], i) => {
+        const inner = i < nIn, c = inner ? '#7ae8ff' : '#c08aff';
+        this.orb.put(x * S, 1.3, y * S, t * 3, ev ? 1.15 : 1);
+        this.glow(x, y, 26, ev ? 34 : 26, c, 0.85);
+        this.shadow(x, y, 16, 0.25);
+        const q = OP[i];
+        if (q && Math.hypot(x - q[0], y - q[1]) < 60) { const dx = x - q[0], dy = y - q[1], l = Math.hypot(dx, dy) || 1, L = ev ? 46 : 26; this.line(x * S, 1.3, y * S, (x - dx / l * L) * S, 1.3, (y - dy / l * L) * S, ev ? 0.9 : 0.6, c, 0.55); }
+        if (q) { q[0] = x; q[1] = y; } else OP[i] = [x, y];
+      });
     }
     for (const s of run.shots) {
       const a = Math.atan2(s.vy || 0, s.vx || 0), y = (s.z || 26) * S;
-      if (s.type === 'arrow') { this.arrow.put(s.x * S, y, s.y * S, -a, 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * 40) * S, y, (s.y - Math.sin(a) * 40) * S, 0.22, '#a0dcff', 0.6); }
-      else if (s.type === 'dagger') { this.dagger.put(s.x * S, y, s.y * S, -a, 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * 30) * S, y, (s.y - Math.sin(a) * 30) * S, 0.18, W, 0.45); }
-      else if (s.type === 'boom') { const k = (s.r || 15) / 15; this.boom.put(s.x * S, 0.9, s.y * S, -(s.spin || 0), k * 1.1); this.glow(s.x, s.y, 18, 22 * k, '#ffd54a', 0.5); this.shadow(s.x, s.y, 26 * k, 0.25); }
+      if (s.type === 'arrow') { this.arrow.put(s.x * S, y, s.y * S, -a, 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * (EW.arrows ? 60 : 40)) * S, y, (s.y - Math.sin(a) * (EW.arrows ? 60 : 40)) * S, EW.arrows ? 0.3 : 0.22, EW.arrows ? '#7ae8ff' : '#a0dcff', 0.6); }
+      else if (s.type === 'dagger') { const ev = EW.daggers, L = ev ? 54 : 30; this.dagger.put(s.x * S, y, s.y * S, -a, ev ? 1.25 : 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * L) * S, y, (s.y - Math.sin(a) * L) * S, ev ? 0.3 : 0.18, ev ? '#ffd54a' : W, ev ? 0.6 : 0.45); }
+      else if (s.type === 'boom') {
+        const k = (s.r || 15) / 15, ev = EW.boomerang;
+        this.boom.put(s.x * S, 0.9, s.y * S, -(s.spin || 0), k * 1.1); this.glow(s.x, s.y, 18, 22 * k, '#ffd54a', 0.5); this.shadow(s.x, s.y, 26 * k, 0.25);
+        // flou de rotation : disque lumineux sous la lame (tornade de lames : plus large, deux couleurs)
+        this.ra.ring(s.x * S, 0.88, s.y * S, k * 1.15, col(ev ? '#ffe48a' : '#fff0c0'), ev ? 0.55 : 0.3, 0, 0.35, 0.75, -(s.spin || 0) * 1.0, 0, 0, 0.7);
+        if (ev) this.ra.ring(s.x * S, 0.9, s.y * S, k * 1.3, col('#ff9a3a'), 0.4, 0, 0.12, 0.5, -(s.spin || 0) + 2, 0, 0, 0.5);
+      }
       else if (s.type === 'snow') { const k = s.R / 56; this.snow.put(s.x * S, Math.max(0.3, s.z * S * 0.9 + 0.5), s.y * S, s.t * 8, 1.1 * k + 0.4); this.shadow(s.x, s.y, 28, 0.3); if (s.t > s.dur * 0.6) this.ringAt(s.tx, s.ty, s.R, '#e8f4ff', 0.35 * (s.t / s.dur), 0.1, 0.15); }
       else if (s.type === 'crystal') {
         this.crys.put(s.x * S, 1.4, s.y * S, -a, 1.3);
@@ -374,35 +476,51 @@ export class Fx {
   }
 
   gameFx(dt) {
-    const run = this.run, t = this.gfx.t;
+    const run = this.run, t = this.gfx.t, EW = this.evoW;
     for (const f of run.fx) {
       const k = 1 - f.life / f.max;
       if (f.type === 'slash') {
-        // grand croissant lumineux (blanc et bleu) qui balaie devant le héros
-        const sweep = Math.min(1, k * 2.2), a0 = f.a - 1.3, R = f.r, al = 1 - k;
-        this.ra.ring(f.x * S, 0.9, f.y * S, R * S, col('#ffe9a8'), al * 0.95, 0, 0.42, 2.6 * sweep / TAU, a0, 0, 0, 0.9);
-        this.ra.ring(f.x * S, 0.92, f.y * S, R * 1.08 * S, col('#9ad8ff'), al * 0.7, 0, 0.12, 2.6 * sweep / TAU, a0, 0, 0, 0.3);
-        this.rg.ring(f.x * S, 0.07, f.y * S, R * S, col('#ffffff'), al * 0.25, 0, 0.4, 2.6 * sweep / TAU, a0, 0, 0, 0);
-        if (!f.g_sp) { f.g_sp = 1; for (let i = 0; i < 5; i++) { const an = a0 + Math.random() * 2.6; this.sparks.push({ x: f.x + Math.cos(an) * R * 0.9, y: f.y + Math.sin(an) * R * 0.9, z: 18, vx: Math.cos(an) * 160, vy: Math.sin(an) * 160, vz: 60, life: 0.25, max: 0.25, c: '#ffe48a', w: 2.4 }); } }
-      } else if (f.type === 'beam') {
-        const w = f.w * (1 - k * 0.7), ca = Math.cos(f.a), sa = Math.sin(f.a), y = 1.1;
-        const ax = f.x * S, az = f.y * S, bx = (f.x + ca * f.len) * S, bz = (f.y + sa * f.len) * S;
-        this.line(ax, y, az, bx, y, bz, w * 2.6 * S, '#ffd54a', (1 - k * 0.6) * 0.8);
-        this.line(ax, y, az, bx, y, bz, w * 1.1 * S, '#fff6c0', 1 - k * 0.5);
-        this.line(ax, y, az, bx, y, bz, w * 0.4 * S, W, 1);
-        this.ln.lane(ax, 0.08, az, f.a, f.len * S, w * 2.2 * S, col('#ffe48a'), (1 - k) * 0.5, 0, 0.5, 0, 1, 0, 0);
-        this.glow(f.x, f.y, 22, w * 1.6, '#fff0a0', 1 - k);
-        if (!f.g_sp) { f.g_sp = 1; for (let i = 0; i < 6; i++) { const d = Math.random() * f.len; this.sparkle(f.x + ca * d, f.y + sa * d, 22, '#fff0a0'); } }
-      } else if (f.type === 'bolt') {
-        if (!f.g_pts) {
-          f.g_pts = zigzag((f.x + rand(-40, 40)) * S, 22, f.y * S, f.x * S, 0.2, f.y * S, 8, 0.9);
-          this.decal(f.x, f.y, 18, '#1a1020', 0.35); this.puff(f.x, f.y, 4, 14, 0.5);
-          this.ring(f.x, f.y, 8, 50, '#fff7a0', 6, 0.25);
+        // grand croissant lumineux (blanc et bleu) qui balaie devant le héros ; tourbillon du Titan : or et feu
+        const ev = EW.sword, sweep = Math.min(1, k * 2.2), a0 = f.a - 1.3, R = f.r, al = 1 - k;
+        this.ra.ring(f.x * S, 0.9, f.y * S, R * S, col(ev ? '#ffc04a' : '#ffe9a8'), al * 0.95, 0, ev ? 0.5 : 0.42, 2.6 * sweep / TAU, a0, 0, 0, 0.9);
+        this.ra.ring(f.x * S, 0.92, f.y * S, R * 1.08 * S, col(ev ? '#ff7a2a' : '#9ad8ff'), al * 0.7, 0, 0.12, 2.6 * sweep / TAU, a0, 0, 0, 0.3);
+        this.rg.ring(f.x * S, 0.07, f.y * S, R * S, col(ev ? '#ffd54a' : '#ffffff'), al * (ev ? 0.35 : 0.25), 0, 0.4, 2.6 * sweep / TAU, a0, 0, 0, 0);
+        if (!f.g_sp) {
+          f.g_sp = 1;
+          for (let i = 0; i < (ev ? 8 : 5); i++) { const an = a0 + Math.random() * 2.6; this.sparks.push({ x: f.x + Math.cos(an) * R * 0.9, y: f.y + Math.sin(an) * R * 0.9, z: 18, vx: Math.cos(an) * 160, vy: Math.sin(an) * 160, vz: 60, life: 0.25, max: 0.25, c: ev ? '#ffb02a' : '#ffe48a', w: 2.4 }); }
+          if (ev) this.puff(f.x + Math.cos(f.a) * R * 0.6, f.y + Math.sin(f.a) * R * 0.6, 2, 14, 0.4, '#e8d8b8');
         }
-        const a = 1 - k, P = f.g_pts;
-        for (let i = 1; i < P.length; i++) { const [x0, y0, z0] = P[i - 1], [x1, y1, z1] = P[i]; this.line(x0, y0, z0, x1, y1, z1, 0.9, '#fff07a', a * 0.5); this.line(x0, y0, z0, x1, y1, z1, 0.3, W, a); }
-        this.glow(f.x, f.y, 6, 50, '#fff7a0', a);
+      } else if (f.type === 'beam') {
+        // prisme solaire (évolué) : rayons arc-en-ciel, cœur blanc
+        const ev = EW.beam, w = f.w * (1 - k * 0.7), ca = Math.cos(f.a), sa = Math.sin(f.a), y = 1.1;
+        const ax = f.x * S, az = f.y * S, bx = (f.x + ca * f.len) * S, bz = (f.y + sa * f.len) * S;
+        const c1 = ev ? PRISM[((f.a * 2 / Math.PI + 4.2) | 0) % 4] : '#ffd54a';
+        this.line(ax, y, az, bx, y, bz, w * 2.6 * S, c1, (1 - k * 0.6) * 0.8);
+        this.line(ax, y, az, bx, y, bz, w * 1.1 * S, ev ? '#ffffff' : '#fff6c0', 1 - k * 0.5);
+        this.line(ax, y, az, bx, y, bz, w * 0.4 * S, W, 1);
+        this.ln.lane(ax, 0.08, az, f.a, f.len * S, w * 2.2 * S, col(ev ? c1 : '#ffe48a'), (1 - k) * 0.5, 0, 0.5, 0, 1, 0, 0);
+        this.glow(f.x, f.y, 22, w * 1.6, ev ? '#ffffff' : '#fff0a0', 1 - k);
+        if (ev) this.glow(f.x + ca * f.len, f.y + sa * f.len, 16, w * 1.4, c1, (1 - k) * 0.8);
+        if (!f.g_sp) { f.g_sp = 1; for (let i = 0; i < 6; i++) { const d = Math.random() * f.len; this.sparkle(f.x + ca * d, f.y + sa * d, 22, ev ? c1 : '#fff0a0'); } }
+      } else if (f.type === 'bolt') {
+        // tempête divine (évoluée) : éclairs plus épais, bleutés, onde au sol
+        const ev = EW.lightning;
+        if (!f.g_pts) {
+          f.g_pts = zigzag((f.x + rand(-40, 40)) * S, 22, f.y * S, f.x * S, 0.2, f.y * S, 8, ev ? 1.2 : 0.9);
+          this.decal(f.x, f.y, ev ? 26 : 18, '#1a1020', 0.35); this.puff(f.x, f.y, 4, 14, 0.5);
+          this.ring(f.x, f.y, 8, ev ? 80 : 50, ev ? '#bfe8ff' : '#fff7a0', 6, 0.25);
+          if (ev && this.sparks.length < 200) for (let i = 0; i < 5; i++) { const an = Math.random() * TAU; this.sparks.push({ x: f.x, y: f.y, z: 4, vx: Math.cos(an) * 260, vy: Math.sin(an) * 180, vz: rand(80, 260), life: 0.3, max: 0.3, c: '#bfe8ff', w: 2.6 }); }
+        }
+        const a = 1 - k, P = f.g_pts, wk = ev ? 1.5 : 1;
+        for (let i = 1; i < P.length; i++) { const [x0, y0, z0] = P[i - 1], [x1, y1, z1] = P[i]; this.line(x0, y0, z0, x1, y1, z1, 0.9 * wk, ev ? '#8ad0ff' : '#fff07a', a * 0.5); this.line(x0, y0, z0, x1, y1, z1, 0.3 * wk, W, a); }
+        this.glow(f.x, f.y, 6, ev ? 70 : 50, ev ? '#bfe8ff' : '#fff7a0', a);
       } else if (f.type === 'ring') {
+        // givre : couronne d'éclats de glace ; champignons : nuage toxique
+        if (!f.g_sp && !f.warn) {
+          f.g_sp = 1;
+          if (f.color === '#9ad8ff' && f.r > 60) this.shardRing(f.x, f.y, f.r * 0.92, Math.min(22, Math.round(f.r / (EW.frost ? 11 : 16))), '#ffffff', EW.frost ? 1.1 : 0.75);
+          else if (f.color === '#8aff5a') this.puff(f.x, f.y, EW.shrooms ? 8 : 5, f.r * 0.5, 0.55, '#b8f08a');
+        }
         if (f.warn) {
           const kk = clamp(1 - f.life / f.max, 0, 1), blink = 0.75 + Math.sin(t * 30) * 0.25 * kk;
           this.ringAt(f.x, f.y, f.r, f.color, 0.95, 0.05, 0.16, 1, 0, 0, 0, 0.3);
@@ -417,10 +535,14 @@ export class Fx {
     // cape solaire (aura)
     const aura = run.p.weapons.find(w => w.id === 'aura');
     if (aura && aura.R) {
-      const p = run.p, R = aura.R * (1 + Math.sin(t * 5) * 0.03);
-      this.ringAt(p.x, p.y, R, '#ff8a2a', 0.22, 0.001, 1, 1, 0, 0, 0, 0, true, 0.09);
+      // disque de chaleur discret (le héros reste lisible au centre), bord pointillé qui tourne ;
+      // cœur de soleil (évolué) : second anneau, langues de feu qui montent du bord
+      const p = run.p, ev = aura.evo, R = aura.R * (1 + Math.sin(t * 5) * 0.03);
+      this.ringAt(p.x, p.y, R, '#ff8a2a', ev ? 0.16 : 0.12, 0.001, 1, 1, 0, 0, 0, 0, true, 0.09);
       this.ringAt(p.x, p.y, R, '#ffb04a', 0.85, 0.035, 0, 1, t * 0.5, 14, 0.6, 0.5, true, 0.11);
-      if (Math.random() < 0.3) { const an = Math.random() * TAU, d = Math.random() * R; this.sparks.push({ x: p.x + Math.cos(an) * d, y: p.y + Math.sin(an) * d, z: 2, vx: 0, vy: 0, vz: rand(40, 90), life: 0.5, max: 0.5, c: '#ffb04a', w: 2 }); }
+      if (ev) this.ringAt(p.x, p.y, R * 0.62, '#ffe48a', 0.6, 0.05, 0, 1, -t * 0.8, 10, -0.8, 0.6, true, 0.11);
+      if (Math.random() < (ev ? 0.9 : 0.3)) { const an = Math.random() * TAU, d = ev ? R * rand(0.85, 1) : Math.random() * R; this.sparks.push({ x: p.x + Math.cos(an) * d, y: p.y + Math.sin(an) * d, z: 2, vx: 0, vy: 0, vz: rand(40, 90) * (ev ? 1.6 : 1), life: 0.5, max: 0.5, c: Math.random() < 0.5 ? '#ffb04a' : '#ff6a2a', w: ev ? 3 : 2 }); }
+      if (ev && Math.random() < 0.25 && this.puffs.length < 200) { const an = Math.random() * TAU; this.puffs.push({ x: p.x + Math.cos(an) * R * 0.95, y: p.y + Math.sin(an) * R * 0.95, z: 4, vx: 0, vy: 0, vz: 70, s: rand(7, 11), life: 0.45, max: 0.45, a: 0.45, c: '#ffb04a' }); }
     }
     // ondes de choc (à sauter) : muret de terre et de lumière qui avance
     for (const w of run.waves) {
@@ -496,13 +618,24 @@ export class Fx {
   heroFx(dt) {
     const run = this.run, p = run.p, t = this.gfx.t;
     if (this.lvl > 0) { this.lvl -= dt * 1.6; const a = Math.max(0, this.lvl); this.beam(p.x, p.y, 44 + (1 - a) * 20, 160, '#ffe48a', a * 0.9); }
+    // rayons derrière le héros (évolution) : assez petits pour qu'on le voie encore au milieu
     if (this.evo > 0) {
       this.evo -= dt;
       const a = Math.min(1, this.evo), evo = p.evo | 0;
-      this.spin(this.ry, p.x * S, 1.2, p.y * S + 0.5, (12 + evo * 2.4), t * 1.5, evo >= 4 && run.cls.id === 'archer' ? '#96f0ff' : '#ffe48a', 0.6 * a);
+      this.spin(this.ry, p.x * S, 1.2, p.y * S + 0.5, (7 + evo * 1.5), t * 1.5, evo >= 4 && run.cls.id === 'archer' ? '#96f0ff' : '#ffe48a', 0.45 * a);
     }
-    for (const r of this.rays) { r.t += dt; const k = r.t / r.max, a = k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85; this.spin(this.ry, p.x * S, 1.2, p.y * S + 0.6, 48, t * 0.8, '#ffe680', 0.7 * Math.max(0, a)); this.glow(p.x, p.y, 24, 160, r.c, 0.5 * Math.max(0, a)); }
+    for (const r of this.rays) { r.t += dt; const k = r.t / r.max, a = Math.max(0, k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85); this.spin(this.ry, p.x * S, 1.2, p.y * S + 0.6, r.s || 22, t * 0.8, '#ffe680', 0.5 * a); this.glow(p.x, p.y, 24, (r.s || 22) * 3, r.c, 0.35 * a); }
     this.rays = this.rays.filter(r => r.t < r.max);
+    // anneaux de lumière qui montent le long du héros
+    let n = 0;
+    for (const h of this.halos) {
+      h.t += dt; if (h.t >= h.max) continue;
+      this.halos[n++] = h;
+      if (h.t < 0) continue;
+      const k = h.t / h.max, e = easeOut(k);
+      this.ra.ring(p.x * S, 0.15 + e * 3.6 + p.h * S, p.y * S, (1.7 - e * 0.9), col(h.c), (1 - k) * 0.95, 0, 0.16, 1, 0, 0, 0, 0.8);
+    }
+    this.halos.length = n;
     if (p.inv > 0.5 && !run.dying) this.glow(p.x, p.y, 22 + p.h, 40, '#fff0b0', 0.35 + Math.sin(t * 12) * 0.15);
     const B = this.bubble;
     B.visible = !!p.shieldHit && !run.dying;
@@ -573,7 +706,7 @@ export class Fx {
     for (const b of this.bursts) {
       b.t += dt; const k = b.t / b.max; if (k >= 1) continue;
       const R = b.r * (0.3 + 0.7 * (1 - (1 - k) ** 2));
-      this.glow(b.x, b.y, b.h || 0, R, b.c, (1 - k) * 0.9);
+      this.glow(b.x, b.y, b.h || 0, R, b.c, (1 - k) * 0.65);
       if (!b.noRing) this.ringAt(b.x, b.y, R * 0.7, b.c, (1 - k) * 0.9, clamp(6 * (1 - k) / (R * 0.7), 0.01, 0.4), 0, 1, 0, 0, 0, 0.6, true, 0.12);
       this.bursts[n++] = b;
     }
@@ -593,7 +726,18 @@ export class Fx {
       this.dec.tint(i, d.c); this.dec.alpha(i, d.a * clamp(d.life / 3, 0, 1));
       this.decals[n++] = d;
     }
-    this.decals.length = n;
+    this.decals.length = n; n = 0;
+    // éclats de glace : jaillissent, restent un instant, rentrent dans le sol
+    for (const q of this.shards) {
+      q.t += dt; if (q.t >= q.life) continue;
+      this.shards[n++] = q;
+      if (q.t < 0) continue;
+      const k = q.t / q.life, up = k < 0.15 ? backOut(k / 0.15) : k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1, s = q.s * Math.max(0.01, up);
+      const i = this.shard.put(q.x * S, -0.2 * (1 - up), q.y * S, q.a, s, s * 1.15, s);
+      this.shard.tint(i, q.c);
+      if (q.t < dt * 1.5) this.sparkle(q.x, q.y, 20, '#e8f8ff');
+    }
+    this.shards.length = n;
     // chrono écoulé : des braises montent autour du héros
     const run = this.run, E = this.embers;
     if (run.overtime > 0) {
