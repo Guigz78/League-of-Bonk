@@ -682,6 +682,12 @@ function overlay(html) {
   requestAnimationFrame(() => w.classList.add('in'));
   return w;
 }
+// fermeture d'une fenêtre de la partie : court fondu (elle ne compte plus comme ouverte dès maintenant)
+function closeOv(w, then) {
+  w.classList.add('closing'); w.classList.remove('in');
+  setTimeout(() => w.remove(), 150);
+  then?.();
+}
 
 // choix protégé contre les touches accidentelles : cartes inactives un court instant, et seul un appui
 // commencé sur la carte après son activation compte (le doigt qui déplaçait le héros ne choisit rien)
@@ -733,7 +739,7 @@ function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration
     sfx('pick'); buzz(15);
     b.classList.add('picked');
     w.classList.add('picking');
-    setTimeout(() => { w.remove(); done(cur[+b.dataset.i]); }, 240);
+    setTimeout(() => closeOv(w, () => done(cur[+b.dataset.i])), 200);
   });
   // relancer : nouvelles cartes ; passer : la partie reprend (un peu d'or en échange)
   w.addEventListener('click', e => {
@@ -756,9 +762,9 @@ function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration
       busy = true; sfx('coin'); nS--;
       let res;
       try { res = extra.skip(); } catch (err) { res = false; }
-      w.remove();
+      closeOv(w);
       // si la partie ne reprend pas d'elle-même, on la relance sans rien choisir
-      if (res !== false && run && run.paused && !run.over && !$('.lvl-ov')) done({ kind: 'skip', id: 'skip', lv: 0 });
+      if (res !== false && run && run.paused && !run.over && !$('.lvl-ov:not(.closing)')) done({ kind: 'skip', id: 'skip', lv: 0 });
     }
   });
 }
@@ -772,7 +778,7 @@ function chestMenu(c, gold, done) {
   </div>`);
   w.classList.add('lvl-ov');
   if (c.kind === 'evo') sfx('levelup');
-  guardCards(w, '.lu-ok', () => { sfx('tap'); w.remove(); done(); }, 500);
+  guardCards(w, '.lu-ok', () => { sfx('tap'); closeOv(w, done); }, 500);
 }
 
 // ---------- Portail entre deux mondes ----------
@@ -809,7 +815,7 @@ function portalMenu(info, choose) {
   w.addEventListener('click', e => {
     const b = e.target.closest('[data-v]'); if (!b || b.disabled) return;
     sfx('tap');
-    w.remove();
+    closeOv(w);
     choose(b.dataset.v);
   });
 }

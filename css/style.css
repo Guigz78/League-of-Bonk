@@ -881,6 +881,9 @@ button.itile:active { transform: translateY(1px); }
 .overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity .16s var(--ease);
   background: rgba(4,6,10,.78); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); touch-action: none; }
 .overlay.in { opacity: 1; }
+.overlay.closing { pointer-events: none; transition-duration: .14s; }
+.overlay.closing .lvlup, .overlay.closing .portal-menu { transform: translateY(-6px); transition: transform .14s var(--ease); }
+.modal-wrap.out .modal { transform: translateY(16px); }
 .overlay.lvl-ov { align-items: stretch; padding: calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px); background: radial-gradient(90% 40% at 50% 8%, rgba(63,208,255,.12), transparent 70%), rgba(4,6,10,.84); }
 .lvlup { width: 100%; max-width: 460px; margin: auto; display: flex; flex-direction: column; text-align: left; }
 .lvl-ov .lvlup { max-height: 100%; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; }
