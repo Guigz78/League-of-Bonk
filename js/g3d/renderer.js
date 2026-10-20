@@ -10,6 +10,7 @@ import { Overlay } from './overlay.js';
 import { save } from '../save.js';
 import { PETS } from '../data.js';
 import * as SI from './stand-in.js';
+import { RIM } from './models-kit.js';
 export { zoneBannerURL } from './world.js';
 
 // personnages : js/g3d/models.js (agent des personnages) s'il est là, sinon les modèles provisoires
@@ -28,13 +29,15 @@ export function supported() {
 }
 
 const FOV = 32, VIEW_W = 22; // ≈ 460 px de large au niveau du héros (écran portrait)
+const QSTEPS = [1, 0.85, 0.72, 0.6]; // paliers de résolution de la 3D
+let qLevel = 0, qLite = false;       // gardés d'un monde à l'autre (run.nextWorld recrée le rendu)
 
 export class Gfx {
   constructor(run, canvas) {
     this.run = run;
     this.cv = canvas;
     this.t = 0; this.dt = 0;
-    this.quality = 1; this.frameMs = 16; this.slowT = 0;
+    this.quality = QSTEPS[qLevel]; this.frameMs = 16; this.slowT = 0; this.fastT = 0; this.badT = []; this.lite = false;
     // toile WebGL sous la toile 2D (qui garde les entrées et l'interface dessinée)
     const c3 = this.c3 = document.createElement('canvas');
     c3.className = 'cv3d';
@@ -48,6 +51,7 @@ export class Gfx {
     this.camera.rotation.set(-PITCH, 0, 0);
     // lumières : ciel + soleil chaud, brouillard pour la profondeur
     const L = this.look = LOOK[run.zone.bg] || LOOK.lane;
+    RIM.c.value.set(L.rim || '#fff4e0'); RIM.w.value = L.rimW ?? 0.35; RIM.d.value = L.rimD ?? 0.25; // bords des personnages, par monde
     this.fogC = col(L.fog).clone(); this.skyC = col(L.sky).clone();
     this.scene.background = this.fogC.clone();
     this.scene.fog = new THREE.Fog(this.fogC.clone(), 80, 200);
@@ -77,12 +81,14 @@ export class Gfx {
     this.pools = new Map();
     this.pops = [];
     for (const d of run.zone.monsters) { this.pool(d, 'n'); if (d.elite) this.pool(d, 'e'); }
+    for (const P of this.pools.values()) if (P.v === 'n' && !P.extra) P.loBatch?.(); // modèles allégés prêts avant la première foule
     this.ms = { x: 0, y: 0, z: 0, rot: 0, scale: 1, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
     // caméra
     this.cam = { x: p.x, y: p.y, lx: 0, ly: 0, z: 1 };
     this.v3 = new THREE.Vector3();
     this.overlay = new Overlay(this, canvas);
     this.resize();
+    if (qLite) this.setLite(true);
     this.world.refresh(p.x, p.y);
   }
 
@@ -110,15 +116,30 @@ export class Gfx {
     this.overlay.resize(vw, vh);
   }
 
-  // si l'appareil peine, on baisse la résolution de la 3D (l'interface reste nette)
+  // qualité automatique par paliers : résolution de la 3D (l'interface reste nette), puis mode allégé (moins de
+  // détails au sol et de particules). On remonte d'un palier quand l'appareil a de la marge un bon moment, mais
+  // jamais vers un palier qui a ramé il y a peu (pas de va-et-vient). Le palier est gardé d'un monde à l'autre.
   perf(dt) {
-    if (!dt) return;
+    if (!dt || dt > 0.25) return; // à-coup isolé (onglet en arrière-plan…) : ignoré
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
-    if (this.frameMs > 23 && this.quality > 0.62) {
-      this.slowT += dt;
-      if (this.slowT > 2.5) { this.slowT = 0; this.quality = Math.max(0.6, this.quality - 0.15); this.resize(); }
-    } else this.slowT = 0;
+    const n = QSTEPS.length;
+    if (this.frameMs > 24) {
+      this.slowT += dt; this.fastT = 0;
+      if (this.slowT > 2.5) {
+        this.slowT = 0; this.frameMs = 18;
+        this.badT[qLevel] = this.t;
+        if (qLevel < n - 1) { qLevel++; this.quality = QSTEPS[qLevel]; this.resize(); } else if (!this.lite) this.setLite(true);
+      }
+    } else if (this.frameMs < 17.5) {
+      this.slowT = 0; this.fastT += dt;
+      if (this.fastT > 8) {
+        this.fastT = 0;
+        if (this.lite) this.setLite(false);
+        else if (qLevel > 0 && this.t - (this.badT[qLevel - 1] ?? -1e9) > 45) { qLevel--; this.quality = QSTEPS[qLevel]; this.resize(); }
+      }
+    } else { this.slowT = 0; this.fastT = 0; }
   }
+  setLite(on) { this.lite = qLite = on; this.world.setLite(on); }
 
   // caméra haute fixe : suit le héros en douceur avec un peu d'avance, ne tourne jamais
   updateCamera(dt) {
@@ -132,7 +153,8 @@ export class Gfx {
     const zt = run.boss && !run.boss.dead ? 1.12 : 1;
     c.z += (zt - c.z) * (1 - Math.exp(-d * 0.8));
     const sm = [0, 0.5, 1][save.settings?.shake ?? 2] ?? 1;
-    const shk = Math.min(6, (run.shake || 0) * 0.45) * sm * S;
+    if (this.kick > 0) this.kick = Math.max(0, this.kick - d * 14);
+    const shk = Math.min(6, ((run.shake || 0) + (this.kick || 0)) * 0.45) * sm * S;
     const sx = shk ? Math.sin(this.t * 61) * shk : 0, sz = shk ? Math.cos(this.t * 47) * shk : 0;
     const D = this.D * c.z, cam = this.camera;
     cam.position.set(c.x * S + sx, Math.sin(PITCH) * D + sz * 0.5, c.y * S + Math.cos(PITCH) * D + sz);
@@ -172,8 +194,9 @@ export class Gfx {
     this.overlay.render(dt);
   }
 
-  // le héros est aussi sur le calque 1 (passes de la silhouette)
-  layer(o) { o.traverse(c => c.layers.enable(1)); }
+  // le héros est aussi sur le calque 1 (passes de la silhouette) : seulement ses pièces opaques (l'aura, son halo
+  // au sol et ses étincelles, transparents, dessineraient sinon un grand rectangle bleu derrière le chemin)
+  layer(o) { o.traverse(c => { if (c.isMesh && !c.material?.transparent) c.layers.enable(1); else c.layers.disable(1); }); }
   xray() {
     const R = this.renderer, sc = this.scene, cam = this.camera, run = this.run;
     if (run.dying || !this.hero.root.visible) return;
@@ -194,19 +217,29 @@ export class Gfx {
     else if (ev.type === 'kill') this.pops.push({ e: ev.e, t: 0, max: ev.e.boss ? 0.5 : 0.16, x: ev.e.x, y: ev.e.y });
     else if (ev.type === 'elite' && ev.e) ev.e.g_new = 1;
     else if (ev.type === 'enemyDash' || ev.type === 'bossDash') ev.e.g_trail = 0.5;
+    else if (ev.type === 'director') this.phase = ev.phase;
   }
 
   // ambiance : la folie (chrono écoulé) rougit le ciel et la brume ; lampe du héros dans les mondes sombres
+  // pic de la horde (rythme des vagues) : lumière un peu plus chaude et plus sombre, le temps du pic
   mood(dt) {
     const run = this.run, L = this.look, ot = run.overtime > 0 ? Math.min(1, 0.35 + (run.otLevel || 1) * 0.09) : 0;
     this.otK = (this.otK || 0) + (ot - (this.otK || 0)) * Math.min(1, dt * 2);
-    const k = this.otK;
+    const sp = this.phase === 'spike' && !ot ? 1 : 0;
+    this.spK = (this.spK || 0) + (sp - (this.spK || 0)) * Math.min(1, dt * 1.5);
+    const k = this.otK, s = this.spK;
     const fogT = col(L.fog), red = col('#5a0a10');
-    this.scene.fog.color.copy(fogT).lerp(red, k * 0.75);
+    this.scene.fog.color.copy(fogT).lerp(red, k * 0.75 + s * 0.12);
     this.scene.background.copy(this.scene.fog.color);
-    this.hemi.color.copy(col(L.sky)).lerp(col('#ff7a5a'), k * 0.55);
-    this.hemi.intensity = L.hemi * (1 - k * 0.15);
-    this.sun.color.copy(col(L.sun)).lerp(col('#ff6a4a'), k * 0.6);
+    this.hemi.color.copy(col(L.sky)).lerp(col('#ff7a5a'), k * 0.55 + s * 0.15);
+    this.hemi.intensity = L.hemi * (1 - k * 0.22 - s * 0.06);
+    this.sun.color.copy(col(L.sun)).lerp(col('#ff6a4a'), k * 0.6 + s * 0.15);
+    this.sun.intensity = L.sunI * (1 - k * 0.1);
+    // folie : le brouillard se resserre, le bord des monstres rougeoie
+    const f = this.scene.fog, far = this.D * (L.dark ? 2.0 : 2.6) / (L.fogK || 1);
+    f.far = far * (1 - k * 0.22); f.near = this.D * 0.92 * (1 - k * 0.2);
+    RIM.c.value.copy(col(L.rim || '#fff4e0')).lerp(col('#ff4a2a'), k * 0.8);
+    RIM.w.value = (L.rimW ?? 0.35) + k * 0.3;
     if (this.lamp) { const p = run.p; this.lamp.position.set(p.x * S, 5, p.y * S + 2.5); }
   }
 
@@ -247,18 +280,26 @@ export class Gfx {
   // ---------- Monstres (instanciés par type) ----------
   drawMonsters(dt) {
     const run = this.run, t = this.t, s = this.ms, fx = this.fx, cx = this.cam.x, cy = this.cam.y;
-    for (const P of this.pools.values()) P.begin();
+    // foule (beaucoup de monstres à l'écran) : modèles allégés, avec hystérésis pour ne pas clignoter
+    const lod = this.lodOn = this.nVis > 120 ? true : this.nVis < 85 ? false : !!this.lodOn;
+    for (const P of this.pools.values()) { P.begin(); P.useLo = lod; }
     const ot = run.overtime > 0;
+    let nVis = 0;
     for (const e of run.enemies) {
       if (e.dead) continue;
       const ex = e.x - cx, ey = e.y - cy;
-      if (ex < -420 || ex > 420 || ey < -980 || ey > 640) continue; // hors du champ
+      if (ex < -400 || ex > 400 || ey < -900 || ey > 640) continue; // hors du champ
+      nVis++;
       if (e.burrowed && e.jumpH < -40) { fx.mound(e); continue; }
       const P = this.pool(e.def, e.boss ? 'b' : e.elite ? 'e' : 'n');
       const body = e.def.body, age = run.time - e.born;
       let up = e.fly * 0.9, sq = e.g_sq || 0;
       if (e.fly) up += Math.sin(e.bob * 0.45) * 3;
       if (e.jumpH > 0) up += e.jumpH; else if (e.jumpH < 0) up += e.jumpH * 0.12;
+      if (e.g_mini > 0) { // le champion tombe du ciel puis fend le sol
+        e.g_mini -= dt * 2.4;
+        if (e.g_mini <= 0) fx.miniLand(e); else up += e.g_mini * e.g_mini * 320;
+      }
       if (sq > 0) e.g_sq = Math.max(0, sq - dt * 9);
       let k = e.r / 16;
       if (age < 0.3) { k *= backOut(clamp(age / 0.3, 0, 1)); if (!e.g_sp) { e.g_sp = 1; fx.puff(e.x, e.y, 3, e.r * 0.5, 0.45); } }
@@ -292,6 +333,7 @@ export class Gfx {
       P.add(e, s);
     }
     for (const P of this.pools.values()) P.end();
+    this.nVis = nVis;
   }
 
   dispose() {
@@ -305,6 +347,7 @@ export class Gfx {
       this.renderer.dispose();
       this.renderer.forceContextLoss?.();
     } catch (e) { /* rien */ }
+    RIM.c.value.set('#fff4e0'); RIM.w.value = 0.35; RIM.d.value = 0; // menus : reflet neutre
     this.c3.remove();
   }
 }

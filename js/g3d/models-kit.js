@@ -44,6 +44,27 @@ function wedge() { // prisme triangulaire (oreilles, dents, piquants plats) : ar
   const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false }); g.translate(0, 0, -0.5);
   return g;
 }
+// version allégée d'une primitive (monstres en très grand nombre) : moins de facettes, mêmes proportions
+const LOD = new Map();
+export function lodKey(key) {
+  let r = LOD.get(key);
+  if (r) return r;
+  const [k, a, b, c] = key.split(':'), n = (v, d) => +v || d;
+  switch (k) {
+    case 'rbox': r = 'box'; break;
+    case 'sph': r = `sph:${Math.max(4, n(a, 8) - 2)}:${Math.max(3, n(b, 6) - 2)}`; break;
+    case 'hemi': r = `hemi:${Math.max(5, n(a, 8) - 2)}:${Math.max(2, n(b, 4) - 1)}`; break;
+    case 'cyl': r = `cyl:${Math.max(4, n(a, 8) - 3)}`; break;
+    case 'cone': r = `cone:${Math.max(3, n(a, 6) - 1)}`; break;
+    case 'frust': r = `frust:${a}:${b}:${Math.max(4, n(c, 8) - 3)}`; break;
+    case 'tor': r = `tor:${n(a, 0.1)}:${Math.max(3, n(b, 4) - 1)}:${Math.max(6, n(c, 12) - 4)}`; break;
+    case 'cap': r = `cap:${n(a, 1)}:${Math.max(4, n(b, 6) - 2)}`; break;
+    case 'ico': r = 'ico:0'; break;
+    default: r = key;
+  }
+  LOD.set(key, r);
+  return r;
+}
 export function prim(key) {
   let g = PRIM.get(key);
   if (g) return g;
@@ -99,7 +120,7 @@ export class Shape {
   }
   // ajoute une primitive : grad = assombrit le bas (volume), glow = émission (0..1+)
   add(key, color, m, o = {}) {
-    const g = prim(key), P = g.attributes.position, grad = o.grad ?? 0.2, glow = o.glow || 0, cu = this.cur;
+    const g = prim(this.lod ? lodKey(key) : key), P = g.attributes.position, grad = o.grad ?? 0.2, glow = o.glow || 0, cu = this.cur;
     _c.set(color);
     if (this.tint) _c.lerp(_c2.set(this.tint[0]), this.tint[1]);
     const v = new THREE.Vector3();
@@ -236,7 +257,10 @@ vGlow = aA.w * uGlow;
 #endif`;
 const FCOMMON = `#include <common>
 varying float vGlow;
-varying vec4 vFx;`;
+varying vec4 vFx;
+uniform vec3 uRimC;
+uniform float uRimW;
+uniform float uRimD;`;
 const FCOLOR = `#include <color_fragment>
 {
   vec3 c = diffuseColor.rgb;
@@ -249,13 +273,16 @@ const FEMIS = `#include <emissivemap_fragment>
 totalEmissiveRadiance += diffuseColor.rgb * vGlow + vec3(0.95, 0.95, 0.9) * vFx.x * 0.6 + vec3(0.25, 0.02, 0.0) * vFx.z * 0.35;`;
 const FRIM = `{
   float lobR = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
-  outgoingLight += diffuseColor.rgb * (lobR * lobR * lobR) * LOB_RIM;
+  outgoingLight *= 1.0 - uRimD * smoothstep(0.72, 0.97, lobR); // faces rasantes assombries : silhouette lisible sur sol clair
+  outgoingLight += mix(diffuseColor.rgb, uRimC, uRimW) * (lobR * lobR * lobR) * LOB_RIM;
 }
 #include <opaque_fragment>`;
 
+// reflet de bord partagé par tous les personnages : couleur et part de cette couleur (le moteur la règle par monde)
+export const RIM = { c: { value: new THREE.Color('#fff4e0') }, w: { value: 0.35 }, d: { value: 0 } };
 export function charMaterial({ anim = false, alphaHash = false, rim = 0.55, parts = null } = {}) {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, alphaHash });
-  const U = { uFx: { value: new THREE.Vector4(0, 0, 0, 1) }, uGlow: { value: 1 }, uBody: { value: new THREE.Vector4(0, 0, 0, 0) } };
+  const U = { uFx: { value: new THREE.Vector4(0, 0, 0, 1) }, uGlow: { value: 1 }, uBody: { value: new THREE.Vector4(0, 0, 0, 0) }, uRimC: RIM.c, uRimW: RIM.w, uRimD: RIM.d };
   if (anim) { const P = parts || [0, 1, 2, 3].map(() => Array.from({ length: NPART }, () => new THREE.Vector4())); U.uPA = { value: P[0] }; U.uPB = { value: P[1] }; U.uPC = { value: P[2] }; U.uPD = { value: P[3] }; }
   m.userData.U = U;
   m.defines = { LOB_RIM: rim.toFixed(3) };
@@ -266,7 +293,7 @@ export function charMaterial({ anim = false, alphaHash = false, rim = 0.55, part
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', FCOMMON).replace('#include <color_fragment>', FCOLOR)
       .replace('#include <emissivemap_fragment>', FEMIS).replace('#include <opaque_fragment>', FRIM);
   };
-  m.customProgramCacheKey = () => 'lobchar1';
+  m.customProgramCacheKey = () => 'lobchar3';
   return m;
 }
 
