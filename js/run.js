@@ -373,7 +373,7 @@ export class Run {
   // vol de vie effectif (Frénésie sanglante : doublé sous 50 % de PV, au moins +4 %), plafonné ; x = bonus de l'arme qui frappe
   lsNow(x = 0) {
     const p = this.p; let ls = p.lifesteal + x;
-    if (this.leg.blood && p.hp < p.maxHp * 0.5) ls = Math.max(ls * 2, ls + 0.04);
+    if (this.leg.blood && p.hp < p.maxHp * 0.5) ls = Math.max(ls * (1 + this.leg.blood), ls + 0.04 * this.leg.blood); // deux objets : triplé
     return Math.min(LS.max, ls);
   }
   // soins de l'équipement : vol de vie (au plus LS.rate × vol de vie des PV max par seconde, plafond LS.cap, ×1,5 en Frénésie
