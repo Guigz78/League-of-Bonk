@@ -656,18 +656,22 @@ export class Fx {
     out[0] = u * u * o.ax + 2 * u * s * mx + s * s * hx; out[1] = u * u * o.ay + 2 * u * s * my + s * s * hy; out[2] = u * u * o.az + 2 * u * s * mz + s * s * hz;
   }
   bloodFx(dt) {
-    const p = this.run.p, hx = p.x, hy = p.y, hz = 24 + Math.max(0, p.h), P = BP, Q = BQ;
+    const p = this.run.p, hx = p.x, hy = p.y, hz = 24 + Math.max(0, p.h), P = BP;
     for (const o of this.blood) {
       if (!o.on) continue;
       o.t += dt; if (o.t < 0) continue;
       const k = o.t / o.max;
       if (k >= 1) { o.on = 0; this.bloodHit = 0.28; continue; }
       const s = k * (0.35 + 0.65 * k); // part vite du monstre, accélère vers le héros
-      // petite goutte vive et longue traînée sombre (rien à voir avec les grosses boules roses des tirs ennemis)
-      this.bloodAt(o, s, hx, hy, hz, P); this.bloodAt(o, Math.max(0, s - 0.2), hx, hy, hz, Q);
-      this.line(P[0] * S, P[2] * S, P[1] * S, Q[0] * S, Q[2] * S, Q[1] * S, 0.2, '#c8001e', 0.8);
-      this.glow(P[0], P[1], P[2], 6.5, '#ff1f3a', 0.8);
-      this.glow(P[0], P[1], P[2], 2.4, '#ffe0e6', 1);
+      // filet de gouttes de sang (petits cubes cramoisis non éclairés, façon voxel, qui tournent) avec un léger halo :
+      // rien à voir avec les grosses boules roses des tirs ennemis
+      for (let j = 0; j < 3; j++) {
+        this.bloodAt(o, Math.max(0, s - j * 0.07), hx, hy, hz, P);
+        const i = this.cuB.put(P[0] * S, P[2] * S, P[1] * S, o.t * 14 + j, (7 - j * 1.8) * S);
+        this.cuB.tint(i, col(j ? '#a8001c' : '#e8102e'));
+      }
+      this.bloodAt(o, s, hx, hy, hz, P);
+      this.glow(P[0], P[1], P[2], 9, '#ff1f3a', 0.5);
     }
     // arrivée : petit anneau cramoisi qui s'ouvre aux pieds du héros et lueur sur sa poitrine
     if (this.bloodHit > 0) {
@@ -798,7 +802,7 @@ export class Fx {
   }
 }
 
-const BP = [0, 0, 0], BQ = [0, 0, 0]; // positions des orbes de sang (réutilisées)
+const BP = [0, 0, 0]; // position d'une goutte de sang (réutilisée)
 
 // ligne brisée d'un éclair (points 3D en unités)
 export function zigzag(x0, y0, z0, x1, y1, z1, n, amp) {

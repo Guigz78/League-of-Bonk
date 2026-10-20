@@ -45,9 +45,11 @@ const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
 const SWEEP_LEN = 270, BOSS_WAVE = 300; // portées limitées du rayon et des ondes du boss : on esquive en s'éloignant
 const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', 'Néant'];
 // Vol de vie (exporté : le simulateur d'équilibrage peut le modifier). Soin par seconde plafonné à rate × vol de vie
-// (en part des PV max, au plus cap) : plus on en a, plus il soigne, même dans une horde. max = plafond du vol de vie,
-// base = talent de tous les champions, dag = en plus sur les coups des dagues évoluées (Mille lames)
-export const LS = { cap: 0.07, rate: 0.5, max: 0.35, base: 0.015, dag: 0.06 };
+// (en part des PV max, au plus cap = 6 %/s, atteint vers 30 %) : plus on en a, plus il soigne, même dans une horde.
+// max = plafond du vol de vie, base = talent de tous les champions, dag = en plus sur les coups des dagues évoluées
+// (Mille lames), sun = Cœur de soleil (aura évoluée, qui soigne en brûlant) : relève le plafond comme ce vol de vie.
+// Équilibrage (simulateur, 144 parties) : boss du monde 1 vaincu 85 %, monde 2 54 % (sans vol de vie : 80 % et 48 %).
+export const LS = { cap: 0.06, rate: 0.2, max: 0.35, base: 0.01, dag: 0.06, sun: 0.2 };
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
 const NB = ' ';
@@ -449,7 +451,7 @@ export class Run {
     const p = this.p, w = p.weapons.find(x => x.id === id), E = WEAPON_EVOS[id];
     if (!w || w.evo || !E) return;
     w.evo = true; w.r = 3; w.t = Math.min(w.t, 0.3); w.orbs = null;
-    if (id === 'daggers' || id === 'aura') this.lsX += id === 'daggers' ? LS.dag : 0.08; // Mille lames, Cœur de soleil : comptent dans le soin par seconde
+    if (id === 'daggers' || id === 'aura') this.lsX += id === 'daggers' ? LS.dag : LS.sun; // Mille lames, Cœur de soleil : comptent dans le soin par seconde
     this.evoFlash = Math.max(this.evoFlash, 0.9); p.inv = Math.max(p.inv, 1.5);
     this.burst(p.x, p.y, 40, 40, '#ffe48a', 4);
     this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 260, life: 0.7, max: 0.7, color: '#ffd54a' });
