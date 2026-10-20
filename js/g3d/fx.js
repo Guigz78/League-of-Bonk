@@ -4,7 +4,7 @@
 // par objet et par image. Ne modifie jamais la partie.
 import { THREE, S, TAU, PITCH, clamp, rand, easeOut, backOut, col, shade, Build, G, T, lowpoly, Pool, RingPool, LanePool, alphaMat, ADD, TX, billboardGeo, pillarGeo, flatGeo } from './kit.js';
 import { TOTEMS } from '../data.js';
-import { LOOT_GLOW } from '../g2d/items.js';
+import { LOOT_GLOW } from './tex2d.js';
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon

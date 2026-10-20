@@ -1,4 +1,4 @@
-// Moteur façon Megabonk / PokéBonk (rendu 2D vu de dessus) : monde ouvert, hordes, armes automatiques,
+// Moteur façon Megabonk / PokéBonk (monde plat vu de dessus, rendu 3D par js/g3d) : monde ouvert, hordes, armes automatiques,
 // évolutions du champion, autels, coffres, boss géants. Pas de saut : toute attaque s'évite en se déplaçant.
 // Difficulté : niveaux Normal / Difficile / Cauchemar par zone, comportements par type de monstre
 // (chaque attaque spéciale est annoncée par l'événement 'enemyTelegraph' avant d'agir), élites à pouvoirs,

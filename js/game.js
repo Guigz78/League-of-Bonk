@@ -6,7 +6,7 @@ import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addIte
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
   buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
 import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
-import { heroURL, creatureURL, mountPreview, zoneBannerURL } from './visuals.js';
+import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported } from './visuals.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
 import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } from './ui.js';
@@ -24,9 +24,21 @@ let loginShown = '';
 // ---------- Démarrage ----------
 export function boot() {
   cloud.onChange(() => { if (!battle) refreshTopbar(); });
+  if (!supported()) setTimeout(() => toast(`${iconImg('cube', 16)} WebGL 2 indisponible : <b>mettez à jour iOS / Safari</b> pour jouer`, 6000), 600);
   if (!save.cls) return classSelect(true);
   home();
   autoLogin();
+}
+
+// appareil sans WebGL 2 (iOS trop ancien) : le jeu en 3D ne peut pas s'afficher, on le dit au lieu de planter
+function noWebGL() {
+  return modal({
+    title: `${iconImg('cube', 22)} Affichage impossible`,
+    body: `<p>Votre appareil ne peut pas afficher le jeu : <b>WebGL 2</b> est nécessaire.</p>
+      <p class="muted set-note">Mettez à jour iOS / Safari (Réglages › Général › Mise à jour logicielle), puis relancez le jeu.</p>`,
+    buttons: [{ label: 'Compris', cls: 'primary', value: true }],
+    dismissable: true,
+  });
 }
 
 // récompense de connexion : proposée une fois par jour à l'arrivée sur l'accueil
@@ -534,6 +546,7 @@ let run = null;
 let runBoosts = [];
 
 function startRun(z, diff = 0) {
+  if (!supported()) return noWebGL(); // rien n'est dépensé (bonus, partie comptée)
   diff = Math.max(0, Math.min(diff, maxDiff(z)));
   save.stats.runs++;
   const boosts = runBoosts = consumeBoosts(); // enregistre aussi la partie commencée
@@ -1704,7 +1717,6 @@ async function settings() {
     body: `<div id="${wrapId}">
       <h4 class="first">Jeu</h4>
       <div class="set-list">
-        ${row('cube', 'Graphismes', '3D façon arcade, ou 2D plus légère', seg('gfx', [['3d', '3D'], ['2d', '2D']]), true)}
         ${row('shake', 'Tremblements de l\'écran', '', seg('shake', [[0, 'Aucun'], [1, 'Faibles'], [2, 'Normaux']]), true)}
         ${row('numbers', 'Chiffres de dégâts', '', seg('numbers', [['all', 'Tous'], ['crit', 'Critiques'], ['none', 'Aucun']]), true)}
         ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
@@ -1730,7 +1742,7 @@ async function settings() {
   });
   // boutons internes
   const wrap = document.getElementById(wrapId);
-  const o = { gfx: S.gfx, shake: S.shake, numbers: S.numbers };
+  const o = { shake: S.shake, numbers: S.numbers };
   let action = null;
   wrap.addEventListener('click', e => {
     const sv = e.target.closest('[data-sv]');
@@ -1747,7 +1759,6 @@ async function settings() {
   });
   wrap.querySelector('#sJoy').addEventListener('input', e => { wrap.querySelector('#sJoyV').textContent = joyTxt(+e.target.value); });
   await p;
-  const was3d = S.gfx;
   S.sound = wrap.querySelector('#sSound').checked;
   S.vibrate = wrap.querySelector('#sVib').checked;
   S.lefty = wrap.querySelector('#sLefty').checked;
@@ -1756,7 +1767,6 @@ async function settings() {
   const mOn = wrap.querySelector('#sMus').checked;
   if (mOn !== S.music) { S.music = mOn; if (!mOn) stopMusic(); }
   persist({ touch: false });
-  if (was3d !== S.gfx) toast(`${iconImg('cube', 16)} Graphismes <b>${S.gfx === '2d' ? '2D' : '3D'}</b> activés`);
   if (action === 'login') return cloud.signIn();
   if (action === 'logout') {
     const ok = await modal({ title: 'Se déconnecter ?', body: '<p>Votre progression reste sur cet appareil et dans votre compte.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Se déconnecter', cls: 'primary', value: true }] });

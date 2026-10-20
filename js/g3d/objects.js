@@ -3,7 +3,7 @@
 // Lit l'état de la partie, ne le modifie jamais.
 import { THREE, S, TAU, clamp, rand, easeOut, backOut, col, shade, Build, G, T, lowpoly, Pool, TX, ADD } from './kit.js';
 import { TOTEMS } from '../data.js';
-import { LOOT_GLOW, swirlTex, rune } from '../g2d/items.js';
+import { LOOT_GLOW, swirlTex, rune } from './tex2d.js';
 
 const GEM = ['#4fb8ff', '#5ae87a', '#c06aff', '#ff4a6a'];
 const LOOT = [

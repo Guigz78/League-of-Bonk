@@ -5,7 +5,7 @@ import { HALF, TOTEMS } from '../data.js';
 import { save } from '../save.js';
 import { fmt } from '../ui.js';
 import { iconURL } from '../art.js';
-import { LOOT_GLOW, glowTex, shade as shadeHex } from '../g2d/items.js';
+import { LOOT_GLOW, glowTex, shade as shadeHex } from './tex2d.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -32,8 +32,6 @@ export class Overlay {
   constructor(gfx, canvas) {
     this.gfx = gfx; this.run = gfx.run; this.cv = canvas;
     this.g = canvas.getContext('2d');
-    // une toile déjà opaque (ancien rendu 2D) cacherait la 3D : on recopie alors l'image 3D dessous
-    this.opaque = this.g.getContextAttributes ? this.g.getContextAttributes().alpha === false : false;
     this.nums = []; this.numBy = new Map(); this.flyLoot = [];
     this.flashA = 0.55; this.flashC = '235,225,255'; this.edgeA = 0; this.edgeC = '255,40,40'; this.otPulse = 0; this.flashHurt = 0;
     this.icons = {};
@@ -87,8 +85,7 @@ export class Overlay {
     const g = this.g, gfx = this.gfx, run = this.run, p = run.p, vw = this.vw, vh = this.vh, t = gfx.t;
     this.dt = dt;
     g.setTransform(1, 0, 0, 1, 0, 0);
-    if (this.opaque) g.drawImage(gfx.c3, 0, 0, this.cv.width, this.cv.height);
-    else g.clearRect(0, 0, this.cv.width, this.cv.height);
+    g.clearRect(0, 0, this.cv.width, this.cv.height);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     // vignette douce permanente
     if (!this.vign || this.vign.w !== vw || this.vign.h !== vh) {

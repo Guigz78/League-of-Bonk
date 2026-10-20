@@ -30,9 +30,9 @@ export function freshSave() {
     boostSel: [null, null],
     pendingChests: [],
     achievements: {},
-    // options : graphismes 3D/2D, tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
-    // taille du joystick (0,8 à 1,3), gaucher (saut à droite)
-    settings: { sound: true, music: true, vibrate: true, gfx: '3d', shake: 2, numbers: 'all', joySize: 1, lefty: false },
+    // options : tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
+    // taille du joystick (0,8 à 1,3), gaucher (ultime à gauche)
+    settings: { sound: true, music: true, vibrate: true, shake: 2, numbers: 'all', joySize: 1, lefty: false },
     tutorialDone: false,
     lastZone: null,     // dernier monde lancé (bouton JOUER de l'accueil)
     daily: null,        // quêtes du jour : { day, quests: [{ id, n, tier, gold, base, claimed }] }
@@ -72,7 +72,7 @@ function migrate(s) {
 
 // options toujours valides (sauvegardes anciennes ou venues du cloud)
 function cleanSettings(o) {
-  o.gfx = o.gfx === '2d' ? '2d' : '3d';
+  delete o.gfx; // ancien choix 3D/2D : le jeu est désormais toujours en 3D
   o.shake = [0, 1, 2].includes(+o.shake) ? +o.shake : 2;
   o.numbers = ['all', 'crit', 'none'].includes(o.numbers) ? o.numbers : 'all';
   o.joySize = Math.max(0.8, Math.min(1.3, +o.joySize || 1));

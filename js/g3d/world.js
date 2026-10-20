@@ -1,13 +1,13 @@
 // Monde 3D low-poly façon Megabonk : sol à facettes colorées + texture pixel, chemins, rivières, lacs gelés,
 // brume, failles du Néant, décor instancié (arbres, rochers, buissons, tours…), touffes d'herbe et fleurs,
-// collines au-delà du bord de la carte, particules d'ambiance. Tracé identique au rendu 2D (mêmes graines).
+// collines au-delà du bord de la carte, particules d'ambiance. Plan du monde (thème, tracés) : layout.js.
 import { THREE, S, TAU, Build, G, T, lowpoly, col, shade, clamp, tex, TX, billboardGeo, flatGeo, ADD, Pool } from './kit.js';
 import { HALF } from '../data.js';
 import { rng } from '../pixel.js';
-import { THEMES, World2D } from '../g2d/world.js';
+import { THEMES, makeFeatures, onFeature } from './layout.js';
 
 // ambiance 3D par thème : fond/brouillard, ciel et sol de la lumière d'ambiance, soleil, reflet de bord des
-// personnages (rim, rimW) ; t = couleurs du thème 2D remplacées en 3D (sol un peu plus profond et moins saturé
+// personnages (rim, rimW) ; t = couleurs du thème (layout.js) remplacées en 3D (sol un peu plus profond et moins saturé
 // que les personnages, chemins plus sobres : héros et monstres ressortent mieux, comme sur le concept)
 export const LOOK = {
   lane:   { fog: '#a4dcf8', fogK: 1, sky: '#fff4dc', grd: '#40602a', hemi: 1.42, sun: '#fff0d0', sunI: 2.2, edge: '#3e6a2c', hill: '#4a8a34', rim: '#fff2d8', rimW: 0.4,
@@ -297,8 +297,7 @@ export class World3D {
     this.T = { ...(THEMES[zone.bg] || THEMES.lane), ...(this.L.t || {}) };
     this.group = new THREE.Group();
     scene.add(this.group);
-    this.r = rng('w2d' + zone.id);
-    this.features = banner || World2D.prototype.makeFeatures.call(this);
+    this.features = banner || makeFeatures(zone.bg, rng('w2d' + zone.id));
     this.avoid = avoid;
     this.mats = [];
     this.t = 0;
@@ -312,7 +311,7 @@ export class World3D {
     else this.refresh(banner.cx, banner.cy, banner.wx, banner.up, banner.down);
   }
 
-  onFeature(x, y, pad = 0) { return World2D.prototype.onFeature.call(this, x, y, pad); }
+  onFeature(x, y, pad = 0) { return onFeature(this.features, x, y, pad); }
 
   // sol : grande grille à facettes, couleurs de l'herbe nuancées par un bruit, collines au-delà du bord
   buildGround() {
@@ -456,7 +455,7 @@ export class World3D {
     return [pts[i][0] - dy / l * off + (r - 0.5) * 8, pts[i][1] + dx / l * off + (hash2(off, i) - 0.5) * 8, s * (0.8 + r * 0.5), r * 6];
   }
 
-  // grand décor : mêmes règles de placement que le rendu 2D (cellules de 256, évite les points d'intérêt).
+  // grand décor : cellules de 256 tirées de graines fixes, hors des chemins et loin des points d'intérêt.
   // Tout est généré au départ, mais seules les cellules autour de la caméra remplissent les instances.
   buildProps(banner) {
     const T0 = this.T, kinds = T0.props.map(p => p[0]), tot = T0.props.reduce((s, p) => s + p[1], 0);

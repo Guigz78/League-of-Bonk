@@ -1,14 +1,13 @@
-// Choix du rendu : 3D low-poly façon Megabonk (caméra fixe) par défaut, 2D cartoon en secours
-// (réglage « Graphismes » ou appareil sans WebGL). Le reste du jeu passe uniquement par ce module.
-import { save } from './save.js';
-import * as V2 from './g2d/index.js';
+// Rendu du jeu : 3D low-poly façon Megabonk (caméra fixe, js/g3d). Le reste du jeu passe uniquement par ce module.
+// Sans WebGL 2 (iOS trop ancien) : game.js refuse la partie avec un message ; portraits et bandeaux sont alors une
+// image vide et les aperçus animés ne font rien (jamais d'erreur dans les menus).
 import * as V3 from './g3d/index.js';
 
-export function use3D() { return save.settings.gfx !== '2d' && V3.supported(); }
-const V = () => (use3D() ? V3 : V2);
+export const supported = V3.supported;
+const NONE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // 1 px transparent
 
-export function createGfx(run, canvas) { return new (V().Gfx)(run, canvas); }
-export function heroURL(...a) { return V().heroURL(...a); }
-export function creatureURL(...a) { return V().creatureURL(...a); }
-export function mountPreview(...a) { return V().mountPreview(...a); }
-export function zoneBannerURL(...a) { return V().zoneBannerURL(...a); }
+export function createGfx(run, canvas) { return new V3.Gfx(run, canvas); }
+export function heroURL(...a) { return (supported() && V3.heroURL(...a)) || NONE; }
+export function creatureURL(...a) { return (supported() && V3.creatureURL(...a)) || NONE; }
+export function mountPreview(...a) { if (supported()) V3.mountPreview(...a); }
+export function zoneBannerURL(...a) { return (supported() && V3.zoneBannerURL(...a)) || NONE; }

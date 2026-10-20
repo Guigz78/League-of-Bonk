@@ -1,5 +1,5 @@
 // Portraits 3D des menus : héros, monstres, boss et familiers rendus une fois (contexte WebGL partagé hors écran)
-// puis gardés en cache sous forme d'URL d'image. Mêmes signatures que le rendu 2D (js/g2d/sprites.js).
+// puis gardés en cache sous forme d'URL d'image (chaîne vide si le rendu échoue).
 import { THREE, PI } from './models-kit.js';
 import { heroModel, MonsterPool, petModel } from './models.js';
 import { ZONES, PETS } from '../data.js';
