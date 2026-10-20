@@ -388,7 +388,7 @@ export class Run {
       this.lsPool = 0;
     }
     this.lsT -= dt; this.lsGlow = Math.max(0, this.lsGlow - dt);
-    if (this.lsT <= 0 && this.lsShown >= 1) { this.text(p.x + rand(-8, 8), p.y, 60, '+' + fmt(this.lsShown), '#ff4d6d', 1.05); this.lsShown = 0; this.lsT = 0.7; this.lsGlow = 0.32; }
+    if (this.lsT <= 0 && this.lsShown >= 1) { this.text(p.x + rand(-8, 8), p.y, 72, '+' + fmt(this.lsShown), '#ff4d6d', 1.15); this.lsShown = 0; this.lsT = 0.7; this.lsGlow = 0.32; }
     if (this.leg.bubble && !p.shieldHit) {
       this.bubbleT -= dt;
       if (this.bubbleT <= 0) { p.shieldHit = 1; this.bubbleT = 10 / this.leg.bubble; this.emit('legend', { kind: 'bubble', x: p.x, y: p.y }); }

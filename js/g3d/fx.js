@@ -641,7 +641,7 @@ export class Fx {
     if (B.visible) { B.position.set(p.x * S, 1.2 + p.h * S, p.y * S); B.scale.setScalar(1.55 + Math.sin(t * 4) * 0.05); B.material.opacity = 0.2 + Math.sin(t * 4) * 0.06; }
   }
 
-  // vol de vie : 2 orbes de sang partent du monstre touché et filent en cloche vers le héros (même s'il bouge)
+  // vol de vie : 2 orbes (filets de gouttes de sang) partent du monstre touché et filent en cloche vers le héros (même s'il bouge)
   bloodOrbs(ev) {
     for (let k = 0; k < 2; k++) {
       const o = this.blood[this.bloodI], a = Math.random() * TAU, r = rand(18, 46);
