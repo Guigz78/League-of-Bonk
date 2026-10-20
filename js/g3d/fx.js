@@ -68,6 +68,9 @@ export class Fx {
     // particules propres au rendu
     this.sparks = []; this.stars = []; this.puffs = []; this.debris = []; this.rings = []; this.pillars = []; this.bursts = []; this.bolts = []; this.rays = []; this.decals = []; this.teles = []; this.embers = [];
     this.halos = []; this.shards = []; this.orbPrev = []; this.evoW = {}; this.hitN = 0;
+    // orbes de sang du vol de vie : réserve fixe réutilisée en boucle (aucune allocation pendant la partie)
+    this.blood = Array.from({ length: 24 }, () => ({ on: 0, t: 0, max: 0.45, ax: 0, ay: 0, az: 0, cx: 0, cy: 0, cz: 0 }));
+    this.bloodI = 0; this.bloodHit = 0;
     this.lvl = 0; this.evo = 0;
     this.tc = new THREE.Color();
     // arrivée dans le monde par le portail
@@ -206,6 +209,7 @@ export class Fx {
       case 'lootDrop': this.puff(ev.x, ev.y, 5, 12, 0.6); this.ring(ev.x, ev.y, 6, 60, LOOT_GLOW[ev.tier] || W, 5, 0.4, -0.5); break;
       case 'overtime': for (let i = 0; i < 3; i++) this.ring(p.x, p.y, 30, 360 + i * 120, '#ff3a2a', 12, 0.8, -i * 0.15); break;
       case 'legend': this.legendFx(ev); break;
+      case 'lifesteal': this.bloodOrbs(ev); break;
       case 'block': this.ring(p.x, p.y, 20, 46, '#a8d8ff', 5, 0.3, 0, 20); break;
       case 'dodge': this.puff(p.x, p.y, 4, 10, 0.4, '#d8f0ff'); break;
       case 'chest': this.bursts.push({ x: ev.x, y: ev.y, h: 16, r: 120, t: 0, max: 0.7, c: '#ffd54a' }); this.burstStars(ev.x, ev.y, 20, 16, '#ffd54a', 220); break;
@@ -395,6 +399,7 @@ export class Fx {
     if (tg && !tg.dead && !tg.burrowed && !run.dying) this.ringAt(tg.x, tg.y, tg.r * 1.45 + 6, '#ff3a3a', 0.85, 0.09, 0.05, 1, t * 1.4, 4, 0, 0.45);
     this.alerts(dt);
     this.heroFx(dt);
+    this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
     for (const q of run.parts) {
@@ -423,7 +428,7 @@ export class Fx {
     for (const s of run.shots) {
       const a = Math.atan2(s.vy || 0, s.vx || 0), y = (s.z || 26) * S;
       if (s.type === 'arrow') { this.arrow.put(s.x * S, y, s.y * S, -a, 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * (EW.arrows ? 60 : 40)) * S, y, (s.y - Math.sin(a) * (EW.arrows ? 60 : 40)) * S, EW.arrows ? 0.3 : 0.22, EW.arrows ? '#7ae8ff' : '#a0dcff', 0.6); }
-      else if (s.type === 'dagger') { const ev = EW.daggers, L = ev ? 54 : 30; this.dagger.put(s.x * S, y, s.y * S, -a, ev ? 1.25 : 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * L) * S, y, (s.y - Math.sin(a) * L) * S, ev ? 0.3 : 0.18, ev ? '#ffd54a' : W, ev ? 0.6 : 0.45); }
+      else if (s.type === 'dagger') { const ev = EW.daggers, L = ev ? 54 : 30; this.dagger.put(s.x * S, y, s.y * S, -a, ev ? 1.25 : 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * L) * S, y, (s.y - Math.sin(a) * L) * S, ev ? 0.3 : 0.18, ev ? '#ff4d6d' : W, ev ? 0.6 : 0.45); } // Mille lames : traînée de sang
       else if (s.type === 'boom') {
         const k = (s.r || 15) / 15, ev = EW.boomerang;
         this.boom.put(s.x * S, 0.9, s.y * S, -(s.spin || 0), k * 1.1); this.glow(s.x, s.y, 18, 22 * k, '#ffd54a', 0.5); this.shadow(s.x, s.y, 26 * k, 0.25);
@@ -636,6 +641,47 @@ export class Fx {
     if (B.visible) { B.position.set(p.x * S, 1.2 + p.h * S, p.y * S); B.scale.setScalar(1.55 + Math.sin(t * 4) * 0.05); B.material.opacity = 0.2 + Math.sin(t * 4) * 0.06; }
   }
 
+  // vol de vie : 2 orbes (filets de gouttes de sang) partent du monstre touché et filent en cloche vers le héros (même s'il bouge)
+  bloodOrbs(ev) {
+    for (let k = 0; k < 2; k++) {
+      const o = this.blood[this.bloodI], a = Math.random() * TAU, r = rand(18, 46);
+      this.bloodI = (this.bloodI + 1) % this.blood.length;
+      o.on = 1; o.t = -k * 0.07; o.max = rand(0.36, 0.48);
+      o.ax = ev.x; o.ay = ev.y; o.az = ev.h || 20; o.cx = Math.cos(a) * r; o.cy = Math.sin(a) * r * 0.7; o.cz = rand(70, 110);
+    }
+  }
+  // courbe de Bézier : monstre -> point de contrôle (au-dessus, décalé) -> poitrine du héros ; s = avancement (0..1)
+  bloodAt(o, s, hx, hy, hz, out) {
+    const u = 1 - s, mx = (o.ax + hx) / 2 + o.cx, my = (o.ay + hy) / 2 + o.cy, mz = Math.max(o.az, hz) + o.cz;
+    out[0] = u * u * o.ax + 2 * u * s * mx + s * s * hx; out[1] = u * u * o.ay + 2 * u * s * my + s * s * hy; out[2] = u * u * o.az + 2 * u * s * mz + s * s * hz;
+  }
+  bloodFx(dt) {
+    const p = this.run.p, hx = p.x, hy = p.y, hz = 24 + Math.max(0, p.h), P = BP;
+    for (const o of this.blood) {
+      if (!o.on) continue;
+      o.t += dt; if (o.t < 0) continue;
+      const k = o.t / o.max;
+      if (k >= 1) { o.on = 0; this.bloodHit = 0.28; continue; }
+      const s = k * (0.35 + 0.65 * k); // part vite du monstre, accélère vers le héros
+      // filet de gouttes de sang (petits cubes cramoisis non éclairés, façon voxel, qui tournent) avec un léger halo :
+      // rien à voir avec les grosses boules roses des tirs ennemis
+      for (let j = 0; j < 3; j++) {
+        this.bloodAt(o, Math.max(0, s - j * 0.07), hx, hy, hz, P);
+        const i = this.cuB.put(P[0] * S, P[2] * S, P[1] * S, o.t * 14 + j, (7 - j * 1.8) * S);
+        this.cuB.tint(i, col(j ? '#a8001c' : '#e8102e'));
+      }
+      this.bloodAt(o, s, hx, hy, hz, P);
+      this.glow(P[0], P[1], P[2], 9, '#ff1f3a', 0.5);
+    }
+    // arrivée : petit anneau cramoisi qui s'ouvre aux pieds du héros et lueur sur sa poitrine
+    if (this.bloodHit > 0) {
+      this.bloodHit -= dt;
+      const a = clamp(this.bloodHit / 0.28, 0, 1);
+      this.ringAt(hx, hy, 16 + (1 - a) * 18, '#ff3a5a', a * 0.85, 0.18, 0, 1, 0, 0, 0, 0.6, true, 0.1);
+      this.glow(hx, hy, hz, 22, '#ff2a4a', a * 0.4);
+    }
+  }
+
   // particules propres au rendu
   particles(dt) {
     const g = this.gfx, t = g.t;
@@ -755,6 +801,8 @@ export class Fx {
     for (const m of this.mats) m.dispose();
   }
 }
+
+const BP = [0, 0, 0]; // position d'une goutte de sang (réutilisée)
 
 // ligne brisée d'un éclair (points 3D en unités)
 export function zigzag(x0, y0, z0, x1, y1, z1, n, amp) {
