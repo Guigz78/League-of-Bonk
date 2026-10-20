@@ -48,7 +48,8 @@ const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', '
 // (en part des PV max, au plus cap = 6 %/s, atteint vers 30 %) : plus on en a, plus il soigne, même dans une horde.
 // max = plafond du vol de vie, base = talent de tous les champions, dag = en plus sur les coups des dagues évoluées
 // (Mille lames), sun = Cœur de soleil (aura évoluée, qui soigne en brûlant) : relève le plafond comme ce vol de vie.
-// Équilibrage (simulateur, 144 parties) : boss du monde 1 vaincu 85 %, monde 2 54 % (sans vol de vie : 80 % et 48 %).
+// Équilibrage (simulateur, 312 parties) : boss du monde 1 vaincu 86 %, monde 2 51 % (sans ces ajouts : 85 % et 49 %) ;
+// bot qui prend le vol de vie en priorité (~21 %) : 83 % et 44 %, il tient mieux mais tue moins vite.
 export const LS = { cap: 0.06, rate: 0.2, max: 0.35, base: 0.01, dag: 0.06, sun: 0.2 };
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
