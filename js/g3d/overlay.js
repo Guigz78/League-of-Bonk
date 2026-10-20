@@ -12,6 +12,8 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const rand = (a, b) => a + Math.random() * (b - a);
 const FONT = 'ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif';
 const INK = '#14081e';
+// couleurs du système de design (interface carrée et sobre) : fond, filets, accent ambre, cyan
+const BG = 'rgba(10,13,20,.86)', LINE = 'rgba(255,255,255,.16)', ACC = '#f5b400', CY = '#3fd0ff';
 let LILITA = false;
 const tf = (px, w = 900) => (LILITA ? `700 ${Math.round(px * 1.12)}px 'Rajdhani', ${FONT}` : `${w} ${px}px ${FONT}`);
 try {
@@ -107,11 +109,11 @@ export class Overlay {
     const [hx, hy] = gfx.ws(p.x, p.y, Math.max(0, p.h));
     const ratio = clamp(p.hp / p.maxHp, 0, 1);
     // barre de vie du héros (sous ses pieds)
-    if (!run.dying) rbar(g, hx - 21, hy + 10, 42, 6, ratio, ratio < 0.3 ? '#ff5a4a' : '#5ae87a');
+    if (!run.dying) rbar(g, hx - 20, hy + 10, 40, 4, ratio, ratio < 0.3 ? '#ff4d5e' : '#3ddc84');
     // barres des élites
     for (const e of run.enemies) if (e.elite && !e.dead && !e.boss) {
       const [x, y, ok] = gfx.ws(e.x, e.y, e.r * 2.6 + e.fly);
-      if (ok && x > -30 && x < vw + 30 && y > -30 && y < vh + 30) rbar(g, x - 24, y - 4, 48, 6, clamp(e.hp / e.maxHp, 0, 1), '#c06aff');
+      if (ok && x > -30 && x < vw + 30 && y > -30 && y < vh + 30) rbar(g, x - 22, y - 4, 44, 4, clamp(e.hp / e.maxHp, 0, 1), e.mini ? ACC : '#a855f7');
     }
     // cible principale (réticule)
     const tg = run.target;
@@ -125,10 +127,9 @@ export class Overlay {
       const [x, y] = gfx.ws(c.x, c.y, 62);
       const ok = run.gold >= run.chestCost;
       g.font = tf(13);
-      const txt = `${run.chestCost} or`, w = g.measureText(txt).width + 18;
-      g.fillStyle = INK; rr(g, x - w / 2 - 1.5, y - 11.5, w + 3, 24, 12); g.fill();
-      g.fillStyle = ok ? '#2a3a7a' : '#4a1a2a'; rr(g, x - w / 2, y - 10, w, 20, 10); g.fill();
-      this.outText(g, txt, x, y + 1, ok ? '#ffd54a' : '#ff9a8a', 3);
+      const txt = `${run.chestCost} OR`, w = g.measureText(txt).width + 16;
+      panel(g, x - w / 2, y - 10, w, 20, 'rgba(10,13,20,.88)', ok ? 'rgba(245,180,0,.7)' : 'rgba(255,77,94,.6)', 5);
+      g.fillStyle = ok ? ACC : '#ff8a96'; g.fillText(txt, x, y + 1);
     }
     // chiffres de dégâts (les coups rapprochés sur un même monstre s'additionnent) : gros, blancs, cernés de noir
     const ppu = gfx.ppu();
@@ -217,13 +218,11 @@ export class Overlay {
       this.badge(g, x, y, 14, TOTEMS[T0.kind]?.color || '#ffffff', this.icons[T0.kind]);
     }
   }
+  // pastille carrée : fond sombre, cadre de la couleur du totem, icône au trait
   badge(g, x, y, r, c, img) {
-    g.fillStyle = INK; g.beginPath(); g.arc(x, y + 1.5, r + 2.4, 0, TAU); g.fill();
-    const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.45, 0, x, y, r);
-    gr.addColorStop(0, shadeHex(c, 0.45)); gr.addColorStop(0.6, c); gr.addColorStop(1, shadeHex(c, -0.35));
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.4; g.beginPath(); g.arc(x, y, r - 1.6, 0, TAU); g.stroke();
-    if (img && img.complete && img.naturalWidth) g.drawImage(img, x - r * 0.78, y - r * 0.8, r * 1.56, r * 1.56);
+    panel(g, x - r, y - r, r * 2, r * 2, BG, null, 4);
+    g.strokeStyle = c; g.lineWidth = 1.5; chamfer(g, x - r + 0.75, y - r + 0.75, r * 2 - 1.5, r * 2 - 1.5, 4); g.stroke();
+    if (img && img.complete && img.naturalWidth) g.drawImage(img, x - r * 0.72, y - r * 0.72, r * 1.44, r * 1.44);
   }
 
   // texte cerné de noir avec une petite ombre dessous
@@ -249,23 +248,18 @@ export class Overlay {
     const s = hot ? 1.08 + Math.abs(Math.sin(t * 16)) * 0.1 : 1 + Math.sin(t * 7) * 0.04;
     const [, top] = this.gfx.ws(run.p.x, run.p.y, 60 + run.p.h);
     const y = top - 26;
+    // panneau carré à angles coupés (ambre, rouge à l'approche de l'impact), flèche vers le haut, jauge du temps restant
     g.save(); g.translate(hx, y); g.scale(s, s);
     g.font = tf(19);
-    const label = 'SAUTEZ !', tw = g.measureText(label).width, W = tw + 52, H = 34, x0 = -W / 2;
-    const plate = () => { rr(g, x0, -H / 2, W, H, H / 2); g.moveTo(-8, H / 2 - 1); g.lineTo(0, H / 2 + 9); g.lineTo(8, H / 2 - 1); };
-    g.lineJoin = 'round';
-    g.fillStyle = INK; g.strokeStyle = INK; g.lineWidth = 5; plate(); g.fill(); g.stroke();
-    const gr = g.createLinearGradient(0, -H / 2, 0, H / 2);
-    gr.addColorStop(0, hot ? '#ff8a6a' : '#ffe27a'); gr.addColorStop(1, hot ? '#d81e2e' : '#f08a14');
-    g.fillStyle = gr; plate(); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.35)'; rr(g, x0 + 8, -H / 2 + 3, W - 16, 7, 3.5); g.fill();
-    const cx = x0 + 18, R = 10.5;
-    g.fillStyle = INK; g.beginPath(); g.arc(cx, 0, R + 2.5, 0, TAU); g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 4; g.beginPath(); g.arc(cx, 0, R - 1, 0, TAU); g.stroke();
-    g.strokeStyle = hot ? '#ff5a4a' : '#ffffff'; g.lineWidth = 4; g.beginPath(); g.arc(cx, 0, R - 1, -Math.PI / 2, -Math.PI / 2 + k * TAU); g.stroke();
-    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(cx, -6); g.lineTo(cx + 5, -1); g.lineTo(cx + 2, -1); g.lineTo(cx + 2, 5); g.lineTo(cx - 2, 5); g.lineTo(cx - 2, -1); g.lineTo(cx - 5, -1); g.closePath(); g.fill();
+    const label = 'SAUTEZ !', tw = g.measureText(label).width, W = tw + 46, H = 32, x0 = -W / 2, c = hot ? '#ff4d5e' : ACC;
+    g.beginPath(); g.moveTo(-7, H / 2); g.lineTo(0, H / 2 + 8); g.lineTo(7, H / 2); g.closePath(); g.fillStyle = c; g.fill();
+    panel(g, x0, -H / 2, W, H, c, 'rgba(6,8,13,.55)', 8);
+    g.fillStyle = 'rgba(6,8,13,.35)'; g.fillRect(x0 + 8, H / 2 - 5, W - 16, 3);
+    g.fillStyle = '#ffffff'; g.fillRect(x0 + 8, H / 2 - 5, (W - 16) * k, 3);
+    const cx = x0 + 16, ink = hot ? '#ffffff' : '#161000';
+    g.fillStyle = ink; g.beginPath(); g.moveTo(cx, -8); g.lineTo(cx + 6, -1); g.lineTo(cx + 2.2, -1); g.lineTo(cx + 2.2, 6); g.lineTo(cx - 2.2, 6); g.lineTo(cx - 2.2, -1); g.lineTo(cx - 6, -1); g.closePath(); g.fill();
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    this.outText(g, label, x0 + 34 + tw / 2, 1, '#ffffff', 4);
+    g.fillStyle = ink; g.fillText(label, x0 + 28 + tw / 2, -1);
     g.restore();
   }
 
@@ -281,18 +275,17 @@ export class Overlay {
       if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 4) * 5, '#d81e2e', '#ff8a5a', 'BOSS', 0.9);
     }
   }
+  // repère carré : étiquette sombre à angles coupés, liseré de couleur à gauche, flèche pleine vers le bas
   pin(g, x, y, c1, c2, label, s = 1) {
     g.save(); g.translate(x, y); g.scale(s, s);
-    const ar = new Path2D(); ar.moveTo(0, 18); ar.lineTo(-14, 2); ar.lineTo(-6, 2); ar.lineTo(-6, -8); ar.lineTo(6, -8); ar.lineTo(6, 2); ar.lineTo(14, 2); ar.closePath();
-    g.lineJoin = 'round'; g.strokeStyle = INK; g.lineWidth = 6; g.stroke(ar);
-    const gr = g.createLinearGradient(0, -8, 0, 18); gr.addColorStop(0, c2); gr.addColorStop(1, c1); g.fillStyle = gr; g.fill(ar);
-    g.font = tf(15); g.textAlign = 'center'; g.textBaseline = 'middle';
-    const w = g.measureText(label).width + 18;
-    g.fillStyle = INK; rr(g, -w / 2 - 2, -36, w + 4, 26, 13); g.fill();
-    const gb = g.createLinearGradient(0, -34, 0, -12); gb.addColorStop(0, c2); gb.addColorStop(1, c1);
-    g.fillStyle = gb; rr(g, -w / 2, -34, w, 22, 11); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.3)'; rr(g, -w / 2 + 5, -32, w - 10, 6, 3); g.fill();
-    this.outText(g, label, 0, -22.5, '#ffffff', 3.4);
+    g.lineJoin = 'miter';
+    g.beginPath(); g.moveTo(0, 14); g.lineTo(-10, 2); g.lineTo(10, 2); g.closePath();
+    g.lineWidth = 3; g.strokeStyle = 'rgba(6,8,13,.85)'; g.stroke(); g.fillStyle = c2; g.fill();
+    g.font = tf(14); g.textAlign = 'center'; g.textBaseline = 'middle';
+    const w = g.measureText(label).width + 22;
+    panel(g, -w / 2, -26, w, 22, BG, LINE, 6);
+    g.fillStyle = c1; g.fillRect(-w / 2, -26 + 6, 3, 16);
+    g.fillStyle = '#ffffff'; g.fillText(label, 2, -14.5);
     g.restore();
   }
 
@@ -344,9 +337,8 @@ export class Overlay {
       if (!off(o)) continue;
       const a = dirTo(o), [ax0, ay0] = toEdge(a), b = Math.sin(t * 6) * 2;
       g.save(); g.translate(ax0 - Math.cos(a) * b, ay0 - Math.sin(a) * b); g.rotate(a);
-      g.fillStyle = INK; g.beginPath(); g.moveTo(size + 4, 0); g.lineTo(-size * 0.7 - 3, -size * 0.8 - 3); g.lineTo(-size * 0.7 - 3, size * 0.8 + 3); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(6,8,13,.85)'; g.beginPath(); g.moveTo(size + 3.5, 0); g.lineTo(-size * 0.7 - 2.5, -size * 0.8 - 2.5); g.lineTo(-size * 0.7 - 2.5, size * 0.8 + 2.5); g.closePath(); g.fill();
       g.fillStyle = c; g.beginPath(); g.moveTo(size, 0); g.lineTo(-size * 0.7, -size * 0.8); g.lineTo(-size * 0.7, size * 0.8); g.closePath(); g.fill();
-      g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.moveTo(size * 0.6, -size * 0.1); g.lineTo(-size * 0.5, -size * 0.65); g.lineTo(-size * 0.5, -size * 0.2); g.closePath(); g.fill();
       g.restore();
     }
     // grande flèche vers le portail (ou l'autel du boss avant l'invocation)
@@ -375,33 +367,36 @@ export class Overlay {
     g.save(); g.translate(ax + Math.cos(a) * bb, ay + Math.sin(a) * bb); g.rotate(a); g.scale(s, s);
     g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55 + Math.sin(t * 7) * 0.2; g.drawImage(glowTex(c1), -40, -40, 80, 80);
     g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+    // flèche pleine à arêtes vives, liseré sombre, bande claire au centre (lisible sur tous les sols)
     const ar = new Path2D(); ar.moveTo(26, 0); ar.lineTo(2, -22); ar.lineTo(2, -10); ar.lineTo(-18, -10); ar.lineTo(-18, 10); ar.lineTo(2, 10); ar.lineTo(2, 22); ar.closePath();
-    g.strokeStyle = INK; g.lineWidth = 7; g.stroke(ar);
-    const gr = g.createLinearGradient(0, -22, 0, 22); gr.addColorStop(0, c2); gr.addColorStop(1, c1); g.fillStyle = gr; g.fill(ar);
-    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-14, -6); g.lineTo(5, -6); g.lineTo(5, -14); g.stroke();
+    g.lineJoin = 'miter'; g.strokeStyle = 'rgba(6,8,13,.9)'; g.lineWidth = 5; g.stroke(ar);
+    g.fillStyle = c1; g.fill(ar);
+    g.fillStyle = c2; g.beginPath(); g.moveTo(20, 0); g.lineTo(6, -13); g.lineTo(6, -4); g.lineTo(-14, -4); g.lineTo(-14, 4); g.lineTo(6, 4); g.lineTo(6, 13); g.closePath(); g.fill();
     g.restore();
-    // étiquette avec la distance, côté intérieur
+    // étiquette avec la distance, côté intérieur : panneau sombre à angles coupés, liseré de couleur
     const d = Math.round(Math.hypot(tg.x - p.x, tg.y - p.y) / 10) + ' m';
     g.font = tf(big ? 15 : 13); const w1 = g.measureText(label).width;
-    g.font = tf(12); const w2 = g.measureText(d).width;
-    const W = Math.max(w1, w2) + 20, H = 38;
+    g.font = tf(13); const w2 = g.measureText(d).width;
+    const W = Math.max(w1, w2) + 24, H = 38;
     const lo = big ? -56 : 58, lx = clamp(ax - Math.cos(a) * lo, W / 2 + 6, vw - W / 2 - 6), ly = clamp(ay - Math.sin(a) * (big ? -48 : 46), top - 30, big ? vh - 190 : bot + 10);
-    g.fillStyle = INK; rr(g, lx - W / 2 - 2, ly - H / 2 - 2, W + 4, H + 4, 11); g.fill();
-    const gb = g.createLinearGradient(0, ly - H / 2, 0, ly + H / 2); gb.addColorStop(0, shadeHex(c1, 0.15)); gb.addColorStop(1, shadeHex(c1, -0.35));
-    g.fillStyle = gb; rr(g, lx - W / 2, ly - H / 2, W, H, 9); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.22)'; rr(g, lx - W / 2 + 4, ly - H / 2 + 3, W - 8, 8, 4); g.fill();
+    panel(g, lx - W / 2, ly - H / 2, W, H, BG, LINE, 7);
+    g.fillStyle = c2; g.fillRect(lx - W / 2, ly - H / 2 + 7, 3, H - 7);
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = tf(big ? 15 : 13); this.outText(g, label, lx, ly - 7, '#ffffff', 3.4);
-    g.font = tf(12); this.outText(g, d, lx, ly + 10, '#fff2a0', 3);
+    g.font = tf(big ? 15 : 13); g.fillStyle = '#ffffff'; g.fillText(label, lx + 1, ly - 7);
+    g.font = tf(13); g.fillStyle = ACC; g.fillText(d, lx + 1, ly + 10);
   }
 
   minimap(g) {
     const run = this.run, p = run.p, R = 44, cx = this.vw - R - 12, cy = 158, range = 900, t = this.gfx.t;
     const mp = (x, y) => [cx + (x - p.x) / range * R, cy + (y - p.y) / range * R];
+    // mini-carte carrée : fond sombre, filet d'un pixel, coins en équerre
     g.save();
-    g.beginPath(); g.arc(cx, cy, R, 0, TAU);
-    g.fillStyle = 'rgba(10,6,20,.62)'; g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.stroke();
+    g.fillStyle = 'rgba(10,13,20,.72)'; g.fillRect(cx - R, cy - R, R * 2, R * 2);
+    g.strokeStyle = LINE; g.lineWidth = 1; g.strokeRect(cx - R + 0.5, cy - R + 0.5, R * 2 - 1, R * 2 - 1);
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.beginPath();
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const x0 = cx + sx * R, y0 = cy + sy * R; g.moveTo(x0, y0 - sy * 7); g.lineTo(x0, y0); g.lineTo(x0 - sx * 7, y0); }
+    g.stroke();
+    g.beginPath(); g.rect(cx - R + 1, cy - R + 1, R * 2 - 2, R * 2 - 2);
     g.clip();
     const dot = (x, y, c, r) => { const [mx, my] = mp(x, y); g.fillStyle = c; g.beginPath(); g.arc(mx, my, r, 0, TAU); g.fill(); };
     g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1;
@@ -420,7 +415,7 @@ export class Overlay {
     if (run.boss && !run.boss.dead) dot(run.boss.x, run.boss.y, '#ff2a4a', 4.5);
     g.restore();
     // autel et portail : toujours visibles, collés au bord quand ils sont loin
-    const pinned = (x, y) => { let [mx, my] = mp(x, y); const dx = mx - cx, dy = my - cy, d = Math.hypot(dx, dy); if (d > R - 4) { mx = cx + dx / d * (R - 4); my = cy + dy / d * (R - 4); } return [mx, my]; };
+    const pinned = (x, y) => { let [mx, my] = mp(x, y); const dx = mx - cx, dy = my - cy, m = Math.max(Math.abs(dx), Math.abs(dy)); if (m > R - 6) { mx = cx + dx / m * (R - 6); my = cy + dy / m * (R - 6); } return [mx, my]; };
     if (run.altar && !run.altar.used && !run.arena) {
       const [mx, my] = pinned(run.altar.x, run.altar.y);
       g.fillStyle = INK; g.beginPath(); g.arc(mx, my, 7, 0, TAU); g.fill();
@@ -484,7 +479,16 @@ function chestIcon(g, x, y, s, tier, rot) {
 function rr(g, x, y, w, h, r) {
   g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
 }
+// barre fine et carrée (vie du héros, des élites) : fond sombre, remplissage plein, reflet d'un pixel
 function rbar(g, x, y, w, h, k, c) {
-  g.fillStyle = 'rgba(16,8,30,.85)'; rr(g, x - 1.5, y - 1.5, w + 3, h + 3, (h + 3) / 2); g.fill();
-  if (k > 0) { g.fillStyle = c; rr(g, x, y, Math.max(h, w * k), h, h / 2); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + h / 2, y + 1, Math.max(0, w * k - h), 1.4); }
+  g.fillStyle = 'rgba(6,8,13,.82)'; g.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
+  if (k > 0) { g.fillStyle = c; g.fillRect(x, y, w * k, h); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x, y, w * k, 1); }
+}
+// panneau à angles coupés (haut gauche, bas droit) avec filet d'un pixel, comme l'interface
+function chamfer(g, x, y, w, h, c) {
+  g.beginPath(); g.moveTo(x + c, y); g.lineTo(x + w, y); g.lineTo(x + w, y + h - c); g.lineTo(x + w - c, y + h); g.lineTo(x, y + h); g.lineTo(x, y + c); g.closePath();
+}
+function panel(g, x, y, w, h, fill, edge, c = 6) {
+  chamfer(g, x, y, w, h, c); g.fillStyle = fill; g.fill();
+  if (edge) { g.lineWidth = 1; g.strokeStyle = edge; chamfer(g, x + 0.5, y + 0.5, w - 1, h - 1, c); g.stroke(); }
 }
