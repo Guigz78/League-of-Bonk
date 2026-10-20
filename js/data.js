@@ -58,6 +58,7 @@ export const BOONS = {
   xp:     { name: 'Autel du savoir', icon: 'tome', desc: '+20 % d\'expérience' },
   magnet: { name: 'Autel d\'attraction', icon: 'ring', desc: '+30 % rayon de ramassage' },
   haste:  { name: 'Autel de hâte', icon: 'star', desc: 'Attaques 8 % plus fréquentes' },
+  vamp:   { name: 'Autel du sang', icon: 'lifesteal', desc: '+3 % de vol de vie' },
 };
 
 // Ultimes : bouton à charger en tuant des monstres
@@ -93,6 +94,7 @@ export const TOMES = {
   armor:  { name: 'Armure à pointes', icon: 'armor', desc: '−6 % de dégâts subis' },
   wisdom: { name: 'Tome de sagesse', icon: 'tome', desc: '+15 % d\'expérience' },
   area:   { name: 'Chapeau de sorcier', icon: 'crown', desc: '+12 % taille des attaques' },
+  vamp:   { name: 'Crocs du vampire', icon: 'lifesteal', desc: '+3 % de vol de vie : vos coups vous soignent' },
 };
 export const MAX_WEAPONS = 4, MAX_TOMES = 4, MAX_LEVEL = 5;
 
@@ -109,7 +111,7 @@ export const WEAPON_EVOS = {
   boomerang: { tome: 'haste',  name: 'Tornade de lames', icon: 'spin',     desc: '6 grandes lames qui tournent tout autour de vous.' },
   shrooms:   { tome: 'wisdom', name: 'Bosquet explosif', icon: 'i_poison', desc: 'Champignons en série, explosions géantes.' },
   frost:     { tome: 'boots',  name: 'Blizzard éternel', icon: 'frost',    desc: 'Onde de givre géante et fréquente qui gèle tout.' },
-  daggers:   { tome: 'crit',   name: 'Mille lames',      icon: 'volley',   desc: '16 dagues rapides qui transpercent tout.' },
+  daggers:   { tome: 'vamp',   name: 'Mille lames',      icon: 'volley',   desc: '16 dagues rapides qui transpercent tout et volent la vie (+6 % par coup).' },
   snowball:  { tome: 'power',  name: 'Avalanche',        icon: 'heart',    desc: '5 énormes boules qui gèlent les ennemis touchés.' },
 };
 // Rareté des cartes d'amélioration (index = rarity de la carte, couleurs : RARITY[RARITIES[i]]).
@@ -281,7 +283,7 @@ export const BOSS_ITEMS = [
   { slot: 'weapon', name: 'Lame de Ronce-Brûlante', icon: 'sword', main: 'atk', affs: ['critDmg', 'crit', 'lifesteal', 'area'], effect: 'boom' },
   { slot: 'armor', name: 'Carapace du Léviathan', icon: 'armor', main: 'hp', affs: ['regen', 'armor', 'dodge', 'speed'], effect: 'bubble' },
   { slot: 'trinket', name: 'Plume de Cryophénix', icon: 'gem', main: 'crit', affs: ['haste', 'speed', 'ult', 'magnet'], effect: 'frost' },
-  { slot: 'weapon', name: 'Faux du Geôlier', icon: 'staff', main: 'atk', affs: ['lifesteal', 'haste', 'critDmg', 'area'], effect: 'chain' },
+  { slot: 'weapon', name: 'Faux du Geôlier', icon: 'staff', main: 'atk', affs: ['lifesteal', 'haste', 'critDmg', 'area'], effect: 'blood' },
   { slot: 'armor', name: 'Écailles du Ver-Roi', icon: 'armor', main: 'hp', affs: ['armor', 'thorns', 'regen', 'dodge'], effect: 'fury' },
 ];
 
@@ -294,6 +296,7 @@ export const UPGRADES = {
   speed:  { name: 'Agilité', icon: 'arrow', desc: '+4 % de vitesse', per: { speed: 0.04 }, base: 70, grow: 1.45, max: 8 },
   magnet: { name: 'Attraction', icon: 'ring', desc: '+12 % de rayon de ramassage', per: { magnet: 0.12 }, base: 50, grow: 1.4, max: 8 },
   luck:   { name: 'Fortune', icon: 'gold', desc: '+10 % d\'or gagné', per: { gold: 0.1 }, base: 80, grow: 1.5, max: 10 },
+  vamp:   { name: 'Soif de sang', icon: 'lifesteal', desc: '+0,5 % de vol de vie', per: { lifesteal: 0.005 }, base: 120, grow: 1.5, max: 10 },
 };
 
 export const ACHIEVEMENTS = [
@@ -372,6 +375,7 @@ export const BOOSTS = {
   depart:  { name: 'Départ éclair', icon: 'star', desc: 'Commence la partie au niveau 4', price: 180 },
   phenix:  { name: 'Plume de phénix', icon: 'heart', desc: 'Revient une fois à la vie, sans publicité', price: 250 },
   trefle:  { name: 'Trèfle à quatre feuilles', icon: 'crown', desc: 'Les coffres de butin trouvés sont de meilleure qualité', price: 160 },
+  sang:    { name: 'Fiole de sang', icon: 'lifesteal', desc: '+8 % de vol de vie pendant la partie', price: 140 },
 };
 
 // Bilan d'une expédition : +10 % d'or par totem de défi activé.
@@ -452,6 +456,7 @@ export const LEGEND_EFFECTS = {
   feast:   { name: 'Festin', desc: 'Chaque ennemi vaincu rend 0,5 % de vos PV max' },
   bubble:  { name: 'Bulle', desc: 'Un bouclier bloque un coup toutes les 10 s' },
   fury:    { name: 'Furie', desc: '+30 % de dégâts quand vous avez moins de 40 % de PV' },
+  blood:   { name: 'Frénésie sanglante', desc: 'Sous 50 % de PV, votre vol de vie est doublé (au moins +4 %)' },
 };
 
 // ---------- Contenu des coffres de butin (en plus de LOOT_TIERS) ----------

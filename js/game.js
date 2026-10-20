@@ -10,7 +10,7 @@ import { heroURL, creatureURL, mountPreview, zoneBannerURL } from './visuals.js'
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
 import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } from './ui.js';
-import { Run } from './run.js';
+import { Run, LS } from './run.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 import { questList, claimQuest, loginState, claimLogin, dailyBadge, LOGIN_REWARDS, ensureDaily } from './daily.js';
@@ -177,6 +177,7 @@ function heroStat(k, st) {
 
 async function statsSheet() {
   const st = playerStats(), c = CLASSES[save.cls];
+  st.lifesteal = Math.min(LS.max, (st.lifesteal || 0) + LS.base); // + talent de tous les champions (vol de vie de base)
   const shown = STAT_ORDER.filter(k => ['hp', 'atk', 'crit', 'critDmg', 'speed'].includes(k) || (k === 'magnet' || k === 'gold' ? st[k] > 1.0005 : st[k] > 0.0005));
   const capped = k => AFFIXES[k]?.max != null && (k === 'speed' ? st.speed >= c.speed + AFFIXES[k].max - 0.0005 : st[k] >= AFFIXES[k].max - 0.0005);
   await modal({
@@ -820,6 +821,16 @@ function portalMenu(info, choose) {
   });
 }
 
+// caractéristiques de la partie en cours (écran de pause) : dégâts, critique, vol de vie, armure
+function pzStats(p) {
+  const pc1 = v => `${(Math.round(v * 1000) / 10).toLocaleString('fr-FR')} %`;
+  const cell = (ic, label, v, cls = '') => `<div class="${cls}"><small>${iconImg(ic, 12)}${label}</small><b>${v}</b></div>`;
+  return cell('fist', 'Dégâts', `${p.dmgMul >= 1 ? '+' : '−'}${Math.round(Math.abs((p.dmgMul || 1) - 1) * 100)} %`)
+    + cell('target', 'Critique', pct(p.crit || 0))
+    + cell('lifesteal', 'Vol de vie', pc1(p.lifesteal || 0), (p.lifesteal || 0) > LS.base + 0.0005 ? 'ls-on' : '')
+    + cell('shield', 'Armure', pct(p.armor || 0));
+}
+
 async function pauseMenu(resume) {
   const p = run.p, z = run.zone;
   const sw = (id, ic, label, on) => `<label class="set-row">${iconImg(ic, 20)}<span class="set-l">${label}</span><span class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></span></label>`;
@@ -839,6 +850,7 @@ async function pauseMenu(resume) {
         <div><small>Monstres</small><b>${fmt(run.kills || 0)}</b></div><div><small>Or</small><b class="gold-t">${fmt(run.gold)}</b></div>
       </div>
       <div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
+      <div class="pz-sum pz-st">${pzStats(p)}</div>
       <h4>Armes <small>${p.weapons.length}/${nW}</small></h4>
       <div class="cur-build">${p.weapons.map(wRow).join('')}${free(nW - p.weapons.length)}</div>
       <h4>Tomes <small>${tomes.length}/${nT}</small></h4>
@@ -857,6 +869,7 @@ async function pauseMenu(resume) {
         <p>${iconImg('i_burn', 20)}<span><b>Totems de défi</b> : restez près d'un totem pour l'activer. Le monde devient plus dur, mais vous gagnez de l'or, un coffre ou une bénédiction (et +${Math.round(HEAT_GOLD * 100)} % d'or au bilan).</span></p>
         <p>${iconImg('chest', 20)}<span><b>Coffres de butin</b> : ramassez-les, ils s'ouvrent à la fin de la partie. Leurs pièces servent à fabriquer de l'équipement à la Forge.</span></p>
         <p>${iconImg('gem', 20)}<span><b>Explorer</b> : les autels bleus donnent des bénédictions, les coffres dorés des améliorations.</span></p>
+        <p>${iconImg('lifesteal', 20)}<span><b>Vol de vie</b> : vos coups vous soignent (des orbes de sang filent vers vous). Montez-le avec les <b>Crocs du vampire</b>, l'<b>Autel du sang</b>, la <b>Fiole de sang</b> et l'équipement.</span></p>
         <p>${iconImg('i_atk', 20)}<span><b>Attaques spéciales</b> : un monstre qui clignote ou un cercle rouge au sol annonce une attaque. Écartez-vous vite !</span></p>
         <p>${iconImg('crown', 20)}<span><b>Élites</b> : leur nom indique leur pouvoir (${Object.values(ELITE_MODS).map(m => esc(m.name)).join(', ')}). Fuyez les Explosifs quand ils tombent !</span></p>
         <p>${iconImg('nova', 20)}<span><b>Ultime</b> : se charge en battant des monstres et se lance tout seul quand des ennemis sont proches (ou touchez le bouton).</span></p>

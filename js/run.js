@@ -44,7 +44,10 @@ const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le c
 const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
 const SWEEP_LEN = 270, BOSS_WAVE = 300; // portées limitées du rayon et des ondes du boss : on esquive en s'éloignant
 const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', 'Néant'];
-const LS_CAP = 0.04;    // vol de vie : au plus 4 % des PV max rendus par seconde
+// Vol de vie (exporté : le simulateur d'équilibrage peut le modifier). Soin par seconde plafonné à rate × vol de vie
+// (en part des PV max, au plus cap) : plus on en a, plus il soigne, même dans une horde. max = plafond du vol de vie,
+// base = talent de tous les champions, dag = en plus sur les coups des dagues évoluées (Mille lames)
+export const LS = { cap: 0.07, rate: 0.5, max: 0.35, base: 0.015, dag: 0.06 };
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
 const NB = ' ';
@@ -65,13 +68,13 @@ const WLINES = {
   boomerang: [D_('Dégâts par lame'), CD(), ['n', 'Lames', fN], ['R', 'Taille', fI]],
   shrooms: [D_('Dégâts d\'explosion'), CD(), ['n', 'Champignons', fN], ['R', 'Explosion', fI]],
   frost: [D_('Dégâts de l\'onde'), CD(), ['R', 'Rayon', fI], ['freeze', 'Gel', fF]],
-  daggers: [D_('Dégâts par dague'), CD(), ['n', 'Dagues', fN], ['pierce', 'Transperce', fP], ['v', 'Vitesse', fI]],
+  daggers: [D_('Dégâts par dague'), ['ls', 'Vol de vie', v => (v ? pctS(v, false) : 'non')], CD(), ['n', 'Dagues', fN], ['pierce', 'Transperce', fP], ['v', 'Vitesse', fI]],
   snowball: [D_('Dégâts par boule'), CD(), ['n', 'Boules', fN], ['R', 'Zone', fI]],
 };
 const WSIZE = { beam: 'w', sword: 'R', orbs: 'R', aura: 'R', lightning: 'R', boomerang: 'R', shrooms: 'R', frost: 'R', snowball: 'R' };
 // tomes et bénédictions -> caractéristique de derive() ; DLINES : [libellé, format(valeur, valeur de base)]
-const TOME_KEY = { power: 'dmgMul', haste: 'haste', boots: 'speed', vital: 'maxHp', magnet: 'magnet', crit: 'crit', armor: 'armor', wisdom: 'xpMul', area: 'area' };
-const BOON_KEY = { dmg: 'dmgMul', hp: 'maxHp', speed: 'speed', crit: 'crit', xp: 'xpMul', magnet: 'magnet', haste: 'haste' };
+const TOME_KEY = { power: 'dmgMul', haste: 'haste', boots: 'speed', vital: 'maxHp', magnet: 'magnet', crit: 'crit', armor: 'armor', wisdom: 'xpMul', area: 'area', vamp: 'lifesteal' };
+const BOON_KEY = { dmg: 'dmgMul', hp: 'maxHp', speed: 'speed', crit: 'crit', xp: 'xpMul', magnet: 'magnet', haste: 'haste', vamp: 'lifesteal' };
 const DLINES = {
   dmgMul: ['Dégâts', v => pctS(v - 1)],
   haste: ['Vitesse d\'attaque', v => pctS(1 / v - 1)],
@@ -82,6 +85,7 @@ const DLINES = {
   armor: ['Dégâts subis', v => (v > 0.0005 ? '−' + num(v * 100) + NB + '%' : '0' + NB + '%')],
   xpMul: ['Expérience', v => pctS(v - 1)],
   area: ['Taille des attaques', v => pctS(v - 1)],
+  lifesteal: ['Vol de vie', v => num(v * 100, 1) + NB + '%'],
 };
 
 // ---------- Grille spatiale ----------
@@ -126,7 +130,7 @@ export class Run {
     // effets uniques des objets légendaires (un même effet sur deux objets compte double)
     this.leg = {};
     for (const id of Array.isArray(st.effects) ? st.effects : []) if (LEGEND_EFFECTS[id]) this.leg[id] = (this.leg[id] || 0) + 1;
-    this.bDmg = has('rage') ? 1.2 : 1; this.bXp = has('sagesse') ? 1.3 : 1;
+    this.bDmg = has('rage') ? 1.2 : 1; this.bXp = has('sagesse') ? 1.3 : 1; this.bLs = has('sang') ? 0.08 : 0;
     this.phoenix = has('phenix');
     this.p = {
       x: 0, y: 0, h: 0, vh: 0, r: 14, face: { x: 0, y: -1 },
@@ -141,6 +145,8 @@ export class Run {
     this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
     this.rerolls = REROLLS; this.skips = SKIPS;
     this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
+    this.lsShown = 0; this.lsT = 0; this.lsEvT = 0; this.lsGlow = 0; // vol de vie : soin à afficher, orbes (au plus ~8/s), barre de PV
+    this.lsX = 0;             // vol de vie des armes évoluées qui soignent (relève le plafond de soin par seconde)
     this.addWeapon(this.cls.weapon);
     this.recalc();
     this.grid = new Grid(64);
@@ -361,17 +367,26 @@ export class Run {
     return 9;
   }
 
-  // soins de l'équipement : vol de vie (plafonné à 4 % des PV max par seconde) et bulle des légendaires
+  // vol de vie effectif (Frénésie sanglante : doublé sous 50 % de PV, au moins +4 %), plafonné ; x = bonus de l'arme qui frappe
+  lsNow(x = 0) {
+    const p = this.p; let ls = p.lifesteal + x;
+    if (this.leg.blood && p.hp < p.maxHp * 0.5) ls = Math.max(ls * 2, ls + 0.04);
+    return Math.min(LS.max, ls);
+  }
+  // soins de l'équipement : vol de vie (au plus LS.rate × vol de vie des PV max par seconde, plafond LS.cap, ×1,5 en Frénésie
+  // sanglante) et bulle des légendaires. Retour visuel : « +N » cramoisi groupé (au plus toutes les 0,7 s) et éclat de la
+  // barre de PV du HUD (lsGlow, lu par hud())
   updateHeal(dt) {
-    const p = this.p;
-    this.lsBudget = Math.min(p.maxHp * LS_CAP, this.lsBudget + p.maxHp * LS_CAP * dt);
+    const p = this.p, low = this.leg.blood && p.hp < p.maxHp * 0.5;
+    const cap = p.maxHp * Math.min(LS.cap * (low ? 1.5 : 1), LS.rate * this.lsNow(this.lsX));
+    this.lsBudget = Math.min(cap, this.lsBudget + cap * dt);
     if (this.lsPool > 0) {
       const h = Math.min(this.lsPool * this.diff.heal, this.lsBudget, p.maxHp - p.hp);
-      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown = (this.lsShown || 0) + h; }
+      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown += h; }
       this.lsPool = 0;
     }
-    this.lsT = (this.lsT || 0) - dt;
-    if (this.lsT <= 0 && this.lsShown >= 1) { this.text(p.x + 14, p.y, 54, '+' + fmt(this.lsShown), '#ff7ab0', 0.9); this.lsShown = 0; this.lsT = 1.2; }
+    this.lsT -= dt; this.lsGlow = Math.max(0, this.lsGlow - dt);
+    if (this.lsT <= 0 && this.lsShown >= 1) { this.text(p.x + rand(-8, 8), p.y, 60, '+' + fmt(this.lsShown), '#ff4d6d', 1.05); this.lsShown = 0; this.lsT = 0.7; this.lsGlow = 0.32; }
     if (this.leg.bubble && !p.shieldHit) {
       this.bubbleT -= dt;
       if (this.bubbleT <= 0) { p.shieldHit = 1; this.bubbleT = 10 / this.leg.bubble; this.emit('legend', { kind: 'bubble', x: p.x, y: p.y }); }
@@ -434,6 +449,7 @@ export class Run {
     const p = this.p, w = p.weapons.find(x => x.id === id), E = WEAPON_EVOS[id];
     if (!w || w.evo || !E) return;
     w.evo = true; w.r = 3; w.t = Math.min(w.t, 0.3); w.orbs = null;
+    if (id === 'daggers' || id === 'aura') this.lsX += id === 'daggers' ? LS.dag : 0.08; // Mille lames, Cœur de soleil : comptent dans le soin par seconde
     this.evoFlash = Math.max(this.evoFlash, 0.9); p.inv = Math.max(p.inv, 1.5);
     this.burst(p.x, p.y, 40, 40, '#ffe48a', 4);
     this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 260, life: 0.7, max: 0.7, color: '#ffd54a' });
@@ -463,6 +479,8 @@ export class Run {
       xpMul: (1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0)) * this.bXp * (1 + I.xp),
       area: (1 + 0.12 * (t.area || 0)) * (1 + I.area),
       maxHp: Math.round(B.hp * (1 + 0.2 * (t.vital || 0) + 0.15 * (b.hp || 0)) * (1 + 0.15 * evo)),
+      // vol de vie : talent des champions + équipement et Boutique + tome, autels, fiole de sang (plafond LS.max)
+      lifesteal: Math.min(LS.max, LS.base + I.lifesteal + 0.03 * (t.vamp || 0) + 0.03 * (b.vamp || 0) + this.bLs),
     };
   }
 
@@ -488,7 +506,7 @@ export class Run {
       case 'boomerang': return { dmg: A * 1.3 * 1.3 * 1.3 * 1.4, cd: 1.25 * h, n: 6, R: 28 * ar };
       case 'shrooms': return { dmg: A * 3 * 1.4 * 1.5, cd: 1.5 * h, n: 4, R: 125 * ar };
       case 'frost': return { dmg: A * 1.2 * 1.3 * 1.6, cd: 1.7 * h, R: 230 * ar, freeze: 1.5 };
-      case 'daggers': return { dmg: A * 0.9 * 1.3 * 1.4, cd: 0.75 * h, n: 16, pierce: 6, v: 620 };
+      case 'daggers': return { dmg: A * 0.9 * 1.3 * 1.4, cd: 0.75 * h, n: 16, pierce: 6, v: 620, ls: LS.dag };
       case 'snowball': return { dmg: A * 2.4 * 1.3 * 1.5, cd: 1.4 * h, n: 5, R: 110 * ar, freeze: 0.8 };
     }
     switch (id) {
@@ -501,7 +519,7 @@ export class Run {
       case 'boomerang': return { dmg: A * 1.3 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 1.6 : 2) * h, n: 1 + L(3) + L(5), R: (L(4) ? 20 : 15) * ar };
       case 'shrooms': return { dmg: A * 3 * (L(3) ? 1.4 : 1), cd: (L(5) ? 2 : 2.6) * h, n: 1 + L(2) + L(5), R: (L(4) ? 80 : 58) * ar };
       case 'frost': return { dmg: A * 1.2 * (L(2) ? 1.3 : 1), cd: (L(4) ? 2.4 : 3.2) * h, R: (L(3) ? 150 : 115) * ar, freeze: L(5) };
-      case 'daggers': return { dmg: A * 0.9 * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.95 : 1.3) * h, n: 4 + L(2) * 2 + L(4) * 2, pierce: L(5) * 3, v: L(5) ? 540 : 440 };
+      case 'daggers': return { dmg: A * 0.9 * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.95 : 1.3) * h, n: 4 + L(2) * 2 + L(4) * 2, pierce: L(5) * 3, v: L(5) ? 540 : 440, ls: 0 };
       case 'snowball': return { dmg: A * 2.4 * (L(2) ? 1.3 : 1), cd: (L(5) ? 1.7 : 2.2) * h, n: 1 + L(4) + L(5), R: (L(3) ? 76 : 56) * ar };
     }
     return { dmg: A, cd: 1 };
@@ -1832,7 +1850,7 @@ export class Run {
           sfx('swish');
           for (let i = 0; i < S.n; i++) {
             const a = w.rot + i / S.n * TAU;
-            this.shots.push({ type: 'dagger', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * S.v, vy: Math.sin(a) * S.v, r: 8, dmg: S.dmg, pierce: S.pierce, life: 0.75, hit: new Set() });
+            this.shots.push({ type: 'dagger', x: p.x, y: p.y, z: 26, vx: Math.cos(a) * S.v, vy: Math.sin(a) * S.v, r: 8, dmg: S.dmg, pierce: S.pierce, life: 0.75, hit: new Set(), ls: S.ls });
           }
           break;
         }
@@ -1914,7 +1932,7 @@ export class Run {
           s.hit.add(e);
         }
         const v = Math.hypot(s.vx, s.vy) || 1;
-        this.hitEnemy(e, s.dmg, { knock: s.big ? 0 : 90, kx: s.vx / v, ky: s.vy / v });
+        this.hitEnemy(e, s.dmg, { knock: s.big ? 0 : 90, kx: s.vx / v, ky: s.vy / v, ls: s.ls });
         if (s.freeze && !e.boss) e.freeze = 2;
         if (s.pierce-- <= 0) { s.life = 0; break; }
       }
@@ -1934,7 +1952,14 @@ export class Run {
     if (!raw && L.fury && p.hp < p.maxHp * 0.4) dmg *= 1 + 0.3 * L.fury; // Furie : +30 % sous 40 % de PV
     const crit = !o.noCrit && Math.random() < p.crit;
     const d = Math.max(1, Math.round(dmg * (crit ? p.critMul : 1) * rand(0.92, 1.08)));
-    if (!raw && this.it.lifesteal) this.lsPool += Math.min(d, Math.max(0, e.hp)) * this.it.lifesteal;
+    if (!raw) { // vol de vie : une part des dégâts réellement infligés
+      const ls = this.lsNow(o.ls || 0);
+      if (ls > 0) {
+        this.lsPool += Math.min(d, Math.max(0, e.hp)) * ls;
+        // orbes de sang vers le héros (rendu 3D), s'il y a des PV à rendre : d'autant plus fréquentes que le vol de vie est haut (au plus 8/s)
+        if (this.runTime >= this.lsEvT && p.hp < p.maxHp - 1 && !this.dying) { this.lsEvT = this.runTime + clamp(0.0125 / ls, 0.125, 0.6); this.emit('lifesteal', { x: e.x, y: e.y, h: e.r * 1.2 + e.fly }); }
+      }
+    }
     e.hp -= d;
     e.flash = 0.09;
     this.emit('hit', { e, x: e.x, y: e.y, dmg: d, crit, color: o.color || null, quiet: !!o.quiet });
@@ -2482,6 +2507,9 @@ export class Run {
       this._heatN = this.heat;
     }
     $('#xpFill').style.width = (p.xp / p.xpNext * 100) + '%';
+    // vol de vie : la barre de PV du haut (ajoutée par l'interface) s'illumine à chaque soin (style.css, « Vol de vie »)
+    const hb = this._hpb?.isConnected ? this._hpb : (this._hpb = $('.hud .hp-top'));
+    if (hb && (this.lsGlow > 0) !== hb._ls) { hb._ls = this.lsGlow > 0; hb.classList.toggle('ls', hb._ls); }
     this.hudCombo();
     if (p.level !== this._lvN) { $('#lvl').textContent = p.level; this._lvN = p.level; }
     const ub = $('#ultBtn');

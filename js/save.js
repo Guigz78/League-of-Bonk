@@ -19,7 +19,7 @@ export function freshSave() {
     diffSel: [0, 0, 0, 0, 0, 0],       // dernier niveau choisi dans la fiche de zone
     pets: [],
     pet: null,
-    upgrades: { hp: 0, atk: 0, crit: 0, regen: 0, speed: 0, magnet: 0, luck: 0 },
+    upgrades: { hp: 0, atk: 0, crit: 0, regen: 0, speed: 0, magnet: 0, luck: 0, vamp: 0 },
     inventory: [],
     equipped: { weapon: null, armor: null, trinket: null },
     stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {},
@@ -58,6 +58,8 @@ function migrate(s) {
   out.v = base.v;
   out.upgrades = { ...base.upgrades, ...s.upgrades };
   delete out.upgrades.potion;
+  // niveaux toujours valides (nouvelles améliorations comme « Soif de sang » à 0 sur les vieilles sauvegardes)
+  for (const k of Object.keys(out.upgrades)) out.upgrades[k] = Math.max(0, Math.min(UPGRADES[k]?.max ?? 99, Math.floor(+out.upgrades[k] || 0)));
   if (typeof out.stats?.kills === 'object') out.stats = { ...base.stats };
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
