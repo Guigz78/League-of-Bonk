@@ -795,24 +795,6 @@ button.itile:active { transform: translateY(1px); }
 .hud.cr .bossbar .hpbar .fill { position: absolute; inset: 1px auto 1px 1px; border-radius: 0; background: linear-gradient(90deg, #b3122a, #ff4d5e); box-shadow: none; transition: width .25s; }
 .hud.cr .bossbar .hpbar span { position: absolute; inset: auto 0 calc(100% + 5px) auto; display: block; font: 700 12px/1 var(--fd); color: rgba(238,241,246,.85); text-shadow: var(--ts); font-variant-numeric: tabular-nums; }
 .hud.cr .bossbar .hpbar .ph { position: absolute; top: -2px; bottom: -2px; width: 1px; z-index: 2; background: rgba(255,255,255,.7); box-shadow: none; }
-/* bouton Saut : grand carré à angles coupés en bas à gauche ; rouge et pulsant avant un coup à sauter */
-.jump-btn { --jl: rgba(255,255,255,.28); --jf: rgba(8,11,18,.62); position: absolute; left: calc(var(--safe-l) + 18px); bottom: calc(var(--safe-b) + 24px); width: 78px; height: 78px; display: grid; place-items: center;
-  background: none; touch-action: none; transition: transform .08s, filter .15s; isolation: isolate; }
-.jump-btn::before, .jump-btn::after { content: ''; position: absolute; z-index: -1; clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
-.jump-btn::before { inset: 0; background: var(--jl); }
-.jump-btn::after { inset: 1.5px; background: var(--jf); clip-path: polygon(13.4px 0, 100% 0, 100% calc(100% - 13.4px), calc(100% - 13.4px) 100%, 0 100%, 0 13.4px); }
-.jump-btn .jarrow { width: 30px; height: 30px; margin-top: -12px; fill: var(--tx); stroke: none; filter: none; transition: transform .15s; }
-.jump-btn small { position: absolute; left: 0; right: 0; bottom: 13px; text-align: center; font: 700 12px/1 var(--fd); letter-spacing: .2em; text-transform: uppercase; color: var(--tx); text-shadow: none; }
-.jump-btn .jring { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); transform: rotate(-90deg); pointer-events: none; opacity: 0; }
-.jump-btn .jring circle { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: butt; stroke-dasharray: 103.7; stroke-dashoffset: 0; filter: none; }
-.jump-btn .jwarn { position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; display: grid; place-items: center; font: 700 17px/1 var(--fd); font-style: normal; color: #fff; background: var(--red); box-shadow: none; text-shadow: none; transform: scale(0); transition: transform .12s var(--ease); }
-.jump-btn:active, .jump-btn.press { transform: translateY(1px); --jf: rgba(30,38,56,.85); }
-.jump-btn.press { animation: jumpPress .18s ease-out; }
-.jump-btn.air .jarrow { transform: translateY(-4px); }
-.jump-btn.warn { --jl: #ff6a78; --jf: rgba(190,20,40,.86); filter: drop-shadow(0 0 10px rgba(255,50,70,.75)); animation: jumpWarn .45s ease-in-out infinite; }
-.jump-btn.warn .jring { opacity: 1; }
-.jump-btn.warn .jwarn { transform: scale(1); }
-.jump-btn.warn.press, .jump-btn.warn:active { animation: none; }
 /* ultime : carré à angles coupés en bas à droite, anneau de charge, doré quand il est prêt */
 .hud.cr .ult-btn { --jl: rgba(255,255,255,.22); --jf: rgba(8,11,18,.62); position: absolute; right: calc(var(--safe-r) + 18px); bottom: calc(var(--safe-b) + 30px); width: 72px; height: 72px; border-radius: 0;
   display: grid; place-items: center; background: none; box-shadow: none; isolation: isolate; transition: transform .08s, filter .2s; }
@@ -828,7 +810,6 @@ button.itile:active { transform: translateY(1px); }
 .hud.cr .ult-btn.ready img { filter: none; }
 .hud.cr .ult-btn.ready small { color: var(--acc); }
 /* gaucher : saut à droite, ultime à gauche */
-.run.lefty .jump-btn { left: auto; right: calc(var(--safe-r) + 18px); }
 .run.lefty .hud.cr .ult-btn { right: auto; left: calc(var(--safe-l) + 18px); }
 .run.lefty .hud.cr .hint-bubble::after { left: auto; right: 42px; }
 /* bulle d'aide */
@@ -872,8 +853,6 @@ button.itile:active { transform: translateY(1px); }
 @keyframes tick { 50% { opacity: .65; } }
 @keyframes hudPop { 0% { transform: none; } 35% { transform: translateY(-2px); filter: brightness(1.6); } 100% { transform: none; } }
 @keyframes otPlate { 50% { box-shadow: inset 0 0 0 1px #ff6a78, 0 0 4px rgba(255,40,60,.3); } }
-@keyframes jumpWarn { 50% { filter: drop-shadow(0 0 3px rgba(255,50,70,.5)); } }
-@keyframes jumpPress { 0% { transform: translateY(2px) scale(.96); } 100% { transform: none; } }
 @keyframes ultReady { 50% { filter: drop-shadow(0 0 3px rgba(245,180,0,.4)); } }
 @keyframes banner { 0% { opacity: 0; transform: translateY(10px); } 12% { opacity: 1; transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 
@@ -1441,6 +1420,5 @@ button.itile:active { transform: translateY(1px); }
 .hud .minibar .mb-bar i { position: absolute; left: 1px; top: 1px; bottom: 1px; display: block; width: 100%; max-width: calc(100% - 2px); background: linear-gradient(90deg, #7c3aed, var(--violet)); transition: width .12s linear; }
 /* combo : sous la barre du boss quand elle est affichée */
 .hud:has(.bossbar:not([hidden])) .combo { top: max(266px, calc(var(--safe-t) + 226px)); }
-.hud.lefty .jump-btn { left: auto; right: calc(var(--safe-r) + 18px); }
 .hud.cr.lefty .ult-btn, .hud.lefty .ult-btn { right: auto; left: calc(var(--safe-l) + 18px); }
-.hud .jump-btn, .hud .ult-btn, .hud .hud-pause { touch-action: none; -webkit-user-select: none; user-select: none; }
+.hud .ult-btn, .hud .hud-pause { touch-action: none; -webkit-user-select: none; user-select: none; }

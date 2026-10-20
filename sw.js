@@ -1,5 +1,5 @@
 // Service worker : le jeu fonctionne entièrement hors connexion.
-const VERSION = 'lob-v21';
+const VERSION = 'lob-v22';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css', 'vendor/supabase.min.js',
   'js/main.js', 'js/game.js', 'js/run.js', 'js/g2d/renderer.js', 'js/g2d/sprites.js', 'js/g2d/world.js', 'js/g2d/items.js', 'js/g2d/preview.js', 'js/g2d/index.js', 'js/g2d/fallback3d.js', 'js/visuals.js', 'vendor/three.module.min.js',

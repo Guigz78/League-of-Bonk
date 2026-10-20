@@ -606,12 +606,6 @@ export class Fx {
         this.ln.lane(T0.x * S, 0.1, (T0.y - r - 8) * S, Math.PI / 2, (r * 2 + 16) * S, 3 * S, col('#ff5050'), 0.9, 1, 0.8, 0, 1, 0, 0);
       }
     }
-    // alerte de saut : un anneau se resserre sur le héros jusqu'à l'impact
-    if (run.jumpWarn > 0 && !run.dying) {
-      const k = clamp(run.jumpWarn / Math.max(0.3, run.jumpWarnDur || 1), 0, 1), R = 20 + 64 * k, hot = k < 0.35;
-      this.ringAt(p.x, p.y, R + 3, '#1e0a14', 0.45, 0.16, 0, 1, 0, 0, 0, 0, false, 0.08);
-      this.ringAt(p.x, p.y, R, hot ? (Math.sin(t * 40) > 0 ? '#ff3a3a' : W) : '#ffd54a', 1, 0.09, 0.08, 1, 0, 0, 0, 0.5, false, 0.09);
-    }
   }
 
   // héros : colonne du niveau, rayons de l'évolution, invincibilité, bulle

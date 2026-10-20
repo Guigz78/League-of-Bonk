@@ -480,12 +480,6 @@ export class Gfx {
         this.puffs.push({ x: w.x + Math.cos(an) * r, y: w.y + Math.sin(an) * r, vx: Math.cos(an) * 60, vy: Math.sin(an) * 40 - 20, s: rand(5, 9), life: 0.4, max: 0.4, a: 0.35, col: null });
       }
     }
-    // alerte de saut : un anneau se resserre sur le héros jusqu'à l'impact
-    if (run.jumpWarn > 0 && !run.dying) {
-      const k = clamp(run.jumpWarn / Math.max(0.3, run.jumpWarnDur || 1), 0, 1), R = 20 + 64 * k, hot = k < 0.35;
-      g.strokeStyle = 'rgba(30,10,20,.45)'; g.lineWidth = 7; g.beginPath(); g.ellipse(p.x, p.y + 1.5, R, R * 0.62, 0, 0, TAU); g.stroke();
-      g.strokeStyle = hot ? (Math.sin(t * 40) > 0 ? '#ff3a3a' : '#ffffff') : '#ffd54a'; g.lineWidth = 3.6; g.beginPath(); g.ellipse(p.x, p.y, R, R * 0.62, 0, 0, TAU); g.stroke();
-    }
     // chemin lumineux au sol jusqu'au portail : des chevrons qui filent vers lui
     if (run.portal && run.portal.t > 0.5 && !run.dying) {
       const P = run.portal, dx = P.x - p.x, dy = P.y - p.y, d = Math.hypot(dx, dy);
@@ -1399,7 +1393,6 @@ export class Gfx {
       this.outText(g, tx.txt, x, y, tx.color, 3.6);
     }
     g.globalAlpha = 1;
-    this.jumpBubble(g, hx, hy);
     this.markers(g);
     this.guide(g, hx, hy);
     this.arrows(g);
@@ -1436,34 +1429,6 @@ export class Gfx {
     const vw = this.vw, vh = this.vh, gr = g.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * inner, vw / 2, vh / 2, Math.hypot(vw, vh) * 0.55);
     gr.addColorStop(0, `rgba(${rgb},0)`); gr.addColorStop(1, `rgba(${rgb},${Math.min(0.85, a)})`);
     g.fillStyle = gr; g.fillRect(0, 0, vw, vh);
-  }
-
-  // « SAUTEZ ! » au-dessus du héros, avec un compte à rebours circulaire jusqu'à l'impact
-  jumpBubble(g, hx, hy) {
-    const run = this.run, t = this.t;
-    if (!(run.jumpWarn > 0) || run.dying) return;
-    const k = clamp(run.jumpWarn / Math.max(0.3, run.jumpWarnDur || 1), 0, 1), hot = k < 0.35;
-    const s = hot ? 1.08 + Math.abs(Math.sin(t * 16)) * 0.1 : 1 + Math.sin(t * 7) * 0.04;
-    const y = hy - (52 + run.p.h * 0.9) * this.zoom - 30;
-    g.save(); g.translate(hx, y); g.scale(s, s);
-    g.font = tf(19);
-    const label = 'SAUTEZ !', tw = g.measureText(label).width, W = tw + 52, H = 34, x0 = -W / 2;
-    const plate = () => { rr(g, x0, -H / 2, W, H, H / 2); g.moveTo(-8, H / 2 - 1); g.lineTo(0, H / 2 + 9); g.lineTo(8, H / 2 - 1); };
-    g.lineJoin = 'round';
-    g.fillStyle = INK2; g.strokeStyle = INK2; g.lineWidth = 5; plate(); g.fill(); g.stroke();
-    const gr = g.createLinearGradient(0, -H / 2, 0, H / 2);
-    gr.addColorStop(0, hot ? '#ff8a6a' : '#ffe27a'); gr.addColorStop(1, hot ? '#d81e2e' : '#f08a14');
-    g.fillStyle = gr; plate(); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.35)'; rr(g, x0 + 8, -H / 2 + 3, W - 16, 7, 3.5); g.fill();
-    // compte à rebours
-    const cx = x0 + 18, R = 10.5;
-    g.fillStyle = INK2; g.beginPath(); g.arc(cx, 0, R + 2.5, 0, TAU); g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 4; g.beginPath(); g.arc(cx, 0, R - 1, 0, TAU); g.stroke();
-    g.strokeStyle = hot ? '#ff5a4a' : '#ffffff'; g.lineWidth = 4; g.beginPath(); g.arc(cx, 0, R - 1, -Math.PI / 2, -Math.PI / 2 + k * TAU); g.stroke();
-    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(cx, -6); g.lineTo(cx + 5, -1); g.lineTo(cx + 2, -1); g.lineTo(cx + 2, 5); g.lineTo(cx - 2, 5); g.lineTo(cx - 2, -1); g.lineTo(cx - 5, -1); g.closePath(); g.fill();
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    this.outText(g, label, x0 + 34 + tw / 2, 1, '#ffffff', 4);
-    g.restore();
   }
 
   // repères au-dessus du portail et de l'autel quand ils sont à l'écran

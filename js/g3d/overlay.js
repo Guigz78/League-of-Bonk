@@ -161,7 +161,6 @@ export class Overlay {
     }
     g.globalAlpha = 1;
     this.totemBadges(g);
-    this.jumpBubble(g, hx, hy);
     this.markers(g);
     this.guide(g, hx, hy);
     this.arrows(g);
@@ -238,29 +237,6 @@ export class Overlay {
     const vw = this.vw, vh = this.vh, gr = g.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * inner, vw / 2, vh / 2, Math.hypot(vw, vh) * 0.55);
     gr.addColorStop(0, `rgba(${rgb},0)`); gr.addColorStop(1, `rgba(${rgb},${Math.min(0.85, a)})`);
     g.fillStyle = gr; g.fillRect(0, 0, vw, vh);
-  }
-
-  // « SAUTEZ ! » au-dessus du héros, avec un compte à rebours circulaire jusqu'à l'impact
-  jumpBubble(g, hx, hy) {
-    const run = this.run, t = this.gfx.t;
-    if (!(run.jumpWarn > 0) || run.dying) return;
-    const k = clamp(run.jumpWarn / Math.max(0.3, run.jumpWarnDur || 1), 0, 1), hot = k < 0.35;
-    const s = hot ? 1.08 + Math.abs(Math.sin(t * 16)) * 0.1 : 1 + Math.sin(t * 7) * 0.04;
-    const [, top] = this.gfx.ws(run.p.x, run.p.y, 60 + run.p.h);
-    const y = top - 26;
-    // panneau carré à angles coupés (ambre, rouge à l'approche de l'impact), flèche vers le haut, jauge du temps restant
-    g.save(); g.translate(hx, y); g.scale(s, s);
-    g.font = tf(19);
-    const label = 'SAUTEZ !', tw = g.measureText(label).width, W = tw + 46, H = 32, x0 = -W / 2, c = hot ? '#ff4d5e' : ACC;
-    g.beginPath(); g.moveTo(-7, H / 2); g.lineTo(0, H / 2 + 8); g.lineTo(7, H / 2); g.closePath(); g.fillStyle = c; g.fill();
-    panel(g, x0, -H / 2, W, H, c, 'rgba(6,8,13,.55)', 8);
-    g.fillStyle = 'rgba(6,8,13,.35)'; g.fillRect(x0 + 8, H / 2 - 5, W - 16, 3);
-    g.fillStyle = '#ffffff'; g.fillRect(x0 + 8, H / 2 - 5, (W - 16) * k, 3);
-    const cx = x0 + 16, ink = hot ? '#ffffff' : '#161000';
-    g.fillStyle = ink; g.beginPath(); g.moveTo(cx, -8); g.lineTo(cx + 6, -1); g.lineTo(cx + 2.2, -1); g.lineTo(cx + 2.2, 6); g.lineTo(cx - 2.2, 6); g.lineTo(cx - 2.2, -1); g.lineTo(cx - 6, -1); g.closePath(); g.fill();
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillStyle = ink; g.fillText(label, x0 + 28 + tw / 2, -1);
-    g.restore();
   }
 
   // repères au-dessus du portail et de l'autel quand ils sont à l'écran

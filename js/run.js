@@ -141,7 +141,6 @@ export class Run {
     this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
     this.rerolls = REROLLS; this.skips = SKIPS;
     this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
-    this.jumpWarn = 0; this.jumpWarnDur = 0;
     this.addWeapon(this.cls.weapon);
     this.recalc();
     this.grid = new Grid(64);
@@ -345,7 +344,6 @@ export class Run {
 
 
   // il n'y a plus de saut : plus d'alerte de saut (les rendus lisent encore ce champ)
-  updateJumpWarn() { this.jumpWarn = 0; this.jumpWarnDur = 0; }
 
   // temps avant que le rayon tournant du boss atteigne le joueur (9 = jamais)
   sweepEta(e) {
@@ -780,7 +778,6 @@ export class Run {
     if (!this.entering) { this.updateInterest(dt); this.updateAltar(dt); this.updateTotems(dt); }
     this.updatePortal(dt);
     this.updatePet(dt);
-    this.updateJumpWarn();
     for (const f of this.fx) f.life -= dt;
     this.fx = this.fx.filter(f => f.life > 0);
     for (const t of this.texts) { t.life -= dt; t.z += 50 * dt; }
