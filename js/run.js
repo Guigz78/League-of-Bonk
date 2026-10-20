@@ -238,7 +238,7 @@ export class Run {
     this.resize();
     window.addEventListener('resize', this.resize);
     this.bindInput();
-    $('.run .hud')?.classList.toggle('lefty', !!save.settings?.lefty); // gaucher : Saut à droite, ultime à gauche
+    $('.run .hud')?.classList.toggle('lefty', !!save.settings?.lefty); // gaucher : ultime à gauche
     this.onVis = () => { if (document.hidden && !this.paused && !this.over) this.pause(); };
     document.addEventListener('visibilitychange', this.onVis);
     this.renderLoadout();

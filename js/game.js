@@ -565,7 +565,14 @@ function startRun(z, diff = 0) {
   run.onPortal ??= (info, choose) => portalMenu(info, choose);
   battle = run;
   window.__lobRun = run; // utile pour les tests automatisés
-  run.start();
+  try { run.start(); } catch (e) { // WebGL 2 présent mais contexte 3D refusé (plus de 2D de secours) : partie et bonus rendus
+    console.error(e);
+    save.stats.runs--;
+    for (const id of boosts) save.boosts[id] = (save.boosts[id] || 0) + 1;
+    persist();
+    run = window.__lobRun = null; home();
+    return noWebGL();
+  }
   $('.run')?.classList.toggle('lefty', !!save.settings.lefty);
   hpBar(run);
   if (!save.tutorialDone && save.stats.runs <= 1) tutorial(run);

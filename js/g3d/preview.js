@@ -25,7 +25,8 @@ function pedestal(evo) {
 function loop(now) {
   raf = 0;
   const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016); last = now;
-  const r = sharedRenderer();
+  let r;
+  try { r = sharedRenderer(); } catch (e) { for (const P of live) P.dispose(); live.clear(); last = 0; return; } // contexte WebGL refusé : pas d'aperçu
   // taille du canevas partagé : le plus grand aperçu
   let MW = 1, MH = 1;
   for (const P of live) {
