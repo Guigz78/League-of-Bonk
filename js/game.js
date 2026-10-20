@@ -586,7 +586,7 @@ function hpBar(r) {
 // ---------- Tutoriel (premier lancement) : 4 étapes courtes, la partie attend ----------
 const TUTO = [
   { t: 'Bouger', ill: '<i class="ti-joy"></i><i class="ti-hero"></i>', p: 'Posez le doigt <b>n\'importe où</b> et glissez : votre champion court. Il <b>attaque tout seul</b> les monstres proches.' },
-  { t: 'Sauter', ill: '<i class="ti-wave"></i><i class="ti-body"></i><span class="ti-jump"><svg viewBox="0 0 24 24"><path d="M12 3.5l8.5 9.5h-5.2v7.5H8.7V13H3.5z"/></svg></span>', p: 'Touchez <b>Saut</b> pour passer par-dessus les monstres et les ondes de choc. Quand le bouton devient <b>rouge</b>, une attaque arrive : sautez !' },
+  { t: 'Esquiver', ill: '<i class="ti-wave"></i><i class="ti-body"></i>', p: 'Un <b>cercle rouge</b> au sol ou un monstre qui <b>clignote</b> annonce une attaque : <b>écartez-vous</b> avant l\'impact. Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous !' },
   { t: 'Monter de niveau', ill: '<i class="ti-xp"></i><div class="ti-cards"><i style="--d:0s"></i><i style="--d:.12s"></i><i style="--d:.24s"></i></div>', p: 'Ramassez les <b>cristaux bleus</b> pour gagner de l\'expérience. À chaque niveau, choisissez une <b>arme</b>, un <b>tome</b> ou une amélioration.' },
   { t: 'Autel, boss, portail', ill: `<div class="ti-path"><span>${iconImg('skull', 34)}Autel</span><span>${iconImg('crown', 34)}Boss</span><span>${iconImg('portal', 34)}Portail</span></div>`, p: 'Suivez la flèche jusqu\'à l\'<b>autel au crâne rouge</b> pour invoquer le boss. Battu, il ouvre un <b>portail au centre de la carte</b> vers le monde suivant.' },
 ];
@@ -850,7 +850,7 @@ async function pauseMenu(resume) {
       <div class="howto">
         <p>${iconImg('arrow', 20)}<span><b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</span></p>
         <p>${iconImg('sword', 20)}<span><b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</span></p>
-        <p>${iconImg('i_heavy', 20)}<span><b>Sauter</b> : touchez le bouton <b>Saut</b> (en bas à gauche) pour passer par-dessus les monstres, les ondes de choc et les lasers des boss. Quand il clignote en rouge, une attaque arrive : sautez !</span></p>
+        <p>${iconImg('i_heavy', 20)}<span><b>Esquiver</b> : un cercle rouge au sol ou un monstre qui clignote annonce une attaque. Écartez-vous ! Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous du boss.</span></p>
         <p>${iconImg('skull', 20)}<span><b>Boss</b> : suivez la flèche jusqu'à l'<b>autel au crâne rouge</b> et restez dessus pour invoquer le boss. Le combat a lieu dans une arène fermée.</span></p>
         <p>${iconImg('portal', 20)}<span><b>Portail</b> : le boss vaincu ouvre un portail (suivez la flèche) vers le monde suivant, plus dur mais plus riche. Vous pouvez aussi rentrer avec votre butin.</span></p>
         <p>${iconImg('i_enrage', 20)}<span><b>Chrono</b> : quand il est écoulé, le boss arrive de lui-même et les monstres deviennent <b>fous</b>, de plus en plus. Ne traînez pas !</span></p>
@@ -1708,7 +1708,7 @@ async function settings() {
         ${row('shake', 'Tremblements de l\'écran', '', seg('shake', [[0, 'Aucun'], [1, 'Faibles'], [2, 'Normaux']]), true)}
         ${row('numbers', 'Chiffres de dégâts', '', seg('numbers', [['all', 'Tous'], ['crit', 'Critiques'], ['none', 'Aucun']]), true)}
         ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
-        ${row('hand', 'Mode gaucher', 'Bouton Saut à droite', sw('sLefty', S.lefty))}
+        ${row('hand', 'Mode gaucher', 'Bouton d\'ultime à gauche', sw('sLefty', S.lefty))}
       </div>
       <h4>Son</h4>
       <div class="set-list">

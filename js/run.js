@@ -1,5 +1,5 @@
 // Moteur façon Megabonk / PokéBonk (rendu 2D vu de dessus) : monde ouvert, hordes, armes automatiques,
-// saut, évolutions du champion, autels, coffres, boss géants.
+// évolutions du champion, autels, coffres, boss géants. Pas de saut : toute attaque s'évite en se déplaçant.
 // Difficulté : niveaux Normal / Difficile / Cauchemar par zone, comportements par type de monstre
 // (chaque attaque spéciale est annoncée par l'événement 'enemyTelegraph' avant d'agir), élites à pouvoirs,
 // boss en 3 phases.
@@ -19,7 +19,7 @@ const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
 const FLYERS = { bird: 34, ghost: 26 };
 // Particularités par type de corps : PV, recul subi, dégâts au contact
-// (les golems sont lents, très résistants et peu repoussés ; les volants, qu'on ne peut pas sauter, frappent un peu moins fort)
+// (les golems sont lents, très résistants et peu repoussés ; les volants frappent un peu moins fort)
 const BODY = {
   golem: { hp: 1.6, knock: 0.25, dmg: 1 }, blob: { hp: 0.85, knock: 1.1, dmg: 1 }, bird: { hp: 0.85, knock: 1, dmg: 0.85 },
   crab: { hp: 0.95, knock: 0.8, dmg: 1 }, ghost: { hp: 0.9, knock: 1, dmg: 0.9 },
@@ -42,8 +42,8 @@ const ARENA_R = 420;    // rayon de l'arène du boss
 const OT_STEP = 15;     // secondes entre deux niveaux de folie après le chrono
 const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le chrono), le monde s'effondre
 const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
+const SWEEP_LEN = 270, BOSS_WAVE = 300; // portées limitées du rayon et des ondes du boss : on esquive en s'éloignant
 const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', 'Néant'];
-const JUMP_V = 590, GRAV = 1650; // saut : ~0,7 s en l'air, plus de 40 de haut pendant ~0,55 s
 const LS_CAP = 0.04;    // vol de vie : au plus 4 % des PV max rendus par seconde
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
@@ -229,8 +229,7 @@ export class Run {
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
         <div class="minibar" id="minibar" hidden><div class="mb-n" id="miniName"></div><div class="mb-bar"><i id="miniFill"></i></div></div>
         <div class="banner" id="banner"></div>
-        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br><b>Saut</b> : touchez le bouton quand il devient <em>rouge</em>.</div>
-        <button class="jump-btn" id="jumpBtn" aria-label="Sauter"><svg class="jring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16.5"/></svg><svg class="jarrow" viewBox="0 0 24 24"><path d="M12 3.5l8.5 9.5h-5.2v7.5H8.7V13H3.5z"/></svg><small>Saut</small><i class="jwarn">!</i></button>
+        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu'elles n'explosent.</div>
         <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 32)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
       </div>
     </div>`);
@@ -298,7 +297,7 @@ export class Run {
     cv.addEventListener('pointerdown', e => {
       e.preventDefault();
       cv.setPointerCapture?.(e.pointerId);
-      // un seul doigt : on glisse pour courir (le saut a son propre bouton)
+      // un seul doigt : on glisse pour courir
       if (!this.joy) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: 0, yaw: this.yaw };
       $('#hintBubble')?.classList.add('out');
     });
@@ -308,7 +307,7 @@ export class Run {
     });
     const up = e => { if (this.joy && e.pointerId === this.joy.id) this.joy = null; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-    // boutons (Saut, ultime, pause) : réagissent dès qu'on les touche (pas au relâchement), avec un autre doigt
+    // boutons (ultime, pause) : réagissent dès qu'on les touche (pas au relâchement), avec un autre doigt
     // pendant que le premier tient le joystick (le joystick ne suit que son propre doigt)
     const press = (sel, fn) => {
       const b = $(sel); if (!b) return;
@@ -321,10 +320,9 @@ export class Run {
       b.addEventListener('click', e => e.preventDefault());
       b.addEventListener('contextmenu', e => e.preventDefault());
     };
-    press('#jumpBtn', () => this.jump());
     press('#ultBtn', () => this.useUlt());
     press('#pauseBtn', () => this.pause());
-    this.kd = e => { this.keys.add(e.key.toLowerCase()); if (e.key === ' ') this.jump(); if (e.key.toLowerCase() === 'e') this.useUlt(); if (e.key === 'Escape') this.pause(); };
+    this.kd = e => { this.keys.add(e.key.toLowerCase()); if (e.key.toLowerCase() === 'e') this.useUlt(); if (e.key === 'Escape') this.pause(); };
     this.ku = e => this.keys.delete(e.key.toLowerCase());
     window.addEventListener('keydown', this.kd); window.addEventListener('keyup', this.ku);
   }
@@ -345,45 +343,9 @@ export class Run {
     this.onPause(() => { this.paused = false; duckMusic(false); this.last = performance.now(); });
   }
 
-  jump() {
-    const p = this.p;
-    if (this.paused || this.over || this.dying || p.h > 2) return;
-    p.vh = JUMP_V; p.h = 1;
-    this.emit('jump', { x: p.x, y: p.y, warned: this.jumpWarn > 0 });
-    sfx('jump');
-  }
 
-  // secondes avant le prochain coup qu'on évite en sautant (ondes de choc, rayon tournant du boss, sortie de terre
-  // sous le joueur) ; 0 quand rien n'arrive. jumpWarnDur = durée totale de l'alerte en cours (anneau du rendu).
-  updateJumpWarn() {
-    const p = this.p;
-    let w = 9;
-    for (const v of this.waves) { // onde de choc : elle touche quand son bord arrive à 26 du joueur
-      if (v.hit) continue;
-      const d = Math.hypot(p.x - v.x, p.y - v.y);
-      if (d + 26 > v.r && d - 26 < v.max) w = Math.min(w, Math.max(0.01, (d - 26 - v.r) / v.speed));
-    }
-    for (const e of this.enemies) {
-      if (e.dead) continue;
-      const a = e.act;
-      if (a && !e.boss) {
-        if (a.kind === 'stomp' && a.stage === 0) { const d = Math.hypot(p.x - e.x, p.y - e.y); if (d - 26 < a.R) w = Math.min(w, Math.max(0, a.t) + Math.max(0, d - 26 - e.r) / 300); }
-        else if (a.kind === 'burrow' && a.stage === 2 && Math.hypot(p.x - a.x, p.y - a.y) < a.R + p.r + 30) w = Math.min(w, Math.max(0.01, a.t));
-        continue;
-      }
-      if (!e.boss) continue;
-      if (e.phase === 'stomp') { const d = Math.hypot(p.x - e.x, p.y - e.y); if (d - 26 < 540) w = Math.min(w, Math.max(0, e.phaseT) + Math.max(0, d - 26 - e.r) / 330); }
-      else if (e.phase === 'burrow' && e.bst === 2 && Math.hypot(p.x - e.bx, p.y - e.by) < 125 + p.r + 30) w = Math.min(w, Math.max(0.01, e.phaseT));
-      else if (e.phase === 'sweepW' || e.phase === 'sweep') w = Math.min(w, this.sweepEta(e));
-    }
-    w = w < 3 ? w : 0;
-    // première alerte de la partie : on rappelle le bouton
-    if (w > 0 && !this.jumpTold && !this.paused) { this.jumpTold = true; this.msgT = 0; this.msg('Attaque à sauter : touchez « Saut » !'); }
-    if (w > 0 && !this.jumpWarn) { this.jumpWarnDur = w; buzz(12); } // petite vibration au début de l'alerte
-    else if (w > this.jumpWarn + 0.3) this.jumpWarnDur = w; // nouvelle alerte plus lointaine
-    if (!w) this.jumpWarnDur = 0;
-    this.jumpWarn = w;
-  }
+  // il n'y a plus de saut : plus d'alerte de saut (les rendus lisent encore ce champ)
+  updateJumpWarn() { this.jumpWarn = 0; this.jumpWarnDur = 0; }
 
   // temps avant que le rayon tournant du boss atteigne le joueur (9 = jamais)
   sweepEta(e) {
@@ -801,7 +763,6 @@ export class Run {
       if (ad > m) { p.x = A.x + ax / ad * m; p.y = A.y + ay / ad * m; }
     }
     p.moving = ml > 0.05;
-    if (p.h > 0 || p.vh > 0) { p.vh -= GRAV * dt; p.h = Math.max(0, p.h + p.vh * dt); if (p.h === 0) { p.vh = 0; this.emit('land', { x: p.x, y: p.y }); } }
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
     this.updateHeal(dt);
@@ -1105,10 +1066,9 @@ export class Run {
       const a = e.act, dashing = !!a && a.stage === 1 && (a.kind === 'dash' || a.kind === 'strafe');
       if (!e.freeze) e.ang = dashing && a.kind === 'dash' ? Math.atan2(a.dx, a.dy) : Math.atan2(dx, dy);
       if (!e.boss && !a && d > SPAWN_R * 1.5) { const [nx2, ny2] = this.spawnPoint(); e.x = nx2; e.y = ny2; }
-      // contact (on l'évite en sautant par-dessus les ennemis au sol)
+      // contact
       if (e.burrowed) continue;
-      const overhead = !e.fly && p.h > 26 + (e.boss ? 60 : e.elite ? 16 : 0);
-      if (d < e.r * 0.7 + p.r && !overhead) this.hurtPlayer(e.dmg * fury * (dashing ? 1.3 : 1), e);
+      if (d < e.r * 0.7 + p.r) this.hurtPlayer(e.dmg * fury * (dashing ? 1.3 : 1), e);
     }
   }
 
@@ -1219,9 +1179,9 @@ export class Run {
         this.acts++;
         return;
       }
-      case 'golem': { // les golems d'élite frappent le sol : onde de choc à sauter
+      case 'golem': { // les golems d'élite frappent le sol : onde de choc à fuir (portée limitée)
         if (!e.elite || d > 125) break;
-        this.tele(e, 'stomp', 1, e.x, e.y, 0, 0, 170 + e.r); // assez tôt pour sauter (≥ 1 s)
+        this.tele(e, 'stomp', 1.1, e.x, e.y, 0, 0, 150 + e.r); // le temps de sortir du cercle
         this.warnRing(e.x, e.y, e.r * 1.6, 1, '#ff7a3a');
         this.acts++;
         return;
@@ -1278,7 +1238,7 @@ export class Run {
           const k = Math.min(1, dt * 6); e.x += (a.x - e.x) * k; e.y += (a.y - e.y) * k;
           if (a.t <= 0) {
             e.x = a.x; e.y = a.y; e.burrowed = false; e.jumpH = 0; e.born = this.time;
-            const hit = Math.hypot(p.x - a.x, p.y - a.y) < a.R + p.r * 0.5 && p.h < 40;
+            const hit = Math.hypot(p.x - a.x, p.y - a.y) < a.R + p.r * 0.5;
             if (hit) this.hurtPlayer(e.dmg * 1.5, e);
             this.emit('emerge', { e, x: a.x, y: a.y, R: a.R, hit });
             this.burst(a.x, a.y, 16, 0, e.def.pal[1], 3);
@@ -1368,11 +1328,11 @@ export class Run {
           sfx('charge'); this.shake = Math.max(this.shake, 6);
         }
         return;
-      case 'sweep': { // rayon tournant : on saute par-dessus
+      case 'sweep': { // rayon tournant : on s'en sort en s'éloignant du boss (portée limitée)
         mv.x = 0; mv.y = 0;
         e.sweepA += e.sweepDir * SWEEP_ARC / e.sweepDur * dt;
         const cx = Math.cos(e.sweepA), cy = Math.sin(e.sweepA), dx = p.x - e.x, dy = p.y - e.y, along = dx * cx + dy * cy;
-        if (along > 0 && along < e.sweepLen && Math.abs(dy * cx - dx * cy) < e.sweepW / 2 + p.r * 0.6 && p.h <= 40) this.hurtPlayer(e.dmg * 0.9, e);
+        if (along > 0 && along < e.sweepLen && Math.abs(dy * cx - dx * cy) < e.sweepW / 2 + p.r * 0.6) this.hurtPlayer(e.dmg * 0.7, e);
         if (e.phaseT <= 0) {
           if (--e.sweeps > 0) { e.sweepDir = -e.sweepDir; e.phaseT = e.sweepDur; this.emit('bossSweep', { e }); }
           else { e.phase = 'chase'; e.phaseT = rand(1.8, 2.8) * cdm; }
@@ -1399,8 +1359,8 @@ export class Run {
         mv.x *= 0.6; mv.y *= 0.6;
         if (e.phaseT <= 0) {
           e.jumpH = 0; e.phase = 'chase'; e.phaseT = rand(2.5, 3.8) * cdm;
-          this.waves.push({ x: e.x, y: e.y, r: e.r, max: 540, speed: 330, dmg: e.dmg * 0.9, hit: false });
-          if (rage) this.waves.push({ x: e.x, y: e.y, r: e.r * 0.5, max: 420, speed: 220, dmg: e.dmg * 0.9, hit: false }); // 2e onde, plus lente
+          this.waves.push({ x: e.x, y: e.y, r: e.r, max: BOSS_WAVE, speed: 300, dmg: e.dmg * 0.6, hit: false });
+          if (rage) this.waves.push({ x: e.x, y: e.y, r: e.r * 0.5, max: BOSS_WAVE * 0.75, speed: 200, dmg: e.dmg * 0.6, hit: false }); // 2e onde, plus lente
           this.emit('bossStomp', { e, x: e.x, y: e.y });
           this.shake = 12; sfx('stomp'); buzz(50);
           this.burst(e.x, e.y, 30, 0, e.def.pal[1], 4);
@@ -1457,7 +1417,7 @@ export class Run {
           const k = Math.min(1, dt * 5); e.x += (e.bx - e.x) * k; e.y += (e.by - e.y) * k;
           if (e.phaseT <= 0) {
             e.x = e.bx; e.y = e.by; e.burrowed = false; e.jumpH = 0; e.born = this.time;
-            const hit = Math.hypot(p.x - e.x, p.y - e.y) < 125 + p.r * 0.5 && p.h < 50;
+            const hit = Math.hypot(p.x - e.x, p.y - e.y) < 125 + p.r * 0.5;
             if (hit) this.hurtPlayer(e.dmg * 1.5, e);
             this.emit('emerge', { e, x: e.x, y: e.y, R: 125, hit });
             this.burst(e.x, e.y, 40, 0, e.def.pal[1], 6);
@@ -1499,8 +1459,8 @@ export class Run {
       case 'stomp':
         e.phase = 'stomp'; e.phaseT = 1.05;
         this.emit('bossJump', { e });
-        this.emit('enemyTelegraph', { e, kind: 'stomp', x: e.x, y: e.y, dx: 0, dy: 0, dur: 1.05, R: 540 });
-        this.msg('Onde de choc : touchez « Saut » !');
+        this.emit('enemyTelegraph', { e, kind: 'stomp', x: e.x, y: e.y, dx: 0, dy: 0, dur: 1.05, R: BOSS_WAVE });
+        this.msg('Onde de choc : éloignez-vous du boss !');
         break;
       case 'ring':
         e.phase = 'ringW'; e.phaseT = 0.6;
@@ -1543,11 +1503,11 @@ export class Run {
         // rayon tournant de ~200° : il commence loin du joueur et passe sur lui à mi-course (2 passages en phase 3)
         const dir = Math.random() < 0.5 ? 1 : -1, toP = Math.atan2(p.y - e.y, p.x - e.x);
         e.sweepDir = dir; e.sweepA = toP - dir * SWEEP_ARC / 2;
-        e.sweepLen = ARENA_R * 1.3; e.sweepW = 34 + this.zone.id * 2;
+        e.sweepLen = SWEEP_LEN; e.sweepW = 34 + this.zone.id * 2;
         e.sweeps = e.enraged ? 2 : 1; e.sweepDur = e.enraged ? 1.8 : 2.4;
         e.phase = 'sweepW'; e.phaseT = e.enraged ? 0.75 : 0.95;
         this.emit('enemyTelegraph', { e, kind: 'sweep', x: e.x, y: e.y, dx: Math.cos(e.sweepA), dy: Math.sin(e.sweepA), dur: e.phaseT, R: e.sweepLen });
-        this.msg('Rayon tournant : touchez « Saut » !');
+        this.msg('Rayon tournant : éloignez-vous du boss !');
         break;
       }
     }
@@ -1637,7 +1597,7 @@ export class Run {
     for (const w of this.waves) {
       w.r += w.speed * dt;
       const d = Math.hypot(p.x - w.x, p.y - w.y);
-      if (!w.hit && Math.abs(d - w.r) < 26 && p.h < 14) { w.hit = true; this.hurtPlayer(w.dmg); }
+      if (!w.hit && Math.abs(d - w.r) < 26) { w.hit = true; this.hurtPlayer(w.dmg); }
     }
     this.waves = this.waves.filter(w => w.r < w.max);
   }
@@ -1965,7 +1925,7 @@ export class Run {
     this.shots = this.shots.filter(s => s.life > 0);
     for (const s of this.eshots) {
       s.life -= dt; s.x += s.vx * dt; s.y += s.vy * dt;
-      if (dist2(s, p) < (s.r + p.r) ** 2 && p.h < 50) { s.life = 0; this.hurtPlayer(s.dmg); }
+      if (dist2(s, p) < (s.r + p.r) ** 2) { s.life = 0; this.hurtPlayer(s.dmg); }
     }
     this.eshots = this.eshots.filter(s => s.life > 0);
   }
@@ -2491,14 +2451,6 @@ export class Run {
   // ---------- Interface ----------
   hud() {
     const p = this.p;
-    // bouton Saut : rouge et pulsant pendant l'alerte, l'anneau se vide jusqu'à l'impact (à chaque image)
-    const jb = this._jb || (this._jb = $('#jumpBtn')), warn = this.jumpWarn > 0;
-    if (jb) {
-      if (warn !== this._jw) { jb.classList.toggle('warn', warn); this._jw = warn; }
-      const ring = this._jr || (this._jr = jb.querySelector('.jring circle'));
-      if (warn && ring) ring.style.strokeDashoffset = 103.7 * (1 - Math.min(1, this.jumpWarn / Math.max(0.3, this.jumpWarnDur)));
-      jb.classList.toggle('air', p.h > 2);
-    }
     this.hudT = (this.hudT || 0) + 1;
     if (this.hudT % 3) return;
     const tm = $('#timer'), lbl = $('#timerLbl');
