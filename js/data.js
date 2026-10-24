@@ -576,7 +576,7 @@ export const UNLOCK_CHALLENGES = [
 // first.gold × t or et un coffre de butin (rang first.chest[t − 1]).
 export const ABYSS_TIERS = 10;
 export const ABYSS_ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-export const ABYSS = { hp: 0.15, dmg: 0.08, boss: 0.15, spawn: 0.03, gold: 0.2, rarity: 0.015, itemMult: 0.05, color: '#5a6aff',
+export const ABYSS = { hp: 0.35, dmg: 0.15, boss: 0.35, spawn: 0.03, gold: 0.2, rarity: 0.015, itemMult: 0.05, color: '#5a6aff',
   first: { gold: 150, chest: [1, 1, 2, 2, 2, 2, 3, 3, 3, 3] } };
 // malédictions dans l'ordre d'arrivée (palier I : la première, palier X : toutes)
 export const ABYSS_CURSES = [

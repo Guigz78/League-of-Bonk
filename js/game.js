@@ -104,6 +104,7 @@ function canAffordUpgrade() {
 export function home(t) {
   music('menu');
   battle = null;
+  l2Home(); // L2 : défis remplis validés avant l'affichage (toasts, coffres, tuile des défis)
   // même onglet : on garde la position de défilement (achats en bas de la boutique…)
   const keep = !t || t === tab ? $('#hubMain')?.scrollTop || 0 : 0;
   const moved = t && t !== tab;
@@ -114,7 +115,6 @@ export function home(t) {
   if (moved) $('#hubMain').classList.add('scr-in');
   bind($('.hub'), handlers);
   mountPreview($('.hc-3d'), save.cls);
-  l2Home(); // L2 : défis remplis validés (toasts)
 }
 
 const handlers = {
@@ -465,8 +465,8 @@ async function zoneSheet(i) {
       <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px spr" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
       <h4>Difficulté</h4>
       <div class="diff-pick" role="radiogroup" aria-label="Niveau de difficulté">${DIFFICULTIES.map((_, k) => btn(k)).join('')}</div>
-      <div class="diff-info d${sel} ${ab ? 'ab' : ''}">${ab ? abyssInfo(i, ab) : diffInfo(i, sel)}</div>
       <div class="abyss-box">${abyssBlock(i, ab)}</div>
+      <div class="diff-info d${sel} ${ab ? 'ab' : ''}">${ab ? abyssInfo(i, ab) : diffInfo(i, sel)}</div>
       <h4>Bonus pour la partie</h4>
       <div class="boost-box">${boostSlots()}</div>
       <h4>Objectif</h4>
@@ -500,7 +500,7 @@ async function zoneSheet(i) {
       const t = +a.dataset.ab;
       sfx('tap');
       if (t > abyssTop(i)) {
-        toast(`${iconImg('lock', 16)} Battez <b>Abysse ${DATA.ABYSS_ROMAN[t - 1]}</b> sur ce monde pour ouvrir le palier suivant`);
+        toast(`${iconImg('lock', 16)} Battez <b>Abysse ${DATA.ABYSS_ROMAN[abyssTop(i)]}</b> sur ce monde pour ouvrir les paliers suivants`);
         a.classList.remove('nope'); void a.offsetWidth; a.classList.add('nope');
         return;
       }

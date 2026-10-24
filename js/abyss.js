@@ -24,7 +24,7 @@ export function runDiff(k = 0, t = 0) {
   const A = ABYSS, C = new Set(curses(t).map(c => c.id)), has = id => C.has(id);
   return { ...D, name: abyssName(t), icon: 'abyss', color: A.color, abyss: t, curses: C,
     desc: `Palier ${t} sur ${ABYSS_TIERS} au-delà de Cauchemar.`,
-    hp: D.hp * (1 + A.hp * t), dmg: D.dmg * (1 + A.dmg * t), boss: D.boss * (1 + A.boss * t) * (has('bosshp') ? 1.3 : 1),
+    hp: D.hp * (1 + A.hp) ** t, dmg: D.dmg * (1 + A.dmg) ** t, boss: D.boss * (1 + A.boss) ** t * (has('bosshp') ? 1.3 : 1),
     spawn: D.spawn * (1 + A.spawn * t), speed: D.speed * (has('fast') ? 1.1 : 1), elite: D.elite * (has('elites') ? 0.5 : 1),
     mods: D.mods + (has('mods') ? 1 : 0), heal: D.heal * (has('lowheal') ? 0.6 : 1),
     gold: D.gold * (1 + A.gold * t), rarity: D.rarity + A.rarity * t, itemMult: D.itemMult + A.itemMult * t };
