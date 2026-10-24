@@ -538,7 +538,7 @@ export const UNLOCK_CHALLENGES = [
   { id: 'wk_aura', cat: 'weapons', icon: 'cloak', name: 'Cœur ardent', txt: 'Battez 3 000 monstres avec la Cape solaire', n: 3000, prog: wk_('aura'), rw: { key: 'aura:sun', gold: 150 } },
   { id: 'wk_daggers', cat: 'weapons', icon: 'volley', name: 'Mille entailles', txt: 'Battez 3 000 monstres avec les Dagues', n: 3000, prog: wk_('daggers'), rw: { key: 'aura:shadow', gold: 150 } },
   { id: 'evo3', cat: 'weapons', icon: 'star', name: 'Arsenal légendaire', txt: 'Faites évoluer 3 armes dans une même partie', n: 3, prog: rec_('evoRun'), rw: { key: 'aura:prism', chest: 2 } },
-  { id: 'evos25', cat: 'weapons', icon: 'hammer', name: 'Maître armurier', txt: 'Faites évoluer 25 armes au total', n: 25, prog: st_('weaponEvos'), rw: { key: 'title:armurier', gold: 300 } },
+  { id: 'evos60', cat: 'weapons', icon: 'hammer', name: 'Maître armurier', txt: 'Faites évoluer 60 armes au total', n: 60, prog: st_('weaponEvos'), rw: { key: 'title:armurier', gold: 300 } },
   // ---- champions ----
   { id: 'lvl25_mage', cat: 'champions', icon: 'nova', name: 'Lumière éternelle', txt: 'Atteignez le niveau 25 avec Lumi', n: 25, prog: lvl_('mage'), rw: { key: 'aura:astral', gold: 200 } },
   { id: 'lvl25_archer', cat: 'champions', icon: 'crystal', name: 'Œil de faucon', txt: 'Atteignez le niveau 25 avec Kira', n: 25, prog: lvl_('archer'), rw: { key: 'aura:frost', gold: 200 } },
@@ -557,7 +557,7 @@ export const UNLOCK_CHALLENGES = [
   { id: 'elites', cat: 'feats', icon: 'i_enrage', name: 'Tueur d\'élites', txt: 'Battez 400 élites', n: 400, prog: rec_('elites'), rw: { gold: 250, chest: 2 } },
   { id: 'lvl40', cat: 'feats', icon: 'upg', name: 'Puissance absolue', txt: 'Atteignez le niveau 40 dans une partie', n: 40, prog: st_('bestLevel'), rw: { key: 'title:titan', gold: 300 } },
   { id: 'stage4', cat: 'feats', icon: 'portal', name: 'Grande expédition', txt: 'Traversez 4 mondes en une seule partie', n: 4, prog: s => (s.stats?.runs ? (+s.stats.bestStage || 0) + 1 : 0), rw: { gold: 400, chest: 2 } },
-  { id: 'kills100k', cat: 'feats', icon: 'skull', name: 'Fléau des hordes', txt: 'Battez 100 000 monstres', n: 100000, prog: st_('kills'), rw: { key: 'aura:jade', gold: 400 } },
+  { id: 'kills150k', cat: 'feats', icon: 'skull', name: 'Fléau des hordes', txt: 'Battez 150 000 monstres', n: 150000, prog: st_('kills'), rw: { key: 'aura:jade', gold: 400 } },
   // ---- Abysse ----
   { id: 'night1', cat: 'abyss', icon: 'skull', name: 'Porte de l\'Abysse', txt: 'Battez un monde en Cauchemar', n: 1, prog: s => ((s.diffCleared || []).some(n => n >= 3) ? 1 : 0), rw: { key: 'abyss', gold: 300 } },
   { id: 'abyss1', cat: 'abyss', icon: 'abyss', name: 'Premier plongeon', txt: 'Battez un monde en Abysse I', n: 1, prog: abyssMax_, rw: { key: 'aura:abyss', chest: 2 } },
@@ -618,18 +618,20 @@ export function masteryOf(xp) {
 export const masteryBonus = lv => ({ dmg: Math.min(MASTERY.cap, Math.floor(Math.max(0, lv) / 2) / 100), hp: Math.min(MASTERY.cap, Math.floor(Math.max(0, lv - 1) / 2) / 100) });
 
 // ---------- Rythme visé (PACING_L2) ----------
-// Joueur « normal » : 30 à 45 min par jour, ~5 parties de 6 à 9 min (1 à 2 mondes), ~3 000 monstres par partie au début
-// (le bot du simulateur en bat ~4 700 en 2 mondes), ~350 XP de maîtrise par partie en Normal, ~600 plus tard (Cauchemar,
-// Abysse). Mesures du simulateur (Normal, monde 1 → 2, voir le compte rendu) : ~12 élites, ~1 200 victimes pour une arme
-// secondaire utilisée toute la partie, ~1,4 évolution d'arme, combo moyen ~550.
-// - Jour 1 (5 parties) : 7 « Premiers pas » ou presque (Crocs du vampire, Cape solaire, Bottes, Champignons, Trèfle,
-//   Départ éclair ; Dagues avec la Jungle), Combo 300 ; maîtrise 4–5 du champion principal (son aura).
-// - Jour 3 (15 parties) : 2–3 défis d'armes (Boule de neige, Nova de givre, Tome de sagesse), niveau 25 avec 1–2
-//   champions (auras), Polyvalent (Plume de phénix), maîtrise 10 (titre « Disciple »), premiers mondes en Difficile
-//   (la Rivière en Difficile ouvre Sora), 8–10 armes et 9–10 tomes dans le tirage.
-// - Jour 7 (35 parties) : tout l'arsenal débloqué (Fiole de sang), Combo 1 000, niveau 40, 4 mondes d'affilée,
-//   Tueur d'élites, un premier monde en Cauchemar : l'Abysse s'ouvre ; Nyx (6 000 PV de vol de vie) ; maîtrise 15–17.
-// - Jour 14 (70 parties) : Abysse I–V sur 1 à 3 mondes, 100 000 monstres, 25 évolutions, maîtrise 20 du principal
-//   (relance de plus), 2e champion vers 12–15.
-// - Jour 20 (100 parties) : Abysse VI–X (Seigneur de l'Abysse : le défi le plus long), maîtrise 30 du principal (cadre
-//   doré), maîtrise 20 avec 3 champions, Ver-Roi en Cauchemar, Combo 2 500 pour les meilleurs.
+// Joueur « normal » : 30 à 45 min par jour, ~5 parties de 6 à 9 min (1 à 2 mondes). Mesures du simulateur (bot, tirage
+// de départ, Normal, monde 1 → 2, 24 parties) : ~4 000 monstres et niveau ~29 par partie, ~280 XP de maîtrise (×1,5 à 2
+// plus tard : Difficile, Cauchemar, 3 mondes et plus), ~9 élites, ~830 PV rendus par le vol de vie, 1,25 évolution d'arme,
+// combo maximal ~750 ; victimes d'une arme gardée toute la partie : foudre ~1 200, lame ricochet ~1 400, orbes ~300,
+// cape solaire ~400, dagues ~250 ; un boss sur trois tombe en moins de 20 s.
+// - Jour 1 (5 parties) : presque tous les « Premiers pas » (Bottes, Champignons, Départ éclair, Trèfle, Fiole de sang,
+//   Tome de sagesse ; Nova de givre avec la Jungle), Combo 300 ; maîtrise 4–6 du champion principal (aura de maîtrise).
+// - Jour 3 (15 parties) : tout l'arsenal ou presque (Boule de neige avec la Foudre), 2–3 auras d'armes, niveau 25 avec
+//   1–2 champions, Polyvalent (Plume de phénix), maîtrise 10 (« Disciple »), Nyx (12 000 PV de vol de vie) pour qui joue
+//   le vol de vie, premiers mondes en Difficile (la Rivière en Difficile ouvre Sora vers le jour 3–5).
+// - Jour 7 (35 parties) : Combo 1 000, niveau 40, 4 mondes d'affilée, Arsenal légendaire, Tête brûlée, un premier monde
+//   en Cauchemar : l'Abysse s'ouvre (paliers I–III) ; 150 000 monstres vers le jour 7–8 ; maîtrise 15–17.
+// - Jour 14 (70 parties) : Tueur d'élites (400), 60 évolutions, Abysse V–VII au monde 1 et 2–3 mondes en Abysse, maîtrise
+//   20 du principal (relance de plus), 2e champion vers 12–15, Combo 2 500 pour les meilleurs.
+// - Jour 20 (100 parties) : Abysse X au monde 1 (~50 % pour un joueur avancé : « Seigneur de l'Abysse », le défi le plus
+//   long), Ver-Roi en Cauchemar, maîtrise 30 du principal (cadre doré), maîtrise 20 avec 3 champions (~85 parties).
+//   Les paliers hauts des mondes 3 à 6 restent ouverts au-delà.
