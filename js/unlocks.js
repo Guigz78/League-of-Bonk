@@ -138,7 +138,8 @@ const s_ = n => (n > 1 ? 's' : '');
 function announce(got, fresh = false) {
   const nk = got.reduce((n, g) => n + g.keys.length, 0);
   if (fresh || got.length > 2) {
-    toast(`${iconImg('key', 18)} ${fresh ? 'Nouveau : <b>Défis de déblocage</b>' : `<b>${got.length} défis réussis</b>`}${got.length ? ` · ${got.length} déjà réussi${s_(got.length)}${nk ? `, ${nk} déblocage${s_(nk)}` : ''}` : ''}`, 3600);
+    const n = got.length, dk = nk ? `${nk} déblocage${s_(nk)}` : '';
+    toast(`${iconImg('key', 18)} ${fresh ? `Nouveau : <b>Défis de déblocage</b>${n ? ` · ${n} déjà réussi${s_(n)}${dk ? ', ' + dk : ''}` : ''}` : `<b>${n} défis réussis</b>${dk ? ' · ' + dk : ''}`}`, 3600);
   } else for (const g of got) toast(`${iconImg(g.c.icon, 18)} Défi réussi : <b>${esc(g.c.name)}</b>${g.keys.length ? ` · ${g.keys.map(k => esc(keyInfo(k).name)).join(', ')} débloqué${s_(g.keys.length)}` : ''}`, 3200);
   if (got.length) sfx('loot');
 }
@@ -160,7 +161,7 @@ export function l2Results(L) {
 // pastilles de récompense : déblocages, or, coffre
 export function rwChips(rw, mini = false) {
   const ks = rw.keys || (rw.key ? [rw.key] : []);
-  return `<span class="df-rw ${mini ? 'mini' : ''}">${ks.map(k => { const I = keyInfo(k); return `<span class="rk ${unlocked(k) ? 'have' : ''}" ${I.color ? `style="--kc:${I.color}"` : ''}>${iconImg(I.icon, 14)}${esc(I.name)}</span>`; }).join('')}${rw.gold ? `<span class="rk gold">${iconImg('gold', 14)}${fmt(rw.gold)}</span>` : ''}${rw.chest != null ? `<span class="rk chest"><img src="${chestURL(rw.chest)}" width="14" height="14" alt="">${esc(LOOT_TIERS[rw.chest]?.name || '')}</span>` : ''}</span>`;
+  return `<span class="df-rw ${mini ? 'mini' : ''}">${ks.map(k => { const I = keyInfo(k); return `<span class="rk ${unlocked(k) && !mini ? 'have' : ''}" ${I.color ? `style="--kc:${I.color}"` : ''}>${iconImg(I.icon, 14)}${esc(I.name)}</span>`; }).join('')}${rw.gold ? `<span class="rk gold">${iconImg('gold', 14)}${fmt(rw.gold)}</span>` : ''}${rw.chest != null ? `<span class="rk chest"><img src="${chestURL(rw.chest)}" width="14" height="14" alt="">${esc(LOOT_TIERS[rw.chest]?.name || '')}</span>` : ''}</span>`;
 }
 const bar = (k, done) => `<span class="pbar ${done ? 'green' : ''}"><i style="width:${(Math.min(1, k) * 100).toFixed(1)}%"></i></span>`;
 // « Défi Pilleur : Ouvrez 5 coffres de butin (3/5) » pour une clé verrouillée
