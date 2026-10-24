@@ -20,6 +20,9 @@ const rnd = n => Math.floor(Math.random() * n);
 export const CUM = SEASON_COST.reduce((a, c) => (a.push(a[a.length - 1] + c), a), [0]);
 export const tierOf = xp => { let n = 0; while (n < SEASON_TIERS && xp >= CUM[n + 1]) n++; return n; };
 
+// numéro de jour -> « AAAA-MM-JJ » (inverse de dayNum)
+export const keyOf = n => { const d = new Date(n * 864e5); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+
 const blank = n => ({ n, start: dayKey(), xp: 0, got: [], bDay: '', bUsed: 0 });
 export function feats() {
   return save.feats || (save.feats = { combo: 0, c200: 0, st3: 0, evoRun: 0, evo: {}, boss: {}, leg: [], weekly: 0, tierBest: 0, seasons: 0 });
@@ -28,7 +31,7 @@ export function feats() {
 // saison en cours : créée au besoin, remise en forme, et renouvelée au bout de 20 jours
 export function season() {
   let S = save.season;
-  if (!S || typeof S !== 'object' || !okDay(S.start)) S = save.season = blank(1);
+  if (!S || typeof S !== 'object' || !okDay(S.start)) { S = save.season = blank(Math.max(1, (S?.n | 0) || 1)); persist({ touch: false }); }
   S.n = Math.max(1, S.n | 0);
   S.xp = Math.max(0, Math.floor(+S.xp || 0));
   if (!Array.isArray(S.got)) S.got = [];
@@ -38,19 +41,41 @@ export function season() {
 
 // fin de saison : paliers atteints pas encore réclamés donnés d'office, puis saison suivante (même parcours)
 function endSeason(S) {
-  const tier = tierOf(S.xp), auto = [];
-  for (let p = 1; p <= tier; p++) if (!S.got.includes(p)) { S.got.push(p); auto.push(p); grant(SEASON_TRACK[p - 1]); }
+  const tier = tierOf(S.xp), auto = [], got = [];
+  for (let p = 1; p <= tier; p++) if (!S.got.includes(p)) { S.got.push(p); auto.push(p); grant(SEASON_TRACK[p - 1], got); }
   feats().seasons++;
   const N = save.season = blank(S.n + 1);
-  N.prev = { n: S.n, tier, auto, seen: false };
+  N.prev = { n: S.n, tier, auto, got: sumUp(got), seen: false }; // bilan affiché une fois à l'accueil
   persist();
   return N;
+}
+
+// regroupe une liste de récompenses données (grant) : { gold, chests: [rangs], parts, boosts, upg, titles, cls }
+export function sumUp(list) {
+  const o = { gold: 0, chests: [], parts: 0, boosts: 0, upg: 0, titles: [], cls: [] };
+  for (const g of list || []) {
+    if (g.k === 'gold') o.gold += g.n;
+    else if (g.k === 'chest') o.chests.push(g.t);
+    else if (g.k === 'parts') o.parts += g.n;
+    else if (g.k === 'boost') o.boosts++;
+    else if (g.k === 'upg') o.upg++;
+    else if (g.k === 'title') o.titles.push(g.id);
+    else if (g.k === 'cls') o.cls.push(g.id);
+  }
+  return o;
 }
 
 // jour de la saison (1 à 20) et jours restants (aujourd'hui compris)
 export function seasonDay() {
   const S = season(), d = Math.max(0, dayNum(dayKey()) - dayNum(S.start));
   return { day: Math.min(SEASON_DAYS, d + 1), left: Math.max(1, SEASON_DAYS - d) };
+}
+// semaine de saison (quêtes de la semaine) : n° 0 à 2 (jours 1-7, 8-14, 15-20), clé de tirage (date de son premier
+// jour), jours restants avant les suivantes (aujourd'hui compris)
+export function seasonWeek() {
+  const S = season(), d = Math.max(0, dayNum(dayKey()) - dayNum(S.start)), w = Math.min(2, Math.floor(d / 7));
+  const end = w < 2 ? (w + 1) * 7 : SEASON_DAYS;
+  return { w, key: keyOf(dayNum(S.start) + 7 * w), left: Math.max(1, end - d), n: S.n };
 }
 
 // état affichable : palier atteint, XP dans le palier en cours, paliers à réclamer
@@ -206,7 +231,7 @@ export function achValue(stat) {
     case 'pets': return s.pets.length;
     case 'legFx': return (F.leg || []).length;
     case 'seen': return Object.keys(st.seen || {}).filter(n => BEAST.has(n)).length;
-    case 'combo': case 'evoRun': case 'weekly': case 'tierBest': return F[key] | 0;
+    case 'combo': case 'c200': case 'st3': case 'evoRun': case 'weekly': case 'tierBest': return F[key] | 0;
     default: return +st[key] || 0;
   }
 }

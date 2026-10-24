@@ -470,14 +470,15 @@ export const CHEST_LOOT = [
 ];
 
 // ===== L1 : saison « Pass d'expédition », quêtes de la semaine, calendrier de 20 jours, succès, titres =====
-// RYTHME (PACING) — à refaire si on touche aux valeurs ci-dessous.
+// RYTHME (PACING) : @PACING@
 export const SEASON_DAYS = 20, SEASON_TIERS = 40;
 export const SEASON_XP = {
-  boss: 25, bossZone: 5,          // par boss vaincu : 25 + 5 × n° du monde (0 à 5), × multiplicateur de difficulté
+  boss: 20, bossZone: 5,          // par boss vaincu : 20 + 5 × n° du monde (0 à 5), × multiplicateur de difficulté
   diff: [1, 1.5, 2],              // Normal, Difficile, Cauchemar (au-delà, Abysse : +0,25 par niveau)
-  kills: 250, chest: 2, totem: 3, min: 2, // 1 XP par 250 monstres, par coffre trouvé, par totem activé, par minute
-  bonus: 1200, bonusMul: 2,       // Bonus du jour : XP ×2 sur les 20 premières minutes de jeu de chaque journée
-  login: 30,                      // récompense du calendrier réclamée
+  kills: 300, chest: 2, totem: 2, min: 2, // 1 XP par 300 monstres, 2 par coffre trouvé, par totem activé, par minute
+  bonus: 1200, bonusMul: 2,       // Bonus du jour : XP des parties ×2 sur les 20 premières minutes de jeu de chaque jour
+  quest: 70,                      // quête du jour réclamée (les quêtes de la semaine ont leur XP dans WEEKLY)
+  login: 50,                      // récompense du calendrier réclamée
 };
 // XP pour passer chaque palier (index 0 = palier 1) : 170, 190 … 950 (22 400 XP en tout)
 export const SEASON_COST = Array.from({ length: SEASON_TIERS }, (_, i) => 150 + 20 * (i + 1));
@@ -490,9 +491,26 @@ export const SEASON_TRACK = [
   { gold: 300 }, { chest: 1 }, { parts: [2, 2] }, { boostId: 'phenix' }, { cls: 'vampire', alt: { chest: 2, gold: 300 }, big: true },
   { gold: 350 }, { chest: 2 }, { upg: 1 }, { parts: [2, 3] }, { chest: 3, gold: 500, title: 'aventurier', big: true },
   { gold: 400 }, { chest: 1, boost: 1 }, { boost: 2 }, { upg: 1 }, { chest: 2, gold: 300 },
-  { parts: [3, 1] }, { gold: 450 }, { chest: 2 }, { upg: 2 }, { cls: 'assassin', alt: { chest: 3 }, title: 'conquerant', big: true },
+  { parts: [3, 1] }, { gold: 450 }, { chest: 2 }, { upg: 2 }, { cls: 'assassin', alt: { chest: 3, gold: 500 }, title: 'conquerant', big: true },
   { gold: 500 }, { chest: 2 }, { boost: 3 }, { upg: 2 }, { chest: 3 },
   { parts: [3, 2] }, { gold: 600 }, { chest: 2, boost: 1 }, { upg: 2 }, { chest: [3, 3], gold: 1000, title: 'legende', big: true },
+];
+// Quêtes de la semaine : 5 par semaine de saison (jours 1-7, 8-14, 15-20), tirées comme celles du jour (graine : date du
+// début de la semaine). Progression = écart de la statistique (achValue de season.js) depuis le tirage. n = objectifs
+// possibles, tier = coffre (rang LOOT_TIERS), xp = XP de saison, gold = or ; need = niveau de difficulté débloqué
+// quelque part (1 : Difficile, 2 : Cauchemar). Volumes : un joueur à 35 min par jour fait ~25 parties par semaine.
+export const WEEKLY = [
+  { id: 'boss', stat: 'wins', icon: 'crown', n: [15, 20], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n} boss` },
+  { id: 'portals', stat: 'portals', icon: 'portal', n: [8, 12], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Franchissez ${n} portails` },
+  { id: 'hard', stat: 'hard', icon: 'i_enrage', n: [5, 8], tier: [2, 2], xp: [400, 500], gold: [250, 350], need: 1, txt: n => `Battez ${n} boss en Difficile ou Cauchemar` },
+  { id: 'night', stat: 'night', icon: 'skull', n: [3, 5], tier: [2, 3], xp: [450, 550], gold: [300, 400], need: 2, txt: n => `Battez ${n} boss en Cauchemar` },
+  { id: 'combo', stat: 'c200', icon: 'bolt', n: [5, 8], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Atteignez un combo de 200 dans ${n} parties` },
+  { id: 'totems', stat: 'totems', icon: 'i_burn', n: [25, 40], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Activez ${n} totems de défi` },
+  { id: 'kills', stat: 'kills', icon: 'skull', n: [40000, 60000], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n.toLocaleString('fr-FR')} monstres` },
+  { id: 'chests', stat: 'chests', icon: 'chest', n: [40, 60], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Ouvrez ${n} coffres de butin` },
+  { id: 'deep', stat: 'st3', icon: 'map', n: [3, 5], tier: [2, 2], xp: [400, 500], gold: [250, 350], txt: n => `Atteignez le 3e monde d'une expédition ${n} fois` },
+  { id: 'daily', stat: 'quests', icon: 'quest', n: [12, 15], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Réclamez ${n} quêtes du jour` },
+  { id: 'evos', stat: 'weaponEvos', icon: 'star', n: [10, 15], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Faites évoluer ${n} armes` },
 ];
 // Calendrier de connexion de 20 jours (remplace celui de 7 jours, l'avancement est gardé) : un jour manqué ne remet
 // rien à zéro, on reprend au jour suivant. Jours 7, 14 et 20 : grosses récompenses. Après le 20e, il recommence.
@@ -530,7 +548,7 @@ export const ACH_CATS = {
   coll:   { name: 'Collection', icon: 'chest' },
   loyal:  { name: 'Fidélité', icon: 'calendar' },
 };
-// Succès d'origine (ACHIEVEMENTS) : [catégorie, statistique suivie (ACH_STAT de season.js), objectif] pour les barres
+// Succès d'origine (ACHIEVEMENTS) : [catégorie, statistique suivie (achValue de season.js), objectif] pour les barres
 export const ACH_META = {
   first_win: ['combat', 'kills', 1], kills1000: ['combat', 'kills', 1000], ult20: ['combat', 'ults', 20], lvl20: ['combat', 'bestLevel', 20],
   allclass: ['champ', 'clsWon', 3], zone1: ['world', 'zone:0', 1], boss1: ['world', 'wins', 1], baron: ['world', 'zone:5', 1],
@@ -539,7 +557,7 @@ export const ACH_META = {
   epic: ['coll', 'epic', 1], pets3: ['coll', 'pets', 3], forge1: ['coll', 'crafted', 1], upgrade5: ['coll', 'itemLv', 5],
   mythic: ['coll', 'mythic', 1], chests50: ['coll', 'chests', 50], quests10: ['loyal', 'quests', 10], login7: ['loyal', 'logins', 7],
 };
-// Nouveaux succès (paliers I/II/III, par champion, par monde…) : stat suivie (ACH_STAT), objectif, or, titre éventuel.
+// Nouveaux succès (paliers I/II/III, par champion, par monde…) : stat suivie (achValue), objectif, or, titre éventuel.
 // Ceux par champion et par monde sont tirés de CLASSES et ZONES (un nouveau champion a les siens).
 const ach = (id, cat, name, desc, stat, goal, gold, title) => ({ id, cat, name, desc, stat, goal, gold, ...(title ? { title } : {}) });
 export const ACH_MORE = [
@@ -570,8 +588,8 @@ export const ACH_MORE = [
   ach('evorun', 'evo', 'Arsenal ultime', 'Avoir 3 armes évoluées dans une même partie.', 'evoRun', 3, 300),
   ach('form', 'evo', 'Forme ultime', 'Atteindre la 5e évolution d\'un champion.', 'formAny', 4, 100),
   ach('heal1', 'blood', 'Goût du sang', 'Rendre 2 000 PV grâce au vol de vie.', 'lsHeal', 2000, 60),
-  ach('heal2', 'blood', 'Soif inextinguible', 'Rendre 30 000 PV grâce au vol de vie.', 'lsHeal', 30000, 200),
-  ach('heal3', 'blood', 'Seigneur vampire', 'Rendre 200 000 PV grâce au vol de vie.', 'lsHeal', 200000, 500, 'vampire'),
+  ach('heal2', 'blood', 'Soif inextinguible', 'Rendre 25 000 PV grâce au vol de vie.', 'lsHeal', 25000, 200),
+  ach('heal3', 'blood', 'Seigneur vampire', 'Rendre 150 000 PV grâce au vol de vie.', 'lsHeal', 150000, 500, 'vampire'),
   ach('legend1', 'coll', 'Trésor légendaire', 'Posséder un objet légendaire.', 'legendary', 1, 100),
   ach('legfx', 'coll', 'Archiviste', 'Obtenir les 7 effets d\'objets légendaires.', 'legFx', 7, 600, 'archiviste'),
   ach('pets6', 'coll', 'Ménagerie complète', 'Posséder les 6 familiers.', 'pets', 6, 400),
@@ -580,7 +598,7 @@ export const ACH_MORE = [
   ach('chests2', 'coll', 'Pilleur de coffres II', 'Ouvrir 250 coffres de butin.', 'chests', 250, 300),
   ach('quests2', 'loyal', 'Toujours partant II', 'Réclamer 50 quêtes du jour.', 'quests', 50, 250),
   ach('weekly1', 'loyal', 'Semaine bien remplie', 'Réclamer 5 quêtes de la semaine.', 'weekly', 5, 150),
-  ach('weekly2', 'loyal', 'Semaine bien remplie II', 'Réclamer 15 quêtes de la semaine.', 'weekly', 15, 400),
+  ach('weekly2', 'loyal', 'Semaine bien remplie II', 'Réclamer 12 quêtes de la semaine.', 'weekly', 12, 400),
   ach('login20', 'loyal', 'Habitué', 'Réclamer 20 récompenses de connexion.', 'logins', 20, 300),
   ach('login50', 'loyal', 'Pilier de la guilde', 'Réclamer 50 récompenses de connexion.', 'logins', 50, 600, 'pilier'),
   ach('pass20', 'loyal', 'Pass d\'expédition', 'Atteindre le palier 20 d\'une saison.', 'tierBest', 20, 200),
