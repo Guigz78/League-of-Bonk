@@ -140,8 +140,8 @@ function seasonHTML() {
       </span>
     </section>
     ${bonus}
-    ${I.ready.length ? `<button class="btn primary big ss-all" data-act="claimAll">Tout réclamer (${I.ready.length})</button>` : ''}
     <div class="ss-track">${rows}</div>
+    ${I.ready.length ? `<div class="ss-foot"><button class="btn primary big" data-act="claimAll">Tout réclamer (${I.ready.length})</button></div>` : ''}
     <section class="ss-help">
       <h4>Gagner de l'XP de saison</h4>
       <ul>

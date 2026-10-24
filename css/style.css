@@ -1499,7 +1499,8 @@ button.itile:active { transform: translateY(1px); }
 .ss-bonus b { color: var(--tx); }
 .ss-bonus.on { border-color: rgba(245,180,0,.45); background: linear-gradient(90deg, rgba(245,180,0,.12), var(--bg1) 70%); }
 .ss-bonus.on b { color: var(--acc); }
-.ss-all { margin-top: 12px; }
+/* « Tout réclamer » : reste en bas de l'écran tant que la piste défile */
+.ss-foot { position: sticky; bottom: 0; z-index: 2; margin: 0 -16px; padding: 14px 16px calc(var(--safe-b) + 12px); background: linear-gradient(180deg, rgba(10,13,20,0), var(--bg) 40%); }
 .ss-track { position: relative; margin-top: 18px; }
 .ss-track::before { content: ''; position: absolute; left: 19px; top: 10px; bottom: 10px; width: 2px; background: var(--ln2); }
 .st-row { position: relative; display: flex; gap: 10px; margin-bottom: 8px; }
