@@ -30,6 +30,7 @@ export function gainMastery(cls, xp) {
   return { cls, xp, from: a.lv, to: b.lv, cur: b.cur, next: b.next, miles: MASTERY.miles.filter(m => m > a.lv && m <= b.lv) };
 }
 
+const low = t => t.charAt(0).toLowerCase() + t.slice(1);
 const bonusTxt = lv => { const b = masteryBonus(lv); return b.dmg || b.hp ? `+${Math.round(b.dmg * 100)} % dégâts · +${Math.round(b.hp * 100)} % PV` : 'Aucun bonus pour l\'instant'; };
 const bar = (cur, next) => `<span class="pbar cy"><i style="width:${next ? Math.min(100, cur / next * 100).toFixed(1) : 100}%"></i></span>`;
 
@@ -48,7 +49,7 @@ export function masteryPanel(cls) {
       <span class="ms-lv"><small>Maîtrise</small><b>${M.lv}</b></span>
       <div class="ms-txt"><b>${esc(name)} · ${M.next ? `niveau ${M.lv}/${MASTERY.max}` : 'maîtrise maximale'}</b>
         <div class="ms-prog">${bar(M.cur, M.next)}<em>${M.next ? `${fmt(M.cur)}/${fmt(M.next)} XP` : 'Max'}</em></div>
-        <small>${bonusTxt(M.lv)}${next ? ` · palier ${next} : ${esc(mileInfo(next, cls).txt.toLowerCase())}` : ''}</small></div>
+        <small>${bonusTxt(M.lv)}${next ? ` · palier ${next} : ${esc(low(mileInfo(next, cls).txt))}` : ''}</small></div>
     </div>
     <div class="ms-miles">${miles}</div>
     <p class="muted ms-note">XP à chaque partie avec ${esc(name)} : monstres, niveau atteint et mondes vaincus (plus en Difficile, Cauchemar et Abysse).</p>`;

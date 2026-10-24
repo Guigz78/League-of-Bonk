@@ -1553,7 +1553,7 @@ button.itile:active { transform: translateY(1px); }
 .ap { position: relative; aspect-ratio: 1; display: grid; place-items: center; background: var(--bg1); border: 1px solid var(--ln); }
 .ap i { width: 58%; height: 58%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0, var(--ac) 40%, color-mix(in srgb, var(--ac) 30%, #000) 100%); box-shadow: 0 0 10px color-mix(in srgb, var(--ac) 70%, transparent); }
 .ap.on { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
-.ap.locked i { filter: grayscale(.85) brightness(.45); box-shadow: none; }
+.ap.locked i { filter: grayscale(.45) brightness(.5); box-shadow: none; }
 .ap > img { position: absolute; right: 2px; bottom: 2px; width: 12px; height: 12px; }
 
 /* Abysse : fiche de monde, malédictions, étiquette des mondes */
@@ -1590,7 +1590,8 @@ button.itile:active { transform: translateY(1px); }
 /* partie : bandeau des malédictions, écran de pause */
 .hud.cr .banner.abyss div { --bc: #6a7aff; max-width: min(340px, 92vw); padding: 9px 12px 10px; }
 .banner .ab-curses { margin-top: 6px; max-height: 40vh; overflow: hidden; }
-.banner .ab-c { padding: 4px 8px; }
+.hud.cr .banner .ab-c { padding: 4px 8px; }
+.hud.cr .banner .ab-c small { display: block; margin: 0; font: 500 11.5px/1.25 var(--fb); letter-spacing: 0; text-transform: none; color: var(--tx2); }
 .pause-modal .ab-curses.small { max-height: 220px; overflow-y: auto; }
 
 /* Boutique : bonus à débloquer */

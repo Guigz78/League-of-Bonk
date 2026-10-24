@@ -54,7 +54,7 @@ export function abyssWin(t, cleared = [], worlds = []) {
 const mul = v => '×' + String(Math.round(v * 100) / 100).replace('.', ',');
 // liste des malédictions d'un palier (la dernière arrivée en tête)
 export function curseList(t, cls = '') {
-  return `<div class="ab-curses ${cls}">${curses(t).map((c, i) => `<span class="ab-c ${i === t - 1 ? 'new' : ''}">${iconImg(c.icon, 16)}<b>${esc(c.name)}</b><small>${esc(c.desc)}</small></span>`).reverse().join('')}</div>`;
+  return `<span class="ab-curses ${cls}">${curses(t).map((c, i) => `<span class="ab-c ${i === t - 1 ? 'new' : ''}">${iconImg(c.icon, 16)}<b>${esc(c.name)}</b><small>${esc(c.desc)}</small></span>`).reverse().join('')}</span>`;
 }
 
 // boutons des paliers (sous la difficulté) : « — » puis I à X ; sel = palier choisi (0 = pas d'Abysse)

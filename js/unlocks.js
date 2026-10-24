@@ -183,7 +183,9 @@ export function clsLockPanel(id) {
 // tuile de l'accueil : défis réussis et le plus proche à finir
 export function defisTile() {
   const L = challengeList().map(challengeState), done = L.filter(x => x.done).length;
-  const next = L.filter(x => !x.done).sort((a, b) => b.k - a.k)[0];
+  // prochain défi : les « Premiers pas » d'abord, puis le plus avancé
+  const open = L.filter(x => !x.done), first = open.filter(x => x.c.cat === CHALLENGE_CATS[0].id);
+  const next = (first.length ? first : open).sort((a, b) => b.k - a.k)[0];
   const rk = next && (next.c.rw.key || next.c.rw.keys?.[0]);
   return `<button class="df-tile" data-act="defis">
       <span class="df-t-ic">${iconImg('key', 22)}</span>

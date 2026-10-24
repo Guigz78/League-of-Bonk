@@ -539,7 +539,7 @@ function classSelect(first) {
       <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
       <section class="cs-detail">
         <p class="cs-desc">${esc(c.desc)}</p>
-        ${lk ? clsLockPanel(sel) : masteryPanel(sel)}
+        ${lk ? clsLockPanel(sel) : ''}
         <div class="stats wide">
           <span>${iconImg('heart', 16)}PV<b>${c.hp}</b></span>
           <span>${iconImg('fist', 16)}ATQ<b>${c.atk}</b></span>
@@ -554,7 +554,7 @@ function classSelect(first) {
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
           <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
           <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
-        ${lk ? '' : auraPicker(sel)}
+        ${lk ? '' : `<h4 class="evo-t">Maîtrise</h4>${masteryPanel(sel)}${auraPicker(sel)}`}
         ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
       </section>
       <div class="cs-foot"><button class="btn primary big" data-act="go" ${lk ? 'disabled' : ''}>${lk ? `${iconImg('lock', 16)} Verrouillé · ${esc(c.name)}` : `${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}`}</button></div>
