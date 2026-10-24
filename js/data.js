@@ -470,7 +470,34 @@ export const CHEST_LOOT = [
 ];
 
 // ===== L1 : saison « Pass d'expédition », quêtes de la semaine, calendrier de 20 jours, succès, titres =====
-// RYTHME (PACING) : @PACING@
+// RYTHME (PACING) : calculé, pas deviné (à refaire si on touche aux valeurs ci-dessous).
+// 1) Parties mesurées au simulateur d'équilibrage (bot, 3 champions, totems activés, 1 résurrection), moyennes par partie
+//    et XP de saison qu'elles rapportent avec SEASON_XP :
+//      monde 1 Normal (début)  :  8,8 min,  5 900 monstres, 1,4 boss,  6 coffres, 5 totems ->  91 XP (10,3 XP/min)
+//      monde 2 Normal          :  9,9 min,  7 800 monstres, 1,5 boss,  9 coffres, 5 totems -> 112 XP (11,3 XP/min)
+//      monde 3 Normal          : 10,2 min, 10 200 monstres, 1,3 boss, 10 coffres, 5 totems -> 122 XP (12,0 XP/min)
+//      monde 4 Normal          :  8,9 min,  8 600 monstres, 1,2 boss, 11 coffres, 5 totems -> 119 XP (13,4 XP/min)
+//      monde 1 Difficile       : 11,1 min, 11 200 monstres, 2,1 boss, 15 coffres, 8 totems -> 177 XP (15,9 XP/min)
+//      monde 1 Cauchemar       :  9,3 min,  9 800 monstres, 1,8 boss, 13 coffres, 6 totems -> 165 XP (17,7 XP/min)
+// 2) Joueur « normal » : 35 min de jeu par jour (3-4 parties), 90 % du rendement du bot, ses 3 quêtes du jour, la
+//    connexion chaque jour, les quêtes de la semaine quand elles sont finies. Une journée : parties 500-950 XP (dont
+//    Bonus du jour 175-315), quêtes du jour 210, connexion 50, quêtes de la semaine ~2 000 par semaine (finies en
+//    4-5 jours). Total des 40 paliers : 23 420 XP.
+// 3) Parcours de 20 jours simulé avec le vrai code (fausse date, parties nourries au crochet de fin de partie, voir
+//    l'outil journey.mjs du banc de test) — progression supposée : mondes 1-2 au jour 1, monde 4 au jour 4, monde 5 au
+//    jour 7, Difficile dès le jour 9, Cauchemar sur les mondes 1-2 au jour 14 :
+//      jour 1  : palier 3  (756 XP)    — 17 succès sur 73, calendrier jour 1, 1re quête de la semaine en vue
+//      jour 3  : palier 12 (3 700 XP)  — 25 succès, titre « Éclaireur » et 1er coffre mythique (palier 10)
+//      jour 4  : palier 15             — Nyx la Vampire (si elle est verrouillée, sinon coffre en or + 300 or)
+//      jour 7  : palier 21 (8 300 XP)  — 34 succès, 5/5 quêtes de la semaine, calendrier jour 7 (coffre en or + 2 bonus)
+//      jour 13 : palier 31             — Sora l'Ombre (palier 30) et titre « Conquérant »
+//      jour 14 : palier 32 (16 400 XP) — 44 succès, calendrier jour 14 (coffre mythique + 2 bonus)
+//      jour 19 : palier 40             — 2 coffres mythiques, 1 000 or, titre « Légende de la saison »
+//      jour 20 : palier 40 (25 600 XP) — 51 succès, calendrier jour 20 (titre « Assidu »), puis saison 2 le lendemain
+// 4) Autres joueurs (modèle journalier, pacing.mjs) : 30 min/jour -> palier 39-40 au jour 20 ; 40 min/jour -> palier 40
+//    au jour 18 ; 2 jours sans jouer -> palier 39 ; 2 h/jour -> palier 40 au jour 10 ; 15 min/jour -> palier 29.
+//    Jouer chaque jour paie : 35 min × 7 jours ≈ 9 200 XP par semaine, les mêmes 4 h d'un coup ≈ 5 700 XP (un seul
+//    Bonus du jour, une connexion, 3 quêtes du jour au lieu de 21).
 export const SEASON_DAYS = 20, SEASON_TIERS = 40;
 export const SEASON_XP = {
   boss: 20, bossZone: 5,          // par boss vaincu : 20 + 5 × n° du monde (0 à 5), × multiplicateur de difficulté
