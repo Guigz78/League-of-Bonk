@@ -1541,6 +1541,11 @@ button.itile:active { transform: translateY(1px); }
 .ss-help li img { width: 16px; height: 16px; flex: none; margin-top: 1px; }
 .ss-help b { color: var(--tx); }
 @media (max-width: 359px) {
+  .pass-strip { gap: 10px; padding: 10px; }
+  .ps-top .eyebrow { letter-spacing: .07em; }
+  .ps-next { width: 38px; }
+  .ps-next small { display: none; }
+  .ss-ttl h2 { font-size: 17px; letter-spacing: .04em; }
   .st-card { grid-template-columns: minmax(0, 1fr); }
   .st-act { justify-self: start; }
   .st-node { width: 34px; }

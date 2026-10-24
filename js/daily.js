@@ -4,7 +4,7 @@
 // Toutes rapportent de l'XP de saison (Pass d'expédition, season.js).
 import { save, persist } from './save.js';
 import { LOOT_TIERS, ZONES, WEEKLY, CAL_REWARDS, SEASON_XP } from './data.js';
-import { grant, addXp, achValue, seasonWeek, feats } from './season.js';
+import { grant, addXp, achValue, seasonWeek, feats, claimable } from './season.js';
 
 // modèles de quêtes : statistique suivie, objectifs possibles, coffre (rang) et or
 export const QUESTS = [
@@ -139,7 +139,7 @@ export function claimLogin() {
   return { day: st.day, R, got, xp: SEASON_XP.login, t0: xp.t0, t1: xp.t1 };
 }
 
-// nombre de récompenses qui attendent (pastilles de l'accueil) : quêtes du jour et de la semaine, connexion
+// nombre de récompenses qui attendent (pastilles de l'accueil) : quêtes du jour et de la semaine, connexion, paliers du pass
 export function dailyBadge() {
-  return questList().filter(q => q.ready).length + weeklyList().filter(q => q.ready).length + (loginState().ready ? 1 : 0);
+  return questList().filter(q => q.ready).length + weeklyList().filter(q => q.ready).length + (loginState().ready ? 1 : 0) + (claimable().length ? 1 : 0);
 }

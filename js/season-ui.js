@@ -81,7 +81,7 @@ export function hubStrip() {
   return `<button class="pass-strip ${I.ready.length ? 'hot' : ''}" data-act="season" aria-label="Pass d'expédition">
       <span class="ps-lv"><small>Palier</small><b>${I.tier}</b></span>
       <span class="ps-mid">
-        <span class="ps-top"><span class="eyebrow">Pass d'expédition · S${I.n}</span><em>${I.left} j</em></span>
+        <span class="ps-top"><span class="eyebrow">Pass d'expédition</span><em>S${I.n} · ${I.left} j</em></span>
         <span class="pbar"><i style="width:${I.max ? 100 : (I.cur / I.need * 100).toFixed(1)}%"></i></span>
         <span class="ps-sub"><span>${I.max ? 'Palier maximum !' : `${fmt(I.cur)} / ${fmt(I.need)} XP`}</span>${x2}</span>
       </span>
