@@ -474,11 +474,14 @@ export const CHEST_LOOT = [
 // Clés de save.unlocks : 'w:<arme>', 't:<tome>', 'boost:<bonus>', 'cls:<champion>', 'aura:<id>', 'title:<id>', 'abyss'.
 // Seuls les éléments listés ici sont verrouillés au départ (une arme ajoutée plus tard est libre) ; l'arme de départ d'un
 // champion lui reste toujours ouverte. Champions : CLASSES[id].locked (+ clé 'cls:<id>'), les 3 de base toujours libres.
-// Nouveau joueur : 6 armes (rayon, flèches, épée, orbes, foudre, lame ricochet), 7 tomes (puissance, hâte, cœur de géant,
-// lame aiguisée, armure, chapeau, aimant : chaque arme libre peut évoluer), 5 bonus en Boutique, 3 champions.
+// Nouveau joueur : 8 armes sur 11 (sans champignons, nova de givre, boule de neige), 8 tomes sur 10 (sans bottes ni
+// sagesse), 5 bonus sur 9 en Boutique, les 3 champions de base. Pourquoi pas moins : un tirage plus petit concentre les
+// montées de niveau (armes au niveau 5, évolutions) et rend le Normal trop facile. Simulateur (bot qui prend la 1re carte,
+// 24 parties, monde 1 → 2, Normal) : tout débloqué (= avant) 79 % / 29 % (88 % / 56 % avec 18 parties d'avant L2) ;
+// 6 armes et 7 tomes libres 100 % / 100 % (2,2 évolutions par partie) ; 8 et 8 (retenu) 88 % / 63 % (1,5 évolution).
 export const LOCKED = {
-  w: ['aura', 'shrooms', 'frost', 'daggers', 'snowball'],
-  t: ['vamp', 'boots', 'wisdom'],
+  w: ['shrooms', 'frost', 'snowball'],
+  t: ['boots', 'wisdom'],
   boost: ['trefle', 'depart', 'phenix', 'sang'],                 // libres en Boutique : vigueur, rage, sagesse, fortune, égide
 };
 
@@ -493,6 +496,10 @@ export const AURAS = {
   blood:  { name: 'Sang', color: '#ff2a4a' },
   jade:   { name: 'Jade', color: '#3ae8a0' },
   abyss:  { name: 'Abysse', color: '#4a6aff' },
+  orbit:  { name: 'Orbite', color: '#b07aff' },
+  steel:  { name: 'Acier', color: '#d8e4f0' },
+  sun:    { name: 'Soleil', color: '#ffb030' },
+  shadow: { name: 'Ombre', color: '#7a5ac8' },
   void:   { name: 'Néant', color: '#c03aff' },
   white:  { name: 'Lumière pure', color: '#ffffff' },
   gold:   { name: 'Or royal', color: '#ffe066' },
@@ -517,19 +524,19 @@ const wk_ = id => s => +s.rec?.wk?.[id] || 0, lvl_ = c => s => +s.rec?.lvl?.[c] 
 const abyssMax_ = s => Math.max(0, ...(s.abyss || []).map(n => +n || 0));
 export const UNLOCK_CHALLENGES = [
   // ---- premiers pas (premier jour) ----
-  { id: 'kills1k', cat: 'start', icon: 'skull', name: 'Chasseur de monstres', txt: 'Battez 1 000 monstres', n: 1000, prog: st_('kills'), rw: { key: 't:vamp', gold: 60 } },
-  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { key: 'w:aura', gold: 80 } },
-  { id: 'lvl15', cat: 'start', icon: 'upg', name: 'Montée en puissance', txt: 'Atteignez le niveau 15 dans une partie', n: 15, prog: st_('bestLevel'), rw: { key: 't:boots', gold: 60 } },
-  { id: 'evo1', cat: 'start', icon: 'star', name: 'Alchimiste', txt: 'Faites évoluer une arme (niveau 5 + son tome)', n: 1, prog: st_('weaponEvos'), rw: { key: 'w:shrooms', gold: 100 } },
+  { id: 'kills1k', cat: 'start', icon: 'skull', name: 'Chasseur de monstres', txt: 'Battez 1 000 monstres', n: 1000, prog: st_('kills'), rw: { key: 't:boots', gold: 60 } },
+  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { key: 'w:shrooms', gold: 80 } },
+  { id: 'lvl15', cat: 'start', icon: 'upg', name: 'Montée en puissance', txt: 'Atteignez le niveau 15 dans une partie', n: 15, prog: st_('bestLevel'), rw: { key: 'boost:depart', gold: 60 } },
+  { id: 'evo1', cat: 'start', icon: 'star', name: 'Alchimiste', txt: 'Faites évoluer une arme (niveau 5 + son tome)', n: 1, prog: st_('weaponEvos'), rw: { key: 't:wisdom', gold: 100 } },
   { id: 'chests5', cat: 'start', icon: 'chest', name: 'Pilleur', txt: 'Ouvrez 5 coffres de butin', n: 5, prog: st_('chests'), rw: { key: 'boost:trefle', gold: 80 } },
-  { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le monde suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:depart', gold: 100 } },
-  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { key: 'w:daggers', gold: 150 } },
+  { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le monde suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:sang', gold: 100 } },
+  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { key: 'w:frost', gold: 150 } },
   // ---- armes : victimes cumulées avec une arme, évolutions ----
   { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 6 000 monstres avec la Foudre', n: 6000, prog: wk_('lightning'), rw: { key: 'w:snowball', gold: 150 } },
-  { id: 'wk_orbs', cat: 'weapons', icon: 'bind', name: 'Gardien des orbes', txt: 'Battez 2 500 monstres avec les Orbes spirituels', n: 2500, prog: wk_('orbs'), rw: { key: 'w:frost', gold: 150 } },
-  { id: 'wk_boomerang', cat: 'weapons', icon: 'spin', name: 'Retour à l\'envoyeur', txt: 'Battez 5 000 monstres avec la Lame ricochet', n: 5000, prog: wk_('boomerang'), rw: { key: 't:wisdom', gold: 150 } },
-  { id: 'wk_aura', cat: 'weapons', icon: 'cloak', name: 'Cœur ardent', txt: 'Battez 5 000 monstres avec la Cape solaire', n: 5000, prog: wk_('aura'), rw: { gold: 200, chest: 1 } },
-  { id: 'wk_daggers', cat: 'weapons', icon: 'volley', name: 'Mille entailles', txt: 'Battez 6 000 monstres avec les Dagues', n: 6000, prog: wk_('daggers'), rw: { key: 'boost:sang', gold: 150 } },
+  { id: 'wk_orbs', cat: 'weapons', icon: 'bind', name: 'Gardien des orbes', txt: 'Battez 2 500 monstres avec les Orbes spirituels', n: 2500, prog: wk_('orbs'), rw: { key: 'aura:orbit', gold: 150 } },
+  { id: 'wk_boomerang', cat: 'weapons', icon: 'spin', name: 'Retour à l\'envoyeur', txt: 'Battez 5 000 monstres avec la Lame ricochet', n: 5000, prog: wk_('boomerang'), rw: { key: 'aura:steel', gold: 150 } },
+  { id: 'wk_aura', cat: 'weapons', icon: 'cloak', name: 'Cœur ardent', txt: 'Battez 5 000 monstres avec la Cape solaire', n: 5000, prog: wk_('aura'), rw: { key: 'aura:sun', gold: 150 } },
+  { id: 'wk_daggers', cat: 'weapons', icon: 'volley', name: 'Mille entailles', txt: 'Battez 6 000 monstres avec les Dagues', n: 6000, prog: wk_('daggers'), rw: { key: 'aura:shadow', gold: 150 } },
   { id: 'evo3', cat: 'weapons', icon: 'star', name: 'Arsenal légendaire', txt: 'Faites évoluer 3 armes dans une même partie', n: 3, prog: rec_('evoRun'), rw: { key: 'aura:prism', chest: 2 } },
   { id: 'evos25', cat: 'weapons', icon: 'hammer', name: 'Maître armurier', txt: 'Faites évoluer 25 armes au total', n: 25, prog: st_('weaponEvos'), rw: { key: 'title:armurier', gold: 300 } },
   // ---- champions ----
