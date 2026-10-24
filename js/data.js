@@ -480,8 +480,8 @@ export const SEASON_XP = {
   quest: 70,                      // quête du jour réclamée (les quêtes de la semaine ont leur XP dans WEEKLY)
   login: 50,                      // récompense du calendrier réclamée
 };
-// XP pour passer chaque palier (index 0 = palier 1) : 170, 190 … 950 (22 400 XP en tout)
-export const SEASON_COST = Array.from({ length: SEASON_TIERS }, (_, i) => 150 + 20 * (i + 1));
+// XP pour passer chaque palier (index 0 = palier 1) : 176, 197 … 995 (23 420 XP en tout)
+export const SEASON_COST = Array.from({ length: SEASON_TIERS }, (_, i) => 155 + 21 * (i + 1));
 // Récompenses des 40 paliers (gratuites). gold, chest (rang LOOT_TIERS, ou liste de rangs), parts [rareté, nombre],
 // boost (nombre de bonus au hasard) ou boostId, upg (niveaux gratuits d'amélioration permanente), title (TITLES),
 // cls (champion verrouillé à débloquer ; déjà jouable ou absent -> alt). big = grand palier (mis en avant).
@@ -500,17 +500,17 @@ export const SEASON_TRACK = [
 // possibles, tier = coffre (rang LOOT_TIERS), xp = XP de saison, gold = or ; need = niveau de difficulté débloqué
 // quelque part (1 : Difficile, 2 : Cauchemar). Volumes : un joueur à 35 min par jour fait ~25 parties par semaine.
 export const WEEKLY = [
-  { id: 'boss', stat: 'wins', icon: 'crown', n: [15, 20], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n} boss` },
-  { id: 'portals', stat: 'portals', icon: 'portal', n: [8, 12], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Franchissez ${n} portails` },
-  { id: 'hard', stat: 'hard', icon: 'i_enrage', n: [5, 8], tier: [2, 2], xp: [400, 500], gold: [250, 350], need: 1, txt: n => `Battez ${n} boss en Difficile ou Cauchemar` },
+  { id: 'boss', stat: 'wins', icon: 'crown', n: [20, 25], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n} boss` },
+  { id: 'portals', stat: 'portals', icon: 'portal', n: [15, 20], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Franchissez ${n} portails` },
+  { id: 'hard', stat: 'hard', icon: 'i_enrage', n: [6, 10], tier: [2, 2], xp: [400, 500], gold: [250, 350], need: 1, txt: n => `Battez ${n} boss en Difficile ou Cauchemar` },
   { id: 'night', stat: 'night', icon: 'skull', n: [3, 5], tier: [2, 3], xp: [450, 550], gold: [300, 400], need: 2, txt: n => `Battez ${n} boss en Cauchemar` },
-  { id: 'combo', stat: 'c200', icon: 'bolt', n: [5, 8], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Atteignez un combo de 200 dans ${n} parties` },
-  { id: 'totems', stat: 'totems', icon: 'i_burn', n: [25, 40], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Activez ${n} totems de défi` },
-  { id: 'kills', stat: 'kills', icon: 'skull', n: [40000, 60000], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n.toLocaleString('fr-FR')} monstres` },
-  { id: 'chests', stat: 'chests', icon: 'chest', n: [40, 60], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Ouvrez ${n} coffres de butin` },
-  { id: 'deep', stat: 'st3', icon: 'map', n: [3, 5], tier: [2, 2], xp: [400, 500], gold: [250, 350], txt: n => `Atteignez le 3e monde d'une expédition ${n} fois` },
+  { id: 'combo', stat: 'c200', icon: 'bolt', n: [8, 12], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Atteignez un combo de 200 dans ${n} parties` },
+  { id: 'totems', stat: 'totems', icon: 'i_burn', n: [40, 60], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Activez ${n} totems de défi` },
+  { id: 'kills', stat: 'kills', icon: 'skull', n: [80000, 120000], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n.toLocaleString('fr-FR')} monstres` },
+  { id: 'chests', stat: 'chests', icon: 'chest', n: [100, 150], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Ouvrez ${n} coffres de butin` },
+  { id: 'deep', stat: 'st3', icon: 'map', n: [4, 6], tier: [2, 2], xp: [400, 500], gold: [250, 350], txt: n => `Atteignez le 3e monde d'une expédition ${n} fois` },
   { id: 'daily', stat: 'quests', icon: 'quest', n: [12, 15], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Réclamez ${n} quêtes du jour` },
-  { id: 'evos', stat: 'weaponEvos', icon: 'star', n: [10, 15], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Faites évoluer ${n} armes` },
+  { id: 'evos', stat: 'weaponEvos', icon: 'star', n: [15, 25], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Faites évoluer ${n} armes` },
 ];
 // Calendrier de connexion de 20 jours (remplace celui de 7 jours, l'avancement est gardé) : un jour manqué ne remet
 // rien à zéro, on reprend au jour suivant. Jours 7, 14 et 20 : grosses récompenses. Après le 20e, il recommence.

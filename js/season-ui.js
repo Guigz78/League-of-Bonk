@@ -14,6 +14,8 @@ const s = n => (n > 1 ? 's' : '');
 const RAR_F = ['commune', 'rare', 'épique', 'légendaire']; // « pièce rare », « pièces épiques »
 const chestShort = t => { const n = (LOOT_TIERS[t]?.name || 'Coffre').replace(/^Coffre\s+(en\s+)?/i, ''); return n.charAt(0).toUpperCase() + n.slice(1); };
 const partIc = (r, size = 22) => `<span class="part-ic r-${RARITIES[r]}">${iconImg('part', size)}</span>`;
+// portrait d'un champion (jamais d'erreur si son modèle 3D manque)
+const heroImg = id => { try { return heroURL(id, null, 0); } catch (e) { return ''; } };
 // champion verrouillé qu'une récompense peut débloquer (sinon : récompense de remplacement)
 const clsOpen = id => !!CLASSES[id]?.locked && !save.unlocks?.['cls:' + id];
 
@@ -21,7 +23,7 @@ const clsOpen = id => !!CLASSES[id]?.locked && !save.unlocks?.['cls:' + id];
 export function rwItems(R, out = []) {
   if (!R) return out;
   if (R.cls) {
-    if (clsOpen(R.cls)) out.push({ html: `<img class="px spr st-hero" src="${heroURL(R.cls, null, 0)}" alt="">`, t: `Champion : ${CLASSES[R.cls].name}`, c: 'var(--acc)' });
+    if (clsOpen(R.cls)) out.push({ html: `<img class="px spr st-hero" src="${heroImg(R.cls)}" alt="">`, t: `Champion : ${CLASSES[R.cls].name}`, c: 'var(--acc)' });
     else rwItems(R.alt, out);
   }
   const chests = [].concat(R.chest ?? []);
@@ -59,7 +61,7 @@ async function celebrate(list) {
     sfx('levelup'); buzz(60);
     await modal({
       title: `${iconImg('user', 22)} Nouveau champion`,
-      body: `<div class="new-champ"><img class="px spr" src="${heroURL(id, null, 0)}" alt=""><b>${esc(CLASSES[id].name)}</b><small>${esc(CLASSES[id].role || '')}</small>
+      body: `<div class="new-champ"><img class="px spr" src="${heroImg(id)}" alt=""><b>${esc(CLASSES[id].name)}</b><small>${esc(CLASSES[id].role || '')}</small>
         <p>${esc(CLASSES[id].desc || '')}</p><p class="muted">Choisissez-le depuis l'accueil (« Changer »).</p></div>`,
       buttons: [{ label: 'Génial !', cls: 'primary', value: true }], dismissable: true,
     });
