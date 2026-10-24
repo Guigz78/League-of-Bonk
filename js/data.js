@@ -468,3 +468,127 @@ export const CHEST_LOOT = [
   { items: 1, extra: 0.6, rar: [0, 0.4, 0.45, 0.15],    upg: 0.22 },
   { items: 2, extra: 0.5, rar: [0, 0, 0.55, 0.45],      upg: 0.45 },
 ];
+
+// ===== L2 : Déblocages, Abysse, maîtrise =====
+// Rythme visé (PACING_L2, plus bas). Clés de save.unlocks : 'w:<arme>', 't:<tome>', 'boost:<bonus>', 'cls:<champion>',
+// 'aura:<id>', 'title:<id>', 'abyss' (accès à l'Abysse). Seuls les éléments listés ici sont verrouillés au départ (une arme
+// ajoutée plus tard est libre) ; l'arme de départ d'un champion lui reste toujours ouverte. Champions : CLASSES[id].locked.
+export const LOCKED = {
+  w: ['aura', 'shrooms', 'frost', 'daggers', 'snowball'],      // libres : rayon, flèches, épée, orbes, foudre, lame ricochet
+  t: ['vamp', 'magnet', 'boots', 'wisdom'],                      // libres : puissance, hâte, cœur de géant, lame aiguisée, armure, chapeau
+  boost: ['trefle', 'depart', 'phenix', 'sang'],                 // libres en Boutique : vigueur, rage, sagesse, fortune, égide
+};
+
+// Auras de la forme ultime (cosmétiques, choisies dans l'écran Défis) : remplacent la couleur de l'aura du dernier stade.
+// Les auras de maîtrise ('m_<champion>', palier 5) prennent la couleur de MASTERY.aura.
+export const AURAS = {
+  prism:  { name: 'Prisme', color: '#ff6ad8' },
+  astral: { name: 'Astrale', color: '#8a7aff' },
+  frost:  { name: 'Blizzard', color: '#8ae8ff' },
+  ember:  { name: 'Braise', color: '#ff7a2a' },
+  storm:  { name: 'Tempête', color: '#d8ff4a' },
+  blood:  { name: 'Sang', color: '#ff2a4a' },
+  jade:   { name: 'Jade', color: '#3ae8a0' },
+  abyss:  { name: 'Abysse', color: '#4a5aff' },
+  void:   { name: 'Néant', color: '#c03aff' },
+  white:  { name: 'Lumière pure', color: '#ffffff' },
+  gold:   { name: 'Or royal', color: '#ffe066' },
+};
+// Titres donnés par les défis (clés 'title:<id>') ; ceux de la maîtrise 10 ('m_<champion>') : « Âme de <nom> ».
+// La Saison (L1) les liste s'ils figurent dans sa table TITLES.
+export const UNLOCK_TITLES = {
+  armurier: 'Maître armurier', disciple: 'Disciple', ouragan: 'Ouragan', titan: 'Titan', abyssal: 'Abyssal', seigneur: 'Seigneur de l\'Abysse',
+};
+
+// Défis : prog(save) = progression, n = objectif, rw = récompense (key / keys : déblocages, gold : or, chest : rang d'un
+// coffre de butin). need = champion requis (défi masqué si CLASSES ne le contient pas). Les records des parties sont
+// dans save.rec (wk : victimes par arme, lvl : meilleur niveau par champion, combo, evoRun, elites, heal, noHeart, totemBoss).
+export const CHALLENGE_CATS = [
+  { id: 'start', name: 'Premiers pas' }, { id: 'weapons', name: 'Armes' }, { id: 'champions', name: 'Champions' },
+  { id: 'feats', name: 'Exploits' }, { id: 'abyss', name: 'Abysse' },
+];
+const st_ = k => s => +s.stats?.[k] || 0, rec_ = k => s => +s.rec?.[k] || 0;
+const wk_ = id => s => +s.rec?.wk?.[id] || 0, lvl_ = c => s => +s.rec?.lvl?.[c] || 0;
+const abyssMax_ = s => Math.max(0, ...(s.abyss || []).map(n => +n || 0));
+export const UNLOCK_CHALLENGES = [
+  // ---- premiers pas (premier jour) ----
+  { id: 'kills1k', cat: 'start', icon: 'skull', name: 'Chasseur de monstres', txt: 'Battez 1 000 monstres', n: 1000, prog: st_('kills'), rw: { key: 't:vamp', gold: 60 } },
+  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { key: 'w:aura', gold: 80 } },
+  { id: 'lvl15', cat: 'start', icon: 'upg', name: 'Montée en puissance', txt: 'Atteignez le niveau 15 dans une partie', n: 15, prog: st_('bestLevel'), rw: { key: 't:magnet', gold: 60 } },
+  { id: 'evo1', cat: 'start', icon: 'star', name: 'Alchimiste', txt: 'Faites évoluer une arme (niveau 5 + son tome)', n: 1, prog: st_('weaponEvos'), rw: { key: 'w:shrooms', gold: 100 } },
+  { id: 'chests5', cat: 'start', icon: 'chest', name: 'Pilleur', txt: 'Ouvrez 5 coffres de butin', n: 5, prog: st_('chests'), rw: { key: 'boost:trefle', gold: 80 } },
+  { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le monde suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:depart', gold: 100 } },
+  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { key: 'w:daggers', gold: 150 } },
+  // ---- armes : victimes cumulées avec une arme, évolutions ----
+  { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 5 000 monstres avec la Foudre', n: 5000, prog: wk_('lightning'), rw: { key: 'w:snowball', gold: 150 } },
+  { id: 'wk_orbs', cat: 'weapons', icon: 'bind', name: 'Gardien des orbes', txt: 'Battez 4 000 monstres avec les Orbes spirituels', n: 4000, prog: wk_('orbs'), rw: { key: 'w:frost', gold: 150 } },
+  { id: 'wk_boomerang', cat: 'weapons', icon: 'spin', name: 'Retour à l\'envoyeur', txt: 'Battez 4 000 monstres avec la Lame ricochet', n: 4000, prog: wk_('boomerang'), rw: { key: 't:boots', gold: 150 } },
+  { id: 'wk_aura', cat: 'weapons', icon: 'cloak', name: 'Cœur ardent', txt: 'Battez 4 000 monstres avec la Cape solaire', n: 4000, prog: wk_('aura'), rw: { key: 't:wisdom', gold: 150 } },
+  { id: 'wk_daggers', cat: 'weapons', icon: 'volley', name: 'Mille entailles', txt: 'Battez 5 000 monstres avec les Dagues', n: 5000, prog: wk_('daggers'), rw: { key: 'boost:sang', gold: 150 } },
+  { id: 'evo3', cat: 'weapons', icon: 'star', name: 'Arsenal légendaire', txt: 'Faites évoluer 3 armes dans une même partie', n: 3, prog: rec_('evoRun'), rw: { key: 'aura:prism', chest: 2 } },
+  { id: 'evos25', cat: 'weapons', icon: 'hammer', name: 'Maître armurier', txt: 'Faites évoluer 25 armes au total', n: 25, prog: st_('weaponEvos'), rw: { key: 'title:armurier', gold: 300 } },
+  // ---- champions ----
+  { id: 'lvl25_mage', cat: 'champions', icon: 'nova', name: 'Lumière éternelle', txt: 'Atteignez le niveau 25 avec Lumi', n: 25, prog: lvl_('mage'), rw: { key: 'aura:astral', gold: 200 } },
+  { id: 'lvl25_archer', cat: 'champions', icon: 'crystal', name: 'Œil de faucon', txt: 'Atteignez le niveau 25 avec Kira', n: 25, prog: lvl_('archer'), rw: { key: 'aura:frost', gold: 200 } },
+  { id: 'lvl25_knight', cat: 'champions', icon: 'justice', name: 'Rempart', txt: 'Atteignez le niveau 25 avec Brok', n: 25, prog: lvl_('knight'), rw: { key: 'aura:ember', gold: 200 } },
+  { id: 'allcls', cat: 'champions', icon: 'user', name: 'Polyvalent', txt: 'Battez un boss avec Lumi, Kira et Brok', n: 3, prog: s => ['mage', 'archer', 'knight'].filter(c => s.stats?.classWins?.[c]).length, rw: { key: 'boost:phenix', gold: 200 } },
+  { id: 'vampire', cat: 'champions', need: 'vampire', icon: 'lifesteal', name: 'Soif éternelle', txt: 'Rendez-vous 25 000 PV grâce au vol de vie', n: 25000, prog: rec_('heal'), rw: { key: 'cls:vampire', gold: 200 } },
+  { id: 'assassin', cat: 'champions', need: 'assassin', icon: 'dodge', name: 'L\'ombre de la rivière', txt: 'Battez la Rivière Scintillante en Difficile', n: 1, prog: s => ((s.diffCleared?.[2] || 0) >= 2 ? 1 : 0), rw: { key: 'cls:assassin', gold: 200 } },
+  { id: 'mastery10', cat: 'champions', icon: 'medal', name: 'Disciple', txt: 'Atteignez la maîtrise 10 avec un champion', n: 10, prog: s => Math.max(1, ...Object.values(s.mastery || {}).map(x => masteryOf(x).lv)), rw: { key: 'title:disciple', chest: 2 } },
+  { id: 'mastery20', cat: 'champions', icon: 'medal', name: 'Grand maître', txt: 'Atteignez la maîtrise 20 avec 3 champions', n: 3, prog: s => Object.values(s.mastery || {}).filter(x => masteryOf(x).lv >= 20).length, rw: { key: 'aura:white', chest: 3 } },
+  // ---- exploits ----
+  { id: 'combo300', cat: 'feats', icon: 'bolt', name: 'Enchaînement', txt: 'Réussissez un combo de 300', n: 300, prog: rec_('combo'), rw: { gold: 120, chest: 1 } },
+  { id: 'combo1000', cat: 'feats', icon: 'bolt', name: 'Tornade', txt: 'Réussissez un combo de 1 000', n: 1000, prog: rec_('combo'), rw: { key: 'aura:storm', gold: 200 } },
+  { id: 'combo2500', cat: 'feats', icon: 'bolt', name: 'Ouragan', txt: 'Réussissez un combo de 2 500', n: 2500, prog: rec_('combo'), rw: { key: 'title:ouragan', chest: 3 } },
+  { id: 'noheart', cat: 'feats', icon: 'heart', name: 'Sans filet', txt: 'Battez un boss sans ramasser de cœur dans son monde', n: 1, prog: rec_('noHeart'), rw: { gold: 150, chest: 1 } },
+  { id: 'totemboss', cat: 'feats', icon: 'i_burn', name: 'Tête brûlée', txt: 'Activez les 3 totems d\'un monde, puis battez son boss', n: 1, prog: rec_('totemBoss'), rw: { key: 'aura:blood', chest: 2 } },
+  { id: 'elites', cat: 'feats', icon: 'i_enrage', name: 'Tueur d\'élites', txt: 'Battez 150 élites', n: 150, prog: rec_('elites'), rw: { gold: 250, chest: 1 } },
+  { id: 'lvl40', cat: 'feats', icon: 'upg', name: 'Puissance absolue', txt: 'Atteignez le niveau 40 dans une partie', n: 40, prog: st_('bestLevel'), rw: { key: 'title:titan', gold: 300 } },
+  { id: 'stage4', cat: 'feats', icon: 'portal', name: 'Grande expédition', txt: 'Traversez 4 mondes en une seule partie', n: 4, prog: s => (s.stats?.runs ? (+s.stats.bestStage || 0) + 1 : 0), rw: { gold: 400, chest: 2 } },
+  { id: 'kills100k', cat: 'feats', icon: 'skull', name: 'Fléau des hordes', txt: 'Battez 100 000 monstres', n: 100000, prog: st_('kills'), rw: { key: 'aura:jade', gold: 400 } },
+  // ---- Abysse ----
+  { id: 'night1', cat: 'abyss', icon: 'skull', name: 'Porte de l\'Abysse', txt: 'Battez un monde en Cauchemar', n: 1, prog: s => (s.diffCleared || []).filter(n => n >= 3).length, rw: { key: 'abyss', gold: 300 } },
+  { id: 'abyss1', cat: 'abyss', icon: 'abyss', name: 'Premier plongeon', txt: 'Battez un monde en Abysse I', n: 1, prog: abyssMax_, rw: { key: 'aura:abyss', chest: 2 } },
+  { id: 'abyss3w', cat: 'abyss', icon: 'abyss', name: 'Explorateur des profondeurs', txt: 'Battez 3 mondes différents en Abysse', n: 3, prog: s => (s.abyss || []).filter(n => n > 0).length, rw: { gold: 500, chest: 3 } },
+  { id: 'abyss5', cat: 'abyss', icon: 'abyss', name: 'Abyssal', txt: 'Battez un monde en Abysse V', n: 5, prog: abyssMax_, rw: { key: 'title:abyssal', chest: 3 } },
+  { id: 'void3', cat: 'abyss', icon: 'crown', name: 'Dévoreur dévoré', txt: 'Battez le Ver-Roi du Néant en Cauchemar', n: 1, prog: s => ((s.diffCleared?.[5] || 0) >= 3 ? 1 : 0), rw: { key: 'aura:gold', gold: 800 } },
+  { id: 'abyss10', cat: 'abyss', icon: 'abyss', name: 'Seigneur de l\'Abysse', txt: 'Battez un monde en Abysse X', n: 10, prog: abyssMax_, rw: { keys: ['aura:void', 'title:seigneur'], gold: 1500, chest: 3 } },
+];
+
+// Abysse : paliers I à X au-delà de Cauchemar, par monde. Le palier 1 s'ouvre quand le monde est battu en Cauchemar
+// (et le défi « Porte de l'Abysse » réussi), le palier t quand t − 1 est battu sur ce monde. Chaque palier renforce encore
+// les monstres (sur la base de Cauchemar : × (1 + valeur × t)) et ajoute une malédiction (cumulées : Abysse V a les 5
+// premières) ; les récompenses montent aussi (or, rareté et puissance des objets, XP de maîtrise et de saison).
+// Première victoire d'un palier sur un monde : or (first.gold × t) et un coffre de butin (first.chest[t − 1], dernier au-delà).
+export const ABYSS_TIERS = 10;
+export const ABYSS = { hp: 0.15, dmg: 0.08, boss: 0.15, spawn: 0.03, gold: 0.2, rarity: 0.015, itemMult: 0.05,
+  first: { gold: 150, chest: [2, 2, 2, 2, 3] } };
+export const ABYSS_CURSES = [
+  { id: 'noheart', name: 'Sans cœurs', icon: 'heart', desc: 'Aucun cœur de soin ne tombe' },
+  { id: 'elites', name: 'Élites ×2', icon: 'crown', desc: 'Les élites arrivent 2 fois plus souvent' },
+  { id: 'short', name: 'Chrono court', icon: 'clock', desc: 'Chrono de chaque monde −20 %' },
+  { id: 'fastboss', name: 'Boss furieux', icon: 'i_enrage', desc: 'Boss +20 % de vitesse, attaques plus rapprochées' },
+  { id: 'horde', name: 'Totem imposé', icon: 'i_burn', desc: 'Totem de la Horde partout : +35 % de monstres (et +25 % d\'or)' },
+  { id: 'lowheal', name: 'Soins maudits', icon: 'lifesteal', desc: 'Soins et vol de vie ×0,6' },
+  { id: 'mods', name: 'Élites redoutables', icon: 'skull', desc: 'Les élites ont un pouvoir de plus' },
+  { id: 'bosshp', name: 'Boss colossal', icon: 'i_guard', desc: 'Boss +30 % de PV' },
+  { id: 'swarm', name: 'Grandes hordes', icon: 'i_multi', desc: 'Hordes 40 % plus denses' },
+  { id: 'fast', name: 'Monstres rapides', icon: 'haste', desc: 'Monstres +10 % de vitesse' },
+];
+
+// Maîtrise des champions : XP gagnée à chaque partie avec ce champion = monstres × kills + niveau atteint × level
+// + mondes vaincus × (world + diff × difficulté) × (1 + abyss × palier). Niveaux 1 à 30, niveau L -> L+1 : need[0] + need[1] × L
+// (24 650 XP pour le niveau 30). Chaque niveau donne +1 % de dégâts puis +1 % de PV en alternance (plafond cap pour
+// chacun, atteint au niveau 22) ; paliers : 5 aura, 10 titre, 20 une relance de plus par partie, 30 cadre doré.
+export const MASTERY = { max: 30, need: [100, 50], cap: 0.1, kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
+  miles: [5, 10, 20, 30],
+  aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff' } };
+export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * lv;
+// niveau de maîtrise d'un total d'XP : { lv, cur (XP dans le niveau), next (XP du niveau, 0 au maximum) }
+export function masteryOf(xp) {
+  let lv = 1, x = Math.max(0, +xp || 0);
+  while (lv < MASTERY.max && x >= masteryNeed(lv)) { x -= masteryNeed(lv); lv++; }
+  return { lv, cur: lv >= MASTERY.max ? 0 : Math.floor(x), next: lv >= MASTERY.max ? 0 : masteryNeed(lv) };
+}
+// bonus permanents du niveau lv : +1 % de dégâts aux niveaux pairs, +1 % de PV aux impairs (à partir du 2), plafonnés
+export const masteryBonus = lv => ({ dmg: Math.min(MASTERY.cap, Math.ceil((lv - 1) / 2) / 100), hp: Math.min(MASTERY.cap, Math.floor((lv - 1) / 2) / 100) });
