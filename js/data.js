@@ -595,10 +595,11 @@ export const ABYSS_CURSES = [
 // Maîtrise des champions : XP gagnée à chaque partie avec ce champion = monstres × kills + niveau atteint × level
 // + mondes vaincus × (world + diff × difficulté) × (1 + abyss × palier). Niveaux 1 à 30, niveau L → L + 1 :
 // need[0] + need[1] × L (3 150 XP pour la maîtrise 10, 11 400 pour la 20, 24 650 pour la 30).
-// Chaque niveau donne +1 % de dégâts (niveaux pairs) ou +1 % de PV (impairs, à partir du 3), plafond cap (au niveau 30 :
-// +15 % de dégâts, +14 % de PV). Paliers : 5 aura de maîtrise, 10 titre « Âme de <champion> », 20 une relance de plus
-// par partie, 30 cadre doré.
-export const MASTERY = { max: 30, need: [100, 50], cap: 0.15, kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
+// Chaque niveau donne +1 % de dégâts (niveaux pairs) ou +1 % de PV (impairs, à partir du 3), plafond cap = +10 % de
+// dégâts (maîtrise 20) et +10 % de PV (maîtrise 21) ; au-delà, les paliers. Paliers : 5 aura de maîtrise, 10 titre
+// « Âme de <champion> », 20 une relance de plus par partie, 30 cadre doré. Simulateur (tout débloqué, Normal, monde 1 → 2,
+// 24 parties) : sans maîtrise 79 % / 29 %, avec +15 % / +14 % 100 % / 63 % (trop), d'où le plafond de 10 % (voir le compte rendu).
+export const MASTERY = { max: 30, need: [100, 50], cap: 0.1, kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
   miles: [5, 10, 20, 30],
   aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff' } };
 export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * lv;
