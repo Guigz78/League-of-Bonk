@@ -323,7 +323,7 @@ export const ACHIEVEMENTS = [
   { id: 'mythic', name: 'Trésor mythique', desc: 'Ouvrir un coffre mythique.', gold: 150 },
   { id: 'chests50', name: 'Pilleur de coffres', desc: 'Ouvrir 50 coffres de butin.', gold: 200 },
   { id: 'quests10', name: 'Toujours partant', desc: 'Réclamer 10 quêtes du jour.', gold: 150 },
-  { id: 'login7', name: 'Fidèle au poste', desc: 'Réclamer les 7 récompenses de connexion.', gold: 200 },
+  { id: 'login7', name: 'Fidèle au poste', desc: 'Réclamer 7 récompenses de connexion.', gold: 200 },
 ];
 
 // ---------- Expédition : mondes enchaînés, totems de défi, butin, forge, bonus ----------
@@ -527,7 +527,7 @@ export const TITLES = {
   aventurier:  { name: 'Aventurier', how: 'Pass d\'expédition : palier 20' },
   conquerant:  { name: 'Conquérant', how: 'Pass d\'expédition : palier 30' },
   legende:     { name: 'Légende de la saison', how: 'Pass d\'expédition : palier 40' },
-  fidele:      { name: 'Fidèle au poste', how: 'Calendrier de connexion : 20e jour' },
+  fidele:      { name: 'Assidu', how: 'Calendrier de connexion : 20e jour' },
   fleau:       { name: 'Fléau des monstres', how: 'Succès « Massacre III »' },
   virtuose:    { name: 'Virtuose du combo', how: 'Succès « Enchaînement III »' },
   insomniaque: { name: 'Insomniaque', how: 'Succès « Cauchemar éveillé III »' },

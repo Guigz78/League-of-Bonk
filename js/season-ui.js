@@ -104,15 +104,15 @@ function trackRow(p, I) {
   const items = rwItems(R);
   const act = got ? `<span class="q-claimed">${iconImg('check', 14)} Reçu</span>`
     : ready ? `<button class="btn primary small" data-act="claim" data-tier="${p}">Réclamer</button>`
-    : next ? `<span class="st-xp"><b>${fmt(I.cur)}</b>/${fmt(I.need)} XP</span>`
+    : next ? `<span class="st-xp"><span><b>${fmt(I.cur)}</b> / ${fmt(I.need)} XP</span></span>`
     : `<span class="st-xp">${iconImg('lock', 12)} ${fmt(CUM[p] - I.xp)} XP</span>`;
   return `<div class="st-row ${state} ${R.big ? 'big' : ''}" id="st-${p}">
       <span class="st-node"><b>${p}</b></span>
       <div class="st-card">
         ${R.big ? '<em class="st-tag">Grande récompense</em>' : ''}
         <div class="st-rw">${items.map(it => `<span class="st-it" ${it.c ? `style="--tc:${it.c}"` : ''}><span class="st-ic">${it.html}</span><small>${esc(it.t)}</small></span>`).join('')}</div>
-        ${next ? `<span class="pbar st-bar"><i style="width:${(I.cur / I.need * 100).toFixed(1)}%"></i></span>` : ''}
         <div class="st-act">${act}</div>
+        ${next ? `<span class="pbar st-bar"><i style="width:${(I.cur / I.need * 100).toFixed(1)}%"></i></span>` : ''}
       </div>
     </div>`;
 }

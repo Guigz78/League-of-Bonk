@@ -1284,7 +1284,12 @@ function tipFor(sum, k = 0) {
 }
 
 function announceAchievements() {
-  for (const a of checkAchievements()) {
+  const got = checkAchievements();
+  if (got.length > 3) { // beaucoup d'un coup (ancienne sauvegarde, nouveaux succès) : un seul message
+    toast(`${iconImg('crown', 18)} <b>${got.length} succès</b> débloqués (+${fmt(got.reduce((n, a) => n + a.gold, 0))} or)`, 3600);
+    sfx('loot'); persist(); return;
+  }
+  for (const a of got) {
     toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)${a.title && DATA.TITLES?.[a.title] ? ` · titre « ${esc(DATA.TITLES[a.title].name)} »` : ''}`, 3200);
     sfx('loot');
   }

@@ -75,15 +75,15 @@ function migrate(s) {
   migrateDifficulty(out, base);
   migrateLoot(out, s);
   renameOld(out);
-  migrateL1(out, base);
+  migrateL1(out, base, s);
   return out;
 }
 
 // L1 : compteurs des succès toujours complets (anciennes sauvegardes : boss par champion = parties gagnées avec lui),
 // titres valides. Saison et quêtes de la semaine sont vérifiées par season.js et daily.js à la lecture.
-function migrateL1(out, base) {
+function migrateL1(out, base, s) {
   const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
-  const f = obj(out.feats);
+  const f = obj(s.feats);
   out.feats = { ...base.feats, ...f, evo: { ...obj(f?.evo) }, boss: { ...(f ? obj(f.boss) : obj(out.stats.classWins)) }, leg: Array.isArray(f?.leg) ? f.leg.filter(id => LEGEND_EFFECTS[id]) : [] };
   for (const k of ['combo', 'c200', 'st3', 'evoRun', 'weekly', 'tierBest', 'seasons']) out.feats[k] = Math.max(0, Math.floor(+out.feats[k] || 0));
   out.titles = obj(out.titles) || {};
