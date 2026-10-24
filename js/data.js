@@ -569,14 +569,19 @@ export const UNLOCK_CHALLENGES = [
 
 // Abysse : paliers I à X au-delà de Cauchemar, par monde. Le palier 1 s'ouvre quand le monde est battu en Cauchemar
 // (défi « Porte de l'Abysse »), le palier t quand t − 1 est battu sur ce monde (un monde atteint par un portail pendant une
-// partie en Abysse t compte aussi). Base Cauchemar, puis par palier : PV × (1 + hp × t), dégâts × (1 + dmg × t), PV du
-// boss × (1 + boss × t), apparitions × (1 + spawn × t) ; une malédiction de plus par palier (cumulées : Abysse V a les 5
-// premières de ABYSS_CURSES). Récompenses : or × (1 + gold × t), rareté + rarity × t, puissance des objets + itemMult × t,
-// XP de maîtrise × (1 + MASTERY.abyss × t) (et run.track.abyss pour la Saison). Première victoire d'un palier sur un monde :
-// first.gold × t or et un coffre de butin (rang first.chest[t − 1]).
+// partie en Abysse t compte aussi). Base Cauchemar, puis par palier (composé) : PV × (1 + hp)^t, dégâts × (1 + dmg)^t,
+// PV du boss × (1 + boss)^t, apparitions × (1 + spawn × t) ; une malédiction de plus par palier (cumulées : Abysse V a
+// les 5 premières de ABYSS_CURSES). Récompenses : or × (1 + gold × t), rareté + rarity × t, puissance des objets +
+// itemMult × t, XP de maîtrise × (1 + MASTERY.abyss × t) (et run.track.abyss pour la Saison). Première victoire d'un palier
+// sur un monde : first.gold × t or et un coffre de butin (rang first.chest[t − 1]).
+// Équilibrage (simulateur, 12 parties par palier, un monde, une résurrection) : une progression linéaire (+15 % de PV par
+// palier) laissait Abysse X du monde 1 à 100 % dès le milieu de partie ; d'où la progression composée. Joueur « milieu »
+// (améliorations niv. 5, objets de boss des mondes 1–2 et 4 épiques +3, maîtrise 15) au monde 1 : III 100 %, V 100 %,
+// VII 92 %, X 0 %. Joueur « avancé » (niv. 10, mondes 1–4, maîtrise 25) : monde 1 X 58 % ; monde 3 III 100 %, VII 17 %,
+// X 0 % ; les paliers hauts des mondes 3 à 6 restent des défis de prestige.
 export const ABYSS_TIERS = 10;
 export const ABYSS_ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-export const ABYSS = { hp: 0.35, dmg: 0.15, boss: 0.35, spawn: 0.03, gold: 0.2, rarity: 0.015, itemMult: 0.05, color: '#5a6aff',
+export const ABYSS = { hp: 0.4, dmg: 0.2, boss: 0.4, spawn: 0.03, gold: 0.2, rarity: 0.015, itemMult: 0.05, color: '#5a6aff',
   first: { gold: 150, chest: [1, 1, 2, 2, 2, 2, 3, 3, 3, 3] } };
 // malédictions dans l'ordre d'arrivée (palier I : la première, palier X : toutes)
 export const ABYSS_CURSES = [
