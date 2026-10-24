@@ -14,6 +14,10 @@ import { Run, LS } from './run.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 import { questList, claimQuest, loginState, claimLogin, dailyBadge, LOGIN_REWARDS, ensureDaily } from './daily.js';
+// L2 : défis de déblocage, maîtrise des champions, Abysse
+import { l2Home, endRunL2, l2Results, defisScreen, defisTile, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
+import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
+import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
 
 const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
@@ -110,6 +114,7 @@ export function home(t) {
   if (moved) $('#hubMain').classList.add('scr-in');
   bind($('.hub'), handlers);
   mountPreview($('.hc-3d'), save.cls);
+  l2Home(); // L2 : défis remplis validés (toasts)
 }
 
 const handlers = {
@@ -128,6 +133,7 @@ const handlers = {
   buy: el => buyUpgrade(el.dataset.k),
   sellJunk: () => sellJunk(),
   chests: () => chestScreen(() => home('adventure')),
+  defis: () => defisScreen(() => home()),
   forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
   craft: () => doCraft(),
   fuse: el => doFuse(el.dataset.all === '1'),
@@ -238,7 +244,7 @@ const bossOf = z => (z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${
 function adventureTab() {
   const c = CLASSES[save.cls], st = playerStats();
   const done = save.zoneCleared.filter(Boolean).length;
-  const pz = playZone(), Z = ZONES[pz], D = DIFFICULTIES[Math.min(save.diffSel?.[pz] || 0, maxDiff(pz))];
+  const pz = playZone(), Z = ZONES[pz], D = runDiff(Math.min(save.diffSel?.[pz] || 0, maxDiff(pz)), Math.min(save.abyssSel?.[pz] || 0, abyssTop(pz)));
   // tuiles rapides : quêtes du jour, connexion, coffres en attente
   const qs = questList(), qDone = qs.filter(q => q.prog >= q.n).length, qReady = qs.some(q => q.ready);
   const L = loginState(), pc = save.pendingChests;
@@ -254,7 +260,7 @@ function adventureTab() {
     const first = i === 0 && !save.stats.runs && !cleared;
     return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === pz ? 'cur' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${zoneBannerURL(z)})">
       <div class="z-num">${String(i + 1).padStart(2, '0')}</div>
-      <div class="z-txt">${first ? '<em class="start">Commencez ici</em>' : ''}<b>${esc(z.name)}</b><small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small>${zoneStars(stars)}</div>
+      <div class="z-txt">${first ? '<em class="start">Commencez ici</em>' : ''}<b>${esc(z.name)}</b><small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small>${zoneStars(stars)}${abyssBadge(i)}</div>
       <div class="z-art">${locked ? iconImg('lock', 22) : `<img class="px spr" src="${bossOf(z)}" alt="">`}</div>
     </button>`;
   }).join('');
@@ -277,6 +283,7 @@ function adventureTab() {
       <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
     </button>
     ${quick}
+    ${defisTile()}
     <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
     <div class="zones">${zones}</div>`;
 }
@@ -441,6 +448,8 @@ async function zoneSheet(i) {
   const steps = zoneSteps(z);
   const top = maxDiff(i);
   let sel = Math.min(save.diffSel?.[i] || 0, top);
+  let ab = Math.min(save.abyssSel?.[i] || 0, abyssTop(i)); // L2 : palier d'Abysse choisi (0 = aucun), toujours en Cauchemar
+  if (ab) sel = DIFFICULTIES.length - 1;
   const id = 'zs-' + Date.now();
   const btn = k => {
     const D = DIFFICULTIES[k], locked = k > top, beaten = k < (save.diffCleared[i] || 0);
@@ -456,18 +465,27 @@ async function zoneSheet(i) {
       <div class="enemy-row">${steps.map((m, k) => `<div class="er ${m.boss ? 'boss' : ''}" title="${esc(m.name)}"><img class="px spr" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""></div>`).join('')}</div>
       <h4>Difficulté</h4>
       <div class="diff-pick" role="radiogroup" aria-label="Niveau de difficulté">${DIFFICULTIES.map((_, k) => btn(k)).join('')}</div>
-      <div class="diff-info d${sel}">${diffInfo(i, sel)}</div>
+      <div class="diff-info d${sel} ${ab ? 'ab' : ''}">${ab ? abyssInfo(i, ab) : diffInfo(i, sel)}</div>
+      <div class="abyss-box">${abyssBlock(i, ab)}</div>
       <h4>Bonus pour la partie</h4>
       <div class="boost-box">${boostSlots()}</div>
       <h4>Objectif</h4>
       ${goalBox(i)}
-      <div class="zone-rw">${zoneRewards(i, sel)}</div></div>`,
+      <div class="zone-rw">${ab ? abyssRewards(i, ab) : zoneRewards(i, sel)}</div></div>`,
     buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: `${iconImg('play', 16)} Partir`, cls: 'primary', value: true }],
     dismissable: true,
   });
   const root = document.getElementById(id);
   let picking = -1;
   const drawBoosts = () => { root.querySelector('.boost-box').innerHTML = boostSlots(picking); };
+  // difficulté et palier d'Abysse choisis : boutons, détail, récompenses
+  const drawDiff = () => {
+    root.querySelectorAll('.diff-btn').forEach(x => { const on = +x.dataset.d === sel; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+    const info = root.querySelector('.diff-info');
+    info.className = `diff-info d${sel} ${ab ? 'ab' : ''}`; info.innerHTML = ab ? abyssInfo(i, ab) : diffInfo(i, sel);
+    root.querySelector('.abyss-box').innerHTML = abyssBlock(i, ab);
+    root.querySelector('.zone-rw').innerHTML = ab ? abyssRewards(i, ab) : zoneRewards(i, sel);
+  };
   root?.addEventListener('click', e => {
     const slot = e.target.closest('.bslot'), opt = e.target.closest('.bp-opt');
     if (slot) { sfx('tap'); const k = +slot.dataset.s; picking = picking === k ? -1 : k; drawBoosts(); return; }
@@ -475,6 +493,18 @@ async function zoneSheet(i) {
       sfx(opt.dataset.id ? 'loot' : 'tap');
       save.boostSel[picking] = opt.dataset.id || null;
       picking = -1; persist({ touch: false }); drawBoosts();
+      return;
+    }
+    const a = e.target.closest('.ab-btn');
+    if (a) {
+      const t = +a.dataset.ab;
+      sfx('tap');
+      if (t > abyssTop(i)) {
+        toast(`${iconImg('lock', 16)} Battez <b>Abysse ${DATA.ABYSS_ROMAN[t - 1]}</b> sur ce monde pour ouvrir le palier suivant`);
+        a.classList.remove('nope'); void a.offsetWidth; a.classList.add('nope');
+        return;
+      }
+      if (t !== ab) { ab = t; if (ab) sel = DIFFICULTIES.length - 1; drawDiff(); }
       return;
     }
     const b = e.target.closest('.diff-btn');
@@ -486,32 +516,30 @@ async function zoneSheet(i) {
       b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
       return;
     }
-    if (k === sel) return;
-    sel = k;
+    if (k === sel && !ab) return;
+    sel = k; ab = 0;
     sfx('tap');
-    root.querySelectorAll('.diff-btn').forEach(x => { const on = +x.dataset.d === k; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
-    const info = root.querySelector('.diff-info');
-    info.className = `diff-info d${k}`; info.innerHTML = diffInfo(i, k);
-    root.querySelector('.zone-rw').innerHTML = zoneRewards(i, k);
+    drawDiff();
   });
   const ok = await p;
-  if (save.diffSel[i] !== sel) { save.diffSel[i] = sel; persist({ touch: false }); }
-  if (ok) { save.lastZone = i; startRun(i, sel); }
+  if (save.diffSel[i] !== sel || (save.abyssSel?.[i] || 0) !== ab) { save.diffSel[i] = sel; if (save.abyssSel) save.abyssSel[i] = ab; persist({ touch: false }); }
+  if (ok) { save.lastZone = i; startRun(i, sel, ab); }
 }
 
 // ---------- Choix de la classe ----------
 function classSelect(first) {
   music('menu');
   let sel = save.cls || 'mage';
-  const render = () => {
-    const c = CLASSES[sel];
+  const render = (keep = false) => {
+    const c = CLASSES[sel], lk = clsLocked(sel), y = keep ? $('.class-select')?.scrollTop || 0 : 0;
     mount(`<div class="class-select">
       ${first ? `<div class="title-logo"><div class="l1">League of</div><div class="l3">B<em>o</em>nk</div></div><p class="cs-sub">Choisissez votre champion</p>`
         : `<div class="cs-bar"><button class="icon-btn" data-act="back" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Champions</h2></div>`}
       <div class="cs-stage"><canvas class="cs-3d"></canvas><div class="cs-id"><span class="role">${esc(c.role)}</span><h3>${esc(c.name)}</h3></div></div>
-      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span></button>`).join('')}</div>
+      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
       <section class="cs-detail">
         <p class="cs-desc">${esc(c.desc)}</p>
+        ${lk ? clsLockPanel(sel) : masteryPanel(sel)}
         <div class="stats wide">
           <span>${iconImg('heart', 16)}PV<b>${c.hp}</b></span>
           <span>${iconImg('fist', 16)}ATQ<b>${c.atk}</b></span>
@@ -526,18 +554,23 @@ function classSelect(first) {
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
           <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
           <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
+        ${lk ? '' : auraPicker(sel)}
         ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
       </section>
-      <div class="cs-foot"><button class="btn primary big" data-act="go">${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}</button></div>
+      <div class="cs-foot"><button class="btn primary big" data-act="go" ${lk ? 'disabled' : ''}>${lk ? `${iconImg('lock', 16)} Verrouillé · ${esc(c.name)}` : `${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}`}</button></div>
     </div>`);
+    if (y) $('.class-select').scrollTop = y;
     mountPreview($('.cs-3d'), sel);
     bind($('.class-select'), {
       pick: el => { sel = el.dataset.c; render(); },
       go: () => {
+        if (clsLocked(sel)) return; // champion à débloquer (Défis, Saison)
         save.cls = sel; persist();
         home('adventure');
       },
       back: () => home(),
+      aura: el => { if (pickAura(sel, el.dataset.aura)) { sfx('loot'); render(true); } },
+      defis: () => defisScreen(() => classSelect(first)),
     });
   };
   render();
@@ -547,15 +580,17 @@ function classSelect(first) {
 let run = null;
 let runBoosts = [];
 
-function startRun(z, diff = 0) {
+function startRun(z, diff = 0, abyss = 0) {
   if (!supported()) return noWebGL(); // rien n'est dépensé (bonus, partie comptée)
   diff = Math.max(0, Math.min(diff, maxDiff(z)));
+  abyss = Math.max(0, Math.min(abyss | 0, abyssTop(z))); // L2 : palier d'Abysse (en Cauchemar)
   save.stats.runs++;
   const boosts = runBoosts = consumeBoosts(); // enregistre aussi la partie commencée
   const zone = ZONES[z];
   run = new Run({
     zone,
     diff,
+    abyss,
     boosts,
     onPause: resume => pauseMenu(resume),
     onLevelUp: (title, opts, done, sub, extra) => levelUpMenu(title, opts, done, sub, extra),
@@ -872,6 +907,7 @@ async function pauseMenu(resume) {
       </div>
       <div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
       <div class="pz-sum pz-st">${pzStats(p)}</div>
+      ${abyssPause(run.abyss)}
       <h4>Armes <small>${p.weapons.length}/${nW}</small></h4>
       <div class="cur-build">${p.weapons.map(wRow).join('')}${free(nW - p.weapons.length)}</div>
       <h4>Tomes <small>${tomes.length}/${nT}</small></h4>
@@ -938,7 +974,7 @@ const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStar
 // ---------- Fin d'expédition ----------
 function endRun(z, sum) {
   battle = null; run = null;
-  const k = sum.diff || 0, D = DIFFICULTIES[k];
+  const k = sum.diff || 0, D = runDiff(k, sum.abyss); // Abysse : or, rareté et puissance des objets en plus
   const st = save.stats;
   const start = ZONES[sum.startZone] || z;
   // champs de l'expédition (valeurs par défaut tant que le moteur ne les fournit pas)
@@ -1006,11 +1042,13 @@ function endRun(z, sum) {
   // totems de défi : +10 % d'or par totem activé
   const heatGold = heat ? Math.round(gold * HEAT_GOLD * heat) : 0;
   gold += heatGold;
+  const l2 = endRunL2(sum, { cleared, worlds, k }); // L2 : records, maîtrise, paliers d'Abysse (or ci-dessous), défis
+  gold += l2.gold;
   save.gold += gold;
   persist();
   const got = checkAchievements();
   persist();
-  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record,
+  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2,
     final: sum.final ?? (sum.win && cleared.includes(ZONES.length - 1)), reached: ZONES[Math.min(ZONES.length - 1, start.id + stage)] };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
@@ -1300,6 +1338,7 @@ function summaryScreen(R, opened = []) {
     </div>
     ${worldCards ? `<h3 class="section-t">Mondes vaincus <small>${cleared.length}</small></h3><div class="worlds-res">${worldCards}</div>` : ''}
     ${heatLine || chestLine || pendLine ? `<div class="summary">${heatLine}${chestLine}${pendLine}</div>` : ''}
+    ${l2Results(R.l2)}
     <h3 class="section-t">Progression <small>${nDone}/${ZONES.length} mondes</small></h3>
     ${prog}
     ${R.found.length ? `<h3 class="section-t">Objets trouvés <small>${R.found.length}</small></h3><div class="inv-grid found">${R.found.map(it => itemTile(it, { act: false })).join('')}</div>` : ''}
@@ -1658,15 +1697,19 @@ function shopTab() {
     }).join('')}</div>
     <h3 class="section-t">Bonus <small>pour une seule partie</small></h3>
     <p class="muted shop-intro">Choisissez-en jusqu'à ${BOOST_SLOTS} dans la fiche d'une zone avant de partir.</p>
-    <div class="upgrades boost-shop">${Object.entries(BOOSTS).map(([id, b]) => `<div class="upgrade boost-card">
+    <div class="upgrades boost-shop">${Object.entries(BOOSTS).map(([id, b]) => isFree('boost', id) ? `<div class="upgrade boost-card">
         <span class="bo-ic">${iconImg(b.icon, 32)}${save.boosts[id] ? `<i class="bo-n">×${save.boosts[id]}</i>` : ''}</span>
         <div class="u-txt"><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>
         <button class="btn buy small" data-act="buyBoost" data-id="${id}" ${save.gold < b.price ? 'disabled' : ''}>${iconImg('gold', 14)} ${fmt(b.price)}</button>
+      </div>` : `<div class="upgrade boost-card locked" data-act="defis">
+        <span class="bo-ic">${iconImg(b.icon, 32)}${save.boosts[id] ? `<i class="bo-n">×${save.boosts[id]}</i>` : ''}</span>
+        <div class="u-txt"><b>${esc(b.name)}</b><small>${esc(b.desc)}</small><small class="lk-l">${iconImg('lock', 12)} ${esc(lockLine('boost:' + id))}</small></div>
+        <span class="lk-b">${iconImg('lock', 18)}</span>
       </div>`).join('')}</div>`;
 }
 
 function doBuyBoost(id) {
-  if (!buyBoost(id)) return;
+  if (!isFree('boost', id) || !buyBoost(id)) return; // L2 : bonus à débloquer
   sfx('coin');
   toast(`${iconImg(BOOSTS[id].icon, 16)} ${esc(BOOSTS[id].name)} ×${save.boosts[id]}`);
   home();

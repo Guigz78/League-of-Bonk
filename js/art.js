@@ -506,6 +506,11 @@ const ICON = {
   part: [IC.cyan, IC.cyan, '<path d="M12 3l7.5 4.5v9L12 21l-7.5-4.5v-9z" fill="T"/><circle cx="12" cy="12" r="3"/>'],
   pet: [IC.w, IC.gold, '<path d="M5 9.5L7 4l3 3.5h4L17 4l2 5.5V14a7 7 0 0 1-14 0z" fill="T"/><rect x="8.6" y="11" width="2" height="2" fill="S" stroke="none"/><rect x="13.4" y="11" width="2" height="2" fill="S" stroke="none"/>'],
   eye: [IC.w, IC.w, '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="T"/><circle cx="12" cy="12" r="3"/>'],
+  // L2 : Abysse (gouffre en entonnoir), maîtrise (médaille), aura (flamme de la forme ultime)
+  abyss: [IC.violet, IC.blue, '<path d="M3 5h18l-5 6.5H8z" fill="T"/><path d="M8 11.5l2.2 4.5h3.6l2.2-4.5M10.2 16l1.8 3.5 1.8-3.5"/>'],
+  medal: [IC.gold, IC.gold, '<path d="M8 3l3 6.2M16 3l-3 6.2"/><circle cx="12" cy="15" r="5.5" fill="T"/><path d="M12 12.4l.9 1.8 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3z" fill="S" stroke="none"/>'],
+  key: [IC.gold, IC.gold, '<circle cx="8" cy="12" r="4.5" fill="T"/><path d="M12.5 12h8.5M17.5 12v3.5M20.5 12v2.5"/>'],
+  aura: [IC.gold, IC.orange, '<path d="M12 21c-4 0-7-2.6-7-6.4 0-3.4 2.4-5 3-8.6 1.6 1.2 2.4 2.8 2.6 4.4.8-1.6 1.2-3.6.9-6.4 3.8 2.4 7.5 6.2 7.5 10.6 0 3.8-3 6.4-7 6.4z" fill="T"/><path d="M12 21c-1.8 0-3-1.2-3-3 0-1.6 1.4-2.6 2-4.2 1.4 1 4 2.4 4 4.4 0 1.6-1.2 2.8-3 2.8z"/>'],
 };
 
 function svgIcon(name) {
