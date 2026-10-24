@@ -385,7 +385,7 @@ export class Run {
     this.lsBudget = Math.min(cap, this.lsBudget + cap * dt);
     if (this.lsPool > 0) {
       const h = Math.min(this.lsPool * this.diff.heal, this.lsBudget, p.maxHp - p.hp);
-      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown += h; }
+      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown += h; save.stats.lsHeal = (save.stats.lsHeal || 0) + h; } // total : succès (season.js)
       this.lsPool = 0;
     }
     this.lsT -= dt; this.lsGlow = Math.max(0, this.lsGlow - dt);

@@ -188,7 +188,7 @@ export function grant(R, out = []) {
   }
   if (R.title && TITLES[R.title]) {
     if (hasTitle(R.title)) { save.gold += 250; out.push({ k: 'gold', n: 250 }); } // déjà gagné (saison suivante)
-    else { (save.titles || (save.titles = {}))[R.title] = Date.now(); out.push({ k: 'title', id: R.title }); }
+    else { earnTitle(R.title); out.push({ k: 'title', id: R.title }); }
   }
   if (R.gold) { save.gold += R.gold; out.push({ k: 'gold', n: R.gold }); }
   return out;
@@ -198,6 +198,11 @@ export function grant(R, out = []) {
 export const hasTitle = id => id === 'recrue' || !!save.titles?.[id] || !!save.unlocks?.['title:' + id];
 export const titleList = () => Object.entries(TITLES).map(([id, T]) => ({ id, ...T, own: hasTitle(id), on: save.title === id }));
 export const titleName = () => (save.title && TITLES[save.title] && hasTitle(save.title) ? TITLES[save.title].name : '');
+// titre gagné : affiché tout de suite si le joueur n'en a pas encore choisi
+export function earnTitle(id) {
+  (save.titles || (save.titles = {}))[id] = Date.now();
+  if (!save.title || save.title === 'recrue') save.title = id;
+}
 export function setTitle(id) {
   save.title = TITLES[id] && hasTitle(id) ? id : null;
   persist();
@@ -255,7 +260,7 @@ export function checkAchievements() {
     if (save.achievements[a.id] || achValue(a.stat) < a.goal) continue;
     save.achievements[a.id] = Date.now();
     save.gold += a.gold;
-    if (a.title && TITLES[a.title] && !hasTitle(a.title)) (save.titles || (save.titles = {}))[a.title] = Date.now();
+    if (a.title && TITLES[a.title] && !hasTitle(a.title)) earnTitle(a.title);
     got.push(a);
   }
   return got;
