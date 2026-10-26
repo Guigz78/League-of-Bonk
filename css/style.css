@@ -1607,3 +1607,9 @@ button.itile:active { transform: translateY(1px); }
   .ab-btn { height: 34px; }
 }
 .diff-tag.ab { color: #8a9aff; }
+/* onglets des champions : jamais plus larges que l'écran (3 à 5 champions, iPhone SE) : image au-dessus du nom */
+.cs-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cs-tab { flex-direction: column; justify-content: center; gap: 2px; height: 66px; padding: 4px 2px; }
+.cs-tab > img { width: 36px; height: 36px; }
+.cs-tab span { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 370px) { .cs-tab { font-size: 11px; letter-spacing: .04em; } }
