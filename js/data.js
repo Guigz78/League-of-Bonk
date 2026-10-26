@@ -484,12 +484,12 @@ export const CHEST_LOOT = [
 //    Bonus du jour 175-315), quêtes du jour 210, connexion 50, quêtes de la semaine ~2 000 par semaine (finies en
 //    4-5 jours). Total des 40 paliers : 23 420 XP.
 // 3) Parcours de 20 jours simulé avec le vrai code (fausse date, parties nourries au crochet de fin de partie, voir
-//    l'outil journey.mjs du banc de test) — progression supposée : mondes 1-2 au jour 1, monde 4 au jour 4, monde 5 au
+//    l'outil journey.mjs du banc de test ; les quêtes tirées changent avec la date) — progression supposée : mondes 1-2 au jour 1, monde 4 au jour 4, monde 5 au
 //    jour 7, Difficile dès le jour 9, Cauchemar sur les mondes 1-2 au jour 14 :
 //      jour 1  : palier 3  (756 XP)    — 17 succès sur 73, calendrier jour 1, 1re quête de la semaine en vue
-//      jour 3  : palier 12 (3 700 XP)  — 25 succès, titre « Éclaireur » et 1er coffre mythique (palier 10)
-//      jour 4  : palier 15             — Nyx la Vampire (si elle est verrouillée, sinon coffre en or + 300 or)
-//      jour 7  : palier 21 (8 300 XP)  — 34 succès, 5/5 quêtes de la semaine, calendrier jour 7 (coffre en or + 2 bonus)
+//      jour 3  : palier 11-12 (3 250-3 700 XP) — 25 succès, titre « Éclaireur » et 1er coffre mythique (palier 10)
+//      jour 4-5 : palier 15            — Nyx la Vampire (si elle est verrouillée, sinon coffre en or + 300 or)
+//      jour 7  : palier 20-21 (8 100-8 300 XP) — 34 succès, 5/5 quêtes de la semaine, calendrier jour 7 (coffre en or + 2 bonus)
 //      jour 13 : palier 31             — Sora l'Ombre (palier 30) et titre « Conquérant »
 //      jour 14 : palier 32 (16 400 XP) — 44 succès, calendrier jour 14 (coffre mythique + 2 bonus)
 //      jour 19 : palier 40             — 2 coffres mythiques, 1 000 or, titre « Légende de la saison »
