@@ -1606,3 +1606,4 @@ button.itile:active { transform: translateY(1px); }
   .df-kinds small { font-size: 8.5px; letter-spacing: .04em; }
   .ab-btn { height: 34px; }
 }
+.diff-tag.ab { color: #8a9aff; }

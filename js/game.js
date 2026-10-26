@@ -899,7 +899,7 @@ async function pauseMenu(resume) {
   const free = n => Array.from({ length: Math.max(0, n) }, () => '<span class="bl empty"><i>Emplacement libre</i></span>').join('');
   const hpK = Math.max(0, Math.min(1, p.hp / Math.max(1, p.maxHp)));
   const v = await modal({
-    title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1}/${ZONES.length} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}">${esc(run.diff.name)}</span>` : ''}</span>`,
+    title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1}/${ZONES.length} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
     body: `<div class="pz-sum">
         <div><small>Temps</small><b>${fmtTime(run.runTime ?? run.time ?? 0)}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
@@ -1328,7 +1328,7 @@ function summaryScreen(R, opened = []) {
   mount(`<div class="reward-screen ${won ? 'complete' : 'lost'}">
     <span class="eyebrow rs-eyebrow">${eyebrow}</span>
     <h2 class="rs-title">${title}</h2>
-    <p class="rs-zone">${route} <span class="diff-tag d${k}">${esc(D.name)}</span></p>
+    <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
     ${R.final ? `<p class="center finale">Le Ver-Roi du Néant est tombé. Vous avez vaincu les 6 boss. Bravo, champion !</p>` : ''}
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>

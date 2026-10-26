@@ -244,7 +244,7 @@ export class Run {
             <button class="icon-btn hud-pause" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
             <div class="hl-row"><span class="hr-loot" id="lootPill"><i class="hud-chest"></i><b id="lootN">0</b></span><span class="hr-heat" id="heatPill" hidden>${iconImg('i_burn', 15)}<b id="heatN">0</b></span></div>
           </div>
-          <div class="timer"><span class="world-tag" id="worldTag"></span><span class="t-plate" id="tPlate"><b id="timer">0:00</b></span><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
+          <div class="timer"><span class="world-tag" id="worldTag"></span><span class="t-plate" id="tPlate"><b id="timer">0:00</b></span><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}${this.abyss ? ' ab' : ''}">${esc(this.diff.name)}</em>` : ''}</div>
           <div class="hud-right">
             <span>${iconImg('skull', 15)}<b id="killsN">0</b></span><span class="hr-gold">${iconImg('gold', 15)}<b id="goldRun">0</b></span>
           </div>
