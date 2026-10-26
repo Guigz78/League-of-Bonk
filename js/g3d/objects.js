@@ -257,7 +257,8 @@ export class Objects {
     if (age >= 0 && age < 0.6) { const k = age / 0.6; up = Math.sin(k * Math.PI) * 70 * (1 - k * 0.3); sx = sy = 0.5 + 0.5 * easeOut(k); }
     else if (age >= 0.6 && age < 0.8) { const k = Math.sin((age - 0.6) / 0.2 * Math.PI); sx = 1 + k * 0.22; sy = 1 - k * 0.18; }
     else { const ph = (t * 1.2 + it.x * 0.013) % 2.4; if (ph < 0.4) { const k = Math.sin(ph / 0.4 * Math.PI); up = k * 6; sx = 1 - k * 0.05; sy = 1 + k * 0.07; } }
-    const X = it.x * S, Z = it.y * S, s = 1.05;
+    const X = it.x * S, Z = it.y * S, s = it.giga ? 1.7 : 1.05; // Giga coffre : bien plus gros, colonne dorée
+    if (it.giga) { fx.beam(it.x, it.y, 70, 420, '#ffd54a', 0.5); fx.ringAt(it.x, it.y, 70, '#ffd54a', 0.8, 0.06, 0.1, 1, t * 0.6, 12, 0.6, 0.5, true); }
     this.loot[tier].put(X, up * S, Z, 0.3 + Math.sin(t * 0.8 + it.x) * 0.15, s * sx, s * sy, s * sx);
     fx.shadow(it.x, it.y, 46 * sx, 0.32);
     fx.glow3(X, 1 + up * S, Z, 3.5 + tier * 0.9, c, 0.35 + 0.12 * tier + Math.sin(t * 3 + it.x) * 0.08);
@@ -294,7 +295,7 @@ export class Objects {
   drawPortal(dt) {
     const run = this.run, P = run.portal, t = this.gfx.t, fx = this.fx;
     this.sw1.visible = this.sw2.visible = this.portalRunes.visible = this.portalSwirlG.visible = false;
-    if (!P) { this.suck.length = 0; return; }
+    if (!P || P.t < 0) { this.suck.length = 0; return; } // âge négatif : ouverture retardée (victoire contre le giga boss)
     const s = backOut(clamp(P.t / 0.9, 0, 1)), ch = P.charge, X = P.x * S, Z = P.y * S;
     if (Math.abs(P.x - this.gfx.cam.x) > 900 || Math.abs(P.y - this.gfx.cam.y) > 1500) return;
     this.portalBase.put(X, 0, Z, 0, s);

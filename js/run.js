@@ -3,8 +3,9 @@
 // Difficulté : niveaux Normal / Difficile / Cauchemar par zone, comportements par type de monstre
 // (chaque attaque spéciale est annoncée par l'événement 'enemyTelegraph' avant d'agir), élites à pouvoirs,
 // boss en 3 phases.
-// Expédition : une partie enchaîne les mondes. Dans chaque monde, l'autel invoque le boss dans une arène ;
-// sa mort ouvre un portail vers le monde suivant (plus dur). Chrono écoulé : les monstres deviennent fous.
+// Expédition en 3 niveaux (EXPE_LEVELS) : le monde choisi, puis les mondes suivants, chacun plus dur (LEVELS). Dans chaque
+// monde, l'autel invoque le boss dans une arène ; sa mort ouvre un portail vers le niveau suivant. Le niveau 3 se termine
+// par le GIGA BOSS (js/giga.js, réglages GB) : sa défaite = victoire de l'expédition. Chrono écoulé : les monstres deviennent fous.
 // Totems de défi (plus dur contre des récompenses), coffres de butin ramassés pendant la partie, bonus de départ.
 // L2 : armes et tomes verrouillés jamais proposés (unlocks.js), paliers d'Abysse (difficulté effective de abyss.js et
 // malédictions : this.curse), suivi de la partie this.track (contrat L1/L2/L3, passé à onEnd dans sum.track).
@@ -18,6 +19,8 @@ import { rng } from './pixel.js';
 import { createGfx } from './visuals.js';
 import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
+import { EXPE_LEVELS, GIGA } from './data.js';
+import { GIGA_METHODS } from './giga.js';
 
 const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
@@ -48,6 +51,26 @@ const DOOM_LV = 7;      // à partir de ce niveau de folie (1 min 30 après le c
 const SWEEP_ARC = 3.5;  // le rayon tournant du boss balaie ~200°
 const SWEEP_LEN = 270, BOSS_WAVE = 300; // portées limitées du rayon et des ondes du boss : on esquive en s'éloignant
 const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', 'Néant'];
+// ---------- Expédition en 3 niveaux et giga boss (réglages exportés : le simulateur d'équilibrage peut les modifier) ----------
+// LEVELS : renfort propre à chaque niveau, en plus de BAL.st* (monde traversé) et du monde lui-même : hp / dmg des monstres,
+// spawn = cadence d'apparition, cap = monstres simultanés en plus, elite = intervalle entre deux élites, mods = pouvoirs
+// d'élite en plus, gold = or laissé par le boss
+export const LEVELS = [
+  { hp: 1, dmg: 1, spawn: 1, cap: 0, elite: 1, mods: 0, gold: 1 },
+  { hp: 1.1, dmg: 1.08, spawn: 1.12, cap: 16, elite: 0.85, mods: 0, gold: 1.15 },
+  { hp: 1.2, dmg: 1.15, spawn: 1.25, cap: 32, elite: 0.72, mods: 1, gold: 1.3 },
+];
+// GB : giga boss (js/giga.js). PV et dégâts relatifs au boss du monde du niveau 3 ; scale = taille (rayon 7 × scale, boss
+// du monde : 8) ; arena = rayon de l'arène ; intro = cinématique (s, invulnérable) ; ph2 / ph3 = seuils des phases (PV) ;
+// roar = rugissement d'un changement de phase (s). Attaques (index = phase − 1) : bonk = bonds écrasants (rayon, dégâts ×,
+// nombre), quake = ondes de choc à brèche (vitesse, portée, largeur de la brèche en rad, écart en s, nombre), laser = double
+// rayon tournant (portée, largeur, vitesse rad/s, durée), rain = météores de la pluie, fire = météore sur le joueur toutes les
+// fire s en phase 3, elites = élites appelées au début des phases 2 et 3, cd = délai entre deux attaques (s)
+export const GB = {
+  hp: 2.2, dmg: 1.15, scale: 14, speed: 0.85, arena: 560, intro: 3.2, ph2: 0.66, ph3: 0.33, roar: 1.6,
+  bonkR: 135, bonkDmg: 1.5, bonks: [1, 2, 3], quakeV: 290, quakeMax: 430, quakeGap: 0.95, quakeDt: 0.85, quakes: [2, 2, 3],
+  laserLen: 360, laserW: 38, laserSpin: 0.85, laserT: 4.2, rain: [14, 18, 24], fire: 3.2, elites: [0, 2, 2], cd: [1.6, 1.3, 0.95],
+};
 // Vol de vie (exporté : le simulateur d'équilibrage peut le modifier). Soin par seconde plafonné à rate × vol de vie
 // (en part des PV max, au plus cap = 6 %/s, atteint vers 30 %) : plus on en a, plus il soigne, même dans une horde.
 // max = plafond du vol de vie, base = talent de tous les champions, dag = en plus sur les coups des dagues évoluées
@@ -190,6 +213,10 @@ export class Run {
     this.track = { kills: 0, bossKills: 0, worlds: 0, maxWorld: zone.id, maxCombo: 0, level: 1, dmgTaken: 0, hits: 0, ults: 0, chests: 0, totems: 0,
       elites: 0, weaponKills: {}, evoWeapons: 0, time: 0, cls: this.cls.id, diff: this.diffId, abyss: this.abyss, zone: zone.id, won: false,
       lsHeal: 0, hearts: 0, bossFast: 0, totemBoss: 0 };
+    // expédition en 3 niveaux : levels = niveau atteint (1 à 3), route = mondes visités dans l'ordre, giga = giga boss vaincu,
+    // gigaDance = vaincu sans être touché par son double rayon, gigaFight = durée du combat (s)
+    this.route = [zone.id];
+    Object.assign(this.track, { levels: 1, route: this.route, giga: 0, gigaDance: 0, gigaFight: 0 });
     this.curW = null;         // arme qui frappe en ce moment (victimes par arme)
     this.setupWorld();
     if (has('depart')) { // départ éclair : niveau 4, 3 améliorations à choisir tout de suite
@@ -209,13 +236,16 @@ export class Run {
     this.spawnAcc = 0;
     // élites plus fréquentes, 4 hordes de plus en plus denses, plafond de monstres selon la zone et le niveau
     this.nextElite = 35;
-    this.eliteGap = (z.id ? 30 : 34) * D.elite;
+    // niveau de l'expédition (0 à 2) : renforts LEVELS ; le dernier niveau se termine par le giga boss (giga.js)
+    const LV = this.lv = LEVELS[Math.min(this.stage, LEVELS.length - 1)];
+    this.gigaLevel = this.stage >= EXPE_LEVELS - 1;
+    this.eliteGap = (z.id ? 30 : 34) * D.elite * LV.elite;
     this.swarms = [0.25, 0.46, 0.66, 0.85].map(f => f * this.duration);
     this.swarmN = 0;
     // rythme des vagues (calme -> montée -> pic -> répit) et champion de mi-parcours (~55 % du chrono)
     this.phase = 'calm'; this.spikeT = 0; this.breathT = 0;
     this.miniAt = this.duration * 0.55; this.miniDone = false; this.mini = null;
-    this.cap = Math.min(HARD_CAP - 10, Math.round((150 + z.id * 16 + this.stage * 12) * (1 + (D.spawn - 1) * 0.6)));
+    this.cap = Math.min(HARD_CAP - 10, Math.round((150 + z.id * 16 + this.stage * 12 + LV.cap) * (1 + (D.spawn - 1) * 0.6)));
     this.pack = 0; this.packX = 0; this.packY = 0;
     this.acts = 0;            // attaques spéciales en cours (limitées pour rester lisibles)
     this.boss = null; this.bossSpawned = false;
@@ -226,7 +256,7 @@ export class Run {
     if (this.curse.has('horde')) { this.wm.spawn = 1.35; this.wm.gold = 1.25; } // Abysse : totem de la Horde imposé
     // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
     const st = this.stage, carry = this.runTime;
-    this.sk = { hp: (1 + BAL.stHp * st) * (1 + carry / BAL.carryHp), dmg: (1 + BAL.stDmg * st) * (1 + carry / BAL.carryDmg), boss: 1 + BAL.stBoss * st };
+    this.sk = { hp: (1 + BAL.stHp * st) * (1 + carry / BAL.carryHp) * LV.hp, dmg: (1 + BAL.stDmg * st) * (1 + carry / BAL.carryDmg) * LV.dmg, boss: 1 + BAL.stBoss * st };
     this.placeInterest();
   }
 
@@ -272,7 +302,7 @@ export class Run {
     this.renderLoadout();
     this.renderEvo();
     this.renderWorld();
-    this.banner(`<small>Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
+    this.banner(`<small>Niveau 1/${EXPE_LEVELS} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
     if (this.abyss) setTimeout(() => { if (!this.over) this.banner(`<small>${esc(abyssName(this.abyss))} · malédictions</small>${curseList(this.abyss, 'small')}`, 3200, 'small abyss'); }, 2500);
     music('zone' + this.zone.id);
     this.last = performance.now();
@@ -563,10 +593,11 @@ export class Run {
       }).join('');
   }
 
-  // monde courant dans le bandeau du haut : « Monde 2/6 · Jungle »
+  // niveau de l'expédition et monde courant dans le bandeau du haut : « Niveau 2/3 · Jungle »
   renderWorld() {
     const el = $('#worldTag'); if (!el) return;
-    el.innerHTML = `Monde <b>${this.zone.id + 1}/${ZONES.length}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
+    el.innerHTML = `Niveau <b>${this.stage + 1}/${EXPE_LEVELS}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
+    el.classList.toggle('giga', !!this.gigaLevel);
   }
 
   renderEvo() {
@@ -683,8 +714,9 @@ export class Run {
     let dt = clamp((now - this.last) / 1000, 0, 0.05);
     this.last = now;
     if (!this.paused) {
-      // court ralenti de célébration à la mort d'un boss
-      if (this.celebT > 0) { this.celebT -= dt; this.slowmo = this.celebT > 0.4 ? 0.3 : 1 - 0.7 * Math.max(0, this.celebT) / 0.4; }
+      // court ralenti de célébration à la mort d'un boss (plus long et plus lent pour le giga boss, giga.js)
+      if (this.celebT > 0) { this.celebT -= dt; this.slowmo = this.celebT > 0.4 ? this.celebK || 0.3 : 1 - 0.7 * Math.max(0, this.celebT) / 0.4; }
+      else if (this.cineT > 0) this.cineSlow(dt); // cinématique d'arrivée du giga boss
       dt *= this.slowmo;
       if (this.hitStop > 0) { this.hitStop -= dt; dt *= 0.06; } // arrêt sur image très bref (gros coups)
       this.update(dt);
@@ -817,6 +849,7 @@ export class Run {
     this.updateShots(dt);
     this.updateWaves(dt);
     this.updateBombs(dt);
+    if (this.boss?.giga && !this.boss.dead) this.gigaTick(dt); // giga boss : rayons, pluie de feu (giga.js)
     this.updatePickups(dt);
     if (!this.entering) { this.updateInterest(dt); this.updateAltar(dt); this.updateTotems(dt); }
     this.updatePortal(dt);
@@ -849,7 +882,7 @@ export class Run {
     if (t >= this.duration) this.updateOvertime(dt);
     const ot = this.otLevel, fight = this.boss && !this.boss.dead;
     // la cadence monte nettement avec le temps (zone 1 un peu plus douce), puis avec la folie après le chrono
-    let rate = (0.9 + Math.min(t, this.duration) / 18) * (1 + z.id * 0.12) * (1 + this.stage * 0.1) * D.spawn * this.wm.spawn * (1 + 0.3 * ot) * this.director(dt);
+    let rate = (0.9 + Math.min(t, this.duration) / 18) * (1 + z.id * 0.12) * (1 + this.stage * 0.1) * this.lv.spawn * D.spawn * this.wm.spawn * (1 + 0.3 * ot) * this.director(dt);
     if (fight) rate *= this.boss.enraged ? 0.5 : 0.36;
     this.spawnAcc += rate * dt;
     const pool = Math.min(3, Math.floor(t / (this.duration / 4)));
@@ -982,6 +1015,11 @@ export class Run {
     if (o.boss) {
       hp = Math.max(def.hp, 165) * BAL.bossHp * (1 + z.id * BAL.zBoss) * D.boss * S.boss * this.runHp;
       dmg = def.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
+      if (o.giga) { // giga boss : relatif au boss du monde (GB)
+        const bd = z.boss || z.monsters[4];
+        hp = Math.max(bd.hp, 165) * BAL.bossHp * (1 + z.id * BAL.zBoss) * D.boss * S.boss * this.runHp * GB.hp;
+        dmg = bd.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg * GB.dmg; scale = GB.scale; speed *= GB.speed;
+      }
     }
     if (o.gen) { hp *= 0.32; dmg *= 0.6; scale *= 0.62; speed *= 1.18; } // petit morceau d'un blob divisé
     const e = {
@@ -994,7 +1032,7 @@ export class Run {
       side: Math.random() < 0.5 ? 1 : -1, sideT: rand(0.5, 2), regen: 0, vamp: false, bomb: false, rage: 0, sumT: 0, enraged: false,
       // expédition : fou (après le chrono), enfermé dans l'arène (boss et ses renforts), phase du boss, invulnérable
       mad: ot > 0, inArena: !!o.inArena, bossPhase: o.boss ? 1 : 0, invuln: 0,
-      mini: !!o.mini, ringT: o.mini ? rand(3, 4.5) : 0,
+      mini: !!o.mini, ringT: o.mini ? rand(3, 4.5) : 0, giga: !!o.giga,
     };
     if (o.elite) this.makeElite(e);
     this.enemies.push(e);
@@ -1004,7 +1042,7 @@ export class Run {
   // élite : 1 pouvoir tiré au hasard (2 en Cauchemar), affiché dans son nom
   makeElite(e) {
     const keys = Object.keys(ELITE_MODS), mods = [];
-    while (mods.length < Math.min(keys.length, this.diff.mods + (e.mini && this.diff.mods < 2 ? 1 : 0))) {
+    while (mods.length < Math.min(keys.length, this.diff.mods + (this.lv?.mods || 0) + (e.mini && this.diff.mods < 2 ? 1 : 0))) {
       const m = keys[Math.floor(Math.random() * keys.length)];
       if (!mods.includes(m)) mods.push(m);
     }
@@ -1028,8 +1066,8 @@ export class Run {
     a.charge = clamp(a.charge + (inside ? dt / 2.5 : -dt / 2), 0, 1);
     if (inside && !a.told) {
       a.told = true;
-      const def = this.zone.boss || this.zone.monsters[4];
-      this.banner(`<small>Autel du boss</small>Restez dessus pour invoquer ${esc(def.name)}`, 2200, 'small altar');
+      const def = this.gigaLevel ? GIGA : this.zone.boss || this.zone.monsters[4];
+      this.banner(`<small>${this.gigaLevel ? 'Autel du giga boss' : 'Autel du boss'}</small>Restez dessus pour invoquer ${esc(def.name)}`, 2200, 'small altar');
     }
     if (!inside) a.told = a.charge > 0 ? a.told : false;
     if (a.charge >= 1 && !this.paused) { a.used = true; a.charge = 1; this.summonBoss(a.x, a.y, false); }
@@ -1038,13 +1076,14 @@ export class Run {
   // invoque le boss : l'arène se referme autour de l'autel (ou du joueur quand le chrono est écoulé)
   summonBoss(cx, cy, auto) {
     this.bossSpawned = true;
-    const z = this.zone, def = z.boss || z.monsters[4], p = this.p, lim = HALF - 500;
+    // niveau 3 : le giga boss (giga.js), dans une arène plus large
+    const G = !!this.gigaLevel, z = this.zone, def = G ? GIGA : z.boss || z.monsters[4], p = this.p, R = G ? GB.arena : ARENA_R, lim = HALF - Math.max(500, R + 100);
     cx = clamp(cx, -lim, lim); cy = clamp(cy, -lim, lim);
-    const A = this.arena = { x: cx, y: cy, R: ARENA_R };
+    const A = this.arena = { x: cx, y: cy, R };
     // le boss surgit de l'autre côté de l'autel
     let dx = cx - p.x, dy = cy - p.y, d = Math.hypot(dx, dy);
     if (d < 20) { const a = Math.random() * TAU; dx = Math.cos(a); dy = Math.sin(a); d = 1; }
-    const B = this.boss = this.addEnemy(def, z.boss ? 5 : 4, { boss: true, inArena: true, x: cx + dx / d * 230, y: cy + dy / d * 230 });
+    const B = this.boss = this.addEnemy(def, z.boss ? 5 : 4, { boss: true, giga: G, inArena: true, x: cx + dx / d * (G ? 260 : 230), y: cy + dy / d * (G ? 260 : 230) });
     B.phase = 'intro'; B.phaseT = 1.5; B.invuln = 1.5;
     if (this.curse.has('fastboss')) { B.speed *= 1.2; B.bcd = 0.8; } // Abysse : boss furieux
     this.bossT0 = this.time;
@@ -1060,8 +1099,9 @@ export class Run {
     this.emit('bossSummon', { x: B.x, y: B.y, auto: !!auto });
     this.emit('arena', { x: A.x, y: A.y, R: A.R });
     this.emit('boss', { e: B });
+    if (G) return this.gigaIntro(B, auto); // cinématique, barre spéciale, musique (giga.js)
     const bb = $('#bossbar');
-    if (bb) { bb.hidden = false; $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`; }
+    if (bb) { bb.hidden = false; bb.classList.remove('giga'); $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`; }
     this.banner(`<small>${auto ? 'Le chrono est écoulé : il vient à vous !' : 'Vous l\'avez invoqué…'}</small>${esc(def.name)}<em class="b-title">— ${esc(def.title || 'Le chef de la horde')} —</em>`, 2600, 'boss summon');
     this.burst(B.x, B.y, 50, 0, '#ff3a3a', 6);
     this.fx.push({ type: 'ring', x: A.x, y: A.y, r: A.R, life: 0.7, max: 0.7, color: '#ff4a3a' });
@@ -1108,8 +1148,8 @@ export class Run {
       const a = e.act, dashing = !!a && a.stage === 1 && (a.kind === 'dash' || a.kind === 'strafe');
       if (!e.freeze) e.ang = dashing && a.kind === 'dash' ? Math.atan2(a.dx, a.dy) : Math.atan2(dx, dy);
       if (!e.boss && !a && d > SPAWN_R * 1.5) { const [nx2, ny2] = this.spawnPoint(); e.x = nx2; e.y = ny2; }
-      // contact
-      if (e.burrowed) continue;
+      // contact (pas pendant un bond du giga boss)
+      if (e.burrowed || e.air) continue;
       if (d < e.r * 0.7 + p.r) this.hurtPlayer(e.dmg * fury * (dashing ? 1.3 : 1), e);
     }
   }
@@ -1339,12 +1379,13 @@ export class Run {
 
   // ---------- Boss ----------
   bossAI(e, dt, nx, ny, d, sp) {
+    if (e.giga && this.gigaAI(e, dt, nx, ny, d, sp)) return; // giga boss : ses phases et attaques (giga.js), le reste ci-dessous
     const mv = this.mv, p = this.p, rage = e.enraged, cdm = (rage ? 0.6 : e.bossPhase >= 2 ? 0.85 : 1) * (e.bcd || 1);
     e.phaseT -= dt;
     mv.x = nx * sp; mv.y = ny * sp;
     if (e.ring2 > 0) { e.ring2 -= dt; if (e.ring2 <= 0) this.bossRing(e, 0.5); }
     // phases : 2 sous 60 % de PV (rugissement), 3 sous 30 % (rage) ; seulement entre deux attaques
-    if (e.phase === 'chase' || e.phase === 'rainW') {
+    if ((e.phase === 'chase' || e.phase === 'rainW') && !e.giga) {
       if (e.bossPhase < 2 && e.hp < e.maxHp * 0.6) return this.bossPhase2(e);
       if (e.bossPhase === 2 && e.hp < e.maxHp * 0.3) { this.enrage(e); }
     }
@@ -1626,6 +1667,7 @@ export class Run {
       const hit = Math.hypot(p.x - b.x, p.y - b.y) < b.R + p.r * 0.5;
       if (hit) this.hurtPlayer(b.dmg, null);
       this.emit(b.kind === 'explode' ? 'explode' : 'impact', { e: b.e || null, x: b.x, y: b.y, R: b.R, hit });
+      if (b.giga) this.gigaImpact(b, hit); // giga boss : atterrissage d'un bond, météores (giga.js)
       this.fx.push({ type: 'ring', x: b.x, y: b.y, r: b.R * 1.1, life: 0.3, max: 0.3, color: '#ffc87a' });
       this.burst(b.x, b.y, b.kind === 'explode' ? 26 : 12, 10, b.kind === 'explode' ? '#ff7a3a' : '#ffd0a0', 3);
       this.shake = Math.max(this.shake, b.kind === 'explode' ? 8 : 4);
@@ -1639,7 +1681,7 @@ export class Run {
     for (const w of this.waves) {
       w.r += w.speed * dt;
       const d = Math.hypot(p.x - w.x, p.y - w.y);
-      if (!w.hit && Math.abs(d - w.r) < 26) { w.hit = true; this.hurtPlayer(w.dmg); }
+      if (!w.hit && Math.abs(d - w.r) < 26 && !(w.gap != null && this.inGap(w, p))) { w.hit = true; this.hurtPlayer(w.dmg); }
     }
     this.waves = this.waves.filter(w => w.r < w.max);
   }
@@ -2120,6 +2162,7 @@ export class Run {
 
   // le boss est vaincu : court ralenti, butin, l'arène tombe et le portail s'ouvre en son centre
   bossDown(e) {
+    if (e.giga) return this.gigaDown(e); // victoire de l'expédition (giga.js)
     const A = this.arena || { x: e.x, y: e.y, R: ARENA_R }, z = this.zone, p = this.p;
     if (!this.cleared.includes(z.id)) this.cleared.push(z.id);
     const T = this.track, fight = this.time - (this.bossT0 ?? this.time);
@@ -2135,19 +2178,19 @@ export class Run {
     this.eshots = []; this.bombs = []; this.waves = [];
     // récompenses : grosse gemme, or, coffres de butin (1 en or, parfois mythique, + 1 en argent par niveau de difficulté)
     this.pickups.push({ type: 'xp', x: e.x, y: e.y, v: 40 * (1 + z.id) * (1 + this.stage), spin: 0 });
-    const g = Math.max(1, Math.round((6 + z.id * 3) * this.base.gold * this.diff.gold * this.wm.gold));
+    const g = Math.max(1, Math.round((6 + z.id * 3) * this.base.gold * this.diff.gold * this.wm.gold * this.lv.gold));
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; this.pickups.push({ type: 'gold', x: e.x + Math.cos(a) * 40, y: e.y + Math.sin(a) * 40, v: g }); }
     const tiers = [Math.random() < 0.12 + 0.08 * this.diffId + 0.03 * this.abyss ? 3 : 2];
     for (let i = 0; i < this.diffId; i++) tiers.push(1);
     tiers.forEach((t, i) => { const a = -Math.PI / 2 + (i - (tiers.length - 1) / 2) * 0.7; this.dropLoot(A.x + Math.cos(a) * 95, A.y + Math.sin(a) * 95, t, { boss: true }); });
-    // portail vers le monde suivant : toujours au centre de la carte (là où la partie a commencé)
+    // portail vers le niveau suivant : toujours au centre de la carte (là où la partie a commencé)
     this.portal = { x: 0, y: 0, R: 60, charge: 0, t: 0 };
     this.nextElite = Math.max(this.nextElite, this.time + 25);
     this.emit('bossDeath', { e, x: e.x, y: e.y });
     this.emit('portalOpen', { x: 0, y: 0 });
     const bb = $('#bossbar'); if (bb) bb.hidden = true;
-    const last = !ZONES[z.id + 1];
-    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${last ? 'Le dernier portail est ouvert au centre !' : 'Le portail s\'ouvre au centre de la carte !'}`, 2600, 'boss portal');
+    const lv = this.stage + 2;
+    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${lv >= EXPE_LEVELS ? 'Portail ouvert vers le niveau du giga boss !' : `Portail ouvert vers le niveau ${lv} !`}`, 2600, 'boss portal');
     this.shake = 16;
     p.inv = Math.max(p.inv, 1.5);
     stopMusic(); sfx('win'); sfx('portal'); buzz(100);
@@ -2187,13 +2230,13 @@ export class Run {
 
   takeLoot(it, quiet = false) {
     it.taken = true;
-    this.loot.push({ tier: it.tier, zone: this.zone.id });
+    this.loot.push({ tier: it.tier, zone: this.zone.id, ...(it.giga ? { giga: 1 } : {}) }); // giga : Giga coffre (giga boss)
     this.track.chests++;
     this.emit('pickup', { kind: 'loot', x: it.x, y: it.y, v: it.tier });
     if (quiet) return;
     sfx('lootPick'); buzz(30);
     this.burst(it.x, it.y, 18, 20, LOOT_TIERS[it.tier].color, 3);
-    this.banner(`<small>Butin · à ouvrir après la partie</small>${esc(LOOT_TIERS[it.tier].name)} ramassé !`, 1500, `small loot t${it.tier}`);
+    this.banner(`<small>Butin · à ouvrir après la partie</small>${it.giga ? 'Giga coffre' : esc(LOOT_TIERS[it.tier].name)} ramassé !`, 1500, `small loot t${it.tier}${it.giga ? ' giga' : ''}`);
   }
 
   burst(x, y, n, z = 0, color = '#ffffff', scale = 2) {
@@ -2345,12 +2388,24 @@ export class Run {
     }
   }
 
-  // le héros est passé : on propose le monde suivant ou le retour avec le butin
+  // monde du niveau suivant de l'expédition : le monde suivant ; s'il n'existe pas (ou a déjà été visité), le monde débloqué
+  // le plus avancé pas encore visité. null après le dernier niveau (ou le giga boss vaincu).
+  nextZone() {
+    if (this.gigaWon || this.stage + 1 >= EXPE_LEVELS) return null;
+    const nx = ZONES[this.zone.id + 1], seen = id => this.route.includes(id);
+    if (nx && !seen(nx.id)) return nx;
+    const top = Math.max(save.unlockedZone || 0, this.zone.id), open = ZONES.filter(z => !seen(z.id) && z.id <= top);
+    return open[open.length - 1] || ZONES.find(z => !seen(z.id)) || null;
+  }
+
+  // le héros est passé : on propose le niveau suivant (plus dur) ou le retour avec le butin ; après le giga boss, la victoire
   portalReached() {
     for (const it of this.pickups) if (it.type === 'loot' && it.boss && !it.taken) this.takeLoot(it, true); // le butin du boss suit
     this.paused = true; this.joy = null; this.look = null;
-    const next = ZONES[this.zone.id + 1] || null;
-    const info = { from: this.zone.id, to: next ? next.id : null, stage: this.stage, kills: this.kills, gold: this.gold, loot: this.loot.length, time: this.runTime, cleared: [...this.cleared] };
+    const next = this.nextZone();
+    const info = { from: this.zone.id, to: next ? next.id : null, stage: this.stage, level: this.stage + 1, levels: EXPE_LEVELS, giga: !!this.gigaWon,
+      gigaNext: !!next && this.stage + 2 >= EXPE_LEVELS, route: [...this.route],
+      kills: this.kills, gold: this.gold, loot: this.loot.length, time: this.runTime, cleared: [...this.cleared] };
     let chosen = false;
     const choose = c => {
       if (chosen || this.over) return;
@@ -2362,7 +2417,7 @@ export class Run {
   }
 
   nextWorld() {
-    const next = ZONES[this.zone.id + 1];
+    const next = this.nextZone();
     if (!next || this.over) return this.finish(true);
     // les gemmes restées au sol sont accordées
     let xp = 0;
@@ -2370,6 +2425,7 @@ export class Run {
     if (xp) this.gainXp(xp);
     this.stage++;
     this.zone = next;
+    this.route.push(next.id); this.track.levels = this.stage + 1;
     this.setupWorld();
     this.events.length = 0;
     const p = this.p;
@@ -2385,7 +2441,9 @@ export class Run {
     $('#timer')?.classList.remove('boss', 'ot', 'low');
     this.renderWorld();
     music('zone' + next.id);
-    this.banner(`<small>${esc(next.sub)}</small>Monde ${next.id + 1} · ${esc(next.name)}`, 2800, 'world');
+    // « NIVEAU 2 — plus dur » ; le dernier niveau annonce le giga boss
+    const lv = this.stage + 1, giga = this.gigaLevel;
+    this.banner(`<small>Monde ${next.id + 1} · ${esc(next.name)}</small>Niveau ${lv} <em class="lv-dash">—</em> ${giga ? 'le giga boss vous attend' : 'plus dur'}<em class="b-title">${giga ? `${esc(GIGA.name)}, ${esc(GIGA.title)}, garde l'autel` : esc(next.sub)}</em>`, 3000, `world level${giga ? ' giga' : ''}`);
     this.emit('worldStart', { zone: next.id, stage: this.stage });
     sfx('shrine'); buzz(60);
   }
@@ -2504,11 +2562,11 @@ export class Run {
     Object.assign(this.track, { kills: this.kills, worlds: this.cleared.length, maxWorld: this.zone.id, maxCombo: this.comboBest, level: this.p.level,
       time: Math.round(this.runTime), won: this.cleared.length > 0, dmgTaken: Math.round(this.track.dmgTaken), lsHeal: Math.round(this.track.lsHeal) });
     this.onEnd({
-      win, final: !!win && !ZONES[this.zone.id + 1] && this.cleared.includes(this.zone.id),
+      win, final: !!this.gigaWon, giga: !!this.gigaWon, route: [...this.route], levels: this.stage + 1,
       diff: this.diffId, time: this.runTime, kills: this.kills, level: this.p.level, gold: this.gold, evo: this.p.evo,
       weapons: this.p.weapons.map(w => ({ ...w })), tomes: { ...this.p.tomes }, revived: this.revived,
       startZone: this.startZone, cleared: [...this.cleared], stage: this.stage,
-      loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone })), heat: this.heat, boosts: [...this.boosts],
+      loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone, ...(l.giga ? { giga: 1 } : {}) })), heat: this.heat, boosts: [...this.boosts],
       combo: this.comboBest, evos: this.p.weapons.filter(w => w.evo).map(w => w.id),
       abyss: this.abyss, track: { ...this.track, weaponKills: { ...this.track.weaponKills } },
     });
@@ -2528,8 +2586,8 @@ export class Run {
     tm.classList.toggle('low', !ot && left < 20 && !fight);
     tm.classList.toggle('boss', fight && !ot);
     lbl.textContent = this.entering ? 'En route !'
-      : this.portal ? 'Au portail !'
-      : fight ? 'Battez le boss !'
+      : this.portal ? (this.gigaWon ? 'Victoire !' : 'Au portail !')
+      : fight ? (this.boss.giga ? 'Battez le giga boss !' : 'Battez le boss !')
       : ot ? `Folie niv. ${this.otLevel}`
       : left < 30 ? 'Folie imminente !'
       : this.mini && !this.mini.dead ? 'Battez le champion !'
@@ -2569,6 +2627,7 @@ export class Run {
     }
     if (this.boss && !this.boss.dead) {
       const b = $('#bossbar');
+      if (this.boss.giga) this.gigaHud(b);
       b.querySelector('.fill').style.width = Math.max(0, this.boss.hp / this.boss.maxHp * 100) + '%';
       b.querySelector('.hpbar span').textContent = fmt(Math.max(0, this.boss.hp));
     }
@@ -2593,3 +2652,6 @@ export class Run {
   // ---------- Rendu ----------
   render(dt) { this.gfx.render(dt); }
 }
+
+// giga boss du niveau 3 (js/giga.js) : invocation, phases, attaques, victoire de l'expédition
+Object.assign(Run.prototype, GIGA_METHODS);

@@ -546,6 +546,7 @@ const MON = {
 };
 const BODY = { blob, humanoid: c => goblinBody(c, { hat: 'band' }), golem, beast, bird, crab, ghost, worm };
 export const BOSS = {}; // rempli par models-bosses.js
+const POSE_G = { groar: 1, leapW: 1, quakeW: 1, laserW: 1, laser: 1, gspiral: 1 }; // giga boss : bras levés (giga.js)
 
 // ---------- Construction (mise en cache par type + variante) ----------
 const BUILT = new Map();
@@ -647,7 +648,7 @@ export class MonsterPool {
     let pw = 0;
     const act = e && e.act;
     if (act && act.stage === 0) pw = 1; else if (act) pw = 0.35;
-    if (e && e.boss && (e.phase === 'intro' || e.phase === 'roar' || e.phase === 'aim' || e.phase === 'ringW' || e.phase === 'summonW')) pw = 1;
+    if (e && e.boss && (e.phase === 'intro' || e.phase === 'roar' || e.phase === 'aim' || e.phase === 'ringW' || e.phase === 'summonW' || POSE_G[e.phase])) pw = 1;
     if (e && L !== this.fade) { e._m3p = (e._m3p || 0) + (pw - (e._m3p || 0)) * 0.25; pw = e._m3p; } else if (e) pw = e._m3p || 0;
     const A = L.iA.array, Bb = L.iB.array, q = i * 4;
     A[q] = s.anim || 0; A[q + 1] = clamp((s.flash || 0) * (big ? 0.55 : 1), 0, 1); A[q + 2] = al; A[q + 3] = s.mad ? 0.8 : 0;
