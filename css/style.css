@@ -1444,3 +1444,174 @@ button.itile:active { transform: translateY(1px); }
 
 /* ===== App iOS ===== */
 :root.native .web-only { display: none; }
+/* ===== L2 : Déblocages, Abysse, maîtrise ===== */
+/* tuile « Défis » de l'accueil (sous les tuiles rapides) */
+.df-tile { width: 100%; margin-top: 8px; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 12px; text-align: left; background: var(--s1); border: 1px solid var(--ln); border-radius: var(--rad); transition: transform .12s, background .15s; }
+.df-tile:active { transform: translateY(1px); background: var(--s2); }
+.df-t-ic, .df-t-rw { width: 40px; height: 40px; flex: none; display: grid; place-items: center; background: var(--bg0); }
+.df-t-ic img, .df-t-rw img { width: 22px; height: 22px; }
+.df-t-rw { background: rgba(245,180,0,.08); box-shadow: inset 0 0 0 1px rgba(245,180,0,.35); }
+.df-t-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.df-t-txt .eyebrow { color: var(--tx2); font-size: 10px; letter-spacing: .14em; }
+.df-t-txt b { font: 700 17px/1 var(--fd); font-variant-numeric: tabular-nums; }
+.df-t-txt b small { font-size: 13px; color: var(--tx3); }
+.df-t-txt > small { font-size: 12px; color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.df-t-txt .pbar { margin-top: 2px; }
+
+/* écran « Défis » */
+.defis { height: 100%; overflow-x: hidden; overflow-y: auto; padding: calc(var(--safe-t) + 12px) 16px calc(var(--safe-b) + 24px); background: radial-gradient(110% 35% at 50% 0%, #17203a 0%, var(--bg) 70%); }
+.defis .cs-bar .cs-title { flex: 1; }
+.df-count { font: 700 15px var(--fd); color: var(--tx3); font-variant-numeric: tabular-nums; }
+.df-count b { font-size: 22px; color: var(--acc); }
+.df-intro { margin: 8px 0 10px; font-size: 13px; line-height: 1.4; }
+.df-sum { padding: 10px 12px; background: var(--s1); border: 1px solid var(--ln); }
+.df-sum > .pbar { height: 5px; }
+.df-kinds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 10px; }
+.df-kinds span { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.df-kinds img { width: 16px; height: 16px; }
+.df-kinds small { font: 700 9.5px/1.1 var(--fd); letter-spacing: .08em; text-transform: uppercase; color: var(--tx3); }
+.df-kinds b { font: 700 14px/1 var(--fd); font-variant-numeric: tabular-nums; }
+.df-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.df-cat { min-height: 34px; padding: 0 12px; font: 700 12px/1 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: var(--tx2); background: var(--s1); border: 1px solid var(--ln); }
+.df-cat.on { color: var(--acc-ink); background: var(--acc); border-color: var(--acc); }
+.defis .section-t { margin-top: 22px; }
+.df-list { display: flex; flex-direction: column; gap: 1px; background: var(--ln); border: 1px solid var(--ln); }
+.df-row { display: flex; gap: 12px; padding: 12px; background: var(--bg1); animation: fadeUp .25s var(--d) var(--ease) both; }
+.df-row.ready { box-shadow: inset 2px 0 0 var(--acc); }
+.df-row.done { background: color-mix(in srgb, var(--green) 5%, var(--bg1)); }
+.df-row.done .df-txt > b { color: var(--tx2); }
+.df-ic { width: 40px; height: 40px; flex: none; display: grid; place-items: center; background: var(--bg0); }
+.df-ic img { width: 24px; height: 24px; }
+.df-row.done .df-ic { background: rgba(61,220,132,.1); box-shadow: inset 0 0 0 1px rgba(61,220,132,.4); }
+.df-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.df-txt > b { font: 700 14.5px/1.15 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+.df-txt > small { font-size: 12.5px; line-height: 1.3; color: var(--tx2); }
+.df-prog, .ms-prog { display: flex; align-items: center; gap: 8px; }
+.df-prog .pbar, .ms-prog .pbar { flex: 1; min-width: 0; }
+.df-prog em, .ms-prog em { flex: none; font: 700 12px var(--fd); font-style: normal; color: var(--tx2); font-variant-numeric: tabular-nums; }
+.df-row.done .df-prog em { color: var(--green); }
+.df-rw { display: flex; flex-wrap: wrap; gap: 4px; }
+.rk { --kc: var(--cy); display: inline-flex; align-items: center; gap: 4px; min-height: 22px; padding: 2px 7px 2px 5px; font: 700 11px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; color: var(--tx);
+  background: color-mix(in srgb, var(--kc) 10%, var(--bg0)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc) 45%, transparent); }
+.rk img { width: 14px; height: 14px; }
+.rk.gold { --kc: var(--acc); color: var(--acc); }
+.rk.chest { --kc: #d0dcf0; }
+.rk.have { opacity: .55; }
+.df-rw.mini { margin-top: 3px; }
+.df-foot { height: 8px; }
+
+/* bilan : défis réussis */
+.df-got { display: flex; flex-direction: column; gap: 1px; background: var(--ln); border: 1px solid var(--ln); }
+.df-got-r { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; background: var(--bg1); animation: fadeUp .3s var(--d) var(--ease) both; }
+.df-got-r > img { width: 22px; height: 22px; margin-top: 2px; }
+.df-got-r > span { flex: 1; min-width: 0; }
+.df-got-r b { display: block; font: 700 14px var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+
+/* écran des champions : verrou, pastille de maîtrise, cadre doré (maîtrise 30) */
+.cs-tab.locked img { filter: grayscale(1) brightness(.55); }
+.cs-tab.locked span { color: var(--tx3); }
+.cs-lk { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 20px; height: 20px; background: var(--bg0); }
+.cs-lk img { width: 12px; height: 12px; }
+.ms-chip { position: absolute; top: 4px; right: 4px; min-width: 20px; height: 18px; padding: 0 4px; display: grid; place-items: center; font: 700 11px/1 var(--fd); font-style: normal; color: var(--cy); background: var(--bg0); box-shadow: inset 0 0 0 1px rgba(63,208,255,.4); }
+.ms-chip.gold { color: var(--acc-ink); background: var(--acc); box-shadow: none; }
+.cs-tab.m-gold { border-color: #e6b422; box-shadow: inset 0 0 0 1px rgba(255,214,90,.45), 0 0 12px rgba(245,180,0,.25); }
+.cs-lock { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 12px; background: var(--s1); border: 1px solid var(--ln2); border-left: 2px solid var(--tx3); }
+.cs-lock > img { width: 24px; height: 24px; flex: none; }
+.cs-lock > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cs-lock b { font: 700 14px var(--fd); letter-spacing: .1em; text-transform: uppercase; }
+.cs-lock small { font-size: 12.5px; color: var(--tx2); line-height: 1.3; }
+.cs-lock .btn { flex: none; min-width: 0; }
+.class-select .btn.primary:disabled { filter: grayscale(.8) brightness(.7); }
+
+/* maîtrise : encadré de la fiche, paliers, ligne du bilan */
+.ms-panel, .ms-res { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--s1); border: 1px solid var(--ln); }
+.ms-panel { margin-bottom: 8px; }
+.ms-panel.gold, .ms-res.gold { border-color: #e6b422; background: linear-gradient(180deg, rgba(245,180,0,.12), var(--s1) 70%); box-shadow: inset 0 0 0 1px rgba(255,214,90,.25); }
+.ms-lv { width: 52px; height: 52px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg0); box-shadow: inset 0 0 0 1px rgba(63,208,255,.35);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.ms-lv small { font: 700 8.5px/1 var(--fd); letter-spacing: .12em; text-transform: uppercase; color: var(--tx3); }
+.ms-lv b { font: 700 24px/1 var(--fd); color: var(--cy); font-variant-numeric: tabular-nums; }
+.gold .ms-lv { box-shadow: inset 0 0 0 1px #e6b422; }
+.gold .ms-lv b { color: var(--acc); }
+.ms-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ms-txt > b { font: 700 14px/1.15 var(--fd); letter-spacing: .08em; text-transform: uppercase; }
+.ms-txt > small { font-size: 12px; color: var(--tx2); line-height: 1.3; }
+.ms-res.up .ms-lv { animation: msPop .5s .3s var(--ease) both; }
+@keyframes msPop { 40% { transform: scale(1.15); } }
+.ms-miles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.ms-mile { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 6px 3px; text-align: center; background: var(--bg1); border: 1px solid var(--ln); color: var(--tx3); }
+.ms-mile img { width: 16px; height: 16px; opacity: .6; }
+.ms-mile b { font: 700 13px/1 var(--fd); }
+.ms-mile small { font-size: 10.5px; line-height: 1.15; overflow-wrap: anywhere; }
+.ms-mile.on { color: var(--tx); border-color: rgba(63,208,255,.35); background: color-mix(in srgb, var(--cy) 7%, var(--bg1)); }
+.ms-mile.on img { opacity: 1; }
+.ms-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.35; }
+.ms-res .rs-arrow { font-style: normal; }
+.ms-res + .summary { margin-top: 6px; }
+
+/* aura de la forme ultime */
+.evo-t .ap-cur { margin-left: 6px; font: 700 11px var(--fd); letter-spacing: .1em; color: var(--acc); }
+.aura-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+.ap { position: relative; aspect-ratio: 1; display: grid; place-items: center; background: var(--bg1); border: 1px solid var(--ln); }
+.ap i { width: 58%; height: 58%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0, var(--ac) 40%, color-mix(in srgb, var(--ac) 30%, #000) 100%); box-shadow: 0 0 10px color-mix(in srgb, var(--ac) 70%, transparent); }
+.ap.on { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+.ap.locked i { filter: grayscale(.45) brightness(.5); box-shadow: none; }
+.ap > img { position: absolute; right: 2px; bottom: 2px; width: 12px; height: 12px; }
+
+/* Abysse : fiche de monde, malédictions, étiquette des mondes */
+.diff-info.ab { border-left-color: #5a6aff; background: linear-gradient(180deg, rgba(90,106,255,.1), var(--s1) 60%); }
+.ab-name { font: 700 15px var(--fd); letter-spacing: .1em; text-transform: uppercase; color: #9aa6ff; }
+.ab-won { color: var(--green); }
+.abyss-box:empty { display: none; }
+.modal h4.ab-h { margin: 14px 0 8px; color: #9aa6ff; }
+.modal h4.ab-h img { width: 16px; height: 16px; }
+.modal h4.ab-h small { font: 600 11px var(--fd); letter-spacing: .08em; color: var(--tx3); }
+.ab-pick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.ab-btn { position: relative; height: 38px; display: grid; place-items: center; background: var(--s1); border: 1px solid var(--ln); color: var(--tx2); transition: transform .12s; }
+.ab-btn b { font: 700 14px/1 var(--fd); letter-spacing: .04em; }
+.ab-btn img { width: 14px; height: 14px; opacity: .6; }
+.ab-btn.on { color: #fff; border-color: #6a7aff; background: linear-gradient(180deg, rgba(90,106,255,.35), rgba(60,40,140,.3)); box-shadow: 0 0 12px rgba(90,106,255,.35); }
+.ab-btn.beaten::after { content: ''; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; background: var(--green); }
+.ab-btn.locked { opacity: .55; }
+.ab-btn.nope { animation: nope .3s; }
+.ab-btn:active { transform: translateY(1px); }
+.ab-teaser { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; font-size: 13px; background: var(--bg1); border: 1px dashed rgba(90,106,255,.4); color: var(--tx2); }
+.ab-teaser img { width: 18px; height: 18px; flex: none; }
+.ab-teaser b { color: #9aa6ff; }
+.ab-teaser small { display: block; font-size: 12px; }
+.ab-curses { display: flex; flex-direction: column; gap: 1px; background: var(--ln); border: 1px solid var(--ln); }
+.ab-c { display: grid; grid-template-columns: 16px 1fr; column-gap: 8px; align-items: center; padding: 6px 8px; background: var(--bg1); text-align: left; }
+.ab-c img { width: 16px; height: 16px; grid-row: span 2; }
+.ab-c b { font: 700 12.5px/1.15 var(--fd); letter-spacing: .06em; text-transform: uppercase; color: #ff9aa5; }
+.ab-c small { font: 500 11.5px/1.25 var(--fb); color: var(--tx2); letter-spacing: 0; text-transform: none; }
+.ab-c.new { background: color-mix(in srgb, #5a6aff 12%, var(--bg1)); }
+.ab-c.new b::after { content: 'nouveau'; margin-left: 6px; padding: 1px 4px; font-size: 9px; letter-spacing: .1em; color: #fff; background: #5a6aff; vertical-align: 1px; }
+.ab-badge { display: inline-flex; align-items: center; gap: 3px; width: max-content; margin-top: 3px; padding: 1px 5px 1px 3px; font: 700 10.5px/1.2 var(--fd); font-style: normal; letter-spacing: .08em; color: #c0c8ff; background: rgba(90,106,255,.18); box-shadow: inset 0 0 0 1px rgba(106,122,255,.5); }
+.ab-badge img { width: 12px; height: 12px; }
+.rs-zone .diff-tag { white-space: nowrap; }
+/* partie : bandeau des malédictions, écran de pause */
+.hud.cr .banner.abyss div { --bc: #6a7aff; max-width: min(340px, 92vw); padding: 9px 12px 10px; }
+.banner .ab-curses { margin-top: 6px; max-height: 40vh; overflow: hidden; }
+.hud.cr .banner .ab-c { padding: 4px 8px; }
+.hud.cr .banner .ab-c small { display: block; margin: 0; font: 500 11.5px/1.25 var(--fb); letter-spacing: 0; text-transform: none; color: var(--tx2); }
+.pause-modal .ab-curses.small { max-height: 220px; overflow-y: auto; }
+
+/* Boutique : bonus à débloquer */
+.boost-card.locked { opacity: .82; }
+.boost-card.locked .bo-ic img { filter: grayscale(1) brightness(.6); }
+.boost-card.locked .u-txt b { color: var(--tx2); }
+.boost-card .lk-l { display: flex; align-items: flex-start; gap: 4px; margin-top: 4px; color: var(--tx3) !important; font-size: 11.5px !important; line-height: 1.3; }
+.boost-card .lk-l img { width: 12px; height: 12px; margin-top: 1px; }
+.lk-b { width: 44px; height: 44px; flex: none; display: grid; place-items: center; background: var(--bg0); }
+.lk-b img { width: 18px; height: 18px; opacity: .7; }
+@media (max-width: 370px) {
+  .df-kinds small { font-size: 8.5px; letter-spacing: .04em; }
+  .ab-btn { height: 34px; }
+}
+.diff-tag.ab { color: #8a9aff; }
+/* onglets des champions : jamais plus larges que l'écran (3 à 5 champions, iPhone SE) : image au-dessus du nom */
+.cs-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cs-tab { flex-direction: column; justify-content: center; gap: 2px; height: 66px; padding: 4px 2px; }
+.cs-tab > img { width: 36px; height: 36px; }
+.cs-tab span { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 370px) { .cs-tab { font-size: 11px; letter-spacing: .04em; } }

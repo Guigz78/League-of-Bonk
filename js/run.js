@@ -6,9 +6,13 @@
 // Expédition : une partie enchaîne les mondes. Dans chaque monde, l'autel invoque le boss dans une arène ;
 // sa mort ouvre un portail vers le monde suivant (plus dur). Chrono écoulé : les monstres deviennent fous.
 // Totems de défi (plus dur contre des récompenses), coffres de butin ramassés pendant la partie, bonus de départ.
+// L2 : armes et tomes verrouillés jamais proposés (unlocks.js), paliers d'Abysse (difficulté effective de abyss.js et
+// malédictions : this.curse), suivi de la partie this.track (contrat L1/L2/L3, passé à onEnd dans sum.track).
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS, AFFIXES, LEGEND_EFFECTS,
-  WEAPON_EVOS, LEVEL_RARITY, WEAPON_RARITY_DMG, REROLLS, SKIPS, COMBO_WINDOW, COMBO_STEPS } from './data.js';
+  WEAPON_EVOS, LEVEL_RARITY, WEAPON_RARITY_DMG, REROLLS, SKIPS, COMBO_WINDOW, COMBO_STEPS, MASTERY, masteryOf } from './data.js';
 import { save, playerStats } from './save.js';
+import { canPickWeapon, canPickTome } from './unlocks.js';
+import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
 import { createGfx } from './visuals.js';
@@ -74,6 +78,8 @@ const WLINES = {
   daggers: [D_('Dégâts par dague'), ['ls', 'Vol de vie', v => (v ? pctS(v, false) : 'non')], CD(), ['n', 'Dagues', fN], ['pierce', 'Transperce', fP], ['v', 'Vitesse', fI]],
   snowball: [D_('Dégâts par boule'), CD(), ['n', 'Boules', fN], ['R', 'Zone', fI]],
 };
+// projectiles -> arme qui les tire (victimes par arme, run.track.weaponKills) ; la flèche de cristal évoluée vient des flèches
+const SHOT_W = { arrow: 'arrows', boom: 'boomerang', dagger: 'daggers', snow: 'snowball' };
 const WSIZE = { beam: 'w', sword: 'R', orbs: 'R', aura: 'R', lightning: 'R', boomerang: 'R', shrooms: 'R', frost: 'R', snowball: 'R' };
 // tomes et bénédictions -> caractéristique de derive() ; DLINES : [libellé, format(valeur, valeur de base)]
 const TOME_KEY = { power: 'dmgMul', haste: 'haste', boots: 'speed', vital: 'maxHp', magnet: 'magnet', crit: 'crit', armor: 'armor', wisdom: 'xpMul', area: 'area', vamp: 'lifesteal' };
@@ -108,11 +114,15 @@ class Grid {
 }
 
 export class Run {
-  constructor({ zone, diff = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal }) {
+  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal }) {
     this.zone = zone;
     this.startZone = zone.id;
     this.diffId = Math.max(0, Math.min(DIFFICULTIES.length - 1, diff | 0));
-    this.diff = DIFFICULTIES[this.diffId];
+    // Abysse (palier 1 à 10, toujours sur la base de Cauchemar) : difficulté renforcée + malédictions cumulées
+    this.diff = runDiff(this.diffId, abyss);
+    this.abyss = this.diff.abyss || 0;
+    if (this.abyss) this.diffId = DIFFICULTIES.length - 1;
+    this.curse = this.diff.curses || new Set();
     this.cls = CLASSES[save.cls];
     this.onEnd = onEnd; this.onPause = onPause; this.onLevelUp = onLevelUp; this.onChest = onChest; this.onDefeat = onDefeat; this.onPortal = onPortal;
     // bonus choisis avant la partie (déjà consommés par l'interface)
@@ -146,7 +156,7 @@ export class Run {
     };
     // rareté des cartes : chance (trèfle, fortune de l'équipement, totem maudit) ; relances et « passer »
     this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
-    this.rerolls = REROLLS; this.skips = SKIPS;
+    this.rerolls = REROLLS + (masteryOf(save.mastery?.[this.cls.id]).lv >= MASTERY.miles[2] ? 1 : 0); this.skips = SKIPS; // maîtrise 20 : une relance de plus
     this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
     this.lsShown = 0; this.lsT = 0; this.lsEvT = 0; this.lsGlow = 0; // vol de vie : soin à afficher, orbes (au plus ~8/s), barre de PV
     this.lsX = 0;             // vol de vie des armes évoluées qui soignent (relève le plafond de soin par seconde)
@@ -173,6 +183,14 @@ export class Run {
     this.stage = 0; this.runTime = 0; this.cleared = []; this.loot = []; this.heat = 0;
     this.lootLuck = 0;        // chance d'améliorer le rang de chaque coffre de butin (totem maudit)
     this.runHp = 1;           // PV des monstres pour le reste de la partie (totem maudit)
+    // suivi de la partie (contrat run.track) : lu à la fin par les défis, la maîtrise (L2) et la Saison (L1).
+    // worlds = mondes vaincus (boss tués), maxWorld = dernier monde atteint, chests = coffres de butin ramassés,
+    // totems = totems activés, won = au moins un boss vaincu ; en plus : abyss (palier), lsHeal (PV rendus par le vol de vie),
+    // hearts (cœurs ramassés), bossFast (combat de boss le plus court, s), totemBoss (boss battu après les 3 totems du monde)
+    this.track = { kills: 0, bossKills: 0, worlds: 0, maxWorld: zone.id, maxCombo: 0, level: 1, dmgTaken: 0, hits: 0, ults: 0, chests: 0, totems: 0,
+      elites: 0, weaponKills: {}, evoWeapons: 0, time: 0, cls: this.cls.id, diff: this.diffId, abyss: this.abyss, zone: zone.id, won: false,
+      lsHeal: 0, hearts: 0, bossFast: 0, totemBoss: 0 };
+    this.curW = null;         // arme qui frappe en ce moment (victimes par arme)
     this.setupWorld();
     if (has('depart')) { // départ éclair : niveau 4, 3 améliorations à choisir tout de suite
       const p = this.p;
@@ -183,7 +201,7 @@ export class Run {
   // (re)met en place le monde courant : au départ et à chaque passage de portail
   setupWorld() {
     const z = this.zone, D = this.diff;
-    this.duration = ZONE_TIME[z.id];
+    this.duration = Math.round(ZONE_TIME[z.id] * (this.curse.has('short') ? 0.8 : 1)); // Abysse : chrono court
     this.time = 0;
     this.enemies = []; this.shots = []; this.eshots = []; this.fx = []; this.pickups = []; this.texts = []; this.mines = []; this.parts = []; this.waves = [];
     this.bombs = [];          // attaques de zone à retardement (explosions, météores) : { x, y, R, t, dmg, kind, e }
@@ -205,6 +223,7 @@ export class Run {
     this.overtime = 0; this.otLevel = 0; this.doomT = 0;
     // modificateurs de ce monde (totems) : apparitions, or, dégâts, vitesse, intervalle des élites
     this.wm = { spawn: 1, gold: 1, dmg: 1, speed: 1, elite: 1 };
+    if (this.curse.has('horde')) { this.wm.spawn = 1.35; this.wm.gold = 1.25; } // Abysse : totem de la Horde imposé
     // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
     const st = this.stage, carry = this.runTime;
     this.sk = { hp: (1 + BAL.stHp * st) * (1 + carry / BAL.carryHp), dmg: (1 + BAL.stDmg * st) * (1 + carry / BAL.carryDmg), boss: 1 + BAL.stBoss * st };
@@ -225,7 +244,7 @@ export class Run {
             <button class="icon-btn hud-pause" id="pauseBtn" aria-label="Pause"><i class="pause-ic"></i></button>
             <div class="hl-row"><span class="hr-loot" id="lootPill"><i class="hud-chest"></i><b id="lootN">0</b></span><span class="hr-heat" id="heatPill" hidden>${iconImg('i_burn', 15)}<b id="heatN">0</b></span></div>
           </div>
-          <div class="timer"><span class="world-tag" id="worldTag"></span><span class="t-plate" id="tPlate"><b id="timer">0:00</b></span><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}">${esc(this.diff.name)}</em>` : ''}</div>
+          <div class="timer"><span class="world-tag" id="worldTag"></span><span class="t-plate" id="tPlate"><b id="timer">0:00</b></span><small id="timerLbl">Survivez !</small>${this.diffId ? `<em class="diff-tag d${this.diffId}${this.abyss ? ' ab' : ''}">${esc(this.diff.name)}</em>` : ''}</div>
           <div class="hud-right">
             <span>${iconImg('skull', 15)}<b id="killsN">0</b></span><span class="hr-gold">${iconImg('gold', 15)}<b id="goldRun">0</b></span>
           </div>
@@ -254,6 +273,7 @@ export class Run {
     this.renderEvo();
     this.renderWorld();
     this.banner(`<small>Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
+    if (this.abyss) setTimeout(() => { if (!this.over) this.banner(`<small>${esc(abyssName(this.abyss))} · malédictions</small>${curseList(this.abyss, 'small')}`, 3200, 'small abyss'); }, 2500);
     music('zone' + this.zone.id);
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -385,7 +405,7 @@ export class Run {
     this.lsBudget = Math.min(cap, this.lsBudget + cap * dt);
     if (this.lsPool > 0) {
       const h = Math.min(this.lsPool * this.diff.heal, this.lsBudget, p.maxHp - p.hp);
-      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown += h; }
+      if (h > 0 && !this.dying) { p.hp += h; this.lsBudget -= h; this.lsShown += h; this.track.lsHeal += h; }
       this.lsPool = 0;
     }
     this.lsT -= dt; this.lsGlow = Math.max(0, this.lsGlow - dt);
@@ -436,7 +456,7 @@ export class Run {
     const p = this.p;
     if (c.kind === 'weapon') {
       const E = WEAPON_EVOS[c.id]; if (!E) return '';
-      return `Évolution : niv. 5 + ${TOMES[E.tome].name} → ${E.name}${p.tomes[E.tome] ? ' (tome possédé)' : ''}`;
+      return `Évolution : niv. 5 + ${TOMES[E.tome].name} → ${E.name}${p.tomes[E.tome] ? ' (tome possédé)' : canPickTome(E.tome) ? '' : ' (tome à débloquer dans les Défis)'}`;
     }
     if (c.kind === 'tome') {
       const w = p.weapons.find(x => !x.evo && WEAPON_EVOS[x.id]?.tome === c.id);
@@ -463,6 +483,7 @@ export class Run {
     this.shake = Math.max(this.shake, 7);
     sfx('evolve'); buzz(90);
     save.stats.weaponEvos = (save.stats.weaponEvos || 0) + 1;
+    this.track.evoWeapons++;
     this.renderLoadout();
   }
 
@@ -573,9 +594,10 @@ export class Run {
     const ev = this.evoReady();
     if (ev.length) { out.push(this.evoCard(ev[Math.floor(Math.random() * ev.length)])); if (n === 1) return out; }
     for (const w of p.weapons) if (w.lv < MAX_LEVEL) cands.push({ kind: 'weapon', id: w.id, lv: w.lv + 1, wgt: 3 });
-    if (p.weapons.length < MAX_WEAPONS) for (const id of Object.keys(WEAPONS)) if (!p.weapons.find(w => w.id === id)) cands.push({ kind: 'weapon', id, lv: 1, wgt: 1.6 });
+    // armes et tomes verrouillés (Défis) : jamais proposés ; l'arme de départ du champion reste toujours ouverte
+    if (p.weapons.length < MAX_WEAPONS) for (const id of Object.keys(WEAPONS)) if (!p.weapons.find(w => w.id === id) && canPickWeapon(id, this.cls.id)) cands.push({ kind: 'weapon', id, lv: 1, wgt: 1.6 });
     for (const [id, lv] of Object.entries(p.tomes)) if (lv < MAX_LEVEL) cands.push({ kind: 'tome', id, lv: lv + 1, wgt: 2 });
-    if (Object.keys(p.tomes).length < MAX_TOMES) for (const id of Object.keys(TOMES)) if (!p.tomes[id]) cands.push({ kind: 'tome', id, lv: 1, wgt: 1.3 });
+    if (Object.keys(p.tomes).length < MAX_TOMES) for (const id of Object.keys(TOMES)) if (!p.tomes[id] && canPickTome(id)) cands.push({ kind: 'tome', id, lv: 1, wgt: 1.3 });
     while (out.length < n && cands.length) {
       const tot = cands.reduce((s, c) => s + c.wgt, 0);
       let x = Math.random() * tot, i = 0;
@@ -853,7 +875,7 @@ export class Run {
       this.spikeT = 7; this.breathT = 0;
       this.emit('swarm', {});
       // hordes de plus en plus denses : un cercle (avec une brèche pour s'échapper), puis deux cercles de monstres différents
-      const n = Math.round((10 + z.id * 2 + wave * 6) * (1 + (D.spawn - 1) * 0.8)), k = Math.min(pool, 3);
+      const n = Math.round((10 + z.id * 2 + wave * 6) * (1 + (D.spawn - 1) * 0.8) * (this.curse.has('swarm') ? 1.4 : 1)), k = Math.min(pool, 3);
       const gap = Math.floor(Math.random() * n), gw = wave <= 2 ? 3 : 2;
       for (let i = 0; i < n && this.enemies.length < HARD_CAP; i++) {
         if ((i - gap + n) % n < gw) continue;
@@ -1024,6 +1046,8 @@ export class Run {
     if (d < 20) { const a = Math.random() * TAU; dx = Math.cos(a); dy = Math.sin(a); d = 1; }
     const B = this.boss = this.addEnemy(def, z.boss ? 5 : 4, { boss: true, inArena: true, x: cx + dx / d * 230, y: cy + dy / d * 230 });
     B.phase = 'intro'; B.phaseT = 1.5; B.invuln = 1.5;
+    if (this.curse.has('fastboss')) { B.speed *= 1.2; B.bcd = 0.8; } // Abysse : boss furieux
+    this.bossT0 = this.time;
     // les monstres présents sont repoussés hors du cercle
     for (const e of this.enemies) {
       if (e.inArena || e.dead) continue;
@@ -1315,7 +1339,7 @@ export class Run {
 
   // ---------- Boss ----------
   bossAI(e, dt, nx, ny, d, sp) {
-    const mv = this.mv, p = this.p, rage = e.enraged, cdm = rage ? 0.6 : e.bossPhase >= 2 ? 0.85 : 1;
+    const mv = this.mv, p = this.p, rage = e.enraged, cdm = (rage ? 0.6 : e.bossPhase >= 2 ? 0.85 : 1) * (e.bcd || 1);
     e.phaseT -= dt;
     mv.x = nx * sp; mv.y = ny * sp;
     if (e.ring2 > 0) { e.ring2 -= dt; if (e.ring2 <= 0) this.bossRing(e, 0.5); }
@@ -1646,6 +1670,7 @@ export class Run {
     if (p.shieldHit) { p.shieldHit = 0; p.inv = 0.5; this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 40, life: 0.4, max: 0.4, color: '#a8d8ff' }); sfx('block'); return; }
     const d = Math.max(1, Math.round(dmg * (1 - p.armor)));
     p.hp -= d;
+    this.track.hits++; this.track.dmgTaken += Math.min(d, p.hp + d);
     p.inv = 0.45;
     this.endCombo(true);
     if (src && src.vamp && !src.dead) { // élite vampirique : se soigne en frappant
@@ -1712,6 +1737,7 @@ export class Run {
   updateWeapons(dt) {
     const p = this.p;
     for (const w of p.weapons) {
+      this.curW = w.id;
       const S = this.wstats(w.id, w.lv, p, w), E = w.evo;
       w.t -= dt; w.a += dt;
       switch (w.id) {
@@ -1870,6 +1896,7 @@ export class Run {
         }
       }
     }
+    this.curW = 'shrooms';
     for (const m of this.mines) {
       m.arm -= dt; m.life -= dt;
       if (m.arm > 0) continue;
@@ -1883,6 +1910,7 @@ export class Run {
       }
     }
     this.mines = this.mines.filter(m => m.life > 0);
+    this.curW = null;
   }
 
   beam(x, y, a, len, width, dmg) {
@@ -1900,6 +1928,7 @@ export class Run {
     const p = this.p, near = [];
     for (const s of this.shots) {
       s.life -= dt;
+      this.curW = s.type === 'crystal' ? (s.evo ? 'arrows' : null) : SHOT_W[s.type] || null;
       if (s.type === 'snow') {
         s.t += dt;
         const k = Math.min(1, s.t / s.dur);
@@ -1940,6 +1969,7 @@ export class Run {
         if (s.pierce-- <= 0) { s.life = 0; break; }
       }
     }
+    this.curW = null;
     this.shots = this.shots.filter(s => s.life > 0);
     for (const s of this.eshots) {
       s.life -= dt; s.x += s.vx * dt; s.y += s.vy * dt;
@@ -2011,6 +2041,9 @@ export class Run {
     e.dead = true;
     this.emit('kill', { e, x: e.x, y: e.y });
     this.kills++;
+    const T = this.track;
+    if (this.curW && !o.raw) T.weaponKills[this.curW] = (T.weaponKills[this.curW] || 0) + 1;
+    if (e.elite) T.elites++;
     if (!o.raw) this.addCombo();
     if (!e.boss) sfx('kill');
     const p = this.p, z = this.zone, L = this.leg;
@@ -2024,7 +2057,7 @@ export class Run {
     this.pickups.push({ type: 'xp', x: e.x, y: e.y, v: xp, spin: Math.random() * 6 });
     const luck = this.base.gold * this.diff.gold * this.wm.gold;
     if (Math.random() < (e.elite ? 1 : 0.06)) this.pickups.push({ type: 'gold', x: e.x + rand(-10, 10), y: e.y + rand(-10, 10), v: Math.max(1, Math.round((1 + z.id * 0.5) * (e.elite ? 8 : 1) * luck)) });
-    if (Math.random() < 0.0045 * (e.elite ? 8 : 1)) this.pickups.push({ type: 'heart', x: e.x, y: e.y });
+    if (!this.curse.has('noheart') && Math.random() < 0.0045 * (e.elite ? 8 : 1)) this.pickups.push({ type: 'heart', x: e.x, y: e.y }); // Abysse : sans cœurs
     if (Math.random() < 0.003) this.pickups.push({ type: 'magnet', x: e.x, y: e.y });
     if (e.mini) this.miniDown(e);
     if (e.elite) {
@@ -2089,6 +2122,10 @@ export class Run {
   bossDown(e) {
     const A = this.arena || { x: e.x, y: e.y, R: ARENA_R }, z = this.zone, p = this.p;
     if (!this.cleared.includes(z.id)) this.cleared.push(z.id);
+    const T = this.track, fight = this.time - (this.bossT0 ?? this.time);
+    T.bossKills++;
+    if (fight > 0 && (!T.bossFast || fight < T.bossFast)) T.bossFast = Math.round(fight * 10) / 10;
+    if (this.totems?.length && this.totems.every(t => t.used)) T.totemBoss = 1;
     this.arena = null;
     this.celebT = 1.5; this.hitStop = 0;
     this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 520, life: 0.8, max: 0.8, color: '#ffe48a' });
@@ -2100,7 +2137,7 @@ export class Run {
     this.pickups.push({ type: 'xp', x: e.x, y: e.y, v: 40 * (1 + z.id) * (1 + this.stage), spin: 0 });
     const g = Math.max(1, Math.round((6 + z.id * 3) * this.base.gold * this.diff.gold * this.wm.gold));
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; this.pickups.push({ type: 'gold', x: e.x + Math.cos(a) * 40, y: e.y + Math.sin(a) * 40, v: g }); }
-    const tiers = [Math.random() < 0.12 + 0.08 * this.diffId ? 3 : 2];
+    const tiers = [Math.random() < 0.12 + 0.08 * this.diffId + 0.03 * this.abyss ? 3 : 2];
     for (let i = 0; i < this.diffId; i++) tiers.push(1);
     tiers.forEach((t, i) => { const a = -Math.PI / 2 + (i - (tiers.length - 1) / 2) * 0.7; this.dropLoot(A.x + Math.cos(a) * 95, A.y + Math.sin(a) * 95, t, { boss: true }); });
     // portail vers le monde suivant : toujours au centre de la carte (là où la partie a commencé)
@@ -2151,6 +2188,7 @@ export class Run {
   takeLoot(it, quiet = false) {
     it.taken = true;
     this.loot.push({ tier: it.tier, zone: this.zone.id });
+    this.track.chests++;
     this.emit('pickup', { kind: 'loot', x: it.x, y: it.y, v: it.tier });
     if (quiet) return;
     sfx('lootPick'); buzz(30);
@@ -2183,7 +2221,7 @@ export class Run {
           this.emit('pickup', { kind: it.type, x: it.x, y: it.y, v: it.v || 0 });
           if (it.type === 'xp') { this.gainXp(it.v); sfx('gem'); }
           if (it.type === 'gold') { this.gold += it.v; sfx('coin'); }
-          if (it.type === 'heart') { const h = Math.round(p.maxHp * 0.25 * this.diff.heal); p.hp = Math.min(p.maxHp, p.hp + h); this.text(p.x, p.y, 70, '+' + h, '#5ae87a', 1.2); sfx('heal'); }
+          if (it.type === 'heart') { this.track.hearts++; const h = Math.round(p.maxHp * 0.25 * this.diff.heal); p.hp = Math.min(p.maxHp, p.hp + h); this.text(p.x, p.y, 70, '+' + h, '#5ae87a', 1.2); sfx('heal'); }
           if (it.type === 'magnet') { for (const o of this.pickups) if (o.type === 'xp') o.pull = true; sfx('boing'); sfx('loot'); }
         }
       }
@@ -2245,7 +2283,7 @@ export class Run {
 
   activateTotem(T) {
     T.used = true; T.charge = 1;
-    this.heat++;
+    this.heat++; this.track.totems++;
     const d = TOTEMS[T.kind], z = this.zone, p = this.p;
     this.emit('totem', { kind: T.kind, x: T.x, y: T.y });
     this.fx.push({ type: 'ring', x: T.x, y: T.y, r: 220, life: 0.6, max: 0.6, color: d.color });
@@ -2410,7 +2448,7 @@ export class Run {
     if (this.paused || this.over) return;
     if (p.ult < 100) { this.msg('Ultime en charge : battez des monstres pour le remplir.'); return; }
     p.ult = 0;
-    save.stats.ults++;
+    save.stats.ults++; this.track.ults++;
     sfx('ult'); buzz(50);
     const A = p.atk * p.dmgMul * (1 + p.evo * 0.3);
     this.ultFlash = 0.5;
@@ -2463,6 +2501,8 @@ export class Run {
   finish(win) {
     if (this.over) return;
     this.destroy();
+    Object.assign(this.track, { kills: this.kills, worlds: this.cleared.length, maxWorld: this.zone.id, maxCombo: this.comboBest, level: this.p.level,
+      time: Math.round(this.runTime), won: this.cleared.length > 0, dmgTaken: Math.round(this.track.dmgTaken), lsHeal: Math.round(this.track.lsHeal) });
     this.onEnd({
       win, final: !!win && !ZONES[this.zone.id + 1] && this.cleared.includes(this.zone.id),
       diff: this.diffId, time: this.runTime, kills: this.kills, level: this.p.level, gold: this.gold, evo: this.p.evo,
@@ -2470,6 +2510,7 @@ export class Run {
       startZone: this.startZone, cleared: [...this.cleared], stage: this.stage,
       loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone })), heat: this.heat, boosts: [...this.boosts],
       combo: this.comboBest, evos: this.p.weapons.filter(w => w.evo).map(w => w.id),
+      abyss: this.abyss, track: { ...this.track, weaponKills: { ...this.track.weaponKills } },
     });
   }
 

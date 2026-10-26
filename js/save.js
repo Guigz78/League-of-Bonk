@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -37,6 +37,11 @@ export function freshSave() {
     lastZone: null,     // dernier monde lancé (bouton JOUER de l'accueil)
     daily: null,        // quêtes du jour : { day, quests: [{ id, n, tier, gold, base, claimed }] }
     login: { day: 0, last: '' }, // récompenses de connexion : prochain jour (0 à 6), dernière date réclamée
+    // L2 : déblocages { clé: true } ('w:', 't:', 'boost:', 'cls:', 'aura:', 'title:', 'abyss'), défis réussis { id: date },
+    // records des parties (rec, voir freshRec), XP de maîtrise par champion, Abysse (palier battu et palier choisi par
+    // monde), aura de la forme ultime choisie par champion { cls: id } ; l2 = version (absente sur une sauvegarde d'avant :
+    // la migration rend ce que le joueur possède, les défis déjà remplis sont validés au retour à l'accueil)
+    unlocks: {}, chal: {}, rec: freshRec(), mastery: {}, abyss: [0, 0, 0, 0, 0, 0], abyssSel: [0, 0, 0, 0, 0, 0], aura: {}, l2: 1,
     run: null,
     nextId: 1,
   };
@@ -69,7 +74,38 @@ function migrate(s) {
   migrateDifficulty(out, base);
   migrateLoot(out, s);
   renameOld(out);
+  migrateL2(out, s);
   return out;
+}
+
+// ---------- L2 : déblocages, records, maîtrise, Abysse ----------
+// records : victimes par arme, meilleur niveau par champion, meilleur combo, évolutions d'armes dans une partie, élites,
+// PV rendus par le vol de vie, combat de boss le plus court (s, 0 = aucun), boss battu après les 3 totems de son monde
+export function freshRec() { return { wk: {}, lvl: {}, combo: 0, evoRun: 0, elites: 0, heal: 0, bossFast: 0, totemBoss: 0 }; }
+// toujours remis en forme (sauvegardes cloud anciennes). Sauvegarde d'avant les déblocages (pas de l2) : ce qu'il possède
+// reste à lui (bonus en stock, champion choisi) ; les défis déjà remplis par ses statistiques sont validés (et payés) au
+// retour à l'accueil (unlocks.js, l2Home)
+function migrateL2(out, s) {
+  const int = (v, max) => Math.max(0, Math.min(max, Math.floor(+v || 0)));
+  const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  const nums = (o, max) => Object.fromEntries(Object.entries(obj(o)).map(([k, v]) => [k, int(v, max)]).filter(([, v]) => v > 0));
+  out.unlocks = Object.fromEntries(Object.entries(obj(s.unlocks)).filter(([k, v]) => v && typeof k === 'string').map(([k]) => [k, true]));
+  out.chal = Object.fromEntries(Object.entries(obj(s.chal)).filter(([, v]) => v).map(([k, v]) => [k, +v || 1]));
+  const r = obj(s.rec), R = freshRec();
+  out.rec = { ...R, wk: nums(r.wk, 1e9), lvl: nums(r.lvl, 999) };
+  for (const k of Object.keys(R)) if (typeof R[k] === 'number') out.rec[k] = int(r[k], 1e9);
+  out.mastery = nums(s.mastery, 1e9);
+  const ab = Array.isArray(s.abyss) ? s.abyss : [], sel = Array.isArray(s.abyssSel) ? s.abyssSel : [];
+  out.abyss = out.zoneCleared.map((_, i) => int(ab[i], ABYSS_TIERS));
+  out.abyssSel = out.zoneCleared.map((_, i) => Math.min(int(sel[i], ABYSS_TIERS), out.abyss[i] + 1));
+  out.aura = Object.fromEntries(Object.entries(obj(s.aura)).filter(([, id]) => typeof id === 'string' && out.unlocks['aura:' + id]));
+  if (out.cls && !CLASSES[out.cls]) out.cls = null; // champion inconnu de cette version : nouveau choix au démarrage
+  if (!(s.l2 >= 1)) { // « tout ce qu'il possède »
+    for (const id of Object.keys(out.boosts || {})) if (LOCKED.boost.includes(id)) out.unlocks['boost:' + id] = true;
+    if (out.cls && CLASSES[out.cls].locked) out.unlocks['cls:' + out.cls] = true;
+    out.l2New = true;
+  }
+  out.l2 = 1;
 }
 
 // options toujours valides (sauvegardes anciennes ou venues du cloud)
@@ -168,6 +204,8 @@ export function playerStats(clsId = save.cls) {
   }
   // plafonds : la vitesse plafonne le bonus au-dessus de celle du champion
   for (const [k, A] of Object.entries(AFFIXES)) if (A.max != null) st[k] = k === 'speed' ? Math.min(st.speed, c.speed + A.max) : Math.min(st[k], A.max);
+  const mb = masteryBonus(masteryOf(save.mastery?.[clsId]).lv); // L2 : maîtrise du champion (+1 % dégâts / PV par niveau)
+  st.hp *= 1 + mb.hp; st.atk *= 1 + mb.dmg;
   for (const k of Object.keys(st)) if (k !== 'effects') st[k] = r3(st[k]);
   st.hp = Math.round(st.hp); st.atk = Math.round(st.atk);
   return st;
@@ -258,7 +296,7 @@ export function rollChest({ tier = 0, zone = 0 }) {
   const T = LOOT_TIERS[tier] || LOOT_TIERS[0], L = CHEST_LOOT[tier] || CHEST_LOOT[0], slots = Object.keys(PARTS), got = {};
   for (let n = rint(T.parts[0], T.parts[1]); n > 0; n--) { const k = slots[rint(0, slots.length - 1)] + ':' + pickW(T.rar); got[k] = (got[k] || 0) + 1; }
   const parts = Object.entries(got).map(([k, n]) => { const [slot, r] = k.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n);
-  const ids = Object.keys(BOOSTS);
+  const ids = Object.keys(BOOSTS).filter(id => !LOCKED.boost.includes(id) || save.unlocks?.['boost:' + id]); // bonus débloqués (L2)
   const boost = Math.random() < T.boost ? ids[rint(0, ids.length - 1)] : null;
   const items = [];
   for (let n = L.items + (Math.random() < L.extra ? 1 : 0); n > 0; n--) items.push(makeItem(Math.random, zone, { rarity: RARITIES[pickW(L.rar)] }));
