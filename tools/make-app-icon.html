@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: 'Rajdhani'; font-weight: 700; src: url(../fonts/rajdhani-700.woff2) format('woff2'); }
+body { margin: 0; background: #000; }
+</style></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+// Icône de l'app (et de la PWA) : Brok en forme ultime (rendu 3D), fond nuit, « BONK! » doré.
+// ?s=taille du carré, ?mode=icon|splash (splash : fond plein, illustration au centre, pour l'écran de lancement iOS)
+import { THREE, PI } from '../js/g3d/models-kit.js';
+import { heroModel } from '../js/g3d/models.js';
+import { lights } from '../js/g3d/portraits.js';
+
+const q = new URLSearchParams(location.search), S = +q.get('s') || 1024, splash = q.get('mode') === 'splash';
+const c = document.getElementById('c'); c.width = c.height = S;
+const g = c.getContext('2d');
+await document.fonts.load('700 100px Rajdhani');
+
+// fond : nuit bleu marine, halo doré derrière le héros, rayons discrets
+const bg = g.createRadialGradient(S / 2, S * 0.46, S * 0.04, S / 2, S * 0.5, S * 0.78);
+bg.addColorStop(0, '#2a3a6a'); bg.addColorStop(0.55, '#121a33'); bg.addColorStop(1, '#0a0d14');
+g.fillStyle = bg; g.fillRect(0, 0, S, S);
+if (!splash) {
+  g.save(); g.translate(S / 2, S * 0.5); g.globalAlpha = 0.07; g.fillStyle = '#ffd36a';
+  for (let i = 0; i < 12; i++) { g.rotate(PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(-S * 0.07, -S); g.lineTo(S * 0.07, -S); g.fill(); }
+  g.restore();
+}
+const k = splash ? 0.3 : 1; // le splash n'occupe que le centre (recadrage plein écran sur iPhone)
+const glow = g.createRadialGradient(S / 2, S * 0.55, 0, S / 2, S * 0.55, S * 0.36 * k);
+glow.addColorStop(0, 'rgba(255,200,90,.45)'); glow.addColorStop(1, 'rgba(255,200,90,0)');
+g.fillStyle = glow; g.fillRect(0, 0, S, S);
+
+// héros 3D rendu hors écran, cadré par sa boîte
+const W = Math.round(S * 0.8 * k), H = W;
+const r = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(W, H, false); r.setClearColor(0x000000, 0);
+const scene = new THREE.Scene(); lights(scene, 1.1);
+const m = heroModel('knight', 4); scene.add(m.root);
+for (let i = 0; i < 50; i++) m.update(1 / 60, { t: 0.8 + i / 60, dirA: PI / 2 });
+const box = new THREE.Box3();
+m.root.updateMatrixWorld(true);
+m.root.traverse(o => { if (o.isMesh && !o.material?.isShaderMaterial && o.material?.blending !== THREE.AdditiveBlending && o.parent?.name !== 'float') { o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
+const ctr = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+const half = Math.max(size.x, size.y) * 0.62;
+const cam = new THREE.OrthographicCamera(-half, half, half, -half, 0.1, 200);
+const el = 0.2, az = 0.42;
+cam.position.copy(ctr).add(new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).multiplyScalar(60));
+cam.lookAt(ctr);
+r.render(scene, cam);
+// ombre au sol puis le héros
+g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(S / 2, S / 2 + H * 0.44, W * 0.26, W * 0.05, 0, 0, PI * 2); g.fill();
+g.drawImage(r.domElement, (S - W) / 2, S / 2 - H * 0.5 + (splash ? 0 : S * 0.06), W, H);
+
+// « BONK! » : Rajdhani gras, doré, contour sombre, légèrement penché
+if (!splash) {
+  g.save(); g.translate(S * 0.5, S * 0.17); g.rotate(-0.06);
+  g.font = `700 ${Math.round(S * 0.2)}px Rajdhani`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineJoin = 'round'; g.lineWidth = S * 0.03; g.strokeStyle = '#0a0d14'; g.strokeText('BONK!', 0, 0);
+  const gold = g.createLinearGradient(0, -S * 0.08, 0, S * 0.08);
+  gold.addColorStop(0, '#ffe58a'); gold.addColorStop(1, '#f5a800');
+  g.fillStyle = gold; g.fillText('BONK!', 0, 0);
+  g.restore();
+}
+m.dispose(); r.dispose();
+document.title = 'ready';
+</script></body></html>

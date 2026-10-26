@@ -1,0 +1,12 @@
+{
+  "appId": "com.guigz78.leagueofbonk",
+  "appName": "League of Bonk",
+  "webDir": "www",
+  "backgroundColor": "#0a0d14",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#0a0d14",
+    "allowsLinkPreview": false
+  }
+}

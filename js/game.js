@@ -1750,8 +1750,8 @@ async function settings() {
         ${row('vibrate', 'Vibrations', '', sw('sVib', S.vibrate))}
       </div>
       <h4>Compte</h4>${acct}
-      <h4>Installer sur iPhone</h4>
-      <p class="muted set-note">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
+      <h4 class="web-only">Installer sur iPhone</h4>
+      <p class="muted set-note web-only">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
       <div class="danger-zone">
         ${u ? '<button class="btn ghost small" data-v="logout">Se déconnecter</button>' : ''}
         <button class="btn ghost small danger" data-v="reset">Effacer la progression</button>

@@ -38,3 +38,24 @@ L'adresse du jeu doit figurer dans Supabase → Authentication → URL Configura
 ## Mise en ligne
 GitHub → Settings → Pages → Source « Deploy from a branch » → `main` / `(root)`.
 Le jeu est alors disponible sur https://guigz78.github.io/League-of-Bonk/
+
+## App iOS
+
+Le jeu est aussi emballé en vraie app iPhone avec [Capacitor](https://capacitorjs.com) (dossier `ios/`, réglages dans
+`capacitor.config.json`). Le code du jeu est le même que la version web : `npm run www` le copie dans `www/`, puis
+`npx cap sync ios` le met dans le projet Xcode. Dans l'app, les vibrations passent par le moteur haptique de l'iPhone,
+l'écran est en portrait plein écran, et la connexion Google est désactivée (la sauvegarde reste sur l'appareil).
+
+**Compilation automatique (sans Mac)** : à chaque mise à jour du jeu sur `main`, l'action GitHub « App iOS »
+(`.github/workflows/ios.yml`) compile l'app sur un Mac de GitHub. On peut aussi la lancer à la main
+(onglet *Actions* → *App iOS* → *Run workflow*).
+
+- **Installer sur son iPhone, gratuitement** : télécharger `LeagueOfBonk-non-signee.ipa` dans les *Artifacts* du
+  dernier run, puis l'installer avec [Sideloadly](https://sideloadly.io) (ou AltStore) et un identifiant Apple
+  gratuit. Avec un compte gratuit, l'app est à réinstaller tous les 7 jours.
+- **TestFlight / App Store** (compte développeur Apple, 99 €/an) : créer l'app dans App Store Connect avec l'identifiant
+  `com.guigz78.leagueofbonk`, créer une clé d'API App Store Connect (rôle *Admin*), puis ajouter dans les secrets du
+  dépôt GitHub : `APPLE_TEAM_ID`, `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` et `APPSTORE_KEY_P8` (contenu du fichier
+  `.p8`). Chaque run envoie alors une nouvelle version sur TestFlight.
+
+Icônes et écran de lancement : `tools/make-app-icon.html` (rendu 3D), générés par `node tools/make-app-icon.mjs`.
