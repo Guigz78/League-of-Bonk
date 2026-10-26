@@ -43,6 +43,15 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive | tail -n 40
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" "$RUNNER_TEMP/ipa/Payload/"
+          # contrôle : le jeu est bien embarqué et l'app est en portrait plein écran
+          APP="$RUNNER_TEMP/ipa/Payload/App.app"
+          for f in public/index.html public/js/main.js public/js/native.js public/vendor/three.module.min.js capacitor.config.json; do
+            test -s "$APP/$f" || { echo "::error::manquant dans l'app : $f"; exit 1; }
+          done
+          /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :UIStatusBarHidden' "$APP/Info.plist" | grep -q true
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          echo "fichiers du jeu dans l'app : $(find "$APP/public" -type f | wc -l)"
           (cd "$RUNNER_TEMP/ipa" && zip -qry ../LeagueOfBonk-non-signee.ipa Payload)
           ls -lh "$RUNNER_TEMP/LeagueOfBonk-non-signee.ipa"
       - uses: actions/upload-artifact@v4

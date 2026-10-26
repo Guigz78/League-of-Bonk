@@ -36,12 +36,18 @@ export function freshSave() {
     tutorialDone: false,
     lastZone: null,     // dernier monde lancé (bouton JOUER de l'accueil)
     daily: null,        // quêtes du jour : { day, quests: [{ id, n, tier, gold, base, claimed }] }
-    login: { day: 0, last: '' }, // récompenses de connexion : prochain jour (0 à 6), dernière date réclamée
+    login: { day: 0, last: '' }, // calendrier de connexion : prochain jour (0 à 19, 20 jours), dernière date réclamée
     // L2 : déblocages { clé: true } ('w:', 't:', 'boost:', 'cls:', 'aura:', 'title:', 'abyss'), défis réussis { id: date },
     // records des parties (rec, voir freshRec), XP de maîtrise par champion, Abysse (palier battu et palier choisi par
     // monde), aura de la forme ultime choisie par champion { cls: id } ; l2 = version (absente sur une sauvegarde d'avant :
     // la migration rend ce que le joueur possède, les défis déjà remplis sont validés au retour à l'accueil)
     unlocks: {}, chal: {}, rec: freshRec(), mastery: {}, abyss: [0, 0, 0, 0, 0, 0], abyssSel: [0, 0, 0, 0, 0, 0], aura: {}, l2: 1,
+    // ===== L1 : saison, quêtes de la semaine, succès, titres (season.js, daily.js) =====
+    season: null,       // Pass d'expédition : { n, start, xp, got: [paliers réclamés], bDay, bUsed (Bonus du jour, s), prev }
+    weekly: null,       // quêtes de la semaine : { week, quests: [{ id, n, tier, gold, xp, base, claimed }] }
+    feats: { combo: 0, c200: 0, st3: 0, evoRun: 0, evo: {}, boss: {}, leg: [], weekly: 0, tierBest: 0, seasons: 0 }, // compteurs (succès, quêtes)
+    titles: {},         // titres gagnés : { id: date } (les clés 'title:*' de save.unlocks comptent aussi)
+    title: null,        // titre affiché sous le nom du champion
     run: null,
     nextId: 1,
   };
@@ -69,12 +75,13 @@ function migrate(s) {
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
   out.settings = cleanSettings({ ...base.settings, ...s.settings });
-  out.login = { day: Math.max(0, Math.min(6, (s.login?.day | 0))), last: typeof s.login?.last === 'string' ? s.login.last : '' };
+  out.login = { day: Math.max(0, Math.min(19, (s.login?.day | 0))), last: typeof s.login?.last === 'string' ? s.login.last : '' };
   if (out.lastZone != null && !(out.lastZone >= 0 && out.lastZone <= 5)) out.lastZone = null;
   migrateDifficulty(out, base);
   migrateLoot(out, s);
   renameOld(out);
   migrateL2(out, s);
+  migrateL1(out, base, s);
   return out;
 }
 
@@ -106,6 +113,19 @@ function migrateL2(out, s) {
     out.l2New = true;
   }
   out.l2 = 1;
+}
+
+// L1 : compteurs des succès toujours complets (anciennes sauvegardes : boss par champion = parties gagnées avec lui),
+// titres valides. Saison et quêtes de la semaine sont vérifiées par season.js et daily.js à la lecture.
+function migrateL1(out, base, s) {
+  const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
+  const f = obj(s.feats);
+  out.feats = { ...base.feats, ...f, evo: { ...obj(f?.evo) }, boss: { ...(f ? obj(f.boss) : obj(out.stats.classWins)) }, leg: Array.isArray(f?.leg) ? f.leg.filter(id => LEGEND_EFFECTS[id]) : [] };
+  for (const k of ['combo', 'c200', 'st3', 'evoRun', 'weekly', 'tierBest', 'seasons']) out.feats[k] = Math.max(0, Math.floor(+out.feats[k] || 0));
+  out.titles = obj(out.titles) || {};
+  if (typeof out.title !== 'string') out.title = null;
+  if (!obj(out.season)) out.season = null;
+  if (!obj(out.weekly)) out.weekly = null;
 }
 
 // options toujours valides (sauvegardes anciennes ou venues du cloud)

@@ -2,7 +2,7 @@
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, BOSS_COUNT, DIFFICULTIES, ELITE_MODS,
   LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES, LEGEND_EFFECTS } from './data.js';
 import * as DATA from './data.js';
-import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, checkAchievements, resetSave, maxDiff,
+import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, resetSave, maxDiff,
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
   buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
 import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
@@ -13,7 +13,10 @@ import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } f
 import { Run, LS } from './run.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
-import { questList, claimQuest, loginState, claimLogin, dailyBadge, LOGIN_REWARDS, ensureDaily } from './daily.js';
+import { loginState, dailyBadge } from './daily.js';
+// L1 : saison, quêtes de la semaine, calendrier de 20 jours, succès, titres
+import { seasonRun, checkAchievements } from './season.js';
+import { hubStrip, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet, achBlock, titleSheet, seasonNotice } from './season-ui.js';
 // L2 : défis de déblocage, maîtrise des champions, Abysse
 import { l2Home, endRunL2, l2Results, defisScreen, defisTile, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
@@ -50,7 +53,8 @@ function autoLogin() {
   const st = loginState();
   if (!st.ready || loginShown === st.last + '|' + st.day || !save.stats.runs) return;
   loginShown = st.last + '|' + st.day;
-  setTimeout(() => { if (!battle && $('.hub') && !$('.modal-wrap')) loginSheet(); }, 450);
+  const tryOpen = (n = 0) => { if (battle || !$('.hub')) return; if ($('.modal-wrap')) { if (n < 40) setTimeout(() => tryOpen(n + 1), 600); return; } loginSheet().then(afterSheet); };
+  setTimeout(tryOpen, 450);
 }
 
 // ---------- Barre du haut ----------
@@ -115,14 +119,19 @@ export function home(t) {
   if (moved) $('#hubMain').classList.add('scr-in');
   bind($('.hub'), handlers);
   mountPreview($('.hc-3d'), save.cls);
+  if (tab === 'adventure') seasonNotice(openPass);
 }
+const openPass = () => seasonScreen(() => { announceAchievements(); home(); });
+const afterSheet = () => { announceAchievements(); if (!battle) home(); };
 
 const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
   play: () => zoneSheet(playZone()),
-  quests: () => questSheet(),
-  login: () => loginSheet(),
+  quests: () => questSheet().then(afterSheet),
+  login: () => loginSheet().then(afterSheet),
+  season: () => openPass(),
+  title: () => titleSheet().then(afterSheet),
   zone: el => zoneSheet(+el.dataset.z),
   changeClass: () => classSelect(false),
   allStats: () => statsSheet(),
@@ -245,14 +254,8 @@ function adventureTab() {
   const c = CLASSES[save.cls], st = playerStats();
   const done = save.zoneCleared.filter(Boolean).length;
   const pz = playZone(), Z = ZONES[pz], D = runDiff(Math.min(save.diffSel?.[pz] || 0, maxDiff(pz)), Math.min(save.abyssSel?.[pz] || 0, abyssTop(pz)));
-  // tuiles rapides : quêtes du jour, connexion, coffres en attente
-  const qs = questList(), qDone = qs.filter(q => q.prog >= q.n).length, qReady = qs.some(q => q.ready);
-  const L = loginState(), pc = save.pendingChests;
-  const quick = `<div class="quick">
-    <button class="qt ${qReady ? 'hot' : ''}" data-act="quests">${iconImg('quest', 22)}<span class="eyebrow">Quêtes</span><b>${qDone}/${qs.length}</b><span class="pbar"><i style="width:${qDone / qs.length * 100}%"></i></span></button>
-    <button class="qt ${L.ready ? 'hot' : ''}" data-act="login">${iconImg('calendar', 22)}<span class="eyebrow">Connexion</span><b>Jour ${L.ready ? L.day + 1 : L.day || 7}/7</b><span class="pbar cy"><i style="width:${(L.ready ? L.day : L.day || 7) / 7 * 100}%"></i></span></button>
-    <button class="qt ${pc.length ? 'hot' : 'off'}" data-act="chests" ${pc.length ? '' : 'disabled'}>${iconImg('chest', 22)}<span class="eyebrow">Coffres</span><b>${pc.length ? `${pc.length} à ouvrir` : 'Aucun'}</b><span class="pbar"><i style="width:${pc.length ? 100 : 0}%"></i></span></button>
-  </div>`;
+  // bandeau « objectifs » : pass d'expédition, quêtes du jour et de la semaine, connexion, coffres (season-ui.js)
+  const quick = hubStrip();
   const zones = ZONES.map((z, i) => {
     const locked = i > save.unlockedZone;
     const cleared = save.zoneCleared[i];
@@ -269,7 +272,7 @@ function adventureTab() {
         ${save.pet ? `<img class="px spr hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}</div>
       <div class="sc-info">
         <span class="sc-role">${esc(c.role)}</span>
-        <h2 class="sc-name">${esc(c.name)}</h2>
+        <h2 class="sc-name">${esc(c.name)}</h2>${heroTitle()}
         <button class="sc-stats" data-act="allStats" aria-label="Toutes les statistiques">
           <span><small>PV</small><b>${fmt(st.hp)}</b></span><span><small>ATQ</small><b>${fmt(st.atk)}</b></span>
           <span><small>Critique</small><b>${pct(st.crit)}</b></span><span><small>Vitesse</small><b>${pct(st.speed)}</b></span>
@@ -295,67 +298,7 @@ function zoneStars(n) {
     `<i class="zs ${k < n ? 'on' : ''}" style="--dc:${d.color}"></i>`).join('')}</div>`;
 }
 
-// ---------- Quêtes du jour et connexion ----------
-const chestName = t => LOOT_TIERS[t]?.name || 'Coffre';
-async function questSheet() {
-  const id = 'qs-' + Date.now();
-  const body = () => {
-    const qs = questList();
-    return `<div class="quests">${qs.map(q => `<div class="quest ${q.claimed ? 'done' : ''} ${q.ready ? 'ready' : ''}">
-        ${iconImg(q.icon, 22)}
-        <div class="q-txt"><b>${esc(q.text)}</b>
-          <div class="q-row"><span class="pbar ${q.prog >= q.n ? 'green' : ''}"><i style="width:${q.prog / q.n * 100}%"></i></span><em>${fmt(q.prog)}/${fmt(q.n)}</em></div>
-          <span class="q-rw">${iconImg('chest', 14)} ${esc(chestName(q.tier))} · ${iconImg('gold', 14)} ${q.gold}</span></div>
-        ${q.claimed ? `<span class="q-claimed">${iconImg('check', 14)} Reçu</span>` : q.ready ? `<button class="btn primary small" data-q="${q.i}">Réclamer</button>`
-          : `<span class="q-chest" aria-hidden="true"><img src="${chestURL(q.tier)}" alt=""></span>`}
-      </div>`).join('')}</div>
-      <p class="q-reset">Nouvelles quêtes chaque jour à minuit</p>`;
-  };
-  const p = modal({ title: `${iconImg('quest', 22)} Quêtes du jour`, body: `<div id="${id}">${body()}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: true }], dismissable: true });
-  const root = document.getElementById(id);
-  root.addEventListener('click', e => {
-    const b = e.target.closest('[data-q]'); if (!b || b.disabled) return;
-    const r = claimQuest(+b.dataset.q); if (!r) return;
-    sfx('loot'); buzz(20);
-    toast(`${iconImg('chest', 16)} <b>${esc(chestName(r.chest))}</b> et <b>+${r.gold} or</b>`);
-    root.innerHTML = body();
-    announceAchievements();
-  });
-  await p;
-  if (!battle) home();
-}
-
-// « Coffre en argent » -> « Argent » (étiquette courte d'une case de connexion)
-const chestShort = t => { const n = chestName(t).replace(/^Coffre\s+(en\s+)?/i, ''); return n.charAt(0).toUpperCase() + n.slice(1); };
-function loginReward(R, size = 30) {
-  if (R.chest != null) return `<span class="ld-ic"><img class="chest-i" src="${chestURL(R.chest)}" alt=""></span><b style="--tc:${LOOT_TIERS[R.chest]?.color || '#fff'}">${esc(chestShort(R.chest))}</b>${R.gold ? `<small>+${R.gold} or</small>` : '<small>Coffre</small>'}`;
-  if (R.boost) return `<span class="ld-ic">${iconImg('potion', size)}</span><b>Bonus</b><small>au hasard</small>`;
-  return `<span class="ld-ic">${iconImg('gold', size)}</span><b>${R.gold}</b><small>or</small>`;
-}
-
-async function loginSheet() {
-  const id = 'lg-' + Date.now();
-  const body = () => {
-    const L = loginState(), cur = L.ready ? L.day : -1, got = L.ready ? L.day : (L.day || 7);
-    return `<div class="login-track">${LOGIN_REWARDS.map((R, k) => `<div class="lday ${k < got ? 'got' : ''} ${k === cur ? 'today' : ''} ${k === 6 ? 'big' : ''}">
-        <em>Jour ${k + 1}</em>${loginReward(R)}${k < got ? `<i class="ld-ok" aria-label="Reçu">${iconImg('check', 14)}</i>` : ''}</div>`).join('')}</div>
-      <p class="login-note">${L.ready ? 'Revenez chaque jour : le 7e jour donne un <b>coffre en or</b>.' : 'Récompense du jour reçue. Revenez demain !'}</p>`;
-  };
-  const L0 = loginState();
-  const v = await modal({ title: `${iconImg('calendar', 22)} Connexion`, body: `<div id="${id}">${body()}</div>`,
-    buttons: L0.ready ? [{ label: 'Plus tard', cls: 'ghost', value: false }, { label: `Réclamer · jour ${L0.day + 1}`, cls: 'primary', value: true }] : [{ label: 'Fermer', cls: 'ghost', value: false }],
-    dismissable: true });
-  if (v) {
-    const r = claimLogin();
-    if (r) {
-      sfx('loot'); buzz(25);
-      const what = r.chest != null ? `<b>${esc(chestName(r.chest))}</b>${r.gold ? ` et <b>+${r.gold} or</b>` : ''}` : r.boostId ? `Bonus : <b>${esc(BOOSTS[r.boostId].name)}</b>` : `<b>+${r.gold} or</b>`;
-      toast(`${iconImg('calendar', 16)} Jour ${r.day + 1} : ${what}`, 2800);
-      announceAchievements();
-    }
-  }
-  if (!battle) home();
-}
+// ---------- Quêtes, connexion, saison : season-ui.js (L1) ----------
 
 const mul = v => '×' + String(Math.round(v * 100) / 100).replace('.', ',');
 const plus = v => '+' + Math.round((v - 1) * 100) + ' %';
@@ -1046,9 +989,10 @@ function endRun(z, sum) {
   gold += l2.gold;
   save.gold += gold;
   persist();
+  const pass = seasonRun({ ...sum, cleared, loot, heat, stage }); // L1 : XP de saison et compteurs des succès
   const got = checkAchievements();
   persist();
-  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2,
+  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass,
     final: sum.final ?? (sum.win && cleared.includes(ZONES.length - 1)), reached: ZONES[Math.min(ZONES.length - 1, start.id + stage)] };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
@@ -1336,6 +1280,7 @@ function summaryScreen(R, opened = []) {
       <div class="${R.record ? 'rec' : ''}"><b>${sum.level}</b><small>${R.record ? 'Record' : 'Niveau'}</small></div>
       <div><b class="gold-t cu" data-n="${R.gold}">${fmt(R.gold)}</b><small>Or gagné</small></div>
     </div>
+    ${runPassBlock(R.pass)}
     ${worldCards ? `<h3 class="section-t">Mondes vaincus <small>${cleared.length}</small></h3><div class="worlds-res">${worldCards}</div>` : ''}
     ${heatLine || chestLine || pendLine ? `<div class="summary">${heatLine}${chestLine}${pendLine}</div>` : ''}
     ${l2Results(R.l2)}
@@ -1359,6 +1304,7 @@ function summaryScreen(R, opened = []) {
   R.got = [];
   bind($('.reward-screen'), {
     home: () => home('adventure'),
+    season: () => seasonScreen(() => home('adventure')),
     again: () => {
       save.diffSel[nextZ] = Math.min(nextK, maxDiff(nextZ));
       persist({ touch: false });
@@ -1377,8 +1323,13 @@ function tipFor(sum, k = 0) {
 }
 
 function announceAchievements() {
-  for (const a of checkAchievements()) {
-    toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)`, 3200);
+  const got = checkAchievements();
+  if (got.length > 3) { // beaucoup d'un coup (ancienne sauvegarde, nouveaux succès) : un seul message
+    toast(`${iconImg('crown', 18)} <b>${got.length} succès</b> débloqués (+${fmt(got.reduce((n, a) => n + a.gold, 0))} or)`, 3600);
+    sfx('loot'); persist(); return;
+  }
+  for (const a of got) {
+    toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)${a.title && DATA.TITLES?.[a.title] ? ` · titre « ${esc(DATA.TITLES[a.title].name)} »` : ''}`, 3200);
     sfx('loot');
   }
   persist();
@@ -1728,7 +1679,6 @@ function buyUpgrade(k) {
 
 // ---------- Succès ----------
 function trophiesTab() {
-  const n = Object.keys(save.achievements).length;
   const st = save.stats;
   const seen = Object.keys(st.seen).length;
   return `<div class="stat-grid">
@@ -1741,11 +1691,7 @@ function trophiesTab() {
       <div><b>${fmt(st.chests || 0)}</b><small>Coffres ouverts</small></div>
       <div><b>${fmt(st.crafted || 0)}</b><small>Objets forgés</small></div>
     </div>
-    <h3 class="section-t">Succès <small>${n}/${ACHIEVEMENTS.length}</small></h3>
-    <div class="achs">${ACHIEVEMENTS.map(a => {
-      const got = save.achievements[a.id];
-      return `<div class="ach ${got ? 'got' : ''}">${iconImg(got ? 'crown' : 'lock', 26)}<div><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></div><span>${iconImg('gold', 12)} ${a.gold}</span></div>`;
-    }).join('')}</div>
+    ${achBlock()}
     <h3 class="section-t">Bestiaire</h3>
     <div class="bestiary">${ZONES.map(z => zoneSteps(z).map((m, k) => {
       const known = st.seen[m.name];
