@@ -74,7 +74,7 @@ export class Overlay {
       case 'bossPhase': this.edgeA = 0.55; this.edgeC = ev.phase >= 3 ? '255,30,30' : '255,140,40'; break;
       case 'bossDeath': this.flashA = 0.6; this.flashC = '255,246,214'; break;
       // giga boss : arrivée (voile sombre, bords rouge et or), armure qui éclate, victoire (éclair doré)
-      case 'gigaSummon': this.flashA = 0.85; this.flashC = '40,0,10'; this.edgeA = 0.9; this.edgeC = '255,150,30'; break;
+      case 'gigaSummon': this.flashA = 0.6; this.flashC = '40,0,10'; this.edgeA = 0.9; this.edgeC = '255,150,30'; break;
       case 'gigaPhase': this.flashA = 0.45; this.flashC = '255,170,90'; this.edgeA = 0.8; this.edgeC = ev.phase >= 3 ? '255,60,20' : '255,170,40'; break;
       case 'gigaDeath': this.flashA = 0.9; this.flashC = '255,236,170'; this.edgeA = 0.7; this.edgeC = '255,210,80'; break;
       case 'gigaBonk': if (ev.hit) { this.flashA = Math.max(this.flashA, 0.3); this.flashC = '255,120,40'; } break;

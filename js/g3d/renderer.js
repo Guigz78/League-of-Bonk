@@ -154,8 +154,8 @@ export class Gfx {
     const fx0 = p.x + c.lx + (cn ? (cn.x - p.x) * ck : 0), fy0 = p.y + c.ly + (cn ? (cn.y - p.y) * ck : 0), fk = cn ? 1 - Math.exp(-d * 3.2) : f;
     c.x += (fx0 - c.x) * fk; c.y += (fy0 - c.y) * fk;
     // très léger recul pendant le combat de boss (l'arène est grande), lent : jamais de pompage ; plus large pour le giga boss
-    const zt = run.boss && !run.boss.dead ? (run.boss.giga ? 1.3 : 1.12) : 1;
-    c.z += (zt - c.z) * (1 - Math.exp(-d * 0.8));
+    const zt = run.boss && !run.boss.dead ? (run.boss.giga ? 1.42 : 1.12) : 1;
+    c.z += (zt - c.z) * (1 - Math.exp(-d * (zt > 1.2 ? 1.6 : 0.8)));
     const sm = [0, 0.5, 1][save.settings?.shake ?? 2] ?? 1;
     if (this.kick > 0) this.kick = Math.max(0, this.kick - d * 14);
     const shk = Math.min(6, ((run.shake || 0) + (this.kick || 0)) * 0.45) * sm * S;

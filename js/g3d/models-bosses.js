@@ -431,6 +431,7 @@ function gorgoth(c, form) {
   s.part(null);
   c.body = [0.04, 0.05, 0.012, 0];
   c.h = 3.9;
+  c.k = 0.7; // rayon de collision du giga boss ≈ 2 × celui d'un boss : le modèle est un peu réduit pour ne pas cacher le héros
 }
 BOSS[GIGA_FORMS[0].name] = c => gorgoth(c, 1);
 BOSS[GIGA_FORMS[1].name] = c => gorgoth(c, 2);

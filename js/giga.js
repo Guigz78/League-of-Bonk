@@ -160,8 +160,8 @@ export const GIGA_METHODS = {
   // délai avant l'attaque suivante (plus court à chaque phase ; Abysse « boss furieux » : e.bcd)
   gigaCd(e, k = 1) { return GB.cd[e.gph - 1] * k * rand(0.85, 1.2) * (e.bcd || 1); },
 
-  // choix de la prochaine attaque (pondéré par la phase, sans répéter la même)
-  gigaPick(e, nx, ny, d) {
+  // choix de la prochaine attaque (pondéré par la phase, sans répéter la même) ; force = attaque imposée (tests)
+  gigaPick(e, nx, ny, d, force) {
     const ph = e.gph, p = this.p, W = this._gw || (this._gw = {});
     W.leap = 3; W.quake = 2.2; W.rain = 1.6; W.aim = d > 260 ? 1.6 : 0.8; W.ring = 0.9;
     W.spiral = ph >= 3 ? 0.6 : 1.4; W.gspiral = ph >= 3 ? 1.8 : 0;
@@ -171,6 +171,7 @@ export const GIGA_METHODS = {
     for (const k in W) tot += W[k];
     let x = Math.random() * tot, pick = 'leap';
     for (const k in W) { x -= W[k]; if (x <= 0) { pick = k; break; } }
+    if (force) pick = force;
     e.last = pick;
     switch (pick) {
       case 'leap':
