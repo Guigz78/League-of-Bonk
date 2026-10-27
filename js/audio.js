@@ -299,3 +299,22 @@ export function duckMusic(on) {
   musicBus.gain.cancelScheduledValues(now());
   musicBus.gain.setTargetAtTime(on ? 0.12 : 0.55, now(), 0.1);
 }
+
+// ---------- Champions C1 : faux de Nyx, festin de sang, danse des ombres de Sora, fureur de Ragnar ----------
+Object.assign(SFX, {
+  // faux : souffle grave qui siffle + petit tintement métallique
+  scythe: () => { noise({ d: 0.2, v: 0.13, filter: ['bandpass', 500], q: 1.5, sweepTo: 2400 }); osc({ type: 'triangle', f: r(1800, 2100), to: 1200, d: 0.12, v: 0.03, at: 0.06 }); },
+  // festin : aspiration (bruit qui monte) puis battement de cœur grave et accord mineur
+  feast: () => {
+    noise({ d: 0.55, v: 0.16, filter: ['bandpass', 300], q: 1.2, sweepTo: 2600 });
+    osc({ type: 'sine', f: 70, to: 45, d: 0.18, v: 0.22, at: 0.5 }); osc({ type: 'sine', f: 70, to: 45, d: 0.18, v: 0.18, at: 0.72 });
+    [294, 349, 440].forEach((f, i) => osc({ type: 'sawtooth', f, d: 0.5, v: 0.035, at: 0.45 + i * 0.04, filter: ['lowpass', 1400], vib: 5, vibRate: 6 }));
+  },
+  // danse des ombres : coup de vent descendant et carillon étouffé
+  shadow: () => { whistle(1800, 300, 0.35, 0, 0.06); noise({ d: 0.4, v: 0.12, filter: ['highpass', 2000], sweepTo: 600 }); [659, 831, 988].forEach((f, i) => osc({ type: 'sine', f, d: 0.25, v: 0.04, at: 0.1 + i * 0.05 })); },
+  // bond de l'ombre : « fsst » très court
+  dash: () => noise({ d: 0.09, v: 0.1, filter: ['bandpass', 2600], q: 2, sweepTo: 800 }),
+  // fureur : cri de guerre (kazoo grave qui monte) + gros coup de tambour
+  fury: () => { kazoo(147, 0.45, 0, 0.11, 220); osc({ type: 'sine', f: 110, to: 35, d: 0.5, v: 0.26 }); noise({ d: 0.45, v: 0.2, filter: ['lowpass', 700], sweepTo: 90 }); boing(80, 0.5, 0.05, 0.07); },
+});
+Object.assign(MIN_GAP, { scythe: 0.08, dash: 0.06 });

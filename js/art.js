@@ -513,6 +513,14 @@ const ICON = {
   aura: [IC.gold, IC.orange, '<path d="M12 21c-4 0-7-2.6-7-6.4 0-3.4 2.4-5 3-8.6 1.6 1.2 2.4 2.8 2.6 4.4.8-1.6 1.2-3.6.9-6.4 3.8 2.4 7.5 6.2 7.5 10.6 0 3.8-3 6.4-7 6.4z" fill="T"/><path d="M12 21c-1.8 0-3-1.2-3-3 0-1.6 1.4-2.6 2-4.2 1.4 1 4 2.4 4 4.4 0 1.6-1.2 2.8-3 2.8z"/>'],
 };
 
+// champions C1 : faux sanglante (Nyx), festin de sang, danse des ombres (Sora), fureur (Ragnar)
+Object.assign(ICON, {
+  scythe: [IC.w, IC.red, '<path d="M6.5 21L15 3.5"/><path d="M15 3.5c-3.5-1.4-8.5-.6-12 2.6 4.2-.8 8.1.3 10.6 2.6z" fill="T" stroke="#ff4d5e"/><path d="M9.5 15l2.5 1.2"/>'],
+  feast: [IC.red, IC.red, '<path d="M12 3L18 12a6 6 0 0 1-12 0z" fill="T"/><path d="M9.6 12.5l1 3 1-3M12.4 12.5l1 3 1-3" stroke="#e9edf3"/>'],
+  shadow: [IC.violet, IC.violet, '<path d="M15.5 3.5a8.5 8.5 0 1 0 5 15.2A7 7 0 0 1 15.5 3.5z" fill="T"/><path d="M3 21l5-5M7 21l3-3M3 17l3-3" stroke="#ff4d5e"/>'],
+  fury: [IC.orange, IC.orange, '<path d="M6 14a6 6 0 0 1 12 0z" fill="T"/><path d="M6.5 11.5C3.8 10.6 2.6 7.8 3.2 4.5M17.5 11.5c2.7-.9 3.9-3.7 3.3-7M5 14h14v3.5H5zM12 8v6"/>'],
+});
+
 function svgIcon(name) {
   const [c, t, body] = ICON[name];
   const tint = t + '38';

@@ -18,6 +18,7 @@ import { rng } from './pixel.js';
 import { createGfx } from './visuals.js';
 import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
+import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
 
 const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
@@ -35,7 +36,7 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // z* : renfort par zone (monde 1 à 6) ; st* : renfort par monde déjà traversé dans la partie ;
 // carry* : renfort selon le temps total de la partie (s)
 // WMUL : multiplicateur de dégâts par arme (équilibrage des classes : chaque champion commence avec la sienne)
-export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25 };
+export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25, scythe: 1.1 };
 // hp / dmg : PV et dégâts de tous les monstres (compensent la puissance des évolutions d'armes, raretés et combos)
 export const BAL = { comboXp: 0.1, hp: 1.3, dmg: 1.12, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
@@ -77,10 +78,11 @@ const WLINES = {
   frost: [D_('Dégâts de l\'onde'), CD(), ['R', 'Rayon', fI], ['freeze', 'Gel', fF]],
   daggers: [D_('Dégâts par dague'), ['ls', 'Vol de vie', v => (v ? pctS(v, false) : 'non')], CD(), ['n', 'Dagues', fN], ['pierce', 'Transperce', fP], ['v', 'Vitesse', fI]],
   snowball: [D_('Dégâts par boule'), CD(), ['n', 'Boules', fN], ['R', 'Zone', fI]],
+  scythe: [D_(), ['ls', 'Vol de vie', v => (v ? pctS(v, false) : 'non')], CD(), ['R', 'Portée', fI], ['arc', 'Arc', v => (v >= TAU - 0.01 ? 'tout autour' : num(v * 180 / Math.PI) + NB + '°')]],
 };
 // projectiles -> arme qui les tire (victimes par arme, run.track.weaponKills) ; la flèche de cristal évoluée vient des flèches
 const SHOT_W = { arrow: 'arrows', boom: 'boomerang', dagger: 'daggers', snow: 'snowball' };
-const WSIZE = { beam: 'w', sword: 'R', orbs: 'R', aura: 'R', lightning: 'R', boomerang: 'R', shrooms: 'R', frost: 'R', snowball: 'R' };
+const WSIZE = { beam: 'w', sword: 'R', orbs: 'R', aura: 'R', lightning: 'R', boomerang: 'R', shrooms: 'R', frost: 'R', snowball: 'R', scythe: 'R' };
 // tomes et bénédictions -> caractéristique de derive() ; DLINES : [libellé, format(valeur, valeur de base)]
 const TOME_KEY = { power: 'dmgMul', haste: 'haste', boots: 'speed', vital: 'maxHp', magnet: 'magnet', crit: 'crit', armor: 'armor', wisdom: 'xpMul', area: 'area', vamp: 'lifesteal' };
 const BOON_KEY = { dmg: 'dmgMul', hp: 'maxHp', speed: 'speed', crit: 'crit', xp: 'xpMul', magnet: 'magnet', haste: 'haste', vamp: 'lifesteal' };
@@ -477,7 +479,7 @@ export class Run {
     const p = this.p, w = p.weapons.find(x => x.id === id), E = WEAPON_EVOS[id];
     if (!w || w.evo || !E) return;
     w.evo = true; w.r = 3; w.t = Math.min(w.t, 0.3); w.orbs = null;
-    if (id === 'daggers' || id === 'aura') this.lsX += id === 'daggers' ? LS.dag : LS.sun; // Mille lames, Cœur de soleil : comptent dans le soin par seconde
+    if (id === 'daggers' || id === 'aura' || id === 'scythe') this.lsX += id === 'aura' ? LS.sun : LS.dag; // Mille lames, Cœur de soleil, Moisson écarlate : comptent dans le soin par seconde
     this.evoFlash = Math.max(this.evoFlash, 0.9); p.inv = Math.max(p.inv, 1.5);
     this.burst(p.x, p.y, 40, 40, '#ffe48a', 4);
     this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 260, life: 0.7, max: 0.7, color: '#ffd54a' });
@@ -517,6 +519,7 @@ export class Run {
     const p = this.p, d = this.derive(), old = p.maxHp;
     Object.assign(p, d);
     p.critMul = 2 + this.it.critDmg;
+    if (this.c1h > 1) p.haste /= this.c1h; // Fureur de Ragnar : attaques plus rapides (champions-c1.js)
     if (p.maxHp > old) p.hp += p.maxHp - old;
   }
 
@@ -524,7 +527,8 @@ export class Run {
   // (dmg = dégâts par coup avant critique, cd = recharge en s, n = nombre de projectiles, R = taille…)
   // x = l'arme elle-même ({ rb : bonus de rareté, evo : évoluée }) quand on la connaît
   wstats(id, lv, p = this.p, x = null) {
-    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+    // wpnMul : bonus du champion sur sa propre arme de départ quand elle est partagée (dagues de Sora)
+    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1) * (id === this.cls.weapon && this.cls.wpnMul || 1), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
     if (x?.evo) switch (id) { // armes évoluées : bien plus fortes, et un comportement à part (updateWeapons)
       case 'beam': return { dmg: A * 1.9 * 1.3 * 1.4 * 1.5, cd: 0.75 * h, n: 4, w: 44 * ar, len: 430 * ar };
       case 'arrows': return { dmg: A * 1.3 * 1.5, cd: 0.36 * h, n: 7, pierce: 4, big: A * 6 };
@@ -537,6 +541,7 @@ export class Run {
       case 'frost': return { dmg: A * 1.2 * 1.3 * 1.6, cd: 1.7 * h, R: 230 * ar, freeze: 1.5 };
       case 'daggers': return { dmg: A * 0.9 * 1.3 * 1.4, cd: 0.75 * h, n: 16, pierce: 6, v: 620, ls: LS.dag };
       case 'snowball': return { dmg: A * 2.4 * 1.3 * 1.5, cd: 1.4 * h, n: 5, R: 110 * ar, freeze: 0.8 };
+      case 'scythe': return { dmg: A * 1.5 * 1.3 * 1.4 * 1.6, cd: 0.75 * h, R: 150 * ar, arc: TAU, n: 1, ls: LS.dag };
     }
     switch (id) {
       case 'beam': return { dmg: A * 1.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.9 : 1.15) * h, n: 1 + L(4), w: (L(3) ? 30 : 18) * ar, len: 320 * ar };
@@ -550,6 +555,8 @@ export class Run {
       case 'frost': return { dmg: A * 1.2 * (L(2) ? 1.3 : 1), cd: (L(4) ? 2.4 : 3.2) * h, R: (L(3) ? 150 : 115) * ar, freeze: L(5) };
       case 'daggers': return { dmg: A * 0.9 * (L(3) ? 1.3 : 1), cd: (L(5) ? 0.95 : 1.3) * h, n: 4 + L(2) * 2 + L(4) * 2, pierce: L(5) * 3, v: L(5) ? 540 : 440, ls: 0 };
       case 'snowball': return { dmg: A * 2.4 * (L(2) ? 1.3 : 1), cd: (L(5) ? 1.7 : 2.2) * h, n: 1 + L(4) + L(5), R: (L(3) ? 76 : 56) * ar };
+      // faux sanglante (Nyx) : arc = angle balayé (rad), ls = vol de vie en plus sur ses coups, n = coups par passage
+      case 'scythe': return { dmg: A * 1.5 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.85 : 1.05) * h, R: (L(3) ? 116 : 94) * ar, arc: L(4) ? TAU : 3.4, n: 1, ls: 0.02 };
     }
     return { dmg: A, cd: 1 };
   }
@@ -812,6 +819,7 @@ export class Run {
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
     this.updateHeal(dt);
+    if (this.c1d || this.c1f) this.tickC1(dt); // champions C1 : danse des ombres, fureur en cours
 
     this.spawn(dt);
     this.grid.clear();
@@ -1899,6 +1907,23 @@ export class Run {
           }
           break;
         }
+        case 'scythe': { // faux sanglante (Nyx) : grand arc de faux vers la cible (tout autour au niveau 4) ; ses coups volent la vie
+          if (w.t > 0) break;
+          const R = S.R, tg = this.aim(R + 60);
+          if (!tg) { w.t = 0.15; break; }
+          w.t = S.cd;
+          const base = Math.atan2(tg.y - p.y, tg.x - p.x), full = S.arc >= TAU - 0.01, nf = Math.ceil(S.arc / 2.6);
+          // croissants cramoisis (effet 'slash' recoloré) ; le dernier vise la cible (élan du héros)
+          for (let i = nf - 1; i >= 0; i--) this.fx.push({ type: 'slash', x: p.x, y: p.y, a: base + (full ? i * TAU / nf : (i - (nf - 1) / 2) * S.arc / nf), r: R, life: 0.3, max: 0.3, c1: E ? '#ff6a80' : '#ff3a58', c2: E ? '#ffd0d8' : '#a8102e', c3: '#d8102e', evo: E });
+          for (const e of this.grid.query(p.x, p.y, R + 40)) {
+            const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
+            if (d > R + e.r) continue;
+            let da = Math.atan2(dy, dx) - base; da = Math.atan2(Math.sin(da), Math.cos(da));
+            if (full || Math.abs(da) < S.arc / 2 + 0.05 || d < 26) for (let k = 0; k < S.n; k++) this.hitEnemy(e, S.dmg, { knock: E ? 300 : 200, kx: dx / (d || 1), ky: dy / (d || 1), ls: S.ls });
+          }
+          sfx('scythe');
+          break;
+        }
       }
     }
     this.curW = 'shrooms';
@@ -1988,6 +2013,7 @@ export class Run {
     if (e.invuln > 0) { if (e.flash <= 0) e.flash = 0.05; return; } // boss qui rugit : invulnérable
     const p = this.p, L = this.leg, raw = dmg >= 1e6; // raw : balayages (mort du boss, résurrection), sans effets
     if (!raw && L.fury && p.hp < p.maxHp * 0.4) dmg *= 1 + 0.3 * L.fury; // Furie : +30 % sous 40 % de PV
+    if (!raw && this.cls.rage) dmg *= this.rageMul(); // Rage de Ragnar : jusqu'à +40 % selon les PV manquants
     const crit = !o.noCrit && Math.random() < p.crit;
     const d = Math.max(1, Math.round(dmg * (crit ? p.critMul : 1) * rand(0.92, 1.08)));
     if (!raw) { // vol de vie : une part des dégâts réellement infligés
@@ -2457,7 +2483,8 @@ export class Run {
     sfx('ult'); buzz(50);
     const A = p.atk * p.dmgMul * (1 + p.evo * 0.3);
     this.ultFlash = 0.5;
-    if (this.cls.ult === 'nova') {
+    if (isUltC1(this.cls.ult)) this.ultC1(A); // champions C1 : festin de sang, danse des ombres, fureur
+    else if (this.cls.ult === 'nova') {
       const R = 300 * p.area;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.6, max: 0.6, color: '#ffd54a' });
       this.burst(p.x, p.y, 50, 20, '#ffe48a');
@@ -2598,3 +2625,5 @@ export class Run {
   // ---------- Rendu ----------
   render(dt) { this.gfx.render(dt); }
 }
+// champions C1 (Nyx, Sora, Ragnar) : ultimes et effets en cours (js/champions-c1.js)
+Object.assign(Run.prototype, C1);
