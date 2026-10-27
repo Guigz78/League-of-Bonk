@@ -22,6 +22,32 @@ export const CLASSES = {
     weapon: 'sword', ult: 'justice',
     colors: { 1: '#c9ced8', 2: '#878fa0', 3: '#f2f4f8', a: '#e6b422', h: '#7a4a24', s: '#ffd9b8', d: '#e9b48f', c: '#2f55b8' },
   },
+  // ---- champions C1 (à débloquer : défi et/ou Saison, clé 'cls:<id>') ; passive = talent montré sur l'écran des champions.
+  // Talents lus par run.js : lifesteal / dodge (comme armor : ajoutés à l'équipement), rage = jusqu'à +x dégâts selon les PV manquants
+  vampire: {
+    id: 'vampire', name: 'Nyx', role: 'Vampire', locked: true,
+    desc: 'Sa faux sanglante fauche tout autour d\'elle et chaque coup la soigne.',
+    hp: 120, atk: 14, crit: 0.1, speed: 1.02, lifesteal: 0.06,
+    weapon: 'scythe', ult: 'bloodfeast',
+    passive: { name: 'Soif de sang', icon: 'lifesteal', desc: 'Vol de vie inné de 6 % : vos coups vous soignent.' },
+    colors: { 1: '#2a1a30', 2: '#170c1c', 3: '#5a2a44', a: '#e0203e', h: '#c8cee0', s: '#f8e8ec', d: '#dcc2ca', c: '#7a1a30' },
+  },
+  assassin: {
+    id: 'assassin', name: 'Sora', role: 'Ombre', locked: true,
+    desc: 'Insaisissable : ses dagues partent dans tous les sens et les coups l\'évitent souvent.',
+    hp: 110, atk: 14, crit: 0.22, speed: 1.1, dodge: 0.1, wpnMul: 1.5, // wpnMul : ses dagues frappent plus fort (run.wstats)
+    weapon: 'daggers', ult: 'shadowdance',
+    passive: { name: 'Pas de l\'ombre', icon: 'dodge', desc: '+15 % de chance de critique et 10 % d\'esquive.' },
+    colors: { 1: '#3a2a6a', 2: '#241a44', 3: '#6e5eb0', a: '#ff3ab0', h: '#1e1830', s: '#ffd9b8', d: '#e9b48f', c: '#16101f' },
+  },
+  berserker: {
+    id: 'berserker', name: 'Ragnar', role: 'Berserker', locked: true,
+    desc: 'Increvable et furieux : plus il est blessé, plus sa hache frappe fort.',
+    hp: 152, atk: 12, crit: 0.06, speed: 0.97, rage: 0.4,
+    weapon: 'boomerang', ult: 'fury',
+    passive: { name: 'Rage', icon: 'i_enrage', desc: 'Jusqu\'à +40 % de dégâts selon les PV manquants ; PV très élevés.' },
+    colors: { 1: '#7a4a2a', 2: '#553018', 3: '#b08050', a: '#3a8ae0', h: '#e0662a', s: '#ffd2b0', d: '#e8a888', c: '#8a5a32' },
+  },
 };
 
 // Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
@@ -47,6 +73,28 @@ export const EVOLUTIONS = {
     { name: 'Brok Titan', lvl: 19, colors: { 1: '#3a3a4a', 2: '#1a1a28', 3: '#7a7a9a', a: '#ff8a2a', c: '#c83a3a' } },
     { name: 'Brok Légende Dorée', lvl: 28, aura: '#ffd54a', colors: { 1: '#ffe070', 2: '#e0a020', 3: '#fffbe0', a: '#ffffff', c: '#ff5a3a' } },
   ],
+  // ---- champions C1 ----
+  vampire: [
+    { name: 'Nyx' },
+    { name: 'Nyx Écarlate', lvl: 5, colors: { 1: '#6a1428', 2: '#3a0a16', 3: '#a82a44', a: '#ff3a52', c: '#1a0e16' } },
+    { name: 'Nyx Nocturne', lvl: 11, colors: { 1: '#2e1a4a', 2: '#180c2a', 3: '#5a3a8a', a: '#ff2a6a', h: '#d4d8ee', c: '#8a1a3a' } },
+    { name: 'Nyx Reine du Sang', lvl: 19, colors: { 1: '#8a0e26', 2: '#4a0614', 3: '#d03a52', a: '#ffd54a', h: '#e4e4f2', c: '#1a0a12' } },
+    { name: 'Nyx Lune de Sang', lvl: 28, aura: '#ff2a4a', colors: { 1: '#1a0a14', 2: '#0c0408', 3: '#ff4a64', a: '#ff2a4a', h: '#ffe0e6', c: '#c8102e' } },
+  ],
+  assassin: [
+    { name: 'Sora' },
+    { name: 'Sora Crépuscule', lvl: 5, colors: { 1: '#4a2a7a', 2: '#2a184a', 3: '#8a6ad0', a: '#ff5ac0', c: '#1a1028' } },
+    { name: 'Sora Lame Fantôme', lvl: 11, colors: { 1: '#5a5a8a', 2: '#34345a', 3: '#a8b0e0', a: '#7af0ff', h: '#2a2a44', c: '#202038' } },
+    { name: 'Sora Éclipse', lvl: 19, colors: { 1: '#1c1630', 2: '#0e0a1a', 3: '#4a3a7a', a: '#ffd54a', h: '#140e22', c: '#ff3ab0' } },
+    { name: 'Sora Néant', lvl: 28, aura: '#b05aff', colors: { 1: '#2a1050', 2: '#140628', 3: '#9a5aff', a: '#ff4ad8', h: '#d8a8ff', c: '#0a0614' } },
+  ],
+  berserker: [
+    { name: 'Ragnar' },
+    { name: 'Ragnar Loup', lvl: 5, colors: { 3: '#c8c8d0', c: '#8a8a96', a: '#4a9aff' } },
+    { name: 'Ragnar Ours', lvl: 11, colors: { 1: '#5a3418', 2: '#3a200e', 3: '#7a5232', c: '#4a2c16', a: '#3a7ae8' } },
+    { name: 'Ragnar Tonnerre', lvl: 19, colors: { 1: '#3a3a48', 2: '#22222e', 3: '#7a8aa8', c: '#2a2a36', a: '#5ad8ff', h: '#f07a3a' } },
+    { name: 'Ragnar Fureur du Nord', lvl: 28, aura: '#ff6a1a', colors: { 1: '#5a2a14', 2: '#3a160a', 3: '#e08a3a', c: '#3a1a0c', a: '#ffb02a', h: '#ff7a1a' } },
+  ],
 };
 
 // Bénédictions des autels (pendant la partie)
@@ -66,6 +114,10 @@ export const ULTS = {
   nova:    { name: 'Éclat final', icon: 'nova', desc: 'Explosion de lumière : énormes dégâts autour de vous.' },
   crystal: { name: 'Flèche de cristal', icon: 'crystal', desc: 'Flèche géante qui transperce et gèle tout sur son passage.' },
   justice: { name: 'Justice', icon: 'justice', desc: 'Frappe tous les ennemis à l\'écran et vous rend invincible 3 s.' },
+  // ---- champions C1 (js/champions-c1.js) ----
+  bloodfeast:  { name: 'Festin de sang', icon: 'feast', desc: 'Draine tous les ennemis à l\'écran et vous soigne.' },
+  shadowdance: { name: 'Danse des ombres', icon: 'shadow', desc: 'Intouchable 2,5 s : vous foncez de cible en cible en tranchant.' },
+  fury:        { name: 'Fureur', icon: 'fury', desc: '6 s d\'attaques 60 % plus rapides et une onde de choc au sol.' },
 };
 
 // Armes (attaques automatiques). lv = description de chaque niveau (1 à 5).
@@ -81,6 +133,8 @@ export const WEAPONS = {
   frost:     { name: 'Nova de givre', icon: 'frost', desc: 'Onde glacée qui blesse et ralentit autour de vous.', lv: ['', '+30 % dégâts', 'Plus grande onde', 'Plus fréquente', 'Gèle 1 s'] },
   daggers:   { name: 'Dagues', icon: 'volley', desc: 'Lance des dagues dans plusieurs directions.', lv: ['', '+2 dagues', '+30 % dégâts', '+2 dagues', 'Transpercent, plus rapides'] },
   snowball:  { name: 'Boule de neige', icon: 'heart', desc: 'Lance une boule de neige qui éclate sur une zone.', lv: ['', '+30 % dégâts', 'Zone plus grande', '+1 boule', '+1 boule, plus rapide'] },
+  // arme propre à Nyx (own : LOCKED.w sans défi, jamais proposée aux autres champions ni comptée dans les Défis)
+  scythe:    { name: 'Faux sanglante', icon: 'scythe', own: 'vampire', desc: 'Grand arc de faux autour de vous ; ses coups volent la vie.', lv: ['', '+30 % dégâts', 'Plus grande portée', 'Fauche tout autour', '+40 % dégâts, plus rapide'] },
 };
 
 // Tomes : améliorations passives pour la partie
@@ -113,6 +167,7 @@ export const WEAPON_EVOS = {
   frost:     { tome: 'boots',  name: 'Blizzard éternel', icon: 'frost',    desc: 'Onde de givre géante et fréquente qui gèle tout.' },
   daggers:   { tome: 'vamp',   name: 'Mille lames',      icon: 'volley',   desc: '16 dagues rapides qui transpercent tout et volent la vie (+6 % par coup).' },
   snowball:  { tome: 'power',  name: 'Avalanche',        icon: 'heart',    desc: '5 énormes boules qui gèlent les ennemis touchés.' },
+  scythe:    { tome: 'vamp',   name: 'Moisson écarlate', icon: 'scythe',   desc: 'Faux géante qui fauche tout autour, très loin, et vole la vie (+6 % par coup).' },
 };
 // Rareté des cartes d'amélioration (index = rarity de la carte, couleurs : RARITY[RARITIES[i]]).
 // mult = force de l'effet (tome +15 % -> +22 % -> +30 % -> +40 %) ; w = poids de base du tirage ; luck = gain de poids par point de chance.
@@ -495,7 +550,7 @@ export const CHEST_LOOT = [
 // 24 parties, monde 1 → 2, Normal) : tout débloqué (= avant) 79 % / 29 % (88 % / 56 % avec 18 parties d'avant L2) ;
 // 6 armes et 7 tomes libres 100 % / 100 % (2,2 évolutions par partie) ; 8 et 8 (retenu) 88 % / 63 % (1,5 évolution).
 export const LOCKED = {
-  w: ['shrooms', 'frost', 'snowball'],
+  w: ['shrooms', 'frost', 'snowball', 'scythe'],                  // faux sanglante : arme de Nyx seulement (aucun défi)
   t: ['boots', 'wisdom'],
   boost: ['trefle', 'depart', 'phenix', 'sang'],                 // libres en Boutique : vigueur, rage, sagesse, fortune, égide
 };
@@ -564,6 +619,8 @@ export const UNLOCK_CHALLENGES = [
   { id: 'allcls', cat: 'champions', icon: 'user', name: 'Polyvalent', txt: 'Battez un boss avec Lumi, Kira et Brok', n: 3, prog: s => ['mage', 'archer', 'knight'].filter(c => s.stats?.classWins?.[c]).length, rw: { key: 'boost:phenix', gold: 200 } },
   { id: 'vampire', cat: 'champions', need: 'vampire', icon: 'lifesteal', name: 'Soif éternelle', txt: 'Rendez-vous 12 000 PV grâce au vol de vie', n: 12000, prog: rec_('heal'), rw: { key: 'cls:vampire', gold: 200 } },
   { id: 'assassin', cat: 'champions', need: 'assassin', icon: 'dodge', name: 'L\'ombre de la rivière', txt: 'Battez la Rivière Scintillante en Difficile', n: 1, prog: s => ((s.diffCleared?.[2] || 0) >= 2 ? 1 : 0), rw: { key: 'cls:assassin', gold: 200 } },
+  // Ragnar, le berserker du Nord : il attend aux Pics Gelés (monde 4, vers le jour 4 au rythme visé)
+  { id: 'berserker', cat: 'champions', need: 'berserker', icon: 'i_enrage', name: 'L\'appel du Nord', txt: 'Battez le boss des Pics Gelés', n: 1, prog: s => (s.zoneCleared?.[3] ? 1 : 0), rw: { key: 'cls:berserker', gold: 200 } },
   { id: 'mastery10', cat: 'champions', icon: 'medal', name: 'Disciple', txt: 'Atteignez le niveau 7 avec un champion', n: 7, prog: s => Math.max(1, ...Object.values(s.mastery || {}).map(x => masteryOf(x).lv)), rw: { key: 'title:disciple', chest: 2 } },
   { id: 'mastery20', cat: 'champions', icon: 'medal', name: 'Grand maître', txt: 'Atteignez le niveau 10 avec 3 champions', n: 3, prog: s => Object.values(s.mastery || {}).filter(x => masteryOf(x).lv >= MASTERY.max).length, rw: { key: 'aura:white', chest: 3 } },
   // ---- exploits ----
@@ -627,12 +684,26 @@ export const ABYSS_CURSES = [
 // × (1 + abyss × palier). Niveaux 1 à 10 : niveau L → L + 1 coûte need[0] + need[1] × (L − 1) XP (8 100 XP pour le niveau
 // 10, ≈ 30 parties). Chaque niveau au-delà du 1er : +1,5 % de dégâts et de PV (+13,5 % au niveau 10). Ensuite, à l'infini :
 // une étoile toutes les star XP (≈ 6 parties), +0,5 % de dégâts et de PV chacune, sans plafond.
-// Paliers (at) : 3 aura du champion, 5 une relance de plus par partie, 7 titre « Âme de <champion> », 10 cadre doré et
-// arme de départ au niveau 2. Ancien barème (30 niveaux, plafond +10 %) : l'XP déjà gagnée est gardée telle quelle.
+// Chaque niveau du 2 au 10 donne en plus un bonus spécial (perks, cumulés, appliqués par playerStats et run.js) ; chaque
+// étoile ajoute aussi un petit bonus tournant (starCycle : or, expérience, ramassage, vitesse). at = paliers lus ailleurs
+// (aura et titre : unlocks.js). Ancien barème (30 niveaux, plafond +10 %) : l'XP déjà gagnée est gardée telle quelle.
 export const MASTERY = { max: 10, need: [200, 175], per: 0.015, star: 1800, starPer: 0.005,
   kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
-  at: { aura: 3, reroll: 5, title: 7, gold: 10 }, miles: [3, 5, 7, 10],
-  aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff' } };
+  at: { aura: 3, reroll: 5, title: 7, gold: 10 }, miles: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+  // bonus spéciaux des niveaux ({c} = nom du champion)
+  perks: {
+    2: { name: 'Pas léger', icon: 'arrow', desc: '+5 % de vitesse de course', speed: 0.05 },
+    3: { name: 'Aura du champion', icon: 'aura', desc: 'Aura de {c} et +15 % de rayon de ramassage', magnet: 0.15 },
+    4: { name: 'Bourse pleine', icon: 'gold', desc: '+10 % d\'or gagné', gold: 0.1 },
+    5: { name: 'Seconde chance', icon: 'reroll', desc: 'Une relance de plus par partie', reroll: 1 },
+    6: { name: 'Garde', icon: 'shield', desc: 'Un bouclier bloque le premier coup de chaque monde', shield: 1 },
+    7: { name: 'Âme du champion', icon: 'flag', desc: 'Titre « Âme de {c} » et ultime chargé à moitié au départ', ult: 50 },
+    8: { name: 'Savoir', icon: 'tome', desc: '+10 % d\'expérience en partie', xp: 0.1 },
+    9: { name: 'Chasseur de trésors', icon: 'chest', desc: 'Coffres de butin de meilleure qualité', loot: 0.1 },
+    10: { name: 'Légende', icon: 'medal', desc: 'Cadre doré et arme de départ au niveau 2', weapon: 1 },
+  },
+  starCycle: [{ gold: 0.02, txt: '+2 % d\'or' }, { xp: 0.02, txt: '+2 % d\'expérience' }, { magnet: 0.03, txt: '+3 % de ramassage' }, { speed: 0.01, txt: '+1 % de vitesse' }],
+  aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff', berserker: '#ff2a1a' } };
 export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * (lv - 1);
 // niveau d'un total d'XP : { lv, cur (XP dans le niveau ou vers la prochaine étoile), next (XP à atteindre), stars }
 export function masteryOf(xp) {
@@ -641,6 +712,15 @@ export function masteryOf(xp) {
   if (lv < MASTERY.max) return { lv, cur: Math.floor(x), next: masteryNeed(lv), stars: 0 };
   const stars = Math.floor(x / MASTERY.star);
   return { lv, cur: Math.floor(x - stars * MASTERY.star), next: MASTERY.star, stars };
+}
+// bonus spéciaux cumulés d'un niveau et d'un nombre d'étoiles (vitesse, ramassage, or, XP : multiplicateurs en plus ;
+// relance, bouclier par monde, charge de l'ultime au départ, chance des coffres, arme de départ niveau 2)
+export function masteryPerks(lv, stars = 0) {
+  const o = { speed: 0, magnet: 0, gold: 0, xp: 0, reroll: 0, shield: 0, ult: 0, loot: 0, weapon: 0 }, C = MASTERY.starCycle;
+  for (const [l, P] of Object.entries(MASTERY.perks)) if (lv >= +l) for (const k in o) o[k] += P[k] || 0;
+  const n = Math.max(0, stars | 0);
+  C.forEach((S, i) => { const times = Math.floor(n / C.length) + (i < n % C.length ? 1 : 0); for (const k in o) o[k] += (S[k] || 0) * times; });
+  return o;
 }
 // bonus permanents : +1,5 % de dégâts et de PV par niveau au-delà du 1er, +0,5 % par étoile (sans plafond)
 export const masteryBonus = (lv, stars = 0) => {

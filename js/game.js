@@ -206,6 +206,7 @@ async function statsSheet() {
   const st = playerStats(), c = CLASSES[save.cls];
   // « max » : bonus de l'équipement et de la Boutique au plafond (le vol de vie affiché compte en plus le talent des champions)
   const capped = k => AFFIXES[k]?.max != null && (k === 'speed' ? st.speed >= c.speed + AFFIXES[k].max - 0.0005 : st[k] - (k === 'lifesteal' ? LS.base : 0) >= AFFIXES[k].max - 0.0005);
+  for (const k of ['lifesteal', 'dodge', 'armor']) if (c[k]) st[k] = Math.min(AFFIXES[k].max, (st[k] || 0) + c[k]); // talents de classe (Nyx, Sora, Brok), plafonnés comme en partie
   st.lifesteal = Math.min(LS.max, (st.lifesteal || 0) + LS.base); // + talent de tous les champions (vol de vie de base)
   const shown = STAT_ORDER.filter(k => ['hp', 'atk', 'crit', 'critDmg', 'speed'].includes(k) || (k === 'magnet' || k === 'gold' ? st[k] > 1.0005 : st[k] > 0.0005));
   await modal({
@@ -493,6 +494,7 @@ function classSelect(first) {
         <div class="cs-spells">
           <div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>Arme de départ · ${esc(WEAPONS[c.weapon].desc)}</small></div></div>
           <div class="cs-spell k-ult">${iconImg(ULTS[c.ult].icon, 26)}<div><b>${esc(ULTS[c.ult].name)}</b><small>Ultime · ${esc(ULTS[c.ult].desc)}</small></div></div>
+          ${c.passive ? `<div class="cs-spell k-pas">${iconImg(c.passive.icon, 26)}<div><b>${esc(c.passive.name)}</b><small>Passif · ${esc(c.passive.desc)}</small></div></div>` : ''}
         </div>
         <h4 class="evo-t">Évolutions pendant la partie</h4>
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">

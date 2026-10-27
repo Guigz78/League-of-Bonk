@@ -254,7 +254,7 @@ export class Gfx {
     if (evo !== this.heroEvo) { this.heroEvo = evo; H.setEvo?.(evo); this.layer(H.root); }
     // attaque : repérée sur les effets et les tirs du héros
     for (const f of run.fx) if (!f.g_seen) { f.g_seen = 1; if (f.type === 'slash' || f.type === 'beam') { hs.atk = 1; hs.atkA = f.a; } }
-    for (const s of run.shots) if (!s.g_seen) { s.g_seen = 1; if ((s.type === 'arrow' || s.type === 'crystal') && hs.atk < 0.9) { hs.atk = 1; hs.atkA = Math.atan2(s.vy, s.vx); } }
+    for (const s of run.shots) if (!s.g_seen) { s.g_seen = 1; if ((s.type === 'arrow' || s.type === 'crystal' || s.type === this.hero.atkShot) && hs.atk < 0.9) { hs.atk = 1; hs.atkA = Math.atan2(s.vy, s.vx); } }
     const cls = run.cls.id;
     if (hs.atk > 0) hs.atk = Math.max(0, hs.atk - dt * (cls === 'archer' ? 3 : cls === 'mage' ? 4 : 5));
     if (p.moving || Math.hypot(p.face.x, p.face.y) > 0.1) hs.face = Math.atan2(p.face.y, p.face.x);

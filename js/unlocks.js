@@ -228,7 +228,7 @@ export function defisScreen(back) {
     const count = (ids, ok) => `${ids.filter(ok).length}/${ids.length}`;
     const auraIds = [...Object.keys(AURAS), ...Object.keys(CLASSES).map(c => 'm_' + c)];
     const kinds = [
-      ['sword', 'Armes', count(Object.keys(WEAPONS), id => isFree('w', id))],
+      ['sword', 'Armes', count(Object.keys(WEAPONS).filter(id => !WEAPONS[id].own), id => isFree('w', id))], // sans les armes propres à un champion (faux de Nyx)
       ['tome', 'Tomes', count(Object.keys(TOMES), id => isFree('t', id))],
       ['potion', 'Bonus', count(Object.keys(BOOSTS), id => isFree('boost', id))],
       ['user', 'Champions', count(Object.keys(CLASSES), id => !clsLocked(id))],

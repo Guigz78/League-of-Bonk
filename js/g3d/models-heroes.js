@@ -3,6 +3,7 @@
 // et aura de super guerrier animée au dernier stade (coque de flammes, étincelles, éclairs, cheveux lumineux).
 import { THREE, PI, TAU, clamp, lerp, damp, smooth, angDiff, yawOf, shade, mixC, Shape, Rig, charMaterial, glowTex } from './models-kit.js';
 import { CLASSES, EVOLUTIONS } from '../data.js';
+import { HEROES_C1 } from './models-heroes-c1.js'; // Nyx, Sora, Ragnar (champions C1)
 
 // os : [parent, x, y, z] (pivots au repos, le modèle regarde vers +Z, sa gauche est +X)
 const BONES = {
@@ -354,12 +355,14 @@ function buildKnight(sh, C, evo) {
 }
 
 const BUILD = { mage: buildMage, archer: buildArcher, knight: buildKnight };
+// pièces communes prêtées aux héros des autres fichiers (models-heroes-c1.js : build(sh, C, evo, KIT))
+const KIT = { SKIN, SKIN_D, INK, LEATHER, LEATHER_D, WOOD, headBlock, eyes, brows, mouth, boots, legs, arm, pauldron, capeShape, star, crownOf, halo, wings, superHair };
 const SHAPES = new Map();
 function heroShapes(clsId, evo) {
   const k = clsId + ':' + evo;
   if (!SHAPES.has(k)) {
     const o = {}, get = n => o[n] || (o[n] = new Shape());
-    (BUILD[clsId] || buildKnight)(get, heroColors(clsId, evo), evo);
+    (BUILD[clsId] || HEROES_C1[clsId]?.build || buildKnight)(get, heroColors(clsId, evo), evo, KIT);
     SHAPES.set(k, o);
   }
   return SHAPES.get(k);
@@ -469,6 +472,7 @@ export function heroModel(clsId, evo = 0) {
   const st = { yaw: 0, ph: 0, mv: 0, land: 0, air: 0, blink: 2.5, bk: 0, die: 0, pop: 0, tl: 0, atk: 0, sq: 0 };
   const api = {
     root, cls: clsId, height: HERO_HEIGHT,
+    atkShot: HEROES_C1[clsId]?.shot || null, // tir du héros qui déclenche son attaque (renderer.js) : dagues de Sora, haches de Ragnar
     setEvo(e) {
       e = clamp(e | 0, 0, 4);
       if (e === cur) return;
@@ -524,7 +528,8 @@ export function heroModel(clsId, evo = 0) {
       // attaques
       if (atk > 0.001) {
         const u = 1 - atk, w = smooth(atk / 0.45);
-        if (clsId === 'knight') {
+        if (HEROES_C1[clsId]?.atk) HEROES_C1[clsId].atk(b, w, u, atk); // champions C1 : faux, dagues, hache
+        else if (clsId === 'knight') {
           // grand coup d'épée horizontal : bras levé sur le côté, balayage vers l'avant et à travers
           const s = smooth(u / 0.28), lift = smooth(u / 0.08);
           b.armR.rotation.z = lerp(b.armR.rotation.z, -1.45, w * lift);

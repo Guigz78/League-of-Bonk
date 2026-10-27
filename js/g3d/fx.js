@@ -5,6 +5,7 @@
 import { THREE, S, TAU, PITCH, clamp, rand, easeOut, backOut, col, shade, Build, G, T, lowpoly, Pool, RingPool, LanePool, alphaMat, ADD, TX, billboardGeo, pillarGeo, flatGeo } from './kit.js';
 import { TOTEMS } from '../data.js';
 import { LOOT_GLOW } from './tex2d.js';
+import { initC1, eventC1, frameC1 } from './fx-c1.js'; // champions C1 (Nyx, Sora, Ragnar)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -76,6 +77,7 @@ export class Fx {
     // arrivée dans le monde par le portail
     const p = this.run.p;
     for (let i = 0; i < 3; i++) this.rings.push({ x: p.x, y: p.y, r0: 10, r1: 150 + i * 70, t: -i * 0.12, max: 0.7, c: i ? '#c06aff' : '#7ae8ff', w: 7 });
+    this.c1 = initC1(this); // champions C1 : ultimes, haches de Ragnar, fureur, danse des ombres (fx-c1.js)
   }
 
   // ---------- Petits outils ----------
@@ -141,6 +143,7 @@ export class Fx {
   // ---------- Événements ----------
   onEvent(ev) {
     const run = this.run, p = run.p;
+    if (this.c1 && eventC1(this, ev)) return; // champions C1
     switch (ev.type) {
       case 'hit': {
         const e = ev.e, h = e.r * 1.2 + e.fly;
@@ -507,6 +510,7 @@ export class Fx {
     if (tg && !tg.dead && !tg.burrowed && !run.dying) this.ringAt(tg.x, tg.y, tg.r * 1.45 + 6, '#ff3a3a', 0.85, 0.09, 0.05, 1, t * 1.4, 4, 0, 0.45);
     this.alerts(dt);
     this.heroFx(dt);
+    frameC1(this, dt); // champions C1
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
@@ -537,7 +541,7 @@ export class Fx {
       const a = Math.atan2(s.vy || 0, s.vx || 0), y = (s.z || 26) * S;
       if (s.type === 'arrow') { this.arrow.put(s.x * S, y, s.y * S, -a, 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * (EW.arrows ? 60 : 40)) * S, y, (s.y - Math.sin(a) * (EW.arrows ? 60 : 40)) * S, EW.arrows ? 0.3 : 0.22, EW.arrows ? '#7ae8ff' : '#a0dcff', 0.6); }
       else if (s.type === 'dagger') { const ev = EW.daggers, L = ev ? 54 : 30; this.dagger.put(s.x * S, y, s.y * S, -a, ev ? 1.25 : 1.1); this.line(s.x * S, y, s.y * S, (s.x - Math.cos(a) * L) * S, y, (s.y - Math.sin(a) * L) * S, ev ? 0.3 : 0.18, ev ? '#ff4d6d' : W, ev ? 0.6 : 0.45); } // Mille lames : traînée de sang
-      else if (s.type === 'boom') {
+      else if (s.type === 'boom' && !this.c1?.axe) { // Ragnar : haches (fx-c1.js)
         const k = (s.r || 15) / 15, ev = EW.boomerang;
         this.boom.put(s.x * S, 0.9, s.y * S, -(s.spin || 0), k * 1.1); this.glow(s.x, s.y, 18, 22 * k, '#ffd54a', 0.5); this.shadow(s.x, s.y, 26 * k, 0.25);
         // flou de rotation : disque lumineux sous la lame (tornade de lames : plus large, deux couleurs)
@@ -594,13 +598,14 @@ export class Fx {
       const k = 1 - f.life / f.max;
       if (f.type === 'slash') {
         // grand croissant lumineux (blanc et bleu) qui balaie devant le héros ; tourbillon du Titan : or et feu
-        const ev = EW.sword, sweep = Math.min(1, k * 2.2), a0 = f.a - 1.3, R = f.r, al = 1 - k;
-        this.ra.ring(f.x * S, 0.9, f.y * S, R * S, col(ev ? '#ffc04a' : '#ffe9a8'), al * 0.95, 0, ev ? 0.5 : 0.42, 2.6 * sweep / TAU, a0, 0, 0, 0.9);
-        this.ra.ring(f.x * S, 0.92, f.y * S, R * 1.08 * S, col(ev ? '#ff7a2a' : '#9ad8ff'), al * 0.7, 0, 0.12, 2.6 * sweep / TAU, a0, 0, 0, 0.3);
-        this.rg.ring(f.x * S, 0.07, f.y * S, R * S, col(ev ? '#ffd54a' : '#ffffff'), al * (ev ? 0.35 : 0.25), 0, 0.4, 2.6 * sweep / TAU, a0, 0, 0, 0);
+        // couleurs imposées par l'effet (c1 cœur, c2 bord, c3 sol) : faux de Nyx, danse de Sora (champions C1)
+        const ev = f.c1 ? f.evo : EW.sword, sweep = Math.min(1, k * 2.2), a0 = f.a - 1.3, R = f.r, al = 1 - k;
+        this.ra.ring(f.x * S, 0.9, f.y * S, R * S, col(f.c1 || (ev ? '#ffc04a' : '#ffe9a8')), al * 0.95, 0, ev ? 0.5 : 0.42, 2.6 * sweep / TAU, a0, 0, 0, 0.9);
+        this.ra.ring(f.x * S, 0.92, f.y * S, R * 1.08 * S, col(f.c2 || (ev ? '#ff7a2a' : '#9ad8ff')), al * 0.7, 0, 0.12, 2.6 * sweep / TAU, a0, 0, 0, 0.3);
+        this.rg.ring(f.x * S, 0.07, f.y * S, R * S, col(f.c3 || (ev ? '#ffd54a' : '#ffffff')), al * (f.c3 ? 0.5 : ev ? 0.35 : 0.25), 0, 0.4, 2.6 * sweep / TAU, a0, 0, 0, 0);
         if (!f.g_sp) {
           f.g_sp = 1;
-          for (let i = 0; i < (ev ? 8 : 5); i++) { const an = a0 + Math.random() * 2.6; this.sparks.push({ x: f.x + Math.cos(an) * R * 0.9, y: f.y + Math.sin(an) * R * 0.9, z: 18, vx: Math.cos(an) * 160, vy: Math.sin(an) * 160, vz: 60, life: 0.25, max: 0.25, c: ev ? '#ffb02a' : '#ffe48a', w: 2.4 }); }
+          for (let i = 0; i < (ev ? 8 : 5); i++) { const an = a0 + Math.random() * 2.6; this.sparks.push({ x: f.x + Math.cos(an) * R * 0.9, y: f.y + Math.sin(an) * R * 0.9, z: 18, vx: Math.cos(an) * 160, vy: Math.sin(an) * 160, vz: 60, life: 0.25, max: 0.25, c: f.c1 || (ev ? '#ffb02a' : '#ffe48a'), w: 2.4 }); }
           if (ev) this.puff(f.x + Math.cos(f.a) * R * 0.6, f.y + Math.sin(f.a) * R * 0.6, 2, 14, 0.4, '#e8d8b8');
         }
       } else if (f.type === 'beam') {

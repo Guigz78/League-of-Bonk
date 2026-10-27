@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus, upgMax } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -231,6 +231,8 @@ export function playerStats(clsId = save.cls) {
   for (const [k, A] of Object.entries(AFFIXES)) if (A.max != null) st[k] = k === 'speed' ? Math.min(st.speed, c.speed + A.max) : Math.min(st[k], A.max);
   const ml = masteryOf(save.mastery?.[clsId]), mb = masteryBonus(ml.lv, ml.stars); // niveau du champion (1 à 10) puis étoiles à l'infini
   st.hp *= 1 + mb.hp; st.atk *= 1 + mb.dmg;
+  const pk = masteryPerks(ml.lv, ml.stars); // bonus spéciaux des niveaux et des étoiles (après les plafonds)
+  st.speed *= 1 + pk.speed; st.magnet *= 1 + pk.magnet; st.gold *= 1 + pk.gold; st.xp += pk.xp;
   for (const k of Object.keys(st)) if (k !== 'effects') st[k] = r3(st[k]);
   st.hp = Math.round(st.hp); st.atk = Math.round(st.atk);
   return st;
