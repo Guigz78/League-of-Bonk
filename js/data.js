@@ -35,7 +35,7 @@ export const CLASSES = {
   assassin: {
     id: 'assassin', name: 'Sora', role: 'Ombre', locked: true,
     desc: 'Insaisissable : ses dagues partent dans tous les sens et les coups l\'évitent souvent.',
-    hp: 110, atk: 14, crit: 0.22, speed: 1.1, dodge: 0.1, wpnMul: 1.4, // wpnMul : ses dagues frappent plus fort (run.wstats)
+    hp: 110, atk: 14, crit: 0.22, speed: 1.1, dodge: 0.1, wpnMul: 1.5, // wpnMul : ses dagues frappent plus fort (run.wstats)
     weapon: 'daggers', ult: 'shadowdance',
     passive: { name: 'Pas de l\'ombre', icon: 'dodge', desc: '+15 % de chance de critique et 10 % d\'esquive.' },
     colors: { 1: '#3a2a6a', 2: '#241a44', 3: '#6e5eb0', a: '#ff3ab0', h: '#1e1830', s: '#ffd9b8', d: '#e9b48f', c: '#16101f' },
