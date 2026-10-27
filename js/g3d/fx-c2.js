@@ -150,10 +150,10 @@ export function frameC2(fx, dt) {
     const Tp = st.thorn, F = C2B.forest, tt = run.c2t;
     Tp.begin();
     if (tt && !run.dying) {
-      const R = F.tR * p.area, n = 16, up = Math.min(1, (F.dur - tt.t) / 0.25) * Math.min(1, tt.t / 0.3);
+      const R = F.tR * p.area, n = 22, up = Math.min(1, (F.dur - tt.t) / 0.25) * Math.min(1, tt.t / 0.3);
       for (let i = 0; i < n; i++) {
-        const a = i / n * TAU + t * 0.5, x = p.x + Math.cos(a) * R, y = p.y + Math.sin(a) * R * 0.95, k = (0.9 + (i % 3) * 0.18) * up;
-        Tp.put(x * S, 0, y * S, -a + Math.PI / 2, k * 1.1, k * 1.3, k * 1.1);
+        const a = i / n * TAU + t * 0.5, rr = R * (i % 2 ? 0.9 : 1.02), x = p.x + Math.cos(a) * rr, y = p.y + Math.sin(a) * rr * 0.95, k = (1.6 + (i % 3) * 0.3) * up;
+        Tp.put(x * S, 0, y * S, -a + Math.PI / 2, k, k * 1.25, k);
       }
       fx.ringAt(p.x, p.y, R, LEAF, 0.7 * up, 0.04, 0.1, 1, t * 0.5, 16, 0.5, 0.5, true, 0.1);
       fx.glow(p.x, p.y, 20, 60, '#7aff5a', 0.3 * up);

@@ -802,6 +802,7 @@ button.itile:active { transform: translateY(1px); }
 .hud.cr .ult-btn::before, .hud.cr .ult-btn::after { content: ''; position: absolute; z-index: -1; }
 .hud.cr .ult-btn::before { inset: 0; background: var(--jl); clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px); }
 .hud.cr .ult-btn::after { inset: 1.5px; background: var(--jf); clip-path: polygon(12.4px 0, 100% 0, 100% calc(100% - 12.4px), calc(100% - 12.4px) 100%, 0 100%, 0 12.4px); }
+.hud.cr .ult-btn[aria-label="Colère de la forêt"] small { letter-spacing: .07em; } /* nom long (Gaïa) : reste dans l'écran */
 .hud.cr .ult-btn .ring { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); transform: rotate(-90deg); pointer-events: none; }
 .hud.cr .ult-btn .ring circle { fill: none; stroke: var(--acc); stroke-width: 1.8; stroke-linecap: butt; stroke-dasharray: 100.5; filter: none; transition: stroke-dashoffset .4s; }
 .hud.cr .ult-btn img { width: 28px; height: 28px; filter: grayscale(1) brightness(.75); }
