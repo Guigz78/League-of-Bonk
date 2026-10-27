@@ -3,6 +3,10 @@
 // s'ajoutent à l'équipement comme l'armure de Brok ; rage (Ragnar) multiplie les dégâts dans run.hitEnemy (rageMul).
 // L'arme de Nyx (faux sanglante, 'scythe') est dans run.js avec les autres armes.
 // Événements pour le rendu (js/g3d/fx-c1.js) : 'ult' (kind = l'ultime), 'c1feast', 'c1hop', 'c1quake', 'c1end'.
+// Équilibrage (simulateur, bot qui prend la 1re carte, Normal, monde 1 → 2, boss tués) : Lumi 18/20 puis 16/20, Kira 15/20
+// puis 9/20, Brok 18/20 puis 17/20 ; Nyx 10/10 puis 8/10 (faux ×1,1 ; à ×1,2 : 20/20 puis 18/20), Sora 23/30 puis 18/30
+// (dagues ×1,4 à 1,5 ; sans bonus : 4/10 puis 2/10, trop peu de victimes au début), Ragnar 9/10 puis 9/10 (152 PV ; à 165 :
+// 20/20 puis 18/20). Difficile, monde 1 : 2 à 3 boss sur 6 à 10 pour chacun (Sora à ×1,55 : 2/10, Kira 3/10).
 import { HALF } from './data.js';
 import { save } from './save.js';
 import { sfx, buzz } from './audio.js';
