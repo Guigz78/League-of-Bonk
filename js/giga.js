@@ -306,9 +306,11 @@ export const GIGA_METHODS = {
     this.msg(`${GIGA.name} appelle ses champions !`);
   },
 
-  // à chaque image tant qu'il vit (run.js update) : phase 3, météores sur le joueur
+  // à chaque image tant qu'il vit (run.js update) : la folie (chrono écoulé) ne monte plus pendant le combat final (pas
+  // d'effondrement du monde par-dessus ses attaques) ; phase 3 : météores sur le joueur
   gigaTick(dt) {
     const e = this.boss, p = this.p;
+    if (this.time > this.duration && this.otLevel) this.duration += dt;
     if (e.gph < 3 || e.phase === 'groar' || this.dying || this.entering) return;
     if ((e.fireT -= dt) > 0) return;
     e.fireT = GB.fire * rand(0.85, 1.15);
