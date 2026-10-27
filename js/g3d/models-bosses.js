@@ -1,8 +1,9 @@
 // Boss 3D uniques (variante 'b' du MonsterPool) : Roi Gobelin, Ronce-Brûlante, Léviathan pourpre, Cryophénix,
-// Geôlier spectral, Ver-Roi du Néant. Même chaîne que les monstres (géométrie animée dans le shader) ;
+// Geôlier spectral, Ver-Roi du Néant ; et le giga boss Gorgoth (3 formes, une par phase). Même chaîne que les monstres (géométrie animée dans le shader) ;
 // la « pose » (rugissement, élan d'attaque) lève les bras, ouvre les gueules, redresse les têtes.
 import { THREE, PI, TAU, shade } from './models-kit.js';
 import { BOSS, crown } from './models-monsters.js';
+import { GIGA_FORMS } from '../data.js';
 
 const GOLD = '#ffd54a', GOLD_D = '#c8901a', INK = '#1a1020', GOB = '#84c440', GOB_D = '#5e9a2e';
 const L2 = [[1, 0], [-1, PI]];
@@ -291,3 +292,146 @@ BOSS['Ver-Roi du Néant'] = c => {
   c.body = [0.02, 0, 0.02, 0];
   c.h = hy + 1.2;
 };
+
+// ---------- GIGA BOSS : Gorgoth, Roi des Bonks (niveau 3 de l'expédition, js/giga.js) ----------
+// Titan cuirassé à la massue géante, ≈ 2 fois un boss de monde en jeu (rayon 7 × GB.scale). Une forme par phase :
+//  1 armure intacte : heaume à visière fendue, cornes de fer, couronne, épaulières à pointes, plastron frappé d'un B doré ;
+//  2 armure brisée : visière et épaulière gauche arrachées, plastron fendu, visage à défenses, fissures de magma ;
+//  3 embrasé : plus d'armure, peau fendue de magma, cornes et massue en feu, couronne de flammes, roches en orbite.
+const G_IRON = '#4e4a62', G_IRON_D = '#2c283c', G_IRON_L = '#8a86a2', G_SKIN = '#7a64a0', G_SKIN_D = '#4e3e70', G_MAGMA = '#ff7a1a', G_HOT = '#ffd54a';
+function gorgoth(c, form) {
+  const { s } = c, hot = form >= 3, mg = hot ? G_HOT : G_MAGMA, gl = hot ? 2.2 : 1.5;
+  const crack = (x, y, z, h, rz, ry = 0, w = 0.06) => s.put('box', mg, x, y, z, w, h, 0.05, 0, ry, rz, { grad: 0, glow: gl });
+  // ---- jambes courtes et massives : grèves de fer (forme 3 : fissures) ----
+  for (const [sd, off] of L2) {
+    s.part([0.46 * sd, 0.78, 0], { rx: 0.28, off, body: 0 });
+    s.put('rbox:0.4', G_SKIN_D, 0.46 * sd, 0.62, 0, 0.56, 0.62, 0.56, 0, 0, 0, { grad: 0.2 });
+    if (form < 3) {
+      s.put('rbox:0.3', G_IRON, 0.46 * sd, 0.36, 0.05, 0.64, 0.52, 0.64, 0, 0, 0, { grad: 0.3 });
+      s.put('rbox:0.3', G_IRON_L, 0.46 * sd, 0.66, 0.3, 0.3, 0.26, 0.12, 0, 0, 0.785, { grad: 0, glow: 0.05 }); // genouillère
+    } else crack(0.46 * sd + 0.12, 0.45, 0.29, 0.4, 0.4 * sd);
+    s.put('rbox:0.3', G_IRON_D, 0.46 * sd, 0.09, 0.12, 0.7, 0.2, 0.86, 0, 0, 0, { grad: 0.1 });
+    s.put('box', GOLD, 0.46 * sd, 0.2, 0.5, 0.5, 0.06, 0.06, 0, 0, 0, { grad: 0, glow: 0.2 });
+  }
+  s.part(null);
+  // ---- bassin, ceinture et boucle (rubis) ----
+  s.put('rbox:0.45', G_IRON_D, 0, 1.0, 0, 1.62, 0.5, 1.2, 0, 0, 0, { grad: 0.2 });
+  s.put('tor:0.1:4:16', GOLD_D, 0, 1.1, 0, 1.66, 1.66, 1.24, PI / 2, 0, 0, { grad: 0 });
+  s.put('rbox:0.3', GOLD, 0, 1.08, 0.64, 0.5, 0.42, 0.12, 0, 0, 0, { grad: 0, glow: 0.35 });
+  s.put('oct', '#ff3a5a', 0, 1.08, 0.71, 0.18, 0.22, 0.08, 0, 0, 0, { grad: 0, glow: 0.9 });
+  // pagne de mailles (devant, derrière)
+  for (const z of [0.5, -0.5]) s.put('frust:0.32:0.42:6', G_IRON_L, 0, 0.72, z, 1, 0.42, 0.22, 0, 0, 0, { grad: 0.3 });
+  // ---- torse énorme ----
+  s.put('sph:10:8', G_SKIN, 0, 1.78, 0, 2.05, 1.6, 1.5, 0, 0, 0, { grad: 0.25 });
+  s.put('sph:8:6', shade(G_SKIN, 0.12), 0, 1.66, 0.42, 1.2, 0.9, 0.7, 0, 0, 0, { grad: 0.1 });
+  if (form === 1) { // plastron entier : B doré, rivets
+    s.put('rbox:0.42', G_IRON, 0, 1.82, 0.22, 1.86, 1.3, 1.2, 0, 0, 0, { grad: 0.3 });
+    s.put('rbox:0.3', G_IRON_L, 0, 1.95, 0.8, 1.1, 0.12, 0.08, 0, 0, 0, { grad: 0 });
+    s.put('rbox:0.3', GOLD, 0, 1.68, 0.83, 0.6, 0.62, 0.08, 0, 0, 0, { grad: 0, glow: 0.3 });
+    s.put('box', '#5a1424', -0.12, 1.68, 0.88, 0.09, 0.46, 0.04, 0, 0, 0, { grad: 0 });
+    for (const [y, r] of [[1.8, 0.2], [1.57, 0.24]]) s.put('tor:0.28:4:10', '#5a1424', -0.08 + r * 0.3, y, 0.88, r, r * 0.92, 0.12, 0, 0, 0, { grad: 0 }); // « B »
+    for (const [x, y] of [[-0.75, 2.2], [0.75, 2.2], [-0.8, 1.4], [0.8, 1.4]]) s.put('sph:5:3', G_IRON_L, x, y, 0.62, 0.12, 0.12, 0.08, 0, 0, 0, { grad: 0 });
+  } else if (form === 2) { // plastron fendu : seule la moitié droite tient encore
+    s.put('rbox:0.42', G_IRON, -0.42, 1.84, 0.22, 1.0, 1.3, 1.2, 0, 0, -0.08, { grad: 0.3 });
+    s.put('rbox:0.3', GOLD, -0.28, 1.66, 0.82, 0.32, 0.5, 0.08, 0, 0, -0.08, { grad: 0, glow: 0.3 });
+    for (let i = 0; i < 4; i++) s.tip('wedge', G_IRON_D, 0.06, 1.3 + i * 0.27, 0.72, 0, 0, -PI / 2 + (i % 2 ? 0.4 : -0.3), 0.08, 0.2, 0.18, { grad: 0 }); // bord déchiré
+    crack(0.35, 1.9, 0.72, 0.6, 0.5); crack(0.55, 1.55, 0.62, 0.42, -0.6); crack(0.22, 1.45, 0.75, 0.3, 0.2);
+  } else { // embrasé : peau fendue de magma, cœur ardent
+    crack(0.3, 1.95, 0.74, 0.7, 0.5); crack(-0.35, 1.9, 0.74, 0.62, -0.45); crack(0.55, 1.5, 0.62, 0.5, -0.7);
+    crack(-0.58, 1.48, 0.6, 0.46, 0.7); crack(0, 1.42, 0.78, 0.36, 0.1); crack(0.1, 2.2, 0.62, 0.4, 1.2);
+    s.put('oct', G_HOT, 0, 1.72, 0.76, 0.42, 0.5, 0.16, 0, 0, 0, { grad: 0, glow: 2.4 });
+    s.put('sph:6:4', G_MAGMA, 0, 1.72, 0.7, 0.66, 0.74, 0.2, 0, 0, 0, { grad: 0, glow: 1.2 });
+  }
+  // dos : pointes
+  for (let i = 0; i < 4; i++) s.tip('cone:4', form < 3 ? G_IRON_D : G_SKIN_D, (i - 1.5) * 0.36, 2.15 - Math.abs(i - 1.5) * 0.1, -0.62, -1.1, 0, (i - 1.5) * 0.2, 0.2, 0.55, 0.2, { grad: -0.2, glow: hot ? 0.3 : 0 });
+  // ---- épaulières (forme 1 : les deux ; forme 2 : la droite) ----
+  for (const sd of [1, -1]) {
+    if (form === 1 || (form === 2 && sd < 0)) {
+      s.put('sph:8:5', G_IRON, 1.02 * sd, 2.38, 0, 0.95, 0.66, 0.95, 0, 0, -0.3 * sd, { grad: 0.3 });
+      s.put('tor:0.12:4:12', GOLD_D, 1.02 * sd, 2.3, 0, 0.92, 0.92, 0.92, PI / 2, 0, -0.3 * sd, { grad: 0, glow: 0.15 });
+      for (let i = 0; i < 3; i++) s.tip('cone:4', G_IRON_L, (0.88 + i * 0.16) * sd, 2.6 - i * 0.05, -0.15 + i * 0.12, -0.2, 0, -sd * (0.5 + i * 0.25), 0.16, 0.5, 0.16, { grad: -0.3 });
+    } else { // épaule nue : rocher de chair fissuré
+      s.put('sph:7:5', G_SKIN_D, 1.0 * sd, 2.32, 0, 0.78, 0.58, 0.78, 0, 0, -0.3 * sd, { grad: 0.2 });
+      crack(1.05 * sd, 2.45, 0.3, 0.32, 0.8 * sd);
+    }
+  }
+  // ---- tête : heaume (1), heaume brisé et visage (2), tête nue en feu (3) ----
+  s.part([0, 2.45, 0.08], { rx: 0.05, f: 1.6, off: 0.6, pose: [-0.35, 0, 0, 0.05] });
+  s.put('rbox:0.45', G_SKIN, 0, 2.78, 0.16, 0.92, 0.8, 0.86, 0, 0, 0, { grad: 0.15 });
+  s.put('rbox:0.4', G_SKIN, 0, 2.58, 0.34, 0.86, 0.36, 0.7, 0, 0, 0, { grad: 0.1 }); // mâchoire
+  if (form === 1) {
+    s.put('rbox:0.42', G_IRON, 0, 2.86, 0.16, 1.04, 0.96, 1.0, 0, 0, 0, { grad: 0.25 });
+    s.put('rbox:0.3', G_IRON_D, 0, 2.78, 0.66, 0.84, 0.36, 0.08, 0, 0, 0, { grad: 0 });       // visière
+    for (const sd of [1, -1]) s.put('box', G_HOT, 0.2 * sd, 2.8, 0.71, 0.24, 0.07, 0.03, 0, 0, -0.18 * sd, { grad: 0, glow: 2 }); // fente lumineuse
+    s.put('box', G_IRON_L, 0, 2.95, 0.68, 0.06, 0.4, 0.06, 0, 0, 0, { grad: 0 });
+    s.put('tor:0.1:4:12', GOLD_D, 0, 2.48, 0.16, 1.06, 1.06, 1.0, PI / 2, 0, 0, { grad: 0 }); // gorgerin
+  } else {
+    if (form === 2) { // calotte cabossée qui tient encore
+      s.put('hemi:9:4', G_IRON, 0.04, 3.04, 0.12, 1.02, 0.6, 0.98, 0, 0, 0.12, { grad: 0.2 });
+      for (let i = 0; i < 3; i++) s.tip('wedge', G_IRON_D, -0.3 + i * 0.25, 3.0, 0.56, PI / 2 + 0.3, 0, (i - 1) * 0.5, 0.08, 0.14, 0.12, { grad: 0 });
+    }
+    // visage furieux : sourcils, yeux brûlants, défenses, nez écrasé
+    for (const sd of [1, -1]) {
+      s.put('box', G_SKIN_D, 0.22 * sd, 2.98, 0.6, 0.34, 0.1, 0.12, 0, 0, -0.38 * sd, { grad: 0 });
+      s.eye(0.2 * sd, 2.84, 0.58, 0.1, { white: hot ? '#ffffff' : '#fff2a0', pupil: hot ? G_HOT : '#ff4a1a', glow: hot ? 2.2 : 1.4, pr: 0.6, tall: 0.8, ry: 0.25 * sd, noHi: true });
+      s.tip('cone:4', '#f4ead0', 0.26 * sd, 2.5, 0.66, -0.25, 0, 0.25 * sd, 0.12, 0.32, 0.12, { grad: 0 }); // défense
+    }
+    s.put('sph:6:4', shade(G_SKIN, -0.1), 0, 2.72, 0.66, 0.3, 0.2, 0.2, 0, 0, 0, { grad: 0 });
+    s.put('box', '#2a0a14', 0, 2.52, 0.7, 0.5, 0.1, 0.05, 0, 0, 0, { grad: 0 });
+    if (hot) crack(0.32, 2.95, 0.52, 0.3, 0.6);
+  }
+  // cornes : de fer (1, 2), de pierre embrasée (3)
+  for (const sd of [1, -1]) {
+    s.tip('cone:5', form < 3 ? G_IRON_L : G_SKIN_D, 0.42 * sd, 3.02, 0.1, -0.15, 0, -sd * 0.95, 0.24, 0.62, 0.24, { grad: -0.3, glow: hot ? 0.3 : 0 });
+    s.tip('cone:4', form < 3 ? '#e8e4f8' : G_HOT, 0.42 * sd + Math.sin(sd * 0.95) * 0.5, 3.02 + Math.cos(0.95) * 0.5, 0.06, -0.3, 0, -sd * 0.35, 0.14, 0.42, 0.14, { grad: -0.2, glow: hot ? 1.6 : 0.1 });
+  }
+  if (form < 3) crown(s, form === 2 ? 0.1 : 0, 3.36, 0.1, 0.72, GOLD, '#ff3a5a');
+  s.part(null);
+  if (hot) { // couronne de flammes au-dessus de la tête, flammes des cornes, roches de magma en orbite
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 4 - 0.5) * 1.6;
+      s.part([Math.sin(a) * 0.32, 3.3, 0.1], { sway: 0.05, bob: 0.08, f: 3.4, off: i * 1.7 });
+      s.tip('cone:4', i % 2 ? G_MAGMA : G_HOT, Math.sin(a) * 0.32, 3.26, 0.1 - Math.abs(a) * 0.05, -0.1, 0, -a * 0.4, 0.26, 0.7 - Math.abs(a) * 0.14, 0.26, { grad: -0.4, glow: 1.8 });
+    }
+    for (const sd of [1, -1]) {
+      s.part([0.9 * sd, 3.45, 0.06], { sway: 0.05, bob: 0.07, f: 3, off: sd * 1.3 });
+      s.tip('cone:4', G_MAGMA, 0.9 * sd, 3.4, 0.06, 0, 0, -sd * 0.3, 0.24, 0.55, 0.24, { grad: -0.4, glow: 1.8 });
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * TAU + 0.6, x = Math.cos(a) * 1.55, z = Math.sin(a) * 1.0, y = 2.2 + (i % 2) * 0.5;
+      s.part([x, y, z], { bob: 0.22, f: 1.4, off: i * 1.6, body: 0 });
+      s.put('dod', G_SKIN_D, x, y, z, 0.32, 0.3, 0.32, i, i * 0.7, 0, { grad: 0.1 });
+      s.put('box', G_HOT, x, y, z + 0.12, 0.05, 0.22, 0.04, 0, 0, 0.5 + i, { grad: 0, glow: 2 });
+    }
+    s.part(null);
+  }
+  // ---- bras : la massue géante « Bonkeur » (main gauche du modèle), le poing droit levé à l'élan ----
+  for (const sd of [1, -1]) {
+    s.part([1.05 * sd, 2.25, 0], { rx: 0.28, off: sd > 0 ? PI : 0, pose: sd < 0 ? [-2.65, 0.25, 0, 0] : [-1.9, -0.5, 0, 0] });
+    s.seg('rbox:0.4', G_SKIN, [1.08 * sd, 2.2, 0], [1.24 * sd, 1.45, 0.1], 0.52, 0.52);
+    if (form < 3) s.put('rbox:0.3', G_IRON, 1.26 * sd, 1.3, 0.12, 0.6, 0.5, 0.6, 0, 0, 0.1 * sd, { grad: 0.25 }); // gantelet
+    else crack(1.3 * sd, 1.5, 0.36, 0.4, 0.3 * sd);
+    s.put('sph:7:5', G_SKIN_D, 1.3 * sd, 0.98, 0.18, 0.56, 0.52, 0.56, 0, 0, 0, { grad: 0.15 }); // poing
+    if (form < 3) for (let i = 0; i < 3; i++) s.put('box', G_IRON_L, 1.3 * sd + (i - 1) * 0.14, 1.06, 0.42, 0.1, 0.1, 0.12, 0, 0, 0, { grad: 0 });
+    if (sd < 0) { // massue : manche cerclé d'or, tête énorme hérissée de pointes
+      const hx = -1.3, hy = 0.98, hz = 0.18, ang = 0.55, L = 1.9;
+      s.tip('cyl:7', '#5a3a26', hx, hy - 0.3, hz, ang, 0, 0, 0.2, L, 0.2, { grad: 0.1 });
+      const ex = hx, ey = hy - 0.3 + Math.cos(ang) * L, ez = hz + Math.sin(ang) * L;
+      for (const k of [0.3, 0.62]) s.put('tor:0.2:4:8', GOLD, hx, hy - 0.3 + Math.cos(ang) * L * k, hz + Math.sin(ang) * L * k, 0.3, 0.3, 0.3, ang + PI / 2, 0, 0, { grad: 0, glow: 0.2 });
+      s.put('dod', form < 3 ? G_IRON : G_SKIN_D, ex, ey, ez, 1.05, 1.15, 1.05, ang, 0.3, 0, { grad: 0.2, glow: hot ? 0.2 : 0 });
+      s.put('tor:0.14:4:10', GOLD_D, ex, ey - 0.12, ez, 0.92, 0.92, 0.92, ang + PI / 2, 0, 0, { grad: 0 });
+      for (let i = 0; i < 9; i++) {
+        const a = i * 2.39996, b = Math.acos(1 - 2 * (i + 0.5) / 9), dx = Math.sin(b) * Math.cos(a), dy = Math.cos(b), dz = Math.sin(b) * Math.sin(a);
+        s.tip('cone:4', form < 3 ? G_IRON_L : G_HOT, ex + dx * 0.46, ey + dy * 0.5, ez + dz * 0.46, Math.atan2(dz, dy), 0, -Math.asin(Math.max(-1, Math.min(1, dx))), 0.16, 0.42, 0.16, { grad: -0.2, glow: hot ? 1.4 : 0 });
+      }
+      if (form >= 2) { s.put('box', mg, ex + 0.2, ey + 0.1, ez + 0.5, 0.06, 0.5, 0.04, 0, 0.4, 0.6, { grad: 0, glow: gl }); s.put('box', mg, ex - 0.25, ey - 0.15, ez + 0.45, 0.06, 0.42, 0.04, 0, -0.3, -0.5, { grad: 0, glow: gl }); }
+      if (hot) for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; s.tip('cone:4', i % 2 ? G_MAGMA : G_HOT, ex + Math.cos(a) * 0.35, ey + 0.35, ez + Math.sin(a) * 0.35, 0, 0, Math.cos(a) * 0.3, 0.2, 0.6, 0.2, { grad: -0.3, glow: 2 }); }
+    }
+  }
+  s.part(null);
+  c.body = [0.04, 0.05, 0.012, 0];
+  c.h = 3.9;
+}
+BOSS[GIGA_FORMS[0].name] = c => gorgoth(c, 1);
+BOSS[GIGA_FORMS[1].name] = c => gorgoth(c, 2);
+BOSS[GIGA_FORMS[2].name] = c => gorgoth(c, 3);

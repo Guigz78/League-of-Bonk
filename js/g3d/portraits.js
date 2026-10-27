@@ -2,7 +2,7 @@
 // puis gardés en cache sous forme d'URL d'image (chaîne vide si le rendu échoue).
 import { THREE, PI } from './models-kit.js';
 import { heroModel, MonsterPool, petModel } from './models.js';
-import { ZONES, PETS } from '../data.js';
+import { ZONES, PETS, GIGA_FORMS } from '../data.js';
 
 // ---------- Contexte WebGL partagé (portraits + aperçus animés) ----------
 let R = null;
@@ -87,6 +87,7 @@ export function heroURL(clsId, _colors, evo = 0) {
 
 const DEFS = new Map();
 for (const z of ZONES) { for (const d of z.monsters) DEFS.set(d.name, d); if (z.boss) DEFS.set(z.boss.name, z.boss); }
+for (const d of GIGA_FORMS) DEFS.set(d.name, d); // giga boss (portail, bilan) : 'x-x-Gorgoth', 'x-x-Gorgoth:3'…
 // monstres / boss / familiers : seed = 'zone-index-Nom' ou 'pet-id'
 export function creatureURL(seed, body, pal, opts = {}) {
   const name = String(seed).replace(/^\d+-\d+-/, ''), boss = !!opts.boss;
