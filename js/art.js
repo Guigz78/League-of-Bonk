@@ -520,6 +520,13 @@ Object.assign(ICON, {
   shadow: [IC.violet, IC.violet, '<path d="M15.5 3.5a8.5 8.5 0 1 0 5 15.2A7 7 0 0 1 15.5 3.5z" fill="T"/><path d="M3 21l5-5M7 21l3-3M3 17l3-3" stroke="#ff4d5e"/>'],
   fury: [IC.orange, IC.orange, '<path d="M6 14a6 6 0 0 1 12 0z" fill="T"/><path d="M6.5 11.5C3.8 10.6 2.6 7.8 3.2 4.5M17.5 11.5c2.7-.9 3.9-3.7 3.3-7M5 14h14v3.5H5zM12 8v6"/>'],
 });
+// champions C2 : morsure du givre et hiver éternel (Frida), sève vivante et colère de la forêt (Gaïa)
+Object.assign(ICON, {
+  chill: [IC.cyan, IC.cyan, '<circle cx="12" cy="12" r="9" fill="T"/><path d="M12 5.5v13M6.4 8.8l11.2 6.4M6.4 15.2l11.2-6.4M10.2 6.6L12 8.2l1.8-1.6M10.2 17.4l1.8-1.6 1.8 1.6"/>'],
+  winter: [IC.cyan, IC.blue, '<path d="M12 2.5v12M6.8 5.5l10.4 6M6.8 11.5l10.4-6M10.4 3.6L12 5l1.6-1.4"/><path d="M3 21.5l3-6 3 6zM9.5 21.5l2.5-4.5 2.5 4.5zM15 21.5l3-6 3 6z" fill="T"/>'],
+  leaf: [IC.green, IC.green, '<path d="M4.5 19.5C4.5 10.5 10 4.5 19.5 4.5c0 9.5-5.5 15-15 15z" fill="T"/><path d="M4.5 19.5L14 10M8.8 15.2h4M11.3 12.7V9.2"/>'],
+  forest: [IC.green, IC.green, '<path d="M12 2.5l6 7.5h-3.2l4.2 6H5l4.2-6H6z" fill="T"/><path d="M12 16v3M7.5 21.5c1.4-1.8 2.9-2.6 4.5-2.6s3.1.8 4.5 2.6"/><path d="M2.8 14.2l2.4 1.3M21.2 14.2l-2.4 1.3M3.2 19.2l2.2-.5M20.8 19.2l-2.2-.5" stroke="#ff7ab8"/>'],
+});
 
 function svgIcon(name) {
   const [c, t, body] = ICON[name];

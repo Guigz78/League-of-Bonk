@@ -318,3 +318,24 @@ Object.assign(SFX, {
   fury: () => { kazoo(147, 0.45, 0, 0.11, 220); osc({ type: 'sine', f: 110, to: 35, d: 0.5, v: 0.26 }); noise({ d: 0.45, v: 0.2, filter: ['lowpass', 700], sweepTo: 90 }); boing(80, 0.5, 0.05, 0.07); },
 });
 Object.assign(MIN_GAP, { scythe: 0.08, dash: 0.06 });
+
+// ---------- Champions C2 : hiver éternel de Frida, colère de la forêt de Gaïa ----------
+Object.assign(SFX, {
+  // hiver éternel : bourrasque qui siffle, craquement de glace puis carillon cristallin qui descend
+  winter: () => {
+    noise({ d: 0.7, v: 0.16, filter: ['bandpass', 3200], q: 0.8, sweepTo: 700 }); whistle(2400, 900, 0.6, 0, 0.05);
+    noise({ d: 0.12, v: 0.2, filter: ['highpass', 2500], at: 0.08 }); noise({ d: 0.08, v: 0.14, filter: ['highpass', 3500], at: 0.2 });
+    [2637, 2093, 1760, 1319, 1047].forEach((f, i) => osc({ type: 'sine', f, d: 0.35, v: 0.045, at: 0.22 + i * 0.07 }));
+  },
+  // éclatement de la glace : verre qui se brise (grappe de tintements aigus et souffle)
+  shatter: () => { noise({ d: 0.3, v: 0.2, filter: ['highpass', 3000], sweepTo: 1200 }); for (let i = 0; i < 6; i++) osc({ type: 'triangle', f: r(2400, 4200), to: r(1500, 2400), d: 0.14, v: 0.035, at: i * 0.025 }); },
+  // colère de la forêt : grondement de terre qui monte, craquements de bois, accord majeur doux (soin)
+  forest: () => {
+    noise({ d: 0.6, v: 0.2, filter: ['lowpass', 500], sweepTo: 1600 }); osc({ type: 'sine', f: 55, to: 110, d: 0.5, v: 0.22 });
+    wood(260, 0.15, 0.18); wood(180, 0.28, 0.16); wood(320, 0.4, 0.12);
+    [392, 494, 587, 784].forEach((f, i) => osc({ type: 'triangle', f, d: 0.5, v: 0.04, at: 0.35 + i * 0.06, vib: 4, vibRate: 5 }));
+  },
+  // coup d'épines : petit « tchak » de ronces
+  thorns: () => { noise({ d: 0.07, v: 0.1, filter: ['bandpass', 1800], q: 3, sweepTo: 900 }); wood(r(500, 700), 0, 0.06); },
+});
+Object.assign(MIN_GAP, { thorns: 0.12, shatter: 0.2 });

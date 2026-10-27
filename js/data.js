@@ -48,6 +48,25 @@ export const CLASSES = {
     passive: { name: 'Rage', icon: 'i_enrage', desc: 'Jusqu\'à +40 % de dégâts selon les PV manquants ; PV très élevés.' },
     colors: { 1: '#7a4a2a', 2: '#553018', 3: '#b08050', a: '#3a8ae0', h: '#e0662a', s: '#ffd2b0', d: '#e8a888', c: '#8a5a32' },
   },
+  // ---- champions C2 (à débloquer : défi, clé 'cls:<id>'). Talents (js/champions-c2.js) : chill = ralentissement des
+  // ennemis touchés (run.hitEnemy), regenPct = part des PV max rendue par seconde, pickup = ramassage en plus (save.playerStats) ;
+  // wpnMul / wpnCd : dégâts et recharge de leur arme de départ (run.wstats), partagée avec les autres champions
+  cryo: {
+    id: 'cryo', name: 'Frida', role: 'Cryomancienne', locked: true,
+    desc: 'Son onde de givre fige les hordes autour d\'elle ; tout ce qu\'elle touche ralentit.',
+    hp: 115, atk: 14, crit: 0.08, speed: 1, chill: 0.2, wpnMul: 1.6, wpnCd: 0.7,
+    weapon: 'frost', ult: 'winter',
+    passive: { name: 'Morsure du givre', icon: 'chill', desc: 'Vos coups ralentissent les ennemis de 20 % (10 % les boss).' },
+    colors: { 1: '#f4f8ff', 2: '#a8c8e8', 3: '#ffffff', a: '#5ad8ff', h: '#f0f6ff', s: '#ffe2d4', d: '#ecbcae', c: '#3a7ac8' },
+  },
+  druid: {
+    id: 'druid', name: 'Gaïa', role: 'Druidesse', locked: true,
+    desc: 'Ses champignons explosent sous les pas des monstres ; la forêt la soigne sans cesse.',
+    hp: 125, atk: 13, crit: 0.08, speed: 1, regenPct: 0.008, pickup: 0.2, wpnMul: 1.4,
+    weapon: 'shrooms', ult: 'forest',
+    passive: { name: 'Sève vivante', icon: 'leaf', desc: 'Régénère 0,8 % des PV par seconde ; ramassage +20 %.' },
+    colors: { 1: '#5a8a3a', 2: '#3a6228', 3: '#9ad06a', a: '#ff7ab8', h: '#a0582a', s: '#ffd8b8', d: '#e8b090', c: '#6a4426' },
+  },
 };
 
 // Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
@@ -95,6 +114,21 @@ export const EVOLUTIONS = {
     { name: 'Ragnar Tonnerre', lvl: 19, colors: { 1: '#3a3a48', 2: '#22222e', 3: '#7a8aa8', c: '#2a2a36', a: '#5ad8ff', h: '#f07a3a' } },
     { name: 'Ragnar Fureur du Nord', lvl: 28, aura: '#ff6a1a', colors: { 1: '#5a2a14', 2: '#3a160a', 3: '#e08a3a', c: '#3a1a0c', a: '#ffb02a', h: '#ff7a1a' } },
   ],
+  // ---- champions C2 ----
+  cryo: [
+    { name: 'Frida' },
+    { name: 'Frida Flocon', lvl: 5, colors: { 2: '#94ccf4', c: '#2a8ad8', a: '#7ae8ff' } },
+    { name: 'Frida Banquise', lvl: 11, colors: { 1: '#d4eaff', 2: '#5a8ac8', c: '#1a4a9a', a: '#4ae0ff', h: '#e0f0ff' } },
+    { name: 'Frida Reine des Glaces', lvl: 19, colors: { 1: '#ffffff', 2: '#b0a4f0', 3: '#f4f0ff', c: '#6a4ad8', a: '#c0f8ff' } },
+    { name: 'Frida Hiver Éternel', lvl: 28, aura: '#5ad0ff', colors: { 1: '#eefaff', 2: '#78c4f0', c: '#2a6ad8', a: '#ffffff', h: '#bff4ff' } },
+  ],
+  druid: [
+    { name: 'Gaïa' },
+    { name: 'Gaïa Floraison', lvl: 5, colors: { 1: '#6a9a3a', 3: '#b0e47a', a: '#ff5aa8' } },
+    { name: 'Gaïa Sylvestre', lvl: 11, colors: { 1: '#3a6a3a', 2: '#28482a', 3: '#7ab85a', c: '#5a3a1e', a: '#ffc23a' } },
+    { name: 'Gaïa Gardienne des Bois', lvl: 19, colors: { 1: '#2a5a4a', 2: '#1a3a30', 3: '#5ae0a0', c: '#4a2e18', a: '#ff8ad8', h: '#e0a050' } },
+    { name: 'Gaïa Mère Nature', lvl: 28, aura: '#7aff5a', colors: { 1: '#8ae05a', 2: '#4a9a3a', 3: '#e0ffb0', c: '#8a5a2a', a: '#ff9ad8', h: '#d8ff8a' } },
+  ],
 };
 
 // Bénédictions des autels (pendant la partie)
@@ -118,6 +152,9 @@ export const ULTS = {
   bloodfeast:  { name: 'Festin de sang', icon: 'feast', desc: 'Draine tous les ennemis à l\'écran et vous soigne.' },
   shadowdance: { name: 'Danse des ombres', icon: 'shadow', desc: 'Intouchable 2,5 s : vous foncez de cible en cible en tranchant.' },
   fury:        { name: 'Fureur', icon: 'fury', desc: '6 s d\'attaques 60 % plus rapides et une onde de choc au sol.' },
+  // ---- champions C2 (js/champions-c2.js) ----
+  winter:      { name: 'Hiver éternel', icon: 'winter', desc: 'Gèle tout l\'écran 3 s et inflige des dégâts, puis la glace vole en éclats.' },
+  forest:      { name: 'Colère de la forêt', icon: 'forest', desc: 'Soin de 30 % ; des racines immobilisent les ennemis et des épines vous entourent 5 s.' },
 };
 
 // Armes (attaques automatiques). lv = description de chaque niveau (1 à 5).
@@ -605,6 +642,9 @@ export const UNLOCK_CHALLENGES = [
   { id: 'assassin', cat: 'champions', need: 'assassin', icon: 'dodge', name: 'L\'ombre de la rivière', txt: 'Battez la Rivière Scintillante en Difficile', n: 1, prog: s => ((s.diffCleared?.[2] || 0) >= 2 ? 1 : 0), rw: { key: 'cls:assassin', gold: 200 } },
   // Ragnar, le berserker du Nord : il attend aux Pics Gelés (monde 4, vers le jour 4 au rythme visé)
   { id: 'berserker', cat: 'champions', need: 'berserker', icon: 'i_enrage', name: 'L\'appel du Nord', txt: 'Battez le boss des Pics Gelés', n: 1, prog: s => (s.zoneCleared?.[3] ? 1 : 0), rw: { key: 'cls:berserker', gold: 200 } },
+  // Frida : la Nova de givre (débloquée par « Au cœur de la jungle ») ; Gaïa : la Jungle Grondante en Difficile
+  { id: 'cryo', cat: 'champions', need: 'cryo', icon: 'frost', name: 'Cœur de glace', txt: 'Battez 2 500 monstres avec la Nova de givre', n: 2500, prog: wk_('frost'), rw: { key: 'cls:cryo', gold: 200 } },
+  { id: 'druid', cat: 'champions', need: 'druid', icon: 'leaf', name: 'L\'appel de la forêt', txt: 'Battez la Jungle Grondante en Difficile', n: 1, prog: s => ((s.diffCleared?.[1] || 0) >= 2 ? 1 : 0), rw: { key: 'cls:druid', gold: 200 } },
   { id: 'mastery10', cat: 'champions', icon: 'medal', name: 'Disciple', txt: 'Atteignez le niveau 7 avec un champion', n: 7, prog: s => Math.max(1, ...Object.values(s.mastery || {}).map(x => masteryOf(x).lv)), rw: { key: 'title:disciple', chest: 2 } },
   { id: 'mastery20', cat: 'champions', icon: 'medal', name: 'Grand maître', txt: 'Atteignez le niveau 10 avec 3 champions', n: 3, prog: s => Object.values(s.mastery || {}).filter(x => masteryOf(x).lv >= MASTERY.max).length, rw: { key: 'aura:white', chest: 3 } },
   // ---- exploits ----
@@ -680,7 +720,7 @@ export const MASTERY = { max: 10, need: [200, 175], per: 0.015, star: 1800, star
     10: { name: 'Légende', icon: 'medal', desc: 'Cadre doré et arme de départ au niveau 2', weapon: 1 },
   },
   starCycle: [{ gold: 0.02, txt: '+2 % d\'or' }, { xp: 0.02, txt: '+2 % d\'expérience' }, { magnet: 0.03, txt: '+3 % de ramassage' }, { speed: 0.01, txt: '+1 % de vitesse' }],
-  aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff', berserker: '#ff2a1a' } };
+  aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff', berserker: '#ff2a1a', cryo: '#7ad0ff', druid: '#8aff4a' } };
 export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * (lv - 1);
 // niveau d'un total d'XP : { lv, cur (XP dans le niveau ou vers la prochaine étoile), next (XP à atteindre), stars }
 export function masteryOf(xp) {

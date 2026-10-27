@@ -19,6 +19,7 @@ import { createGfx } from './visuals.js';
 import { sfx, buzz, music, stopMusic, duckMusic } from './audio.js';
 import { mount, $, esc, fmt } from './ui.js';
 import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
+import { C2, isUltC2 } from './champions-c2.js'; // champions C2 (Frida, Gaïa) : ultimes, passifs, effets en cours
 
 const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
@@ -527,8 +528,8 @@ export class Run {
   // (dmg = dégâts par coup avant critique, cd = recharge en s, n = nombre de projectiles, R = taille…)
   // x = l'arme elle-même ({ rb : bonus de rareté, evo : évoluée }) quand on la connaît
   wstats(id, lv, p = this.p, x = null) {
-    // wpnMul : bonus du champion sur sa propre arme de départ quand elle est partagée (dagues de Sora)
-    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1) * (id === this.cls.weapon && this.cls.wpnMul || 1), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+    // wpnMul / wpnCd : bonus du champion sur sa propre arme de départ quand elle est partagée (dagues de Sora, givre de Frida…)
+    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1) * (id === this.cls.weapon && this.cls.wpnMul || 1), ar = p.area, h = p.haste * (id === this.cls.weapon && this.cls.wpnCd || 1), L = k => (lv >= k ? 1 : 0);
     if (x?.evo) switch (id) { // armes évoluées : bien plus fortes, et un comportement à part (updateWeapons)
       case 'beam': return { dmg: A * 1.9 * 1.3 * 1.4 * 1.5, cd: 0.75 * h, n: 4, w: 44 * ar, len: 430 * ar };
       case 'arrows': return { dmg: A * 1.3 * 1.5, cd: 0.36 * h, n: 7, pierce: 4, big: A * 6 };
@@ -820,6 +821,7 @@ export class Run {
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
     this.updateHeal(dt);
     if (this.c1d || this.c1f) this.tickC1(dt); // champions C1 : danse des ombres, fureur en cours
+    if (this.c2w || this.c2t || this.cls.regenPct) this.tickC2(dt); // champions C2 : sève de Gaïa, hiver éternel, épines
 
     this.spawn(dt);
     this.grid.clear();
@@ -1098,7 +1100,7 @@ export class Run {
       if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
       const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
       const fury = e.rage && e.hp < e.maxHp * 0.5 ? 1.3 : 1;
-      const sp = e.speed * fury * (e.slow ? 0.5 : 1) * (e.freeze ? 0 : 1);
+      const sp = e.speed * fury * (e.slow ? 0.5 : e.chillT > this.runTime ? e.chillK : 1) * (e.freeze ? 0 : 1); // chill : Morsure du givre (Frida)
       if (e.boss) this.bossAI(e, dt, nx, ny, d, sp);
       else if (e.freeze) { mv.x = 0; mv.y = 0; }
       else this.enemyAI(e, dt, nx, ny, d, sp);
@@ -2014,6 +2016,7 @@ export class Run {
     const p = this.p, L = this.leg, raw = dmg >= 1e6; // raw : balayages (mort du boss, résurrection), sans effets
     if (!raw && L.fury && p.hp < p.maxHp * 0.4) dmg *= 1 + 0.3 * L.fury; // Furie : +30 % sous 40 % de PV
     if (!raw && this.cls.rage) dmg *= this.rageMul(); // Rage de Ragnar : jusqu'à +40 % selon les PV manquants
+    if (!raw && this.cls.chill) this.chillC2(e); // Morsure du givre de Frida : l'ennemi touché ralentit
     const crit = !o.noCrit && Math.random() < p.crit;
     const d = Math.max(1, Math.round(dmg * (crit ? p.critMul : 1) * rand(0.92, 1.08)));
     if (!raw) { // vol de vie : une part des dégâts réellement infligés
@@ -2484,6 +2487,7 @@ export class Run {
     const A = p.atk * p.dmgMul * (1 + p.evo * 0.3);
     this.ultFlash = 0.5;
     if (isUltC1(this.cls.ult)) this.ultC1(A); // champions C1 : festin de sang, danse des ombres, fureur
+    else if (isUltC2(this.cls.ult)) this.ultC2(A); // champions C2 : hiver éternel, colère de la forêt
     else if (this.cls.ult === 'nova') {
       const R = 300 * p.area;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.6, max: 0.6, color: '#ffd54a' });
@@ -2627,3 +2631,5 @@ export class Run {
 }
 // champions C1 (Nyx, Sora, Ragnar) : ultimes et effets en cours (js/champions-c1.js)
 Object.assign(Run.prototype, C1);
+// champions C2 (Frida, Gaïa) : ultimes, passifs et effets en cours (js/champions-c2.js)
+Object.assign(Run.prototype, C2);

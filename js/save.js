@@ -209,7 +209,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 // speed, magnet et gold sont des multiplicateurs (1 = normal) ; les autres bonus valent 0 par défaut.
 export function playerStats(clsId = save.cls) {
   const c = CLASSES[clsId];
-  const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: 0, speed: c.speed, magnet: 1, gold: 1,
+  const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: 0, speed: c.speed, magnet: 1 + (c.pickup || 0), gold: 1, // pickup : talent de Gaïa
     critDmg: 0, lifesteal: 0, haste: 0, area: 0, armor: 0, thorns: 0, dodge: 0, xp: 0, ult: 0, effects: [] };
   for (const [k, lvl] of Object.entries(save.upgrades)) {
     const per = UPGRADES[k]?.per;
