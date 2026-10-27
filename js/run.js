@@ -522,7 +522,8 @@ export class Run {
   // (dmg = dégâts par coup avant critique, cd = recharge en s, n = nombre de projectiles, R = taille…)
   // x = l'arme elle-même ({ rb : bonus de rareté, evo : évoluée }) quand on la connaît
   wstats(id, lv, p = this.p, x = null) {
-    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
+    // wpnMul : bonus du champion sur sa propre arme de départ quand elle est partagée (dagues de Sora)
+    const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1) * (id === this.cls.weapon && this.cls.wpnMul || 1), ar = p.area, h = p.haste, L = k => (lv >= k ? 1 : 0);
     if (x?.evo) switch (id) { // armes évoluées : bien plus fortes, et un comportement à part (updateWeapons)
       case 'beam': return { dmg: A * 1.9 * 1.3 * 1.4 * 1.5, cd: 0.75 * h, n: 4, w: 44 * ar, len: 430 * ar };
       case 'arrows': return { dmg: A * 1.3 * 1.5, cd: 0.36 * h, n: 7, pierce: 4, big: A * 6 };
