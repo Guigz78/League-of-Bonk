@@ -1817,3 +1817,7 @@ button.itile:active { transform: translateY(1px); }
 .new-champ small { font: 700 12px var(--fd); letter-spacing: .2em; text-transform: uppercase; color: var(--cy); }
 .season-end .ss-lv { width: 72px; height: 72px; margin-bottom: 6px; }
 .season-end .ss-lv b { font-size: 32px; }
+
+/* ===== Niveaux des champions (1–10, étoiles) et améliorations infinies ===== */
+.ms-stars { font-style: normal; margin-left: 6px; padding: 1px 6px; font: 700 12px/1.3 var(--fd); color: var(--acc-ink); background: var(--acc); letter-spacing: .04em; }
+.inf-tag { display: inline-block; vertical-align: 0; font-style: normal; margin-left: 4px; padding: 0 4px; font: 700 12px/1.1 var(--fd); color: var(--cy); box-shadow: inset 0 0 0 1px rgba(63,208,255,.45); }

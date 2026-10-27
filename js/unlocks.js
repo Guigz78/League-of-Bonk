@@ -26,7 +26,7 @@ export const unlockedBoostIds = () => Object.keys(BOOSTS).filter(id => isFree('b
 export function auraDef(id) {
   if (AURAS[id]) return AURAS[id];
   const c = typeof id === 'string' && id.startsWith('m_') ? CLASSES[id.slice(2)] : null;
-  return c ? { name: `Maîtrise de ${c.name}`, color: MASTERY.aura[c.id] || '#ffd54a' } : null;
+  return c ? { name: `Aura de ${c.name}`, color: MASTERY.aura[c.id] || '#ffd54a' } : null;
 }
 // titres des défis et de la maîtrise (« Âme de Lumi ») : la Saison (L1) peut les lister
 export const l2Titles = () => ({ ...UNLOCK_TITLES, ...Object.fromEntries(Object.values(CLASSES).map(c => ['m_' + c.id, `Âme de ${c.name}`])) });
@@ -88,11 +88,11 @@ export function checkChallenges() {
     if (c.rw.chest != null) s.pendingChests.push(chestFor(c.rw.chest));
     got.push({ c, keys: ks });
   }
-  // paliers de maîtrise : aura (5) et titre (10) du champion
+  // paliers du niveau du champion : aura (niveau 3) et titre (niveau 7)
   for (const [cls, xp] of Object.entries(s.mastery || {})) {
     const lv = masteryOf(xp).lv;
-    if (lv >= MASTERY.miles[0]) K['aura:m_' + cls] = true;
-    if (lv >= MASTERY.miles[1]) K['title:m_' + cls] = true;
+    if (lv >= MASTERY.at.aura) K['aura:m_' + cls] = true;
+    if (lv >= MASTERY.at.title) K['title:m_' + cls] = true;
   }
   if (got.length) persist();
   return got;
@@ -212,7 +212,7 @@ export function auraPicker(cls) {
 // touche une aura : choisie si débloquée, sinon on dit comment l'obtenir
 export function pickAura(cls, id) {
   if (id && !unlocked('aura:' + id)) {
-    const m = id.startsWith('m_') ? `Atteignez la maîtrise ${MASTERY.miles[0]} avec ${CLASSES[id.slice(2)]?.name || 'ce champion'}` : lockLine('aura:' + id);
+    const m = id.startsWith('m_') ? `Atteignez le niveau ${MASTERY.at.aura} avec ${CLASSES[id.slice(2)]?.name || 'ce champion'}` : lockLine('aura:' + id);
     toast(`${iconImg('lock', 16)} ${esc(m)}`, 3000);
     return false;
   }
