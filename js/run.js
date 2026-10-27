@@ -36,7 +36,7 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // z* : renfort par zone (monde 1 à 6) ; st* : renfort par monde déjà traversé dans la partie ;
 // carry* : renfort selon le temps total de la partie (s)
 // WMUL : multiplicateur de dégâts par arme (équilibrage des classes : chaque champion commence avec la sienne)
-export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25, scythe: 1.2 };
+export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25, scythe: 1.1 };
 // hp / dmg : PV et dégâts de tous les monstres (compensent la puissance des évolutions d'armes, raretés et combos)
 export const BAL = { comboXp: 0.1, hp: 1.3, dmg: 1.12, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;

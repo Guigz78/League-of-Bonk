@@ -43,7 +43,7 @@ export const CLASSES = {
   berserker: {
     id: 'berserker', name: 'Ragnar', role: 'Berserker', locked: true,
     desc: 'Increvable et furieux : plus il est blessé, plus sa hache frappe fort.',
-    hp: 165, atk: 12, crit: 0.06, speed: 0.97, rage: 0.4,
+    hp: 152, atk: 12, crit: 0.06, speed: 0.97, rage: 0.4,
     weapon: 'boomerang', ult: 'fury',
     passive: { name: 'Rage', icon: 'i_enrage', desc: 'Jusqu\'à +40 % de dégâts selon les PV manquants ; PV très élevés.' },
     colors: { 1: '#7a4a2a', 2: '#553018', 3: '#b08050', a: '#3a8ae0', h: '#e0662a', s: '#ffd2b0', d: '#e8a888', c: '#8a5a32' },
