@@ -604,11 +604,25 @@ export const ABYSS_CURSES = [
 // × (1 + abyss × palier). Niveaux 1 à 10 : niveau L → L + 1 coûte need[0] + need[1] × (L − 1) XP (8 100 XP pour le niveau
 // 10, ≈ 30 parties). Chaque niveau au-delà du 1er : +1,5 % de dégâts et de PV (+13,5 % au niveau 10). Ensuite, à l'infini :
 // une étoile toutes les star XP (≈ 6 parties), +0,5 % de dégâts et de PV chacune, sans plafond.
-// Paliers (at) : 3 aura du champion, 5 une relance de plus par partie, 7 titre « Âme de <champion> », 10 cadre doré et
-// arme de départ au niveau 2. Ancien barème (30 niveaux, plafond +10 %) : l'XP déjà gagnée est gardée telle quelle.
+// Chaque niveau du 2 au 10 donne en plus un bonus spécial (perks, cumulés, appliqués par playerStats et run.js) ; chaque
+// étoile ajoute aussi un petit bonus tournant (starCycle : or, expérience, ramassage, vitesse). at = paliers lus ailleurs
+// (aura et titre : unlocks.js). Ancien barème (30 niveaux, plafond +10 %) : l'XP déjà gagnée est gardée telle quelle.
 export const MASTERY = { max: 10, need: [200, 175], per: 0.015, star: 1800, starPer: 0.005,
   kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
-  at: { aura: 3, reroll: 5, title: 7, gold: 10 }, miles: [3, 5, 7, 10],
+  at: { aura: 3, reroll: 5, title: 7, gold: 10 }, miles: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+  // bonus spéciaux des niveaux ({c} = nom du champion)
+  perks: {
+    2: { name: 'Pas léger', icon: 'arrow', desc: '+5 % de vitesse de course', speed: 0.05 },
+    3: { name: 'Aura du champion', icon: 'aura', desc: 'Aura de {c} et +15 % de rayon de ramassage', magnet: 0.15 },
+    4: { name: 'Bourse pleine', icon: 'gold', desc: '+10 % d\'or gagné', gold: 0.1 },
+    5: { name: 'Seconde chance', icon: 'reroll', desc: 'Une relance de plus par partie', reroll: 1 },
+    6: { name: 'Garde', icon: 'shield', desc: 'Un bouclier bloque le premier coup de chaque monde', shield: 1 },
+    7: { name: 'Âme du champion', icon: 'flag', desc: 'Titre « Âme de {c} » et ultime chargé à moitié au départ', ult: 50 },
+    8: { name: 'Savoir', icon: 'tome', desc: '+10 % d\'expérience en partie', xp: 0.1 },
+    9: { name: 'Chasseur de trésors', icon: 'chest', desc: 'Coffres de butin de meilleure qualité', loot: 0.1 },
+    10: { name: 'Légende', icon: 'medal', desc: 'Cadre doré et arme de départ au niveau 2', weapon: 1 },
+  },
+  starCycle: [{ gold: 0.02, txt: '+2 % d\'or' }, { xp: 0.02, txt: '+2 % d\'expérience' }, { magnet: 0.03, txt: '+3 % de ramassage' }, { speed: 0.01, txt: '+1 % de vitesse' }],
   aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff' } };
 export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * (lv - 1);
 // niveau d'un total d'XP : { lv, cur (XP dans le niveau ou vers la prochaine étoile), next (XP à atteindre), stars }
@@ -618,6 +632,15 @@ export function masteryOf(xp) {
   if (lv < MASTERY.max) return { lv, cur: Math.floor(x), next: masteryNeed(lv), stars: 0 };
   const stars = Math.floor(x / MASTERY.star);
   return { lv, cur: Math.floor(x - stars * MASTERY.star), next: MASTERY.star, stars };
+}
+// bonus spéciaux cumulés d'un niveau et d'un nombre d'étoiles (vitesse, ramassage, or, XP : multiplicateurs en plus ;
+// relance, bouclier par monde, charge de l'ultime au départ, chance des coffres, arme de départ niveau 2)
+export function masteryPerks(lv, stars = 0) {
+  const o = { speed: 0, magnet: 0, gold: 0, xp: 0, reroll: 0, shield: 0, ult: 0, loot: 0, weapon: 0 }, C = MASTERY.starCycle;
+  for (const [l, P] of Object.entries(MASTERY.perks)) if (lv >= +l) for (const k in o) o[k] += P[k] || 0;
+  const n = Math.max(0, stars | 0);
+  C.forEach((S, i) => { const times = Math.floor(n / C.length) + (i < n % C.length ? 1 : 0); for (const k in o) o[k] += (S[k] || 0) * times; });
+  return o;
 }
 // bonus permanents : +1,5 % de dégâts et de PV par niveau au-delà du 1er, +0,5 % par étoile (sans plafond)
 export const masteryBonus = (lv, stars = 0) => {

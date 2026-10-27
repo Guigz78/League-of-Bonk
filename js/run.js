@@ -9,7 +9,7 @@
 // L2 : armes et tomes verrouillés jamais proposés (unlocks.js), paliers d'Abysse (difficulté effective de abyss.js et
 // malédictions : this.curse), suivi de la partie this.track (contrat L1/L2/L3, passé à onEnd dans sum.track).
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES, MAX_LEVEL, EVOLUTIONS, BOONS, DIFFICULTIES, ELITE_MODS, HALF, TOTEMS, LOOT_TIERS, BOOSTS, AFFIXES, LEGEND_EFFECTS,
-  WEAPON_EVOS, LEVEL_RARITY, WEAPON_RARITY_DMG, REROLLS, SKIPS, COMBO_WINDOW, COMBO_STEPS, MASTERY, masteryOf } from './data.js';
+  WEAPON_EVOS, LEVEL_RARITY, WEAPON_RARITY_DMG, REROLLS, SKIPS, COMBO_WINDOW, COMBO_STEPS, MASTERY, masteryOf, masteryPerks } from './data.js';
 import { save, playerStats } from './save.js';
 import { canPickWeapon, canPickTome } from './unlocks.js';
 import { runDiff, curseList, abyssName } from './abyss.js';
@@ -156,13 +156,15 @@ export class Run {
     };
     // rareté des cartes : chance (trèfle, fortune de l'équipement, totem maudit) ; relances et « passer »
     this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
-    const clv = masteryOf(save.mastery?.[this.cls.id]).lv; // niveau du champion (1 à 10)
-    this.rerolls = REROLLS + (clv >= MASTERY.at.reroll ? 1 : 0); this.skips = SKIPS; // niveau 5 : une relance de plus
+    const cml = masteryOf(save.mastery?.[this.cls.id]); // niveau du champion (1 à 10) et étoiles : bonus spéciaux
+    this.perk = masteryPerks(cml.lv, cml.stars);
+    this.rerolls = REROLLS + this.perk.reroll; this.skips = SKIPS; // niveau 5 : une relance de plus
+    this.p.ult = this.perk.ult; this.p.shieldHit = this.perk.shield ? 1 : 0; // niveau 7 : ultime à moitié ; niveau 6 : garde
     this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
     this.lsShown = 0; this.lsT = 0; this.lsEvT = 0; this.lsGlow = 0; // vol de vie : soin à afficher, orbes (au plus ~8/s), barre de PV
     this.lsX = 0;             // vol de vie des armes évoluées qui soignent (relève le plafond de soin par seconde)
     this.addWeapon(this.cls.weapon);
-    if (clv >= MASTERY.at.gold) this.addWeapon(this.cls.weapon); // niveau 10 : arme de départ au niveau 2
+    if (this.perk.weapon) this.addWeapon(this.cls.weapon); // niveau 10 : arme de départ au niveau 2
     this.recalc();
     this.grid = new Grid(64);
     this.kills = 0; this.gold = 0;
@@ -183,7 +185,7 @@ export class Run {
     this.events = []; // événements pour le rendu (coups, morts, sauts...), vidés à chaque image par gfx
     // expédition : monde courant dans la partie, temps total, mondes nettoyés, butin, totems activés
     this.stage = 0; this.runTime = 0; this.cleared = []; this.loot = []; this.heat = 0;
-    this.lootLuck = 0;        // chance d'améliorer le rang de chaque coffre de butin (totem maudit)
+    this.lootLuck = this.perk.loot; // chance d'améliorer le rang de chaque coffre de butin (totem maudit, niveau 9 du champion)
     this.runHp = 1;           // PV des monstres pour le reste de la partie (totem maudit)
     // suivi de la partie (contrat run.track) : lu à la fin par les défis, la maîtrise (L2) et la Saison (L1).
     // worlds = mondes vaincus (boss tués), maxWorld = dernier monde atteint, chests = coffres de butin ramassés,
@@ -203,6 +205,7 @@ export class Run {
   // (re)met en place le monde courant : au départ et à chaque passage de portail
   setupWorld() {
     const z = this.zone, D = this.diff;
+    if (this.perk?.shield && this.p) this.p.shieldHit = 1; // niveau 6 du champion : la garde revient à chaque monde
     this.duration = Math.round(ZONE_TIME[z.id] * (this.curse.has('short') ? 0.8 : 1)); // Abysse : chrono court
     this.time = 0;
     this.enemies = []; this.shots = []; this.eshots = []; this.fx = []; this.pickups = []; this.texts = []; this.mines = []; this.parts = []; this.waves = [];
