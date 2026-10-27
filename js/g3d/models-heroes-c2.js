@@ -97,12 +97,13 @@ function buildCryo(sh, C, evo, K) {
   } else {
     // cheveux blancs : frange de côté, mèches le long des joues, nappe dans le dos
     H.put('rbox:0.4', hair, 0, 2.0, -0.06, 1.02, 0.52, 0.98, 0, 0, 0, { grad: 0.15 });
+    for (const [x, z, r] of [[-0.28, 0.0, 0.45], [0.02, 0.1, 0.05], [0.3, -0.02, -0.45], [0, -0.3, 0]]) H.put('cone:4', shade(hair, -0.06), x, 2.2, z, 0.36, 0.42, 0.24, 1.75, 0, r, { grad: 0.15 }); // mèches du dessus
     H.put('rbox:0.4', hair, -0.16, 2.04, 0.39, 0.6, 0.22, 0.14, 0.25, 0, 0.3, { grad: 0 });
     H.put('rbox:0.4', hair, 0.26, 2.06, 0.38, 0.4, 0.18, 0.12, 0.2, 0, -0.28, { grad: 0 });
     H.sym('rbox:0.4', hair, 0.45, 1.6, 0.08, 0.16, 0.66, 0.26, 0, 0, 0.05, { grad: 0.12 });
     HR.put('rbox:0.4', hair, 0, 1.5, -0.42, 0.84, 0.96, 0.2, 0.06, 0, 0, { grad: 0.18 });
     // diadème de cristaux (plus grand à chaque stade), couronne de glace pour la reine
-    const band = queen ? light : shade(cry, 0.35);
+    const band = queen ? light : trim;
     H.put('tor:0.1:4:14', band, 0, 2.15, -0.02, 1.0, 1.0, 0.98, PI / 2 - 0.12, 0, 0, { grad: 0, glow: 0.2 });
     const n = queen ? 7 : evo >= 1 ? 5 : 3, big = 1 + evo * 0.25;
     for (let i = 0; i < n; i++) {
