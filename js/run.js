@@ -1909,7 +1909,7 @@ export class Run {
           w.t = S.cd;
           const base = Math.atan2(tg.y - p.y, tg.x - p.x), full = S.arc >= TAU - 0.01, nf = Math.ceil(S.arc / 2.6);
           // croissants cramoisis (effet 'slash' recoloré) ; le dernier vise la cible (élan du héros)
-          for (let i = nf - 1; i >= 0; i--) this.fx.push({ type: 'slash', x: p.x, y: p.y, a: base + (full ? i * TAU / nf : (i - (nf - 1) / 2) * S.arc / nf), r: R, life: 0.26, max: 0.26, c1: E ? '#ff5a70' : '#ff2a48', c2: E ? '#ffd0d8' : '#7a0a22', c3: '#ff1a3a', evo: E });
+          for (let i = nf - 1; i >= 0; i--) this.fx.push({ type: 'slash', x: p.x, y: p.y, a: base + (full ? i * TAU / nf : (i - (nf - 1) / 2) * S.arc / nf), r: R, life: 0.3, max: 0.3, c1: E ? '#ff6a80' : '#ff3a58', c2: E ? '#ffd0d8' : '#a8102e', c3: '#d8102e', evo: E });
           for (const e of this.grid.query(p.x, p.y, R + 40)) {
             const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
             if (d > R + e.r) continue;

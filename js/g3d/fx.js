@@ -494,7 +494,7 @@ export class Fx {
         const ev = f.c1 ? f.evo : EW.sword, sweep = Math.min(1, k * 2.2), a0 = f.a - 1.3, R = f.r, al = 1 - k;
         this.ra.ring(f.x * S, 0.9, f.y * S, R * S, col(f.c1 || (ev ? '#ffc04a' : '#ffe9a8')), al * 0.95, 0, ev ? 0.5 : 0.42, 2.6 * sweep / TAU, a0, 0, 0, 0.9);
         this.ra.ring(f.x * S, 0.92, f.y * S, R * 1.08 * S, col(f.c2 || (ev ? '#ff7a2a' : '#9ad8ff')), al * 0.7, 0, 0.12, 2.6 * sweep / TAU, a0, 0, 0, 0.3);
-        this.rg.ring(f.x * S, 0.07, f.y * S, R * S, col(f.c3 || (ev ? '#ffd54a' : '#ffffff')), al * (ev ? 0.35 : 0.25), 0, 0.4, 2.6 * sweep / TAU, a0, 0, 0, 0);
+        this.rg.ring(f.x * S, 0.07, f.y * S, R * S, col(f.c3 || (ev ? '#ffd54a' : '#ffffff')), al * (f.c3 ? 0.5 : ev ? 0.35 : 0.25), 0, 0.4, 2.6 * sweep / TAU, a0, 0, 0, 0);
         if (!f.g_sp) {
           f.g_sp = 1;
           for (let i = 0; i < (ev ? 8 : 5); i++) { const an = a0 + Math.random() * 2.6; this.sparks.push({ x: f.x + Math.cos(an) * R * 0.9, y: f.y + Math.sin(an) * R * 0.9, z: 18, vx: Math.cos(an) * 160, vy: Math.sin(an) * 160, vz: 60, life: 0.25, max: 0.25, c: f.c1 || (ev ? '#ffb02a' : '#ffe48a'), w: 2.4 }); }
