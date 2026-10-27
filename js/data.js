@@ -57,7 +57,7 @@ export const CLASSES = {
     hp: 115, atk: 14, crit: 0.08, speed: 1, chill: 0.2, wpnMul: 1.6, wpnCd: 0.7,
     weapon: 'frost', ult: 'winter',
     passive: { name: 'Morsure du givre', icon: 'chill', desc: 'Vos coups ralentissent les ennemis de 20 % (10 % les boss).' },
-    colors: { 1: '#f4f8ff', 2: '#a8c8e8', 3: '#ffffff', a: '#5ad8ff', h: '#f0f6ff', s: '#ffe2d4', d: '#ecbcae', c: '#3a7ac8' },
+    colors: { 1: '#cce4f8', 2: '#78aee0', 3: '#ffffff', a: '#5ad8ff', h: '#f4f8ff', s: '#ffe2d4', d: '#ecbcae', c: '#2a5ab8' },
   },
   druid: {
     id: 'druid', name: 'Gaïa', role: 'Druidesse', locked: true,
@@ -117,10 +117,10 @@ export const EVOLUTIONS = {
   // ---- champions C2 ----
   cryo: [
     { name: 'Frida' },
-    { name: 'Frida Flocon', lvl: 5, colors: { 2: '#94ccf4', c: '#2a8ad8', a: '#7ae8ff' } },
-    { name: 'Frida Banquise', lvl: 11, colors: { 1: '#d4eaff', 2: '#5a8ac8', c: '#1a4a9a', a: '#4ae0ff', h: '#e0f0ff' } },
-    { name: 'Frida Reine des Glaces', lvl: 19, colors: { 1: '#ffffff', 2: '#b0a4f0', 3: '#f4f0ff', c: '#6a4ad8', a: '#c0f8ff' } },
-    { name: 'Frida Hiver Éternel', lvl: 28, aura: '#5ad0ff', colors: { 1: '#eefaff', 2: '#78c4f0', c: '#2a6ad8', a: '#ffffff', h: '#bff4ff' } },
+    { name: 'Frida Flocon', lvl: 5, colors: { 1: '#d8f0ff', 2: '#88c6f0', c: '#2a84d8', a: '#7ae8ff' } },
+    { name: 'Frida Banquise', lvl: 11, colors: { 1: '#a6cef0', 2: '#4a78c0', c: '#1a3a8a', a: '#4ae0ff', h: '#e0f0ff' } },
+    { name: 'Frida Reine des Glaces', lvl: 19, colors: { 1: '#e6e2ff', 2: '#9a8ae8', 3: '#f4f0ff', c: '#5a3ac8', a: '#c0f8ff' } },
+    { name: 'Frida Hiver Éternel', lvl: 28, aura: '#5ad0ff', colors: { 1: '#e8f8ff', 2: '#6ab8f0', c: '#2a6ad8', a: '#ffffff', h: '#bff4ff' } },
   ],
   druid: [
     { name: 'Gaïa' },
