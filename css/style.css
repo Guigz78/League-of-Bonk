@@ -1886,7 +1886,7 @@ button.itile:active { transform: translateY(1px); }
 .pm-giga img { position: relative; width: 124px; height: 124px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.6)); }
 .pm-giga em { position: absolute; right: 2px; bottom: 6px; padding: 3px 6px 2px; font: 700 10px/1 var(--fd); font-style: normal; letter-spacing: .14em; color: #002611; background: var(--green); }
 /* bilan : bloc de victoire de l'expédition */
-.giga-res { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px; overflow: hidden; background: linear-gradient(120deg, rgba(70,26,6,.95), rgba(24,10,6,.95)); border: 1px solid rgba(255,180,60,.55);
+.giga-res { flex: none; position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px; overflow: hidden; background: linear-gradient(120deg, rgba(70,26,6,.95), rgba(24,10,6,.95)); border: 1px solid rgba(255,180,60,.55);
   box-shadow: 0 0 30px rgba(255,120,30,.22); animation: fadeUp .35s .1s var(--ease) both; }
 .giga-res::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 26%; background: linear-gradient(100deg, transparent, rgba(255,230,160,.16), transparent); animation: sheen 3.2s 1s ease-in-out infinite; }
 .giga-res > * { position: relative; }
