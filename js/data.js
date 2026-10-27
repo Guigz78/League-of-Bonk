@@ -167,7 +167,7 @@ export const WEAPON_EVOS = {
   frost:     { tome: 'boots',  name: 'Blizzard éternel', icon: 'frost',    desc: 'Onde de givre géante et fréquente qui gèle tout.' },
   daggers:   { tome: 'vamp',   name: 'Mille lames',      icon: 'volley',   desc: '16 dagues rapides qui transpercent tout et volent la vie (+6 % par coup).' },
   snowball:  { tome: 'power',  name: 'Avalanche',        icon: 'heart',    desc: '5 énormes boules qui gèlent les ennemis touchés.' },
-  scythe:    { tome: 'vamp',   name: 'Moisson écarlate', icon: 'scythe',   desc: 'Double faux qui fauche tout autour, très loin, et vole la vie (+6 % par coup).' },
+  scythe:    { tome: 'vamp',   name: 'Moisson écarlate', icon: 'scythe',   desc: 'Faux géante qui fauche tout autour, très loin, et vole la vie (+6 % par coup).' },
 };
 // Rareté des cartes d'amélioration (index = rarity de la carte, couleurs : RARITY[RARITIES[i]]).
 // mult = force de l'effet (tome +15 % -> +22 % -> +30 % -> +40 %) ; w = poids de base du tirage ; luck = gain de poids par point de chance.
