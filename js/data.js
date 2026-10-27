@@ -118,15 +118,15 @@ export const EVOLUTIONS = {
   cryo: [
     { name: 'Frida' },
     { name: 'Frida Flocon', lvl: 5, colors: { 1: '#d8f0ff', 2: '#88c6f0', c: '#2a84d8', a: '#7ae8ff' } },
-    { name: 'Frida Banquise', lvl: 11, colors: { 1: '#a6cef0', 2: '#4a78c0', c: '#1a3a8a', a: '#4ae0ff', h: '#e0f0ff' } },
+    { name: 'Frida Glacier', lvl: 11, colors: { 1: '#a6cef0', 2: '#4a78c0', c: '#1a3a8a', a: '#4ae0ff', h: '#e0f0ff' } },
     { name: 'Frida Reine des Glaces', lvl: 19, colors: { 1: '#e6e2ff', 2: '#9a8ae8', 3: '#f4f0ff', c: '#5a3ac8', a: '#c0f8ff' } },
     { name: 'Frida Hiver Éternel', lvl: 28, aura: '#5ad0ff', colors: { 1: '#e8f8ff', 2: '#6ab8f0', c: '#2a6ad8', a: '#ffffff', h: '#bff4ff' } },
   ],
   druid: [
     { name: 'Gaïa' },
-    { name: 'Gaïa Floraison', lvl: 5, colors: { 1: '#6a9a3a', 3: '#b0e47a', a: '#ff5aa8' } },
-    { name: 'Gaïa Sylvestre', lvl: 11, colors: { 1: '#3a6a3a', 2: '#28482a', 3: '#7ab85a', c: '#5a3a1e', a: '#ffc23a' } },
-    { name: 'Gaïa Gardienne des Bois', lvl: 19, colors: { 1: '#2a5a4a', 2: '#1a3a30', 3: '#5ae0a0', c: '#4a2e18', a: '#ff8ad8', h: '#e0a050' } },
+    { name: 'Gaïa Fleurie', lvl: 5, colors: { 1: '#6a9a3a', 3: '#b0e47a', a: '#ff5aa8' } },
+    { name: 'Gaïa Écorce', lvl: 11, colors: { 1: '#3a6a3a', 2: '#28482a', 3: '#7ab85a', c: '#5a3a1e', a: '#ffc23a' } },
+    { name: 'Gaïa Cerf Doré', lvl: 19, colors: { 1: '#2a5a4a', 2: '#1a3a30', 3: '#5ae0a0', c: '#4a2e18', a: '#ff8ad8', h: '#e0a050' } },
     { name: 'Gaïa Mère Nature', lvl: 28, aura: '#7aff5a', colors: { 1: '#8ae05a', 2: '#4a9a3a', 3: '#e0ffb0', c: '#8a5a2a', a: '#ff9ad8', h: '#d8ff8a' } },
   ],
 };
