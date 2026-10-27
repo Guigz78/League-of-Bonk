@@ -179,11 +179,13 @@ export class Run {
     };
     // rareté des cartes : chance (trèfle, fortune de l'équipement, totem maudit) ; relances et « passer »
     this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
-    this.rerolls = REROLLS + (masteryOf(save.mastery?.[this.cls.id]).lv >= MASTERY.miles[2] ? 1 : 0); this.skips = SKIPS; // maîtrise 20 : une relance de plus
+    const clv = masteryOf(save.mastery?.[this.cls.id]).lv; // niveau du champion (1 à 10)
+    this.rerolls = REROLLS + (clv >= MASTERY.at.reroll ? 1 : 0); this.skips = SKIPS; // niveau 5 : une relance de plus
     this.lsPool = 0; this.lsBudget = 0; this.chainN = 0; this.bubbleT = 0;
     this.lsShown = 0; this.lsT = 0; this.lsEvT = 0; this.lsGlow = 0; // vol de vie : soin à afficher, orbes (au plus ~8/s), barre de PV
     this.lsX = 0;             // vol de vie des armes évoluées qui soignent (relève le plafond de soin par seconde)
     this.addWeapon(this.cls.weapon);
+    if (clv >= MASTERY.at.gold) this.addWeapon(this.cls.weapon); // niveau 10 : arme de départ au niveau 2
     this.recalc();
     this.grid = new Grid(64);
     this.kills = 0; this.gold = 0;

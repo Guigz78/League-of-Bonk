@@ -6,7 +6,7 @@
 // Rythme et calculs : bloc « L1 » à la fin de data.js.
 import { save, persist, checkAchievements as checkBase } from './save.js';
 import { SEASON_DAYS, SEASON_TIERS, SEASON_XP, SEASON_COST, SEASON_TRACK, TITLES, ACH_META, ACH_MORE, ACHIEVEMENTS,
-  CLASSES, UPGRADES, BOOSTS, LOOT_TIERS, ZONES, PARTS, LEGEND_EFFECTS, LOCKED } from './data.js';
+  CLASSES, UPGRADES, BOOSTS, LOOT_TIERS, ZONES, PARTS, LEGEND_EFFECTS, LOCKED, upgMax } from './data.js';
 
 // ---------- Dates : jour local « AAAA-MM-JJ » ----------
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -181,7 +181,7 @@ export function grant(R, out = []) {
   for (let i = 0; i < (R.boost | 0); i++) { const id = ids[rnd(ids.length)]; save.boosts[id] = (save.boosts[id] || 0) + 1; out.push({ k: 'boost', id }); }
   if (BOOSTS[R.boostId]) { save.boosts[R.boostId] = (save.boosts[R.boostId] || 0) + 1; out.push({ k: 'boost', id: R.boostId }); }
   for (let i = 0; i < (R.upg | 0); i++) {
-    const ks = Object.keys(UPGRADES).filter(k => (save.upgrades[k] || 0) < UPGRADES[k].max);
+    const ks = Object.keys(UPGRADES).filter(k => (save.upgrades[k] || 0) < upgMax(k));
     if (!ks.length) { save.gold += 300; out.push({ k: 'gold', n: 300 }); continue; } // Boutique au maximum : de l'or
     const k = ks[rnd(ks.length)];
     save.upgrades[k] = (save.upgrades[k] || 0) + 1;

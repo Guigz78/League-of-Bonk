@@ -101,7 +101,7 @@ function canForgeSomething() {
 }
 
 function canAffordUpgrade() {
-  return Object.keys(UPGRADES).some(k => save.upgrades[k] < UPGRADES[k].max && save.gold >= upgradeCost(k));
+  return Object.keys(UPGRADES).some(k => save.upgrades[k] < DATA.upgMax(k) && save.gold >= upgradeCost(k));
 }
 
 // ---------- Accueil (onglets) ----------
@@ -498,7 +498,7 @@ function classSelect(first) {
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
           <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
           <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
-        ${lk ? '' : `<h4 class="evo-t">Maîtrise</h4>${masteryPanel(sel)}${auraPicker(sel)}`}
+        ${lk ? '' : `<h4 class="evo-t">Niveau du champion</h4>${masteryPanel(sel)}${auraPicker(sel)}`}
         ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
       </section>
       <div class="cs-foot"><button class="btn primary big" data-act="go" ${lk ? 'disabled' : ''}>${lk ? `${iconImg('lock', 16)} Verrouillé · ${esc(c.name)}` : `${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}`}</button></div>
@@ -1589,7 +1589,7 @@ function forgeBody() {
         </div>`}
       </div>
     </div>
-    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1 à +${FORGE.upgrade.max}) ou recyclez vos objets depuis l'onglet <b>Équipement</b>.</span></p>`;
+    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1, +2… à l'infini) ou recyclez vos objets depuis l'onglet <b>Équipement</b>.</span></p>`;
 }
 
 // met à jour la forge sur place (garde le défilement), l'or et les pastilles
@@ -1667,13 +1667,14 @@ async function doFuse(all = false) {
 // ---------- Boutique ----------
 function shopTab() {
   return `<h3 class="section-t first">Améliorations permanentes</h3>
-    <p class="muted shop-intro">Elles valent pour tous les champions.</p>
+    <p class="muted shop-intro">Elles valent pour tous les champions. Celles marquées <b>∞</b> s'améliorent à l'infini.</p>
     <div class="upgrades">${Object.entries(UPGRADES).map(([k, u]) => {
-      const lvl = save.upgrades[k], max = lvl >= u.max, cost = upgradeCost(k);
-      return `<div class="upgrade">
+      const lvl = save.upgrades[k], max = lvl >= DATA.upgMax(k), cost = upgradeCost(k);
+      // améliorations infinies : la barre montre les niveaux jusqu'au max d'origine, puis « ∞ »
+      return `<div class="upgrade ${u.inf ? 'inf' : ''}">
         ${iconImg(u.icon, 36)}
         <div class="u-txt"><b>${u.name}</b><small>${u.desc}</small>
-          <div class="lvl"><span>Niv. ${lvl}/${u.max}</span>${u.max <= 12 ? `<div class="seg-bar">${Array.from({ length: u.max }, (_, k) => `<i class="${k < lvl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="lbar"><i style="width:${lvl / u.max * 100}%"></i></div>`}</div></div>
+          <div class="lvl"><span>Niv. ${lvl}${u.inf ? ' <i class="inf-tag" title="Amélioration à l\'infini">∞</i>' : `/${u.max}`}</span>${u.max <= 12 ? `<div class="seg-bar">${Array.from({ length: u.max }, (_, k) => `<i class="${k < lvl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="lbar"><i style="width:${Math.min(100, lvl / u.max * 100)}%"></i></div>`}</div></div>
         <button class="btn ${max ? 'ghost' : 'buy'} small" data-act="buy" data-k="${k}" ${max || save.gold < cost ? 'disabled' : ''}>
           ${max ? 'Max' : `${iconImg('gold', 14)} ${fmt(cost)}`}
         </button>
@@ -1701,7 +1702,7 @@ function doBuyBoost(id) {
 
 function buyUpgrade(k) {
   const cost = upgradeCost(k);
-  if (save.gold < cost || save.upgrades[k] >= UPGRADES[k].max) return;
+  if (save.gold < cost || save.upgrades[k] >= DATA.upgMax(k)) return;
   save.gold -= cost;
   save.upgrades[k]++;
   persist();

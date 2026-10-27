@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus, upgMax } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -73,7 +73,7 @@ function migrate(s) {
   out.upgrades = { ...base.upgrades, ...s.upgrades };
   delete out.upgrades.potion;
   // niveaux toujours valides (nouvelles améliorations comme « Soif de sang » à 0 sur les vieilles sauvegardes)
-  for (const k of Object.keys(out.upgrades)) out.upgrades[k] = Math.max(0, Math.min(UPGRADES[k]?.max ?? 99, Math.floor(+out.upgrades[k] || 0)));
+  for (const k of Object.keys(out.upgrades)) out.upgrades[k] = Math.max(0, Math.min(upgMax(k), Math.floor(+out.upgrades[k] || 0)));
   if (typeof out.stats?.kills === 'object') out.stats = { ...base.stats };
   out.equipped = { ...base.equipped, ...s.equipped };
   out.stats = { ...base.stats, ...s.stats };
@@ -229,16 +229,19 @@ export function playerStats(clsId = save.cls) {
   }
   // plafonds : la vitesse plafonne le bonus au-dessus de celle du champion
   for (const [k, A] of Object.entries(AFFIXES)) if (A.max != null) st[k] = k === 'speed' ? Math.min(st.speed, c.speed + A.max) : Math.min(st[k], A.max);
-  const mb = masteryBonus(masteryOf(save.mastery?.[clsId]).lv); // L2 : maîtrise du champion (+1 % dégâts / PV par niveau)
+  const ml = masteryOf(save.mastery?.[clsId]), mb = masteryBonus(ml.lv, ml.stars); // niveau du champion (1 à 10) puis étoiles à l'infini
   st.hp *= 1 + mb.hp; st.atk *= 1 + mb.dmg;
   for (const k of Object.keys(st)) if (k !== 'effects') st[k] = r3(st[k]);
   st.hp = Math.round(st.hp); st.atk = Math.round(st.atk);
   return st;
 }
 
+// coût du prochain niveau : croissance géométrique jusqu'au niveau max, puis (améliorations infinies) +12 % du coût du
+// niveau max par niveau en plus
 export function upgradeCost(k) {
-  const u = UPGRADES[k];
-  return Math.round(u.base * Math.pow(u.grow, save.upgrades[k]));
+  const u = UPGRADES[k], lv = save.upgrades[k] || 0;
+  if (lv < u.max) return Math.round(u.base * Math.pow(u.grow, lv));
+  return Math.round(u.base * Math.pow(u.grow, u.max) * (1 + 0.12 * (lv - u.max + 1)));
 }
 
 // ---------- Objets ----------
@@ -328,7 +331,7 @@ export function rollChest({ tier = 0, zone = 0, giga = 0 }) {
   const items = [];
   if (giga) items.push(makeItem(Math.random, zone, { rarity: 'legendary' }));
   for (let n = L.items + (giga || Math.random() < L.extra ? 1 : 0); n > 0; n--) items.push(makeItem(Math.random, zone, { rarity: RARITIES[pickW(L.rar)] }));
-  const ups = Object.keys(UPGRADES).filter(k => save.upgrades[k] < UPGRADES[k].max);
+  const ups = Object.keys(UPGRADES).filter(k => save.upgrades[k] < upgMax(k));
   const upg = ups.length && Math.random() < (giga ? 0.85 : L.upg) ? ups[rint(0, ups.length - 1)] : null;
   const gold = Math.round(rint(T.gold[0], T.gold[1]) * (1 + 0.4 * zone) * (giga ? 2 : 1));
   return { tier, zone, parts, boost, items, upg, gold, ...(giga ? { giga: 1 } : {}) };
@@ -379,11 +382,12 @@ export function fuseParts(slot, r) {
   return true;
 }
 
-// coût du prochain niveau d'un objet (null au maximum)
+// coût du prochain niveau d'un objet : tables FORGE jusqu'à +max, puis à l'infini (une pièce de plus et +35 % de l'or
+// du dernier palier par niveau au-delà) ; la puissance continue de monter de FORGE.upgrade.per par niveau
 export function itemUpgradeCost(it) {
-  const lv = it.lv || 0, U = FORGE.upgrade;
-  if (lv >= U.max) return null;
-  return { parts: U.parts[lv], gold: U.gold[lv], slot: it.slot, r: rarityIdx(it), lv: lv + 1 };
+  const lv = it.lv || 0, U = FORGE.upgrade, n = lv - U.max + 1, top = lv >= U.max;
+  return { parts: top ? U.parts[U.max - 1] + n : U.parts[lv], gold: top ? Math.round(U.gold[U.max - 1] * (1 + 0.35 * n)) : U.gold[lv],
+    slot: it.slot, r: rarityIdx(it), lv: lv + 1 };
 }
 export function canUpgrade(it) {
   const c = itemUpgradeCost(it);
