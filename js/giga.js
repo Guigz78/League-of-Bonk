@@ -34,7 +34,8 @@ export const GIGA_METHODS = {
     p.inv = Math.max(p.inv, GB.intro);
     const bb = $('#bossbar');
     if (bb) {
-      bb.hidden = false; bb.classList.add('giga'); bb.classList.remove('p2', 'p3');
+      bb.hidden = false; bb.classList.add('giga', 'intro'); bb.classList.remove('p2', 'p3'); // intro : barre cachée sous la carte GIGA BOSS
+      setTimeout(() => bb.classList.remove('intro'), 3000);
       $('#bossName').innerHTML = `<span class="tag giga">GIGA BOSS</span>${NAME}<em class="gb-ph" id="gbPh">Phase 1/3</em>`;
       const ph = bb.querySelectorAll('.hpbar .ph');
       if (ph[0]) ph[0].style.left = GB.ph2 * 100 + '%';
