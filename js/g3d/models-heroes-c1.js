@@ -140,10 +140,11 @@ function buildAssassin(sh, C, evo, K) {
   K.headBlock(H, C);
   K.eyes(E, { col: evo >= 4 ? '#ff4ad8' : evo === 2 ? '#3ad8ff' : '#9a4aff', glow: evo >= 2 ? 0.6 : 0.2, r: 0.1, tall: 0.9, y: 1.83 });
   K.brows(H, hair, { angry: 0.32, th: 0.06, y: 1.97 });
-  const maskC = evo === 3 ? '#0e0a18' : ink;
-  H.put('rbox:0.4', maskC, 0, 1.6, 0.34, 0.9, 0.3, 0.3, 0, 0, 0, { grad: 0.1 });
-  H.put('rbox:0.4', maskC, 0, 1.62, 0.47, 0.22, 0.2, 0.08, 0, 0, 0, { grad: 0 }); // nez sous le masque
-  if (evo === 3) H.put('box', GOLD, 0, 1.75, 0.49, 0.86, 0.035, 0.03, 0, 0, 0, { grad: 0, glow: 0.4 });
+  // masque de tissu sur le bas du visage (couleur de la tenue, bord clair)
+  const maskC = evo === 3 ? '#0e0a18' : suitS;
+  H.put('rbox:0.4', maskC, 0, 1.57, 0.34, 0.9, 0.27, 0.3, 0, 0, 0, { grad: 0.1 });
+  H.put('rbox:0.4', maskC, 0, 1.62, 0.47, 0.2, 0.18, 0.08, 0, 0, 0, { grad: 0 }); // nez sous le masque
+  H.put('box', evo === 3 ? GOLD : shade(maskC, 0.25), 0, 1.7, 0.45, 0.88, 0.03, 0.1, 0, 0, 0, { grad: 0, glow: evo === 3 ? 0.4 : 0 });
   if (evo >= 4) K.superHair(HR, hair, 0.8);
   else if (evo === 2) {
     // capuche fantôme rabattue (le bandeau dépasse)
@@ -280,7 +281,7 @@ function buildBerserker(sh, C, evo, K) {
     ap('cyl:6', WOOD_D, 0, 0.92 - 0.62 * k, 0, 0.14 * k, 0.1, 0.14 * k, 0, { grad: 0 });
     ap('rbox:0.2', shade(headC, -0.2), 0, hy, 0.06, 0.14, 0.28 * k, 0.26 * k, 0, { grad: 0 });
     ap('sph:9:6', headC, 0, hy - 0.04 * k, 0.3 * k, 0.1, 0.66 * k, 0.5 * k, 0, { grad: 0.05, glow: evo >= 4 ? 0.3 : 0 });
-    ap('sph:9:6', edge, 0, hy - 0.04 * k, 0.38 * k, 0.11, 0.56 * k, 0.4 * k, 0, { grad: 0, glow: eg });
+    ap('sph:9:6', edge, 0, hy - 0.04 * k, 0.42 * k, 0.085, 0.56 * k, 0.4 * k, 0, { grad: 0, glow: eg });
     ap('sph:9:6', headC, 0, hy - 0.04 * k, 0.27 * k, 0.12, 0.54 * k, 0.42 * k, 0, { grad: 0.05, glow: evo >= 4 ? 0.3 : 0 });
     ap('sph:6:4', paint, 0, hy - 0.02 * k, 0.24 * k, 0.13, 0.12, 0.12, 0, { grad: 0, glow: pg });
     ap('cone:4', headC, 0, hy, -0.14, 0.1, 0.24 * k, 0.12, -PI / 2, { grad: 0 });
