@@ -206,6 +206,7 @@ async function statsSheet() {
   const st = playerStats(), c = CLASSES[save.cls];
   // « max » : bonus de l'équipement et de la Boutique au plafond (le vol de vie affiché compte en plus le talent des champions)
   const capped = k => AFFIXES[k]?.max != null && (k === 'speed' ? st.speed >= c.speed + AFFIXES[k].max - 0.0005 : st[k] - (k === 'lifesteal' ? LS.base : 0) >= AFFIXES[k].max - 0.0005);
+  for (const k of ['lifesteal', 'dodge', 'armor']) if (c[k]) st[k] = Math.min(AFFIXES[k].max, (st[k] || 0) + c[k]); // talents de classe (Nyx, Sora, Brok), plafonnés comme en partie
   st.lifesteal = Math.min(LS.max, (st.lifesteal || 0) + LS.base); // + talent de tous les champions (vol de vie de base)
   const shown = STAT_ORDER.filter(k => ['hp', 'atk', 'crit', 'critDmg', 'speed'].includes(k) || (k === 'magnet' || k === 'gold' ? st[k] > 1.0005 : st[k] > 0.0005));
   await modal({
