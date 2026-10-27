@@ -351,7 +351,8 @@ function goalBox(i) {
   const z = ZONES[i], next = ZONES[i + 1];
   return `<div class="goal goal-list">
     <p>${iconImg('skull', 18)}<span>Trouvez l'<b>autel au crâne rouge</b> et invoquez <b>${esc((z.boss || z.monsters[4]).name)}</b>.</span></p>
-    <p>${iconImg('portal', 18)}<span>Battez-le : un <b>portail</b> s'ouvre ${next ? `vers <b>${esc(next.name)}</b>, plus dur et plus riche` : 'vers la victoire finale'}.</span></p>
+    <p>${iconImg('portal', 18)}<span>Battez-le : un <b>portail</b> mène au <b>niveau suivant</b>${next ? ` (<b>${esc(next.name)}</b>)` : ''}, plus dur et plus riche.</span></p>
+    <p>${iconImg('crown', 18)}<span>Au <b>niveau 3</b>, le <b>giga boss ${esc(DATA.GIGA.name)}</b> garde l'autel : battez-le pour gagner l'expédition et le <b>Giga coffre</b>.</span></p>
     <p>${iconImg('i_enrage', 18)}<span>Au bout de <b>${fmtTime(ZONE_TIME[i])}</b>, les monstres deviennent <b>fous</b> !</span></p>
     <p>${iconImg('i_burn', 18)}<span><b>Totems de défi</b> : plus de danger, plus de récompenses.</span></p>
     <p>${iconImg('chest', 18)}<span>Les <b>coffres de butin</b> ramassés s'ouvrent à la fin.</span></p>
@@ -588,7 +589,7 @@ const TUTO = [
   { t: 'Bouger', ill: '<i class="ti-joy"></i><i class="ti-hero"></i>', p: 'Posez le doigt <b>n\'importe où</b> et glissez : votre champion court. Il <b>attaque tout seul</b> les monstres proches.' },
   { t: 'Esquiver', ill: '<i class="ti-wave"></i><i class="ti-body"></i>', p: 'Un <b>cercle rouge</b> au sol ou un monstre qui <b>clignote</b> annonce une attaque : <b>écartez-vous</b> avant l\'impact. Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous !' },
   { t: 'Monter de niveau', ill: '<i class="ti-xp"></i><div class="ti-cards"><i style="--d:0s"></i><i style="--d:.12s"></i><i style="--d:.24s"></i></div>', p: 'Ramassez les <b>cristaux bleus</b> pour gagner de l\'expérience. À chaque niveau, choisissez une <b>arme</b>, un <b>tome</b> ou une amélioration.' },
-  { t: 'Autel, boss, portail', ill: `<div class="ti-path"><span>${iconImg('skull', 34)}Autel</span><span>${iconImg('crown', 34)}Boss</span><span>${iconImg('portal', 34)}Portail</span></div>`, p: 'Suivez la flèche jusqu\'à l\'<b>autel au crâne rouge</b> pour invoquer le boss. Battu, il ouvre un <b>portail au centre de la carte</b> vers le monde suivant.' },
+  { t: 'Autel, boss, portail', ill: `<div class="ti-path"><span>${iconImg('skull', 34)}Autel</span><span>${iconImg('crown', 34)}Boss</span><span>${iconImg('portal', 34)}Portail</span></div>`, p: 'Suivez la flèche jusqu\'à l\'<b>autel au crâne rouge</b> pour invoquer le boss. Battu, il ouvre un <b>portail au centre de la carte</b> vers le niveau suivant, plus dur. Au niveau 3 : le <b>giga boss</b> !' },
 ];
 function tutorial(r) {
   r.paused = true;
@@ -787,25 +788,37 @@ const bossImg = z => {
   return `<img class="px spr" src="${creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${b.name}`, b.body, b.pal, { boss: !!z.boss })}" alt="">`;
 };
 
+// giga boss : portrait (forme 1, ou forme embrasée une fois vaincu)
+const gigaImg = (won = false) => { const G = DATA.GIGA; return `<img class="px spr" src="${creatureURL(`9-9-${G.name}${won ? ':3' : ''}`, G.body, G.pal, { boss: true })}" alt="">`; };
+
+// portail : niveau suivant (plus dur ; le dernier est celui du giga boss) ou retour avec le butin ; après le giga boss,
+// la victoire de l'expédition
 function portalMenu(info, choose) {
-  const from = ZONES[info.from] || ZONES[0], to = info.to == null ? null : ZONES[info.to];
+  const from = ZONES[info.from] || ZONES[0], to = info.to == null ? null : ZONES[info.to], G = DATA.GIGA;
+  const L = info.levels || DATA.EXPE_LEVELS || 3, lv = info.level || (info.stage | 0) + 1, won = !!info.giga, gNext = !!info.gigaNext && !!to;
   // numéros de monde : ceux de la carte (comme le HUD), pas le rang dans l'expédition
   const nFrom = from.id + 1, cleared = info.cleared?.length ? info.cleared : [from.id];
   const stat = (ic, v, l) => `<div>${iconImg(ic, 18)}<b>${v}</b><small>${l}</small></div>`;
-  const w = overlay(`<div class="portal-menu ${to ? '' : 'final'}">
-    <div class="pm-vortex"><i></i><i></i><i></i><b>${iconImg(to ? 'portal' : 'crown', 34)}</b></div>
-    <span class="eyebrow">${to ? `Monde ${nFrom} vaincu · ${esc(from.name)}` : 'Les six mondes sont vaincus'}</span>
-    <h2>${to ? 'Portail ouvert' : 'Victoire finale'}</h2>
-    <p class="pm-sub">${to ? 'Continuez l\'expédition ou rentrez avec votre butin.' : 'Le monde est sauvé. Bravo, champion !'}</p>
+  // niveaux de l'expédition : 1 · 2 · giga boss
+  const steps = Array.from({ length: L }, (_, i) => {
+    const g = i === L - 1, st = i < lv || won ? 'done' : i === lv && to ? 'next' : '';
+    return `<span class="pm-lv ${g ? 'giga' : ''} ${st}">${g ? iconImg('crown', 13) : ''}${g ? 'Giga boss' : `Niveau ${i + 1}`}</span>`;
+  }).join('<i></i>');
+  const w = overlay(`<div class="portal-menu ${to ? '' : 'final'} ${won || gNext ? 'giga' : ''}">
+    ${won ? `<div class="pm-giga">${gigaImg(true)}<em>Vaincu</em></div>` : `<div class="pm-vortex"><i></i><i></i><i></i><b>${iconImg(to ? 'portal' : 'crown', 34)}</b></div>`}
+    <span class="eyebrow">${won ? `${esc(G.name)} · ${esc(G.title)}` : `Niveau ${lv}/${L} terminé · Monde ${nFrom}`}</span>
+    <h2>${won ? 'Victoire de l\'expédition' : to ? 'Portail ouvert' : 'Expédition terminée'}</h2>
+    <p class="pm-sub">${won ? `Le Roi des Bonks est tombé ! Le <b>Giga coffre</b> est à vous.` : to ? (gNext ? `<b>${esc(G.name)}</b>, le giga boss, vous attend au dernier niveau.` : 'Continuez l\'expédition (plus dur) ou rentrez avec votre butin.') : 'Rentrez avec votre butin.'}</p>
+    <div class="pm-levels">${steps}</div>
     <div class="pm-stats">${stat('clock', fmtTime(info.time || 0), 'Temps')}${stat('skull', fmt(info.kills || 0), 'Monstres')}${stat('gold', fmt(info.gold || 0), 'Or')}${stat('chest', info.loot || 0, 'Coffres')}</div>
-    <div class="pm-bosses">${cleared.map(id => `<span class="pm-b" title="${esc(ZONES[id].name)}">${bossImg(ZONES[id])}<i>✓</i></span>`).join('')}</div>
-    ${to ? `<button class="pm-next" data-v="next" style="background-image:url(${zoneBannerURL(to)})">
-        <span class="pm-n">${String(to.id + 1).padStart(2, '0')}</span>
-        <span class="pm-t"><small>Monde suivant</small><b>${esc(to.name)}</b><em>Plus dur, plus de butin</em></span>
-        <span class="pm-boss">${bossImg(to)}</span><i class="pm-go">Entrer</i>
+    <div class="pm-bosses">${cleared.map((id, i) => `<span class="pm-b" title="${esc(won && i === cleared.length - 1 ? G.name : ZONES[id].name)}">${won && i === cleared.length - 1 ? gigaImg(true) : bossImg(ZONES[id])}<i>✓</i></span>`).join('')}</div>
+    ${to ? `<button class="pm-next ${gNext ? 'giga' : ''}" data-v="next" style="background-image:url(${zoneBannerURL(to)})">
+        <span class="pm-n">${lv + 1}</span>
+        <span class="pm-t"><small>${gNext ? 'Niveau suivant · giga boss' : 'Niveau suivant · plus dur'}</small><b>${esc(to.name)}</b><em>${gNext ? `${esc(G.name)}, ${esc(G.title)}` : 'Monstres plus coriaces, plus d\'élites, plus de butin'}</em></span>
+        <span class="pm-boss">${gNext ? gigaImg() : bossImg(to)}</span><i class="pm-go">Entrer</i>
       </button>
       <button class="btn ghost pm-home" data-v="home">${iconImg('chest', 18)} Rentrer avec le butin</button>`
-    : `<button class="btn primary big pm-home" data-v="home">${iconImg('crown', 20)} Rentrer en héros</button>`}
+    : `<button class="btn primary big pm-home" data-v="home">${iconImg('crown', 20)} ${won ? 'Rentrer en héros' : 'Rentrer avec le butin'}</button>`}
   </div>`);
   w.classList.add('portal-ov');
   // petite pause : le doigt du joueur est peut-être encore sur l'écran
@@ -842,7 +855,7 @@ async function pauseMenu(resume) {
   const free = n => Array.from({ length: Math.max(0, n) }, () => '<span class="bl empty"><i>Emplacement libre</i></span>').join('');
   const hpK = Math.max(0, Math.min(1, p.hp / Math.max(1, p.maxHp)));
   const v = await modal({
-    title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1}/${ZONES.length} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
+    title: `<span class="eyebrow">Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
     body: `<div class="pz-sum">
         <div><small>Temps</small><b>${fmtTime(run.runTime ?? run.time ?? 0)}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
@@ -864,7 +877,8 @@ async function pauseMenu(resume) {
         <p>${iconImg('sword', 20)}<span><b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</span></p>
         <p>${iconImg('i_heavy', 20)}<span><b>Esquiver</b> : un cercle rouge au sol ou un monstre qui clignote annonce une attaque. Écartez-vous ! Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous du boss.</span></p>
         <p>${iconImg('skull', 20)}<span><b>Boss</b> : suivez la flèche jusqu'à l'<b>autel au crâne rouge</b> et restez dessus pour invoquer le boss. Le combat a lieu dans une arène fermée.</span></p>
-        <p>${iconImg('portal', 20)}<span><b>Portail</b> : le boss vaincu ouvre un portail (suivez la flèche) vers le monde suivant, plus dur mais plus riche. Vous pouvez aussi rentrer avec votre butin.</span></p>
+        <p>${iconImg('portal', 20)}<span><b>Portail</b> : le boss vaincu ouvre un portail (suivez la flèche) vers le niveau suivant, plus dur mais plus riche. Vous pouvez aussi rentrer avec votre butin.</span></p>
+        <p>${iconImg('crown', 20)}<span><b>Giga boss</b> : une expédition compte 3 niveaux. Au niveau 3, <b>${esc(DATA.GIGA.name)}</b> remplace le boss : 3 phases, bonds écrasants, ondes à brèche, double rayon. Battez-le pour le <b>Giga coffre</b> !</span></p>
         <p>${iconImg('i_enrage', 20)}<span><b>Chrono</b> : quand il est écoulé, le boss arrive de lui-même et les monstres deviennent <b>fous</b>, de plus en plus. Ne traînez pas !</span></p>
         <p>${iconImg('i_burn', 20)}<span><b>Totems de défi</b> : restez près d'un totem pour l'activer. Le monde devient plus dur, mais vous gagnez de l'or, un coffre ou une bénédiction (et +${Math.round(HEAT_GOLD * 100)} % d'or au bilan).</span></p>
         <p>${iconImg('chest', 20)}<span><b>Coffres de butin</b> : ramassez-les, ils s'ouvrent à la fin de la partie. Leurs pièces servent à fabriquer de l'équipement à la Forge.</span></p>
@@ -893,7 +907,7 @@ async function defeatMenu(canRevive) {
   const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0, z = run.zone;
   const kept = nLoot || run.cleared?.length ? `<p class="ko-kept">${iconImg('chest', 18)}<span>${nLoot ? `Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b>` : 'Vos mondes vaincus'}${nLoot && run.cleared?.length ? ' et les mondes vaincus sont conservés' : ' sont conservés'}.</span></p>` : '';
   const v = await modal({
-    title: `<span class="eyebrow">Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span>K.O.`,
+    title: `<span class="eyebrow">Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS} · ${run.boss?.giga && !run.boss.dead ? esc(DATA.GIGA.name) : `Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}`}</span>K.O.`,
     cls: 'ko-modal',
     body: `<div class="pz-sum">
         <div><small>Survie</small><b>${t}</b></div><div><small>Niveau</small><b>${run.p.level}</b></div>
@@ -925,7 +939,7 @@ function endRun(z, sum) {
   const loot = (Array.isArray(sum.loot) ? sum.loot : []).filter(c => c && LOOT_TIERS[c.tier]);
   const heat = Math.max(0, sum.heat | 0), stage = Math.max(0, sum.stage | 0);
   // 1. les coffres d'abord : ils ne doivent jamais être perdus, même si l'appli se ferme
-  for (const c of loot) save.pendingChests.push({ tier: c.tier | 0, zone: Math.max(0, Math.min(ZONES.length - 1, (c.zone ?? start.id) | 0)) });
+  for (const c of loot) save.pendingChests.push({ tier: c.tier | 0, zone: Math.max(0, Math.min(ZONES.length - 1, (c.zone ?? start.id) | 0)), ...(c.giga ? { giga: 1 } : {}) });
   persist();
   st.kills += sum.kills;
   const record = st.bestLevel > 0 && sum.level > st.bestLevel; // nouveau meilleur niveau atteint
@@ -934,6 +948,17 @@ function endRun(z, sum) {
   st.totems = (st.totems || 0) + heat;
   st.portals = (st.portals || 0) + stage + (sum.win && cleared.length ? 1 : 0);
   if (!sum.win) st.deaths++;
+  // giga boss vaincu : victoires, meilleur niveau de difficulté (+ palier d'Abysse), sans toucher son double rayon, record
+  const route = (Array.isArray(sum.route) && sum.route.length ? sum.route : [start.id]).filter(id => ZONES[id]);
+  let gigaRec = false;
+  if (sum.giga) {
+    st.gigaKills = (st.gigaKills || 0) + 1;
+    st.gigaTop = Math.max(st.gigaTop || 0, k + 1 + (sum.abyss | 0));
+    if (sum.track?.gigaDance) st.gigaDance = (st.gigaDance || 0) + 1;
+    const t = Math.round(sum.time || 0);
+    gigaRec = !!st.gigaBest && t > 0 && t < st.gigaBest;
+    if (t > 0 && (!st.gigaBest || t < st.gigaBest)) st.gigaBest = t;
+  }
   let gold = Math.round(sum.gold);
   const r = rng(Date.now());
   const found = [], worlds = [];
@@ -972,7 +997,7 @@ function endRun(z, sum) {
       const it = makeItem(r, id, { boost: 0.25 + D.rarity, mult: D.itemMult });
       it.isNew = true; it._eq = addItem(it); found.push(it);
     }
-    worlds.push({ z: wz, n: id - start.id + 1, lines });
+    worlds.push({ z: wz, n: route.indexOf(id) + 1 || 1, giga: !!sum.giga && id === route[route.length - 1], lines });
   }
   if (!cleared.length && sum.time > 90 && Math.random() < 0.4) {
     const it = makeItem(r, start.id, { boost: D.rarity, mult: D.itemMult });
@@ -992,8 +1017,8 @@ function endRun(z, sum) {
   const pass = seasonRun({ ...sum, cleared, loot, heat, stage }); // L1 : XP de saison et compteurs des succès
   const got = checkAchievements();
   persist();
-  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass,
-    final: sum.final ?? (sum.win && cleared.includes(ZONES.length - 1)), reached: ZONES[Math.min(ZONES.length - 1, start.id + stage)] };
+  const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass, route, gigaRec,
+    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
   if (save.pendingChests.length) chestScreen(show, true); else show([]);
@@ -1169,16 +1194,19 @@ function revealStage(results, tier, title, { quick = false } = {}) {
 const buzz = ms => { if (save.settings.vibrate && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { /* non supporté */ } };
 
 // écran des coffres en attente : à la fin d'une partie, ou depuis l'accueil
+// nom d'un coffre de butin (le Giga coffre du giga boss est un coffre mythique amélioré)
+const chestName = c => (c.giga ? 'Giga coffre' : LOOT_TIERS[c.tier]?.name || '');
+
 function chestScreen(done, afterRun = false) {
-  const list = [...save.pendingChests].sort((a, b) => b.tier - a.tier);
+  const list = [...save.pendingChests].sort((a, b) => b.tier + (b.giga ? 0.5 : 0) - a.tier - (a.giga ? 0.5 : 0));
   const opened = [];
   let busy = false;
   mount(`<div class="chest-screen">
     <h2 class="rs-title">${afterRun ? 'Butin de l\'expédition' : 'Coffres de butin'}</h2>
     <p class="center muted cs-hint">Touchez un coffre pour l'ouvrir</p>
-    <div class="chest-grid ${list.length <= 4 ? 'few' : ''} ${list.length === 3 ? 'n3' : ''}" style="--n:${list.length === 3 ? 3 : Math.min(2, list.length)}">${list.map((c, i) => `<button class="cg-card t${c.tier}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
+    <div class="chest-grid ${list.length <= 4 ? 'few' : ''} ${list.length === 3 ? 'n3' : ''}" style="--n:${list.length === 3 ? 3 : Math.min(2, list.length)}">${list.map((c, i) => `<button class="cg-card t${c.tier}${c.giga ? ' giga' : ''}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
         <span class="cg-glow"></span><img class="cg-img" src="${chestURL(c.tier)}" alt="">
-        <b>${esc(LOOT_TIERS[c.tier].name)}</b><small>${esc(ZONES[c.zone]?.name || '')}</small>
+        <b>${esc(chestName(c))}</b><small>${esc(ZONES[c.zone]?.name || '')}</small>
       </button>`).join('')}</div>
     <div class="end-btns cs-btns"></div>
   </div>`);
@@ -1209,7 +1237,7 @@ function chestScreen(done, afterRun = false) {
       const res = openChest(idx); // contenu enregistré tout de suite
       opened.push(res);
       card.classList.add('pick');
-      await revealStage([res], res.tier, esc(LOOT_TIERS[res.tier].name));
+      await revealStage([res], res.tier, esc(chestName(res)));
       markOpen(i, res);
       busy = false; drawBtns();
       return;
@@ -1240,6 +1268,11 @@ function summaryScreen(R, opened = []) {
   const { start, k, D, sum, cleared } = R;
   const won = cleared.length > 0;
   const route = R.stage ? `${esc(start.name)} <i class="rs-arrow">›</i> ${esc(R.reached.name)}` : esc(start.name);
+  // victoire de l'expédition : bloc du giga boss (durée du combat, record, Giga coffre, sans toucher le double rayon)
+  const G = DATA.GIGA, T = sum.track || {}, st = save.stats;
+  const gigaBlock = R.final ? `<div class="giga-res"><span class="gr-img">${gigaImg(true)}</span><span class="gr-t"><small>Giga boss vaincu · niveau ${R.stage + 1}</small><b>${esc(G.name)}</b>
+      <span>${esc(G.title)}${T.gigaFight ? ` · combat <b>${fmtTime(T.gigaFight)}</b>` : ''}</span>
+      <span class="gr-chips"><em>Giga coffre</em>${R.gigaRec ? `<em class="rec">Record ${fmtTime(st.gigaBest)}</em>` : st.gigaBest ? `<em>Record ${fmtTime(st.gigaBest)}</em>` : ''}${T.gigaDance ? '<em class="rec">Sans toucher le rayon</em>' : ''}<em>Victoire n° ${fmt(st.gigaKills || 1)}</em></span></span></div>` : '';
   const A = lootAgg(opened), nParts = A.parts.reduce((n, p) => n + p.n, 0), nBoosts = Object.values(A.boosts).reduce((n, v) => n + v, 0);
   const pending = save.pendingChests.length;
   const chestLine = opened.length
@@ -1258,22 +1291,22 @@ function summaryScreen(R, opened = []) {
   const nDone = save.zoneCleared.filter(Boolean).length;
   const worldCards = R.worlds.map((w, i) => `<div class="world-res" style="--d:${(0.15 + i * 0.12).toFixed(2)}s">
       <div class="wr-head" style="background-image:url(${zoneBannerURL(w.z)})">
-        <span class="wr-boss">${bossImg(w.z)}</span>
-        <span class="wr-t"><small>Monde ${w.z.id + 1}</small><b>${esc(w.z.name)}</b></span>
-        <span class="wr-ok">${iconImg('check', 12)} Boss vaincu</span>
+        <span class="wr-boss">${w.giga ? gigaImg(true) : bossImg(w.z)}</span>
+        <span class="wr-t"><small>Niveau ${w.n} <span class="wr-lv">· Monde ${w.z.id + 1}</span></small><b>${esc(w.z.name)}</b></span>
+        <span class="wr-ok">${iconImg('check', 12)} ${w.giga ? 'Giga boss vaincu' : 'Boss vaincu'}</span>
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
-  const title = R.final ? 'Le monde est sauvé' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
-  const eyebrow = R.final ? 'Victoire finale' : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''}` : 'Fin de partie';
+  const title = R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
+  const eyebrow = R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
-  mount(`<div class="reward-screen ${won ? 'complete' : 'lost'}">
+  mount(`<div class="reward-screen ${won ? 'complete' : 'lost'}${R.final ? ' giga' : ''}">
     <span class="eyebrow rs-eyebrow">${eyebrow}</span>
     <h2 class="rs-title">${title}</h2>
     <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
-    ${R.final ? `<p class="center finale">Le Ver-Roi du Néant est tombé. Vous avez vaincu les 6 boss. Bravo, champion !</p>` : ''}
+    ${gigaBlock}
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
       <div><b class="cu" data-n="${sum.kills}">${fmt(sum.kills)}</b><small>Monstres</small></div>
@@ -1686,7 +1719,7 @@ function trophiesTab() {
       <div><b>${seen}/${MONSTER_COUNT + BOSS_COUNT}</b><small>Bestiaire</small></div>
       <div><b>${fmt(st.kills || 0)}</b><small>Monstres vaincus</small></div>
       <div><b>${fmt(st.ults)}</b><small>Ultimes</small></div>
-      <div><b>${st.runs ? (st.bestStage || 0) + 1 : 0}</b><small>Mondes d'affilée</small></div>
+      <div><b>${fmt(st.gigaKills || 0)}</b><small>Giga boss</small></div>
       <div><b>${fmt(st.totems || 0)}</b><small>Totems</small></div>
       <div><b>${fmt(st.chests || 0)}</b><small>Coffres ouverts</small></div>
       <div><b>${fmt(st.crafted || 0)}</b><small>Objets forgés</small></div>
