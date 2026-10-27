@@ -134,6 +134,7 @@ export function seasonRun(sum) {
   const chests = Math.max(0, (T.chests ?? (Array.isArray(sum.loot) ? sum.loot.length : 0)) | 0), totems = Math.max(0, (T.totems ?? sum.heat) | 0);
   const lines = [
     ['boss', cleared.length, Math.round(cleared.reduce((n, z) => n + X.boss + X.bossZone * z, 0) * diffMul(k))],
+    ['giga', sum.giga || T.giga ? 1 : 0, sum.giga || T.giga ? Math.round((X.giga || 0) * diffMul(k)) : 0], // giga boss : gros bonus
     ['kills', kills, Math.floor(kills / X.kills)],
     ['chests', chests, chests * X.chest],
     ['totems', totems, totems * X.totem],

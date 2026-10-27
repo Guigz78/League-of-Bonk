@@ -146,6 +146,7 @@ function seasonHTML() {
       <h4>Gagner de l'XP de saison</h4>
       <ul>
         <li>${iconImg('crown', 16)}<span>Boss vaincu : <b>${X.boss} + ${X.bossZone} par monde</b> (×1,5 en Difficile, ×2 en Cauchemar)</span></li>
+        <li>${iconImg('crown', 16)}<span>Giga boss vaincu (fin d'expédition) : <b>+${X.giga}</b> en plus (× la difficulté)</span></li>
         <li>${iconImg('skull', 16)}<span>${X.kills} monstres : <b>1</b> · coffre trouvé : <b>${X.chest}</b> · totem : <b>${X.totem}</b> · minute de jeu : <b>${X.min}</b></span></li>
         <li>${iconImg('bolt', 16)}<span>Bonus du jour : XP des parties <b>×${X.bonusMul}</b> pendant les ${X.bonus / 60} premières minutes de jeu de chaque jour</span></li>
         <li>${iconImg('quest', 16)}<span>Quête du jour : <b>${X.quest}</b> · quête de la semaine : <b>${Math.min(...WEEKLY.flatMap(q => q.xp))} à ${Math.max(...WEEKLY.flatMap(q => q.xp))}</b> · connexion : <b>${X.login}</b></span></li>
@@ -191,7 +192,7 @@ export function seasonScreen(done) {
 }
 
 // ---------- Fin de partie : XP de saison gagnée (bilan) ----------
-const LINE = { boss: 'Boss', kills: 'Monstres', chests: 'Coffres', totems: 'Totems', time: 'Temps de jeu' };
+const LINE = { boss: 'Boss', giga: 'Giga boss', kills: 'Monstres', chests: 'Coffres', totems: 'Totems', time: 'Temps de jeu' };
 export function runPassBlock(P) {
   if (!P) return '';
   const I = P.info, up = P.t1 > P.t0;

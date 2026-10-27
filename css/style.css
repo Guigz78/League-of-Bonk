@@ -1819,6 +1819,95 @@ button.itile:active { transform: translateY(1px); }
 .season-end .ss-lv { width: 72px; height: 72px; margin-bottom: 6px; }
 .season-end .ss-lv b { font-size: 32px; }
 
+/* ===== Expédition en 3 niveaux et giga boss (js/giga.js) ===== */
+.hud.cr .world-tag.giga { color: #ffd08a; }
+.hud.cr .world-tag.giga b { color: var(--acc-hi); }
+/* bandeau « NIVEAU 2 — plus dur » ; le niveau 3 annonce le giga boss */
+.hud.cr .banner.level div { font-size: 26px; }
+.hud.cr .banner .lv-dash { font-style: normal; color: var(--bc); }
+.hud.cr .banner.level .b-title { display: block; margin-top: 5px; font: 600 12px/1.25 var(--fd); font-style: normal; letter-spacing: .12em; color: var(--tx2); }
+.hud.cr .banner.giga div { --bc: var(--acc-hi); font-size: 26px; background: linear-gradient(180deg, rgba(64,20,8,.95), rgba(26,8,4,.92)); box-shadow: inset 0 2px 0 var(--acc-hi), inset 0 0 0 1px rgba(255,170,40,.35), 0 0 46px rgba(255,110,20,.45); }
+.hud.cr .banner.giga .b-title { color: #ffb070; }
+.hud.cr .banner.loot.giga div { --bc: var(--acc-hi); color: var(--acc-hi); box-shadow: inset 0 2px 0 var(--acc-hi), 0 0 40px rgba(255,190,40,.5); }
+/* barre du giga boss : épaisse, cadre doré, crans des phases (66 % et 33 %), du rouge à l'or */
+.tag.giga { background: linear-gradient(90deg, #ffd54a, #ff8a2a); color: #2a0e00; }
+.hud.cr .bossbar.giga .bn { font-size: 16px; color: #ffe2a8; }
+.hud.cr .bossbar.giga .tag.giga { margin: 0; padding: 2px 6px; font-size: 10.5px; }
+.hud.cr .bossbar .gb-ph { position: absolute; left: 0; top: calc(100% + 5px); font: 700 11px/1 var(--fd); font-style: normal; letter-spacing: .14em; color: var(--acc-hi); text-shadow: var(--ts); }
+.hud.cr .bossbar.giga .hpbar { height: 15px; background: rgba(20,6,4,.88); box-shadow: inset 0 0 0 1px rgba(255,200,80,.55), 0 0 0 1px rgba(0,0,0,.6), 0 0 18px rgba(255,120,30,.35); }
+.hud.cr .bossbar.giga .hpbar .fill { inset: 2px auto 2px 2px; background: linear-gradient(90deg, #8a0a1a, #e8302a 45%, #ff8a2a 80%, #ffd54a); }
+.hud.cr .bossbar.giga .hpbar .fill::after { content: ''; position: absolute; inset: 0 0 50% 0; background: rgba(255,255,255,.22); }
+.hud.cr .bossbar.giga .hpbar .ph { top: -4px; bottom: -4px; width: 3px; margin-left: -1px; background: var(--acc-hi); box-shadow: 0 0 6px rgba(255,200,60,.9); }
+.hud.cr .bossbar.giga .hpbar span { font-size: 13px; color: #ffe2a8; }
+.hud.cr .bossbar.giga.p2 .hpbar .fill { background: linear-gradient(90deg, #9a2a0a, #ff5a1a 50%, #ffb03a); }
+.hud.cr .bossbar.giga.p3 .hpbar { animation: gigaHot .8s ease-in-out infinite alternate; }
+.hud.cr .bossbar.giga.p3 .hpbar .fill { background: linear-gradient(90deg, #ff3a1a, #ffb03a 60%, #fff0a0); }
+.hud.cr .bossbar.giga.inv .hpbar .fill { filter: brightness(1.7) saturate(.4); }
+.hud.cr .bossbar.giga { transition: opacity .4s; }
+.hud.cr .bossbar.giga.intro { opacity: 0; }
+@keyframes gigaHot { to { box-shadow: inset 0 0 0 1px rgba(255,220,120,.9), 0 0 0 1px rgba(0,0,0,.6), 0 0 26px rgba(255,90,20,.75); } }
+/* carte « GIGA BOSS » de la cinématique (et de la victoire) */
+.giga-card { position: absolute; z-index: 29; left: 0; right: 0; top: 24%; display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: none;
+  animation: gigaCard 3.6s var(--ease) forwards; }
+.giga-card.win { animation-duration: 4.2s; }
+.giga-card .gc-rays { position: absolute; left: 50%; top: 50%; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%; opacity: .55;
+  background: repeating-conic-gradient(rgba(255,170,40,.55) 0 7deg, transparent 7deg 22deg); -webkit-mask: radial-gradient(closest-side, #000 20%, transparent); mask: radial-gradient(closest-side, #000 20%, transparent); animation: spin 9s linear infinite; }
+.giga-card > :not(.gc-rays) { position: relative; }
+.giga-card .gc-k { font: 700 clamp(46px, 15vw, 72px)/.95 var(--fd); letter-spacing: .06em; color: #fff3c0;
+  background: linear-gradient(180deg, #fffbe0 10%, #ffd54a 45%, #ff7a1a 80%, #c8200a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 #3a0a04) drop-shadow(0 0 18px rgba(255,90,20,.75)); animation: gigaSlam .5s cubic-bezier(.2,1.6,.4,1) both; }
+.giga-card .gc-n { margin-top: 4px; padding: 6px 20px 5px; font: 700 clamp(24px, 8vw, 34px)/1 var(--fd); letter-spacing: .12em; text-transform: uppercase; color: var(--tx);
+  background: linear-gradient(90deg, transparent, rgba(40,8,4,.92) 15%, rgba(40,8,4,.92) 85%, transparent); box-shadow: inset 0 2px 0 var(--acc-hi); animation: fadeUp .35s .35s var(--ease) both; }
+.giga-card .gc-t { margin-top: 5px; font: 700 13px/1 var(--fd); font-style: normal; letter-spacing: .3em; text-transform: uppercase; color: #ffb070; animation: fadeUp .35s .55s var(--ease) both; }
+.giga-card small { margin-top: 10px; max-width: 86vw; font: 600 12px/1.3 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: rgba(238,241,246,.85); text-shadow: var(--ts); animation: fadeUp .35s .8s var(--ease) both; }
+.giga-card.win .gc-k { background: linear-gradient(180deg, #ffffff 10%, #ffe48a 45%, #ffb02a 85%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 #4a2a00) drop-shadow(0 0 22px rgba(255,210,80,.9)); }
+.giga-card.win .gc-rays { background: repeating-conic-gradient(rgba(255,230,120,.6) 0 8deg, transparent 8deg 20deg); }
+@keyframes gigaCard { 0% { opacity: 0; } 6% { opacity: 1; } 84% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.06); } }
+@keyframes gigaSlam { from { opacity: 0; transform: scale(2.4); } to { opacity: 1; transform: none; } }
+/* portail : niveaux de l'expédition (1 · 2 · giga boss) */
+.pm-levels { display: flex; align-items: center; gap: 6px; }
+.pm-lv { display: flex; align-items: center; gap: 5px; padding: 4px 9px 3px; font: 700 11px/1 var(--fd); letter-spacing: .14em; text-transform: uppercase; color: var(--tx3); background: var(--s1); border: 1px solid var(--ln); }
+.pm-lv.done { color: #002611; background: var(--green); border-color: var(--green); }
+.pm-lv.next { color: var(--acc-ink); background: var(--acc); border-color: var(--acc); }
+.pm-lv.giga { color: #ffd08a; border-color: rgba(255,150,40,.6); }
+.pm-lv.giga.next { color: #2a0e00; background: linear-gradient(90deg, #ffd54a, #ff8a2a); }
+.pm-lv.giga.done { color: #002611; background: var(--green); }
+.pm-lv img { width: 13px; height: 13px; }
+.pm-levels > i { width: 10px; height: 1px; background: var(--ln); }
+.pm-next.giga { box-shadow: inset 0 0 0 1px rgba(255,170,40,.7), 0 0 26px rgba(255,110,20,.3); }
+.pm-next.giga .pm-n { color: var(--acc-hi); }
+.pm-next.giga .pm-t small { color: #ff9a4a; }
+.pm-next.giga .pm-go { background: linear-gradient(90deg, #ffd54a, #ff8a2a); color: #2a0e00; }
+.pm-next.giga .pm-boss img { width: 70px; height: 70px; filter: drop-shadow(0 0 10px rgba(255,120,30,.7)); }
+.portal-menu.giga .pm-vortex i { border-color: rgba(255,190,60,.9); }
+.portal-menu.giga .pm-vortex i:nth-child(2) { border-color: rgba(255,110,30,.8); }
+.portal-menu.giga .pm-vortex i:nth-child(3) { background: radial-gradient(closest-side, #fff, rgba(255,170,40,.7), transparent); }
+.portal-menu.giga h2 { background: linear-gradient(180deg, #fffbe0, #ffd54a 50%, #ff8a2a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.pm-giga { position: relative; width: 132px; height: 132px; display: grid; place-items: center; animation: vortexIn .45s var(--ease) both; }
+.pm-giga::before { content: ''; position: absolute; inset: -10px; border-radius: 50%; background: repeating-conic-gradient(rgba(255,190,60,.45) 0 8deg, transparent 8deg 22deg); -webkit-mask: radial-gradient(closest-side, #000 35%, transparent); mask: radial-gradient(closest-side, #000 35%, transparent); animation: spin 10s linear infinite; }
+.pm-giga img { position: relative; width: 124px; height: 124px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.6)); }
+.pm-giga em { position: absolute; right: 2px; bottom: 6px; padding: 3px 6px 2px; font: 700 10px/1 var(--fd); font-style: normal; letter-spacing: .14em; color: #002611; background: var(--green); }
+/* bilan : bloc de victoire de l'expédition */
+.giga-res { flex: none; position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px; overflow: hidden; background: linear-gradient(120deg, rgba(70,26,6,.95), rgba(24,10,6,.95)); border: 1px solid rgba(255,180,60,.55);
+  box-shadow: 0 0 30px rgba(255,120,30,.22); animation: fadeUp .35s .1s var(--ease) both; }
+.giga-res::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 26%; background: linear-gradient(100deg, transparent, rgba(255,230,160,.16), transparent); animation: sheen 3.2s 1s ease-in-out infinite; }
+.giga-res > * { position: relative; }
+.giga-res .gr-img img { width: 78px; height: 78px; display: block; filter: drop-shadow(0 0 10px rgba(255,140,40,.6)); }
+.giga-res .gr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.giga-res .gr-t small { font: 700 10.5px var(--fd); letter-spacing: .18em; text-transform: uppercase; color: #ff9a4a; }
+.giga-res .gr-t > b { font: 700 20px/1.05 var(--fd); letter-spacing: .06em; text-transform: uppercase; color: var(--acc-hi); }
+.giga-res .gr-t span { font-size: 12.5px; color: var(--tx2); }
+.giga-res .gr-t span b { color: var(--tx); }
+.giga-res .gr-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.giga-res .gr-chips em { padding: 2px 6px; font: 700 10.5px/1.3 var(--fd); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: #2a0e00; background: var(--acc); }
+.giga-res .gr-chips em.rec { background: var(--green); color: #002611; }
+.reward-screen.giga { background: radial-gradient(100% 40% at 50% 0%, rgba(255,150,40,.2), transparent 70%), var(--bg); }
+.reward-screen.giga .rs-title { background: linear-gradient(180deg, #fffbe0, #ffd54a 55%, #ff8a2a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.wr-t small .wr-lv { color: var(--tx2); }
+/* coffre : Giga coffre */
+.cg-card.giga { --tc: #ffb030; box-shadow: inset 0 0 0 1px rgba(255,190,60,.7), 0 0 22px rgba(255,140,30,.35); }
+.cg-card.giga b { color: var(--acc-hi); }
+
 /* ===== Niveaux des champions (1–10, étoiles) et améliorations infinies ===== */
 .ms-stars { font-style: normal; margin-left: 6px; padding: 1px 6px; font: 700 12px/1.3 var(--fd); color: var(--acc-ink); background: var(--acc); letter-spacing: .04em; }
 .inf-tag { display: inline-block; vertical-align: 0; font-style: normal; margin-left: 4px; padding: 0 4px; font: 700 12px/1.1 var(--fd); color: var(--cy); box-shadow: inset 0 0 0 1px rgba(63,208,255,.45); }

@@ -181,6 +181,22 @@ const SFX = {
   chestShake: () => { wood(r(380, 520), 0, 0.12); wood(r(380, 520), 0.09, 0.1); },
   chestOpen: () => { boing(200, 0.35, 0, 0.1); [523, 659, 784, 1047, 1319].forEach((f, i) => kazoo(f, i === 4 ? 0.4 : 0.08, 0.1 + i * 0.07, 0.08)); },
   forge: () => { for (let i = 0; i < 3; i++) { wood(1400, i * 0.16, 0.14); osc({ type: 'square', f: 2600, to: 1800, d: 0.06, v: 0.03, at: i * 0.16 }); } kazoo(784, 0.3, 0.5, 0.08); },
+  // giga boss : rugissement (grave, long, gong), bond écrasant « BONK », armure qui éclate, fanfare de victoire
+  gigaRoar: () => {
+    osc({ type: 'sawtooth', f: 55, to: 32, curve: 'lin', d: 1.8, v: 0.2, filter: ['lowpass', 420], q: 9, vib: 14, vibRate: 5 });
+    osc({ type: 'square', f: 82, to: 41, curve: 'lin', d: 1.5, v: 0.08, filter: ['lowpass', 300], q: 4, at: 0.1 });
+    noise({ d: 1.6, v: 0.14, filter: ['lowpass', 260] });
+    osc({ type: 'sine', f: 98, d: 2.2, v: 0.12, at: 0.1 }); osc({ type: 'sine', f: 147, d: 1.8, v: 0.06, at: 0.12 });
+  },
+  gigaBonk: () => { wood(260, 0, 0.22); osc({ type: 'sine', f: 70, to: 28, d: 0.6, v: 0.3 }); noise({ d: 0.45, v: 0.22, filter: ['lowpass', 700], sweepTo: 90 }); boing(110, 0.6, 0.05, 0.1); },
+  gigaBreak: () => { for (let i = 0; i < 5; i++) wood(r(900, 1500), i * 0.04, 0.12); noise({ d: 0.5, v: 0.2, filter: ['highpass', 2500] }); osc({ type: 'sine', f: 90, to: 35, d: 0.5, v: 0.22 }); },
+  gigaWin: () => {
+    const m = [[392, 0.12], [523, 0.12], [659, 0.12], [784, 0.3], [659, 0.12], [784, 0.12], [1047, 0.9]];
+    let at = 0;
+    for (const [f, d] of m) { kazoo(f, d, at, 0.1); kazoo(f / 2, d, at, 0.05); at += d + 0.02; }
+    for (let i = 0; i < 8; i++) wood(600 + i * 90, at - 0.9 + i * 0.1, 0.08);
+    osc({ type: 'sine', f: 131, d: 2.4, v: 0.1, at: at - 0.9 });
+  },
   // compatibilité avec les anciens noms
   perfect: () => SFX.zap(),
   miss: () => SFX.hurt(),
@@ -214,6 +230,8 @@ const THEMES = {
   zone4: { bpm: 112, root: 57, scale: 'minor', prog: [0, 5, 3, 4], lead: 'square', seed: 51 },
   zone5: { bpm: 126, root: 55, scale: 'minor', prog: [0, 3, 5, 4], lead: 'kazoo', seed: 61 },
   boss:  { bpm: 150, root: 52, scale: 'minor', prog: [0, 0, 5, 4], lead: 'kazoo', seed: 77 },
+  // giga boss : plus rapide, plus grave, grosse caisse doublée et nappe de bourdon (heavy)
+  giga:  { bpm: 164, root: 50, scale: 'minor', prog: [0, 5, 3, 4], lead: 'square', seed: 99, heavy: true },
 };
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 // accords (degrés de la gamme majeure, en demi-tons)
@@ -259,6 +277,10 @@ function tick() {
     if (i % 8 === 4) noise({ d: 0.09, v: 0.08, at, filter: ['bandpass', 1800], q: 0.8, bus: musicBus });
     if (i % 2 === 1) noise({ d: 0.025, v: 0.025, at, filter: ['highpass', 7000], bus: musicBus });
     if (i === 14 && bar % 2 === 1) wood(900, at, 0.06);
+    if (th.heavy) { // giga boss : grosse caisse sur chaque temps, bourdon grave en début de mesure
+      if (i % 4 === 2) osc({ type: 'sine', f: 120, to: 40, d: 0.14, v: 0.18, at, bus: musicBus });
+      if (i === 0) osc({ type: 'sawtooth', f: mtof(chordRoot - 12), d: stepDur * 15, v: 0.05, at, attack: 0.08, filter: ['lowpass', 380], q: 3, bus: musicBus });
+    }
     // basse « oom-pah »
     if (i % 4 === 0) osc({ type: 'triangle', f: mtof(chordRoot + (i % 8 === 4 ? 7 : 0) - 12), d: stepDur * 1.8, v: 0.14, at, attack: 0.005, bus: musicBus });
     if (i % 4 === 2) osc({ type: 'triangle', f: mtof(chordRoot + 7), d: stepDur * 0.9, v: 0.06, at, bus: musicBus });

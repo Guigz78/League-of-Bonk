@@ -324,6 +324,18 @@ export const ZONES = [
 export const MONSTER_COUNT = ZONES.reduce((n, z) => n + z.monsters.length, 0); // 30
 export const BOSS_COUNT = ZONES.filter(z => z.boss).length; // 5
 
+// ---------- Expédition en 3 niveaux, giga boss ----------
+// Une expédition = EXPE_LEVELS niveaux : le monde choisi, puis le monde suivant (s'il n'existe pas ou a déjà été visité :
+// un autre monde débloqué pas encore visité), chacun nettement plus dur (réglages LEVELS et GB en haut de run.js).
+// Le dernier niveau se termine par le GIGA BOSS au lieu du boss du monde ; sa défaite = victoire de l'expédition.
+export const EXPE_LEVELS = 3;
+// pal : armure, ombre, magma (yeux, fissures, aura). PV et dégâts : relatifs au boss du monde (GB.hp, GB.dmg de run.js).
+export const GIGA = { name: 'Gorgoth', title: 'Roi des Bonks', body: 'golem', pal: ['#5a5470', '#2a2638', '#ff8a2a'], hp: 1000, atk: 36,
+  moves: ['heavy', 'enrage', 'guard', 'multi'], giga: true };
+// formes 3D du giga boss, une par phase (armure intacte, armure brisée et fissures de magma, embrasé) : le rendu prend
+// e.mdl (posé par giga.js au changement de phase) ; les modèles sont dans js/g3d/models-bosses.js
+export const GIGA_FORMS = [GIGA, { ...GIGA, name: GIGA.name + ':2' }, { ...GIGA, name: GIGA.name + ':3' }];
+
 // Familiers : obtenus en battant les boss. Agissent chaque tour.
 export const PETS = {
   poro:   { name: 'Pompon', desc: 'Vous soigne de 1,5 % des PV toutes les 4 s.', pal: ['#f2f2f2', '#b9c3cf', '#ffffff'], body: 'blob', zone: 0 },
@@ -409,8 +421,8 @@ export const ACHIEVEMENTS = [
   { id: 'hard1', name: 'Sueurs froides', desc: 'Terminer une zone en Difficile.', gold: 150 },
   { id: 'nightmare1', name: 'Cauchemar éveillé', desc: 'Terminer une zone en Cauchemar.', gold: 300 },
   { id: 'portal1', name: 'Au-delà du portail', desc: 'Franchir un portail après avoir vaincu un boss.', gold: 80 },
-  { id: 'stage3', name: 'Grand voyageur', desc: 'Traverser 3 mondes en une seule partie.', gold: 250 },
-  { id: 'world6', name: 'Expédition légendaire', desc: 'Traverser les 6 mondes en une seule partie.', gold: 1500 },
+  { id: 'stage3', name: 'Grand voyageur', desc: 'Atteindre le niveau 3 d\'une expédition.', gold: 250 },
+  { id: 'world6', name: 'Expédition légendaire', desc: 'Vaincre le giga boss au bout d\'une expédition.', gold: 1500 },
   { id: 'totems10', name: 'Tête brûlée', desc: 'Activer 10 totems de défi.', gold: 150 },
   { id: 'forge1', name: 'Forgeron', desc: 'Fabriquer un objet à la forge.', gold: 60 },
   { id: 'upgrade5', name: 'Chef-d\'œuvre', desc: 'Améliorer un objet jusqu\'à +5.', gold: 200 },
@@ -421,7 +433,8 @@ export const ACHIEVEMENTS = [
 ];
 
 // ---------- Expédition : mondes enchaînés, totems de défi, butin, forge, bonus ----------
-// Une partie traverse les mondes : battre le boss d'un monde ouvre un portail vers le monde suivant (plus difficile).
+// Une partie traverse jusqu'à 3 niveaux (EXPE_LEVELS) : battre le boss d'un monde ouvre un portail vers le niveau suivant
+// (monde suivant, plus difficile) ; le niveau 3 se termine par le giga boss.
 // Quand le chrono d'un monde est écoulé, les monstres deviennent fous (de plus en plus).
 
 // Totems de défi posés dans chaque monde : les activer rend la partie plus dure mais rapporte tout de suite.
@@ -597,11 +610,14 @@ export const AURAS = {
   void:   { name: 'Néant', color: '#c03aff' },
   white:  { name: 'Lumière pure', color: '#ffffff' },
   gold:   { name: 'Or royal', color: '#ffe066' },
+  magma:  { name: 'Magma', color: '#ff5a1a' },   // giga boss vaincu
+  laser:  { name: 'Rayon', color: '#ff3a8a' },   // giga boss vaincu sans toucher son double rayon
 };
 // Titres donnés par les défis (clés 'title:<id>') ; ceux du niveau 7 du champion ('m_<champion>') : « Âme de <nom> ».
 // La Saison (L1) les liste s'ils figurent dans sa table TITLES (ou lit ce tableau).
 export const UNLOCK_TITLES = {
   armurier: 'Maître armurier', disciple: 'Disciple', ouragan: 'Ouragan', titan: 'Titan', abyssal: 'Abyssal', seigneur: 'Seigneur de l\'Abysse',
+  regicide: 'Régicide', fleau_rois: 'Fléau des rois',
 };
 
 // Défis : prog(save) = progression, n = objectif, rw = récompense (key / keys : déblocages, gold : or, chest : rang d'un
@@ -611,7 +627,7 @@ export const UNLOCK_TITLES = {
 // totemBoss (boss battu après les 3 totems de son monde).
 export const CHALLENGE_CATS = [
   { id: 'start', name: 'Premiers pas' }, { id: 'weapons', name: 'Armes' }, { id: 'champions', name: 'Champions' },
-  { id: 'feats', name: 'Exploits' }, { id: 'abyss', name: 'Abysse' },
+  { id: 'feats', name: 'Exploits' }, { id: 'abyss', name: 'Abysse' }, { id: 'giga', name: 'Giga boss' },
 ];
 const st_ = k => s => +s.stats?.[k] || 0, rec_ = k => s => +s.rec?.[k] || 0;
 const wk_ = id => s => +s.rec?.wk?.[id] || 0, lvl_ = c => s => +s.rec?.lvl?.[c] || 0;
@@ -655,7 +671,7 @@ export const UNLOCK_CHALLENGES = [
   { id: 'totemboss', cat: 'feats', icon: 'i_burn', name: 'Tête brûlée', txt: 'Activez les 3 totems d\'un monde, puis battez son boss', n: 1, prog: rec_('totemBoss'), rw: { key: 'aura:blood', chest: 2 } },
   { id: 'elites', cat: 'feats', icon: 'i_enrage', name: 'Tueur d\'élites', txt: 'Battez 400 élites', n: 400, prog: rec_('elites'), rw: { gold: 250, chest: 2 } },
   { id: 'lvl40', cat: 'feats', icon: 'upg', name: 'Puissance absolue', txt: 'Atteignez le niveau 40 dans une partie', n: 40, prog: st_('bestLevel'), rw: { key: 'title:titan', gold: 300 } },
-  { id: 'stage4', cat: 'feats', icon: 'portal', name: 'Grande expédition', txt: 'Traversez 4 mondes en une seule partie', n: 4, prog: s => (s.stats?.runs ? (+s.stats.bestStage || 0) + 1 : 0), rw: { gold: 400, chest: 2 } },
+  { id: 'stage4', cat: 'feats', icon: 'portal', name: 'Grande expédition', txt: 'Atteignez le niveau 3 d\'une expédition', n: 3, prog: s => (s.stats?.runs ? Math.min(3, (+s.stats.bestStage || 0) + 1) : 0), rw: { gold: 400, chest: 2 } },
   { id: 'kills150k', cat: 'feats', icon: 'skull', name: 'Fléau des hordes', txt: 'Battez 150 000 monstres', n: 150000, prog: st_('kills'), rw: { key: 'aura:jade', gold: 400 } },
   // ---- Abysse ----
   { id: 'night1', cat: 'abyss', icon: 'skull', name: 'Porte de l\'Abysse', txt: 'Battez un monde en Cauchemar', n: 1, prog: s => ((s.diffCleared || []).some(n => n >= 3) ? 1 : 0), rw: { key: 'abyss', gold: 300 } },
@@ -664,6 +680,13 @@ export const UNLOCK_CHALLENGES = [
   { id: 'abyss5', cat: 'abyss', icon: 'abyss', name: 'Abyssal', txt: 'Battez un monde en Abysse V', n: 5, prog: abyssMax_, rw: { key: 'title:abyssal', chest: 3 } },
   { id: 'void3', cat: 'abyss', icon: 'crown', name: 'Dévoreur dévoré', txt: 'Battez le Ver-Roi du Néant en Cauchemar', n: 1, prog: s => ((s.diffCleared?.[5] || 0) >= 3 ? 1 : 0), rw: { key: 'aura:gold', gold: 800 } },
   { id: 'abyss10', cat: 'abyss', icon: 'abyss', name: 'Seigneur de l\'Abysse', txt: 'Battez un monde en Abysse X', n: 10, prog: abyssMax_, rw: { keys: ['aura:void', 'title:seigneur'], gold: 1500, chest: 3 } },
+  // ---- giga boss (save.stats : gigaKills victoires, gigaTop meilleur niveau de difficulté battu + 1, gigaDance victoires sans
+  // être touché par son double rayon, gigaBest expédition victorieuse la plus rapide en s) ----
+  { id: 'giga1', cat: 'giga', icon: 'crown', name: 'Tueur de géant', txt: `Battez ${GIGA.name}, le giga boss`, n: 1, prog: st_('gigaKills'), rw: { key: 'aura:magma', gold: 500, chest: 3 } },
+  { id: 'giga_hard', cat: 'giga', icon: 'i_enrage', name: 'Le roi vacille', txt: 'Battez le giga boss en Difficile', n: 1, prog: s => (+s.stats?.gigaTop >= 2 ? 1 : 0), rw: { key: 'title:regicide', gold: 600, chest: 3 } },
+  { id: 'giga_night', cat: 'giga', icon: 'skull', name: 'Cauchemar du roi', txt: 'Battez le giga boss en Cauchemar', n: 1, prog: s => (+s.stats?.gigaTop >= 3 ? 1 : 0), rw: { key: 'title:fleau_rois', gold: 1000, chest: 3 } },
+  { id: 'giga_dance', cat: 'giga', icon: 'dodge', name: 'Danse des rayons', txt: 'Battez le giga boss sans être touché par son double rayon', n: 1, prog: st_('gigaDance'), rw: { key: 'aura:laser', gold: 400, chest: 2 } },
+  { id: 'giga5', cat: 'giga', icon: 'medal', name: 'Briseur de couronnes', txt: 'Battez le giga boss 5 fois', n: 5, prog: st_('gigaKills'), rw: { gold: 800, chest: 3 } },
 ];
 
 // Abysse : paliers I à X au-delà de Cauchemar, par monde. Le palier 1 s'ouvre quand le monde est battu en Cauchemar
@@ -802,6 +825,7 @@ export const SEASON_XP = {
   bonus: 1200, bonusMul: 2,       // Bonus du jour : XP des parties ×2 sur les 20 premières minutes de jeu de chaque jour
   quest: 70,                      // quête du jour réclamée (les quêtes de la semaine ont leur XP dans WEEKLY)
   login: 50,                      // récompense du calendrier réclamée
+  giga: 150,                      // giga boss vaincu (victoire de l'expédition) : en plus du boss, × multiplicateur de difficulté
 };
 // XP pour passer chaque palier (index 0 = palier 1) : 176, 197 … 995 (23 420 XP en tout)
 export const SEASON_COST = Array.from({ length: SEASON_TIERS }, (_, i) => 155 + 21 * (i + 1));
@@ -831,7 +855,8 @@ export const WEEKLY = [
   { id: 'totems', stat: 'totems', icon: 'i_burn', n: [40, 60], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Activez ${n} totems de défi` },
   { id: 'kills', stat: 'kills', icon: 'skull', n: [80000, 120000], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Battez ${n.toLocaleString('fr-FR')} monstres` },
   { id: 'chests', stat: 'chests', icon: 'chest', n: [100, 150], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Ouvrez ${n} coffres de butin` },
-  { id: 'deep', stat: 'st3', icon: 'map', n: [4, 6], tier: [2, 2], xp: [400, 500], gold: [250, 350], txt: n => `Atteignez le 3e monde d'une expédition ${n} fois` },
+  { id: 'deep', stat: 'st3', icon: 'map', n: [4, 6], tier: [2, 2], xp: [400, 500], gold: [250, 350], txt: n => `Atteignez le niveau 3 d'une expédition ${n} fois` },
+  { id: 'giga', stat: 'gigaKills', icon: 'crown', n: [1, 2], tier: [2, 3], xp: [450, 550], gold: [300, 400], need: 1, txt: n => (n > 1 ? `Battez ${n} fois le giga boss` : 'Battez le giga boss') },
   { id: 'daily', stat: 'quests', icon: 'quest', n: [12, 15], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Réclamez ${n} quêtes du jour` },
   { id: 'evos', stat: 'weaponEvos', icon: 'star', n: [15, 25], tier: [1, 2], xp: [350, 450], gold: [200, 300], txt: n => `Faites évoluer ${n} armes` },
 ];
@@ -858,6 +883,7 @@ export const TITLES = {
   vampire:     { name: 'Seigneur vampire', how: 'Succès « Seigneur vampire »' },
   archiviste:  { name: 'Archiviste', how: 'Succès « Archiviste »' },
   pilier:      { name: 'Pilier de la guilde', how: 'Succès « Pilier de la guilde »' },
+  roi:         { name: 'Tombeur de rois', how: 'Succès « Briseur de rois »' },
 };
 // titres des défis de déblocage (L2) et de la maîtrise 10 : choisis au même endroit que les autres
 for (const [id, name] of Object.entries(UNLOCK_TITLES)) TITLES[id] ??= { name, how: 'Défi de déblocage' };
@@ -879,7 +905,7 @@ export const ACH_META = {
   first_win: ['combat', 'kills', 1], kills1000: ['combat', 'kills', 1000], ult20: ['combat', 'ults', 20], lvl20: ['combat', 'bestLevel', 20],
   allclass: ['champ', 'clsWon', 3], zone1: ['world', 'zone:0', 1], boss1: ['world', 'wins', 1], baron: ['world', 'zone:5', 1],
   hard1: ['diff', 'hardZones', 1], nightmare1: ['diff', 'nightZones', 1], nodeath: ['exped', 'clean', 1], portal1: ['exped', 'portals', 1],
-  stage3: ['exped', 'stage', 3], world6: ['exped', 'stage', 6], totems10: ['exped', 'totems', 10], rich: ['coll', 'gold', 1000],
+  stage3: ['exped', 'stage', 3], world6: ['exped', 'gigaKills', 1], totems10: ['exped', 'totems', 10], rich: ['coll', 'gold', 1000],
   epic: ['coll', 'epic', 1], pets3: ['coll', 'pets', 3], forge1: ['coll', 'crafted', 1], upgrade5: ['coll', 'itemLv', 5],
   mythic: ['coll', 'mythic', 1], chests50: ['coll', 'chests', 50], quests10: ['loyal', 'quests', 10], login7: ['loyal', 'logins', 7],
 };
@@ -908,6 +934,10 @@ export const ACH_MORE = [
   ach('totems2', 'exped', 'Tête brûlée II', 'Activer 50 totems de défi.', 'totems', 50, 200),
   ach('totems3', 'exped', 'Tête brûlée III', 'Activer 200 totems de défi.', 'totems', 200, 400),
   ach('worlds50', 'exped', 'Globe-trotteur', 'Vaincre 50 boss au total.', 'wins', 50, 200),
+  ach('giga2', 'exped', 'Briseur de rois', `Vaincre ${GIGA.name}, le giga boss, 10 fois.`, 'gigaKills', 10, 600, 'roi'),
+  ach('gigahard', 'diff', 'Le géant tremble', 'Vaincre le giga boss en Difficile ou plus.', 'gigaTop', 2, 400),
+  ach('giganight', 'diff', 'Nuit des rois', 'Vaincre le giga boss en Cauchemar.', 'gigaTop', 3, 800),
+  ach('gigadance', 'exped', 'Danse des rayons', 'Vaincre le giga boss sans être touché par son double rayon.', 'gigaDance', 1, 300),
   ach('evo1', 'evo', 'Première évolution', 'Faire évoluer une arme.', 'weaponEvos', 1, 60),
   ach('evo2', 'evo', 'Armurier', 'Faire évoluer 15 armes.', 'weaponEvos', 15, 150),
   ach('evo3', 'evo', 'Arsenal vivant', 'Faire évoluer 60 armes.', 'weaponEvos', 60, 400),

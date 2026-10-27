@@ -8,7 +8,7 @@ import { Fx } from './fx.js';
 import { Objects } from './objects.js';
 import { Overlay } from './overlay.js';
 import { save } from '../save.js';
-import { PETS } from '../data.js';
+import { PETS, GIGA_FORMS } from '../data.js';
 import * as SI from './stand-in.js';
 import { RIM } from './models-kit.js';
 export { zoneBannerURL } from './world.js';
@@ -81,6 +81,7 @@ export class Gfx {
     this.pools = new Map();
     this.pops = [];
     for (const d of run.zone.monsters) { this.pool(d, 'n'); if (d.elite) this.pool(d, 'e'); }
+    if (run.gigaLevel) for (const d of GIGA_FORMS) this.pool(d, 'b'); // giga boss : ses 3 formes construites d'avance (pas d'à-coup)
     for (const P of this.pools.values()) if (P.v === 'n' && !P.extra) P.loBatch?.(); // modèles allégés prêts avant la première foule
     this.ms = { x: 0, y: 0, z: 0, rot: 0, scale: 1, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
     // caméra
@@ -148,10 +149,13 @@ export class Gfx {
     c.lx += (p.face.x * lt - c.lx) * k; c.ly += (p.face.y * lt * 0.8 - c.ly) * k;
     const f = 1 - Math.exp(-d * 6.5);
     if (Math.abs(p.x - c.x) > 600 || Math.abs(p.y - c.y) > 600) { c.x = p.x; c.y = p.y; c.lx = c.ly = 0; } // téléporté
-    c.x += (p.x + c.lx - c.x) * f; c.y += (p.y + c.ly - c.y) * f;
-    // très léger recul pendant le combat de boss (l'arène est grande), lent : jamais de pompage
-    const zt = run.boss && !run.boss.dead ? 1.12 : 1;
-    c.z += (zt - c.z) * (1 - Math.exp(-d * 0.8));
+    // cinématique du giga boss (run.cine) : la caméra glisse vers lui le temps de son arrivée
+    const cn = run.cine && !run.cine.dead && run.cineT > 0 ? run.cine : null, ck = cn ? Math.min(1, run.cineT / 0.8) * 0.62 : 0;
+    const fx0 = p.x + c.lx + (cn ? (cn.x - p.x) * ck : 0), fy0 = p.y + c.ly + (cn ? (cn.y - p.y) * ck : 0), fk = cn ? 1 - Math.exp(-d * 3.2) : f;
+    c.x += (fx0 - c.x) * fk; c.y += (fy0 - c.y) * fk;
+    // très léger recul pendant le combat de boss (l'arène est grande), lent : jamais de pompage ; plus large pour le giga boss
+    const zt = run.boss && !run.boss.dead ? (run.boss.giga ? 1.42 : 1.12) : 1;
+    c.z += (zt - c.z) * (1 - Math.exp(-d * (zt > 1.2 ? 1.6 : 0.8)));
     const sm = [0, 0.5, 1][save.settings?.shake ?? 2] ?? 1;
     if (this.kick > 0) this.kick = Math.max(0, this.kick - d * 14);
     const shk = Math.min(6, ((run.shake || 0) + (this.kick || 0)) * 0.45) * sm * S;
@@ -291,7 +295,7 @@ export class Gfx {
       if (ex < -400 || ex > 400 || ey < -900 || ey > 640) continue; // hors du champ
       nVis++;
       if (e.burrowed && e.jumpH < -40) { fx.mound(e); continue; }
-      const P = this.pool(e.def, e.boss ? 'b' : e.elite ? 'e' : 'n');
+      const P = this.pool(e.mdl || e.def, e.boss ? 'b' : e.elite ? 'e' : 'n'); // mdl : forme du giga boss selon sa phase
       const body = e.def.body, age = run.time - e.born;
       let up = e.fly * 0.9, sq = e.g_sq || 0;
       if (e.fly) up += Math.sin(e.bob * 0.45) * 3;
@@ -327,7 +331,7 @@ export class Gfx {
       d.t += dt;
       const kk = d.t / d.max;
       if (kk >= 1) { this.pops.splice(i, 1); continue; }
-      const P = this.pool(e.def, e.boss ? 'b' : e.elite ? 'e' : 'n');
+      const P = this.pool(e.mdl || e.def, e.boss ? 'b' : e.elite ? 'e' : 'n');
       s.x = d.x * S; s.y = Math.max(0, e.fly * 0.9) * S; s.z = d.y * S; s.rot = Math.PI / 2 - e.ang;
       s.scale = e.r / 16 * (1 + kk * 0.35); s.sq = kk; s.flash = 1; s.freeze = false; s.mad = false; s.anim = e.bob; s.alpha = 1 - kk;
       P.add(e, s);

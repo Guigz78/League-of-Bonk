@@ -23,7 +23,10 @@ export function freshSave() {
     inventory: [],
     equipped: { weapon: null, armor: null, trinket: null },
     stats: { wins: 0, kills: 0, ults: 0, deaths: 0, runs: 0, bestLevel: 0, classWins: {}, seen: {},
-      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0, quests: 0, logins: 0 },
+      worlds: 0, bestStage: 0, chests: 0, crafted: 0, totems: 0, portals: 0, mythic: 0, quests: 0, logins: 0,
+      // giga boss : victoires, meilleur niveau de difficulté battu + 1 (1 Normal … 3 Cauchemar), victoires sans toucher son
+      // double rayon, expédition victorieuse la plus rapide (s, 0 = aucune)
+      gigaKills: 0, gigaTop: 0, gigaDance: 0, gigaBest: 0 },
     // expédition : pièces d'équipement par rareté, bonus possédés et choisis, coffres pas encore ouverts
     parts: { weapon: [0, 0, 0, 0], armor: [0, 0, 0, 0], trinket: [0, 0, 0, 0] },
     boosts: {},
@@ -156,10 +159,12 @@ function migrateLoot(out, s) {
   const sel = Array.isArray(out.boostSel) ? out.boostSel : [];
   out.boostSel = Array.from({ length: BOOST_SLOTS }, (_, i) => (BOOSTS[sel[i]] && sel.indexOf(sel[i]) === i ? sel[i] : null));
   out.pendingChests = (Array.isArray(out.pendingChests) ? out.pendingChests : [])
-    .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5) }));
+    .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5), ...(c.giga ? { giga: 1 } : {}) })); // giga = Giga coffre
   const st = out.stats;
   if ((s.v || 1) < 3) st.worlds = Math.max(st.worlds || 0, st.wins || 0);
-  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic', 'quests', 'logins']) st[k] = int(st[k], 1e9);
+  for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic', 'quests', 'logins', 'gigaKills', 'gigaDance', 'gigaBest']) st[k] = int(st[k], 1e9);
+  st.bestStage = Math.min(st.bestStage, 2); // expédition en 3 niveaux (avant : jusqu'à 6 mondes enchaînés)
+  st.gigaTop = int(st.gigaTop, 3 + 10);
   if (!Array.isArray(out.inventory)) out.inventory = [];
 }
 
@@ -316,19 +321,22 @@ const pickW = w => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (
 export const rarityIdx = it => Math.max(0, RARITIES.indexOf(it.rarity));
 
 // tire le contenu d'un coffre sans l'appliquer : pièces, bonus, objets avec leurs caractéristiques,
-// parfois un niveau gratuit d'amélioration permanente, et un peu d'or
-export function rollChest({ tier = 0, zone = 0 }) {
+// parfois un niveau gratuit d'amélioration permanente, et un peu d'or.
+// Giga coffre (giga : giga boss vaincu) : coffre mythique + 2 pièces, un objet légendaire garanti, un objet de plus,
+// amélioration permanente presque sûre, or × 2
+export function rollChest({ tier = 0, zone = 0, giga = 0 }) {
   const T = LOOT_TIERS[tier] || LOOT_TIERS[0], L = CHEST_LOOT[tier] || CHEST_LOOT[0], slots = Object.keys(PARTS), got = {};
-  for (let n = rint(T.parts[0], T.parts[1]); n > 0; n--) { const k = slots[rint(0, slots.length - 1)] + ':' + pickW(T.rar); got[k] = (got[k] || 0) + 1; }
+  for (let n = rint(T.parts[0], T.parts[1]) + (giga ? 2 : 0); n > 0; n--) { const k = slots[rint(0, slots.length - 1)] + ':' + pickW(T.rar); got[k] = (got[k] || 0) + 1; }
   const parts = Object.entries(got).map(([k, n]) => { const [slot, r] = k.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n);
   const ids = Object.keys(BOOSTS).filter(id => !LOCKED.boost.includes(id) || save.unlocks?.['boost:' + id]); // bonus débloqués (L2)
   const boost = Math.random() < T.boost ? ids[rint(0, ids.length - 1)] : null;
   const items = [];
-  for (let n = L.items + (Math.random() < L.extra ? 1 : 0); n > 0; n--) items.push(makeItem(Math.random, zone, { rarity: RARITIES[pickW(L.rar)] }));
+  if (giga) items.push(makeItem(Math.random, zone, { rarity: 'legendary' }));
+  for (let n = L.items + (giga || Math.random() < L.extra ? 1 : 0); n > 0; n--) items.push(makeItem(Math.random, zone, { rarity: RARITIES[pickW(L.rar)] }));
   const ups = Object.keys(UPGRADES).filter(k => save.upgrades[k] < upgMax(k));
-  const upg = ups.length && Math.random() < L.upg ? ups[rint(0, ups.length - 1)] : null;
-  const gold = Math.round(rint(T.gold[0], T.gold[1]) * (1 + 0.4 * zone));
-  return { tier, zone, parts, boost, items, upg, gold };
+  const upg = ups.length && Math.random() < (giga ? 0.85 : L.upg) ? ups[rint(0, ups.length - 1)] : null;
+  const gold = Math.round(rint(T.gold[0], T.gold[1]) * (1 + 0.4 * zone) * (giga ? 2 : 1));
+  return { tier, zone, parts, boost, items, upg, gold, ...(giga ? { giga: 1 } : {}) };
 }
 
 // ouvre le coffre en attente n° i : contenu ajouté à la sauvegarde et coffre retiré en même temps
@@ -466,7 +474,7 @@ export function checkAchievements() {
     nightmare1: (s.diffCleared || []).some(n => n >= 3),
     portal1: st.portals >= 1,
     stage3: st.bestStage >= 2,
-    world6: st.bestStage >= 5,
+    world6: st.gigaKills >= 1,
     totems10: st.totems >= 10,
     forge1: st.crafted >= 1,
     upgrade5: s.inventory.some(i => (i.lv || 0) >= 5),
