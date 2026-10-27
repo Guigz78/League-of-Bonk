@@ -225,8 +225,22 @@ export class Fx {
       case 'blink': this.puff(ev.fromX, ev.fromY, 6, 18, 0.6, '#c8a0ff'); this.puff(ev.x, ev.y, 6, 18, 0.6, '#c8a0ff'); break;
       case 'enemyStomp': case 'bossStomp': this.decal(ev.x, ev.y, ev.e.r * 1.4, '#1a1020', 0.3); this.puff(ev.x, ev.y, 10, ev.e.r, 0.8, '#d8c8b0'); this.rockBurst(ev.x, ev.y, 6, '#7a6a5a', 180); break;
       case 'enemyTelegraph':
-        if (['dash', 'strafe', 'charge', 'stomp', 'mortar'].includes(ev.kind)) this.teles.push({ ...ev, t: 0 });
+        if (['dash', 'strafe', 'charge', 'stomp', 'mortar', 'bonk', 'quake'].includes(ev.kind)) this.teles.push({ ...ev, t: 0 });
         break;
+      // ---- giga boss (giga.js) ----
+      case 'gigaSummon': this.gigaSummonFx(ev); break;
+      case 'gigaPhase': this.gigaPhaseFx(ev); break;
+      case 'gigaDeath': this.gigaDeathFx(ev); break;
+      case 'gigaBonk':
+        this.decal(ev.x, ev.y, ev.R * 0.9, '#1a0a08', 0.5);
+        for (let i = 0; i < 2; i++) this.ring(ev.x, ev.y, 20, ev.R * (1.4 + i * 0.5), i ? '#ffd54a' : '#ff7a1a', 12 - i * 3, 0.5, -i * 0.08);
+        this.bursts.push({ x: ev.x, y: ev.y, h: 6, r: ev.R * 1.5, t: 0, max: 0.4, c: '#ffb04a' });
+        this.puff(ev.x, ev.y, 14, ev.R * 0.6, 0.85, '#d8c0a0');
+        this.rockBurst(ev.x, ev.y, 14, '#6a5a52', 300);
+        this.gfx.kick = Math.max(this.gfx.kick || 0, 8);
+        break;
+      case 'gigaQuake': this.ring(ev.x, ev.y, 30, 160, '#ffb04a', 10, 0.35); this.puff(ev.x, ev.y, 10, 60, 0.8, '#d8c0a0'); break;
+      case 'gigaLaser': if (ev.e) this.burstStars(ev.e.x, ev.e.y, ev.e.r, 16, '#ff6a9a', 260); break;
       case 'ult':
         this.bursts.push({ x: p.x, y: p.y, h: 20, r: ev.kind === 'nova' ? 320 : 260, t: 0, max: 0.6, c: ev.kind === 'crystal' ? '#9ad8ff' : '#ffe48a' });
         for (let i = 0; i < 2; i++) this.ring(p.x, p.y, 20, ev.kind === 'nova' ? 340 : 260, i ? W : ev.kind === 'crystal' ? '#9ad8ff' : '#ffd54a', 12, 0.6, -i * 0.1);
@@ -238,6 +252,99 @@ export class Fx {
     }
   }
   glowPulse(x, y, h, r, c) { this.bursts.push({ x, y, h, r, t: 0, max: 0.18, c, noRing: true }); }
+
+  // ---------- Giga boss ----------
+  // arrivée : colonnes rouge et or, anneaux qui balaient l'arène, sol fendu, rayons derrière lui
+  gigaSummonFx(ev) {
+    const e = ev.e;
+    this.pillars.push({ x: ev.x, y: ev.y, w: 260, h: 1100, t: 0, max: 1.8, c: '#ff3a1a' });
+    this.pillars.push({ x: ev.x, y: ev.y, w: 120, h: 1300, t: -0.2, max: 1.6, c: '#ffd54a' });
+    for (let i = 0; i < 5; i++) this.ring(ev.x, ev.y, 30, 200 + i * 130, i % 2 ? '#ffd54a' : '#ff3a1a', 14, 0.9, -i * 0.15);
+    this.decal(ev.x, ev.y, 160, '#140608', 0.6);
+    this.puff(ev.x, ev.y, 24, 110, 0.9, '#4a1a2a');
+    this.rockBurst(ev.x, ev.y, 30, '#6a5a52', 380);
+    this.burstStars(ev.x, ev.y, e ? e.r : 60, 40, '#ffb04a', 480);
+    this.gfx.kick = Math.max(this.gfx.kick || 0, 12);
+  }
+  // changement de phase : l'armure vole en éclats (morceaux de fer), puis le feu (phase 3)
+  gigaPhaseFx(ev) {
+    const e = ev.e, hot = ev.phase >= 3, h = e ? e.r * 1.3 : 60;
+    for (let i = 0; i < 34 && this.debris.length < 230; i++) {
+      const a = Math.random() * TAU, v = rand(160, 420);
+      this.debris.push({ x: ev.x, y: ev.y, z: h * rand(0.6, 1.4), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7, vz: rand(250, 560), r: rand(5, 10), c: col(hot ? (i % 3 ? '#ff7a1a' : '#ffd54a') : (i % 3 ? '#4e4a62' : i % 2 ? '#8a86a2' : '#ffd54a')), rot: Math.random() * TAU, vr: rand(-14, 14), life: rand(1, 1.6), g: 900 });
+    }
+    for (let i = 0; i < 4; i++) this.ring(ev.x, ev.y, 30, 260 + i * 110, i % 2 ? '#ffffff' : hot ? '#ff3a1a' : '#ffb04a', 13, 0.8, -i * 0.12);
+    this.pillars.push({ x: ev.x, y: ev.y, w: 200, h: 1000, t: 0, max: 1.2, c: hot ? '#ff4a1a' : '#ffb04a' });
+    this.burstStars(ev.x, ev.y, h, 40, hot ? '#ff7a1a' : '#ffe48a', 500);
+    if (hot) this.puff(ev.x, ev.y, 20, 90, 0.8, '#ff9a4a');
+    this.gfx.kick = Math.max(this.gfx.kick || 0, 10);
+  }
+  // victoire : colonnes dorées, anneaux, rayons, pluie de confettis et d'éclats d'or
+  gigaDeathFx(ev) {
+    const p = this.run.p;
+    for (let i = 0; i < 6; i++) this.ring(ev.x, ev.y, 20, 320 + i * 140, i % 2 ? W : '#ffd54a', 14, 1.1, -i * 0.12);
+    this.pillars.push({ x: ev.x, y: ev.y, w: 300, h: 1400, t: 0, max: 2.2, c: '#ffe48a' });
+    this.pillars.push({ x: ev.x, y: ev.y, w: 120, h: 1500, t: -0.3, max: 2, c: '#ffffff' });
+    this.burstStars(ev.x, ev.y, 60, 60, '#ffd54a', 640);
+    this.rockBurst(ev.x, ev.y, 30, '#4e4a62', 420);
+    this.rays.push({ t: 0, max: 3.2, c: '#ffd54a', s: 34 });
+    this.halo('#ffd54a', 5);
+    for (let i = 0; i < 70; i++) this.confetti();
+    this.bursts.push({ x: p.x, y: p.y, h: 30, r: 320, t: 0, max: 1, c: '#ffe48a' });
+    this.gfx.kick = Math.max(this.gfx.kick || 0, 14);
+  }
+  // double rayon tournant : lignes de départ qui clignotent (alerte), puis rayons brûlants avec traînées
+  gigaLaserFx(B, t) {
+    const warn = B.phase === 'laserW', L = B.lzLen, n = B.lzN || 2, dir = B.lzDir || 1;
+    for (let i = 0; i < n; i++) {
+      const a = B.lzA + i * TAU / n, ca = Math.cos(a), sa = Math.sin(a), ax = B.x * S, az = B.y * S, bx = (B.x + ca * L) * S, bz = (B.y + sa * L) * S;
+      if (warn) {
+        const blink = 0.5 + Math.sin(t * 24) * 0.5;
+        this.ln.lane(ax, 0.09, az, a, L * S, B.lzW * S, col('#ff2a6a'), 0.85, 0, 0.22 + blink * 0.3, 1, 5, 1.5, 1);
+        this.ringAt(B.x, B.y, L, '#ff3a6a', 0.9, 0.012, 0.1 + blink * 0.08, 0.16, dir > 0 ? a : a - 0.16 * TAU, 0, 0, 0, false, 0.07); // sens de rotation
+      } else {
+        const w2 = B.lzW * (1 + Math.sin(t * 40 + i) * 0.06), y = 0.9;
+        for (let k = 3; k >= 1; k--) { const an = a - dir * k * 0.06; this.line(ax, y, az, (B.x + Math.cos(an) * L) * S, y, (B.y + Math.sin(an) * L) * S, w2 * 0.8 * S, '#ff4a8a', 0.22 / k); }
+        this.line(ax, y, az, bx, y, bz, w2 * 2.2 * S, '#ff2a6a', 0.7);
+        this.line(ax, y, az, bx, y, bz, w2 * 0.9 * S, '#ffb0d0', 1);
+        this.line(ax, y, az, bx, y, bz, w2 * 0.3 * S, W, 1);
+        this.ln.lane(ax, 0.09, az, a, L * S, w2 * 1.4 * S, col('#ff4a8a'), 0.5, 0, 0.4, 0, 1, 0, 0);
+        const ex = B.x + ca * L, ey = B.y + sa * L;
+        this.glow(ex, ey, 14, w2 * 1.7, '#ff8ab0', 1);
+        if (Math.random() < 0.7) this.sparks.push({ x: ex, y: ey, z: 14, vx: rand(-200, 200), vy: rand(-200, 200), vz: rand(50, 250), life: 0.35, max: 0.35, c: '#ffc0d8', w: 2.6 });
+        if (Math.random() < 0.2) this.decal(B.x + ca * L * rand(0.35, 1), B.y + sa * L * rand(0.35, 1), 14, '#2a0a14', 0.3);
+      }
+    }
+    // portée : cercle pointillé (au-delà, on est à l'abri)
+    this.ringAt(B.x, B.y, L + 8, '#ff6a9a', warn ? 0.7 : 0.45, 0.01, 0, 1, t * 0.3, 40, 0.5, 0.3, false, 0.065);
+    if (!warn) this.glow(B.x, B.y, B.r * 1.4, B.r * 1.6, '#ff6a9a', 0.7);
+  }
+  // giga boss : couronne d'or au sol, lueur de magma (phase 2), aura de feu et braises (phase 3), rugissement
+  gigaDeco(e, up, t) {
+    const ph = e.gph || 1, dt = this.gfx.dt;
+    this.ringAt(e.x, e.y, e.r * 1.45, '#ffd54a', 0.75, 0.04, 0, 1, t * 0.5, 16, 0.5, 0.5, true);
+    if (ph >= 2) this.glow(e.x, e.y, e.r * 1.1 + up, e.r * (1.3 + Math.sin(t * 4) * 0.12), '#ff7a1a', ph >= 3 ? 0.35 : 0.25);
+    if (ph >= 3) {
+      this.glow(e.x, e.y, e.r * 0.9 + up, e.r * 3.2 * (1 + Math.sin(t * 6) * 0.07), '#ff4a1a', 0.32);
+      this.ringAt(e.x, e.y, e.r * 1.9, '#ff5a1a', 0.5 + Math.sin(t * 8) * 0.15, 0.06, 0.08, 1, -t * 0.8, 10, -0.8, 0.5, true);
+      if (this.sparks.length < 190) for (let i = 0; i < 2; i++) { const a = Math.random() * TAU, d = e.r * rand(0.6, 1.3); this.sparks.push({ x: e.x + Math.cos(a) * d, y: e.y + Math.sin(a) * d * 0.8, z: rand(10, e.r * 2) + up, vx: 0, vy: 0, vz: rand(80, 200), life: 0.6, max: 0.6, c: Math.random() < 0.5 ? '#ffb04a' : '#ff5a1a', w: 3 }); }
+      if (Math.random() < 0.2 && this.puffs.length < 200) this.puffs.push({ x: e.x + rand(-e.r, e.r), y: e.y + rand(-e.r * 0.5, e.r * 0.5), z: e.r * 1.5 + up, vx: 0, vy: 0, vz: 90, s: rand(10, 16), life: 0.5, max: 0.5, a: 0.4, c: '#ff9a4a' });
+    }
+    if (e.phase === 'groar') {
+      e.g_roar = (e.g_roar || 0) - dt;
+      if (e.g_roar <= 0) { e.g_roar = 0.18; this.ring(e.x, e.y, e.r * 0.8, e.r * 3.6, ph >= 3 ? '#ff3a1a' : '#ffb04a', 8, 0.5); }
+      this.glow(e.x, e.y, e.r + up, e.r * 3, ph >= 3 ? '#ff4a1a' : '#ffb04a', 0.5 + Math.sin(t * 20) * 0.15);
+    }
+    if (e.phase === 'laserW' || e.phase === 'gspiral' && e.spinUp > 0) this.glow(e.x, e.y, e.r * 1.3 + up, e.r * (1.8 + Math.sin(t * 30) * 0.3), '#ff4a8a', 0.7);
+  }
+  // onde de choc à brèche : arc lumineux interrompu, bords de la brèche marqués en blanc
+  gapWave(w, a) {
+    const g0 = w.gap + w.gw / 2, arc = 1 - w.gw / TAU;
+    this.ringAt(w.x, w.y, w.r, '#ff9a3a', a, clamp(18 / w.r, 0.02, 0.4), 0, arc, g0, 0, 0, 0.8, true, 0.12);
+    this.ringAt(w.x, w.y, w.r + 6, '#2a1408', 0.45 * a, clamp(24 / w.r, 0.02, 0.4), 0, arc, g0, 0, 0, 0, false, 0.08);
+    for (const s of [-1, 1]) { const an = w.gap + s * w.gw / 2; this.glow(w.x + Math.cos(an) * w.r, w.y + Math.sin(an) * w.r, 18, 30, '#ffffff', 0.8 * a); }
+    this.ringAt(w.x, w.y, w.r, '#7affc8', 0.35 * a, 0.08, 0, w.gw / TAU, w.gap - w.gw / 2, 0, 0, 0, true, 0.1); // l'ouverture : passage sûr
+  }
 
   summonFx(ev) {
     const run = this.run, A = run.altar;
@@ -374,6 +481,7 @@ export class Fx {
       }
       if (e.phase === 'ringW' || (e.phase === 'spiral' && e.spinUp > 0) || e.phase === 'summonW')
         this.glow(e.x, e.y, e.r + up, e.r * (2 + Math.sin(t * 30) * 0.3), e.phase === 'summonW' ? '#c06aff' : '#ff3a6a', 0.75);
+      if (e.giga) this.gigaDeco(e, up, t);
     }
     if (e.freeze > 0 && Math.random() < 0.05) this.sparkle(e.x + rand(-e.r, e.r), e.y, e.r + up, '#bfeaff');
     if ((e.mad || (run.overtime > 0 && !e.boss)) && Math.random() < 0.02) this.sparks.push({ x: e.x, y: e.y, z: e.r * 2 + up, vx: 0, vy: 0, vz: 80, life: 0.5, max: 0.5, c: '#ff5a2a', w: 2 });
@@ -552,6 +660,7 @@ export class Fx {
     // ondes de choc (à sauter) : muret de terre et de lumière qui avance
     for (const w of run.waves) {
       const a = 0.35 + 0.65 * clamp(1 - w.r / w.max, 0, 1);
+      if (w.gap != null) { this.gapWave(w, a); continue; } // giga boss : onde ouverte d'une brèche
       this.wave.put(w.x * S, 0, w.y * S, 0, w.r * S, 0.75 + a * 0.35, w.r * S);
       this.ringAt(w.x, w.y, w.r, '#ff9a3a', a, clamp(16 / w.r, 0.02, 0.4), 0, 1, 0, 0, 0, 0.8, true, 0.1);
       this.ringAt(w.x, w.y, w.r + 6, '#2a1408', 0.4 * a, clamp(22 / w.r, 0.02, 0.4), 0, 1, 0, 0, 0, 0, false, 0.08);
@@ -560,8 +669,9 @@ export class Fx {
         this.puffs.push({ x: w.x + Math.cos(an) * w.r, y: w.y + Math.sin(an) * w.r, z: 4, vx: Math.cos(an) * 60, vy: Math.sin(an) * 40, vz: 30, s: rand(6, 10), life: 0.4, max: 0.4, a: 0.4, c: '#d8c0a0' });
       }
     }
-    // rayon tournant du boss
+    // rayon tournant du boss ; double rayon du giga boss
     const B = run.boss;
+    if (B && !B.dead && B.giga && (B.phase === 'laserW' || B.phase === 'laser') && B.lzLen) this.gigaLaserFx(B, t);
     if (B && !B.dead && (B.phase === 'sweepW' || B.phase === 'sweep') && B.sweepLen) {
       const L = B.sweepLen, dir = B.sweepDir || 1, w = B.sweepW || 34, warn = B.phase === 'sweepW';
       const left = warn ? SWEEP_ARC : SWEEP_ARC * clamp(B.phaseT / (B.sweepDur || 2.4), 0, 1);
@@ -604,6 +714,16 @@ export class Fx {
         const R = T0.R, pulse = 0.5 + Math.sin(t * 22) * 0.5, r = Math.min(R, e.r + (R - e.r) * k);
         this.ringAt(e.x, e.y, r, '#ffaa46', 0.55 + pulse * 0.45, clamp(8 / r, 0.02, 0.3), 0.1 + pulse * 0.08, 1, 0, 0, 0, 0.5);
         this.ringAt(e.x, e.y, R, '#ff7a2a', 0.5, 0.02, 0, 1, t * 0.4, 24, 0.5, 0, false, 0.065);
+      } else if (T0.kind === 'bonk') { // bond du giga boss : réticule au sol, son ombre grandit jusqu'à l'atterrissage
+        const R = T0.R, pulse = 0.5 + Math.sin(t * 20) * 0.5;
+        this.shadow(T0.x, T0.y, R * 1.6 * (0.3 + 0.7 * k), 0.15 + 0.4 * k);
+        this.ringAt(T0.x, T0.y, R * (1 - k) + 16, '#ffd54a', 0.7 + pulse * 0.3, 0.06, 0, 1, t * 2, 4, 0, 0.5);
+        for (const a of [0, Math.PI / 2]) this.ln.lane((T0.x - Math.cos(a) * (R + 14)) * S, 0.1, (T0.y - Math.sin(a) * (R + 14)) * S, a, (R * 2 + 28) * S, 4 * S, col('#ff5050'), 0.85, 1, 0.8, 0, 1, 0, 0);
+      } else if (T0.kind === 'quake' && e) { // ondes à brèche du giga boss : portée et première ouverture
+        const R = T0.R, gw = T0.gw || 0.9, g0 = T0.gap + gw / 2, pulse = 0.5 + Math.sin(t * 22) * 0.5;
+        this.ringAt(e.x, e.y, R, '#ff7a2a', 0.6 + pulse * 0.3, 0.02, 0.06 + 0.06 * k, 1 - gw / TAU, g0, 24, 0.5, 0.3, false, 0.065);
+        this.ringAt(e.x, e.y, R, '#7affc8', 0.5 + pulse * 0.3, 0.05, 0.12, gw / TAU, T0.gap - gw / 2, 0, 0, 0.4, false, 0.07);
+        for (const s of [-1, 1]) { const an = T0.gap + s * gw / 2; this.ln.lane((e.x + Math.cos(an) * e.r) * S, 0.1, (e.y + Math.sin(an) * e.r) * S, an, (R - e.r) * S, 3 * S, col('#ffffff'), 0.7, 1, 0.6, 0, 1, 0, 0); }
       } else if (T0.kind === 'mortar') {
         const r = 14 + (1 - k) * 18;
         this.ringAt(T0.x, T0.y, r, '#ff5050', 0.95, 0.18, 0.15, 1, 0, 0, 0, 0.4);
