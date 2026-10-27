@@ -30,7 +30,7 @@ export const CLASSES = {
     hp: 120, atk: 14, crit: 0.1, speed: 1.02, lifesteal: 0.06,
     weapon: 'scythe', ult: 'bloodfeast',
     passive: { name: 'Soif de sang', icon: 'lifesteal', desc: 'Vol de vie inné de 6 % : vos coups vous soignent.' },
-    colors: { 1: '#2a1a30', 2: '#170c1c', 3: '#5a2a44', a: '#e0203e', h: '#e2e6f0', s: '#f8e8ec', d: '#dcc2ca', c: '#7a1a30' },
+    colors: { 1: '#2a1a30', 2: '#170c1c', 3: '#5a2a44', a: '#e0203e', h: '#c8cee0', s: '#f8e8ec', d: '#dcc2ca', c: '#7a1a30' },
   },
   assassin: {
     id: 'assassin', name: 'Sora', role: 'Ombre', locked: true,
@@ -77,8 +77,8 @@ export const EVOLUTIONS = {
   vampire: [
     { name: 'Nyx' },
     { name: 'Nyx Écarlate', lvl: 5, colors: { 1: '#6a1428', 2: '#3a0a16', 3: '#a82a44', a: '#ff3a52', c: '#1a0e16' } },
-    { name: 'Nyx Nocturne', lvl: 11, colors: { 1: '#2e1a4a', 2: '#180c2a', 3: '#5a3a8a', a: '#ff2a6a', h: '#f0f2ff', c: '#8a1a3a' } },
-    { name: 'Nyx Reine du Sang', lvl: 19, colors: { 1: '#8a0e26', 2: '#4a0614', 3: '#d03a52', a: '#ffd54a', h: '#ffffff', c: '#1a0a12' } },
+    { name: 'Nyx Nocturne', lvl: 11, colors: { 1: '#2e1a4a', 2: '#180c2a', 3: '#5a3a8a', a: '#ff2a6a', h: '#d4d8ee', c: '#8a1a3a' } },
+    { name: 'Nyx Reine du Sang', lvl: 19, colors: { 1: '#8a0e26', 2: '#4a0614', 3: '#d03a52', a: '#ffd54a', h: '#e4e4f2', c: '#1a0a12' } },
     { name: 'Nyx Lune de Sang', lvl: 28, aura: '#ff2a4a', colors: { 1: '#1a0a14', 2: '#0c0408', 3: '#ff4a64', a: '#ff2a4a', h: '#ffe0e6', c: '#c8102e' } },
   ],
   assassin: [
