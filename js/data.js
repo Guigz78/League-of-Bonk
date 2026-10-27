@@ -287,15 +287,17 @@ export const BOSS_ITEMS = [
   { slot: 'armor', name: 'Écailles du Ver-Roi', icon: 'armor', main: 'hp', affs: ['armor', 'thorns', 'regen', 'dodge'], effect: 'fury' },
 ];
 
-// Améliorations permanentes (boutique, payées en or)
+// Améliorations permanentes (boutique, payées en or). inf : à l'infini — au-delà de max, chaque niveau coûte 12 % du coût
+// du niveau max de plus (les caractéristiques plafonnées, critique, vitesse et vol de vie, gardent leur maximum).
+export const upgMax = k => (UPGRADES[k]?.inf ? Infinity : UPGRADES[k]?.max ?? 0);
 export const UPGRADES = {
-  hp:     { name: 'Vitalité', icon: 'heart', desc: '+8 PV max', per: { hp: 8 }, base: 40, grow: 1.32, max: 20 },
-  atk:    { name: 'Puissance', icon: 'fist', desc: '+2 dégâts', per: { atk: 2 }, base: 50, grow: 1.35, max: 20 },
+  hp:     { name: 'Vitalité', icon: 'heart', desc: '+8 PV max', per: { hp: 8 }, base: 40, grow: 1.32, max: 20, inf: true },
+  atk:    { name: 'Puissance', icon: 'fist', desc: '+2 dégâts', per: { atk: 2 }, base: 50, grow: 1.35, max: 20, inf: true },
   crit:   { name: 'Précision', icon: 'target', desc: '+2 % de critique', per: { crit: 0.02 }, base: 60, grow: 1.42, max: 10 },
-  regen:  { name: 'Régénération', icon: 'potion', desc: '+0,1 PV par seconde', per: { regen: 1 }, base: 60, grow: 1.42, max: 10 },
+  regen:  { name: 'Régénération', icon: 'potion', desc: '+0,1 PV par seconde', per: { regen: 1 }, base: 60, grow: 1.42, max: 10, inf: true },
   speed:  { name: 'Agilité', icon: 'arrow', desc: '+4 % de vitesse', per: { speed: 0.04 }, base: 70, grow: 1.45, max: 8 },
-  magnet: { name: 'Attraction', icon: 'ring', desc: '+12 % de rayon de ramassage', per: { magnet: 0.12 }, base: 50, grow: 1.4, max: 8 },
-  luck:   { name: 'Fortune', icon: 'gold', desc: '+10 % d\'or gagné', per: { gold: 0.1 }, base: 80, grow: 1.5, max: 10 },
+  magnet: { name: 'Attraction', icon: 'ring', desc: '+12 % de rayon de ramassage', per: { magnet: 0.12 }, base: 50, grow: 1.4, max: 8, inf: true },
+  luck:   { name: 'Fortune', icon: 'gold', desc: '+10 % d\'or gagné', per: { gold: 0.1 }, base: 80, grow: 1.5, max: 10, inf: true },
   vamp:   { name: 'Soif de sang', icon: 'lifesteal', desc: '+0,5 % de vol de vie', per: { lifesteal: 0.005 }, base: 120, grow: 1.5, max: 10 },
 };
 
@@ -486,7 +488,7 @@ export const LOCKED = {
 };
 
 // Auras de la forme ultime (cosmétiques, choisies sur l'écran des champions) : remplacent la couleur de l'aura du dernier
-// stade. Les auras de maîtrise ('m_<champion>', maîtrise 5) prennent la couleur de MASTERY.aura.
+// stade. Les auras de champion ('m_<champion>', niveau 3 du champion) prennent la couleur de MASTERY.aura.
 export const AURAS = {
   prism:  { name: 'Prisme', color: '#ff6ad8' },
   astral: { name: 'Astrale', color: '#8a7aff' },
@@ -504,7 +506,7 @@ export const AURAS = {
   white:  { name: 'Lumière pure', color: '#ffffff' },
   gold:   { name: 'Or royal', color: '#ffe066' },
 };
-// Titres donnés par les défis (clés 'title:<id>') ; ceux de la maîtrise 10 ('m_<champion>') : « Âme de <nom> ».
+// Titres donnés par les défis (clés 'title:<id>') ; ceux du niveau 7 du champion ('m_<champion>') : « Âme de <nom> ».
 // La Saison (L1) les liste s'ils figurent dans sa table TITLES (ou lit ce tableau).
 export const UNLOCK_TITLES = {
   armurier: 'Maître armurier', disciple: 'Disciple', ouragan: 'Ouragan', titan: 'Titan', abyssal: 'Abyssal', seigneur: 'Seigneur de l\'Abysse',
@@ -546,8 +548,8 @@ export const UNLOCK_CHALLENGES = [
   { id: 'allcls', cat: 'champions', icon: 'user', name: 'Polyvalent', txt: 'Battez un boss avec Lumi, Kira et Brok', n: 3, prog: s => ['mage', 'archer', 'knight'].filter(c => s.stats?.classWins?.[c]).length, rw: { key: 'boost:phenix', gold: 200 } },
   { id: 'vampire', cat: 'champions', need: 'vampire', icon: 'lifesteal', name: 'Soif éternelle', txt: 'Rendez-vous 12 000 PV grâce au vol de vie', n: 12000, prog: rec_('heal'), rw: { key: 'cls:vampire', gold: 200 } },
   { id: 'assassin', cat: 'champions', need: 'assassin', icon: 'dodge', name: 'L\'ombre de la rivière', txt: 'Battez la Rivière Scintillante en Difficile', n: 1, prog: s => ((s.diffCleared?.[2] || 0) >= 2 ? 1 : 0), rw: { key: 'cls:assassin', gold: 200 } },
-  { id: 'mastery10', cat: 'champions', icon: 'medal', name: 'Disciple', txt: 'Atteignez la maîtrise 10 avec un champion', n: 10, prog: s => Math.max(1, ...Object.values(s.mastery || {}).map(x => masteryOf(x).lv)), rw: { key: 'title:disciple', chest: 2 } },
-  { id: 'mastery20', cat: 'champions', icon: 'medal', name: 'Grand maître', txt: 'Atteignez la maîtrise 20 avec 3 champions', n: 3, prog: s => Object.values(s.mastery || {}).filter(x => masteryOf(x).lv >= 20).length, rw: { key: 'aura:white', chest: 3 } },
+  { id: 'mastery10', cat: 'champions', icon: 'medal', name: 'Disciple', txt: 'Atteignez le niveau 7 avec un champion', n: 7, prog: s => Math.max(1, ...Object.values(s.mastery || {}).map(x => masteryOf(x).lv)), rw: { key: 'title:disciple', chest: 2 } },
+  { id: 'mastery20', cat: 'champions', icon: 'medal', name: 'Grand maître', txt: 'Atteignez le niveau 10 avec 3 champions', n: 3, prog: s => Object.values(s.mastery || {}).filter(x => masteryOf(x).lv >= MASTERY.max).length, rw: { key: 'aura:white', chest: 3 } },
   // ---- exploits ----
   { id: 'combo300', cat: 'feats', icon: 'bolt', name: 'Enchaînement', txt: 'Réussissez un combo de 300', n: 300, prog: rec_('combo'), rw: { gold: 120, chest: 1 } },
   { id: 'combo1000', cat: 'feats', icon: 'bolt', name: 'Tornade', txt: 'Réussissez un combo de 1 000', n: 1000, prog: rec_('combo'), rw: { key: 'aura:storm', gold: 200 } },
@@ -597,25 +599,31 @@ export const ABYSS_CURSES = [
   { id: 'mods', name: 'Élites redoutables', icon: 'skull', desc: 'Les élites ont un pouvoir de plus' },
 ];
 
-// Maîtrise des champions : XP gagnée à chaque partie avec ce champion = monstres × kills + niveau atteint × level
-// + mondes vaincus × (world + diff × difficulté) × (1 + abyss × palier). Niveaux 1 à 30, niveau L → L + 1 :
-// need[0] + need[1] × L (3 150 XP pour la maîtrise 10, 11 400 pour la 20, 24 650 pour la 30).
-// Chaque niveau donne +1 % de dégâts (niveaux pairs) ou +1 % de PV (impairs, à partir du 3), plafond cap = +10 % de
-// dégâts (maîtrise 20) et +10 % de PV (maîtrise 21) ; au-delà, les paliers. Paliers : 5 aura de maîtrise, 10 titre
-// « Âme de <champion> », 20 une relance de plus par partie, 30 cadre doré. Simulateur (tout débloqué, Normal, monde 1 → 2,
-// 24 parties) : sans maîtrise 79 % / 29 %, avec +15 % / +14 % 100 % / 63 % (trop), d'où le plafond de 10 % (voir le compte rendu).
-export const MASTERY = { max: 30, need: [100, 50], cap: 0.1, kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
-  miles: [5, 10, 20, 30],
+// Niveau des champions (demande du joueur : « 10 niveaux par personnage et des améliorations à l'infini ») : XP gagnée à
+// chaque partie avec ce champion = monstres × kills + niveau atteint × level + mondes vaincus × (world + diff × difficulté)
+// × (1 + abyss × palier). Niveaux 1 à 10 : niveau L → L + 1 coûte need[0] + need[1] × (L − 1) XP (8 100 XP pour le niveau
+// 10, ≈ 30 parties). Chaque niveau au-delà du 1er : +1,5 % de dégâts et de PV (+13,5 % au niveau 10). Ensuite, à l'infini :
+// une étoile toutes les star XP (≈ 6 parties), +0,5 % de dégâts et de PV chacune, sans plafond.
+// Paliers (at) : 3 aura du champion, 5 une relance de plus par partie, 7 titre « Âme de <champion> », 10 cadre doré et
+// arme de départ au niveau 2. Ancien barème (30 niveaux, plafond +10 %) : l'XP déjà gagnée est gardée telle quelle.
+export const MASTERY = { max: 10, need: [200, 175], per: 0.015, star: 1800, starPer: 0.005,
+  kills: 1 / 40, level: 4, world: 50, diff: 25, abyss: 0.15,
+  at: { aura: 3, reroll: 5, title: 7, gold: 10 }, miles: [3, 5, 7, 10],
   aura: { mage: '#ffb0f0', archer: '#5affd8', knight: '#ff9a3a', vampire: '#ff1a3a', assassin: '#9a5aff' } };
-export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * lv;
-// niveau de maîtrise d'un total d'XP : { lv, cur (XP dans le niveau), next (XP du niveau, 0 au maximum) }
+export const masteryNeed = lv => MASTERY.need[0] + MASTERY.need[1] * (lv - 1);
+// niveau d'un total d'XP : { lv, cur (XP dans le niveau ou vers la prochaine étoile), next (XP à atteindre), stars }
 export function masteryOf(xp) {
   let lv = 1, x = Math.max(0, +xp || 0);
   while (lv < MASTERY.max && x >= masteryNeed(lv)) { x -= masteryNeed(lv); lv++; }
-  return { lv, cur: lv >= MASTERY.max ? 0 : Math.floor(x), next: lv >= MASTERY.max ? 0 : masteryNeed(lv) };
+  if (lv < MASTERY.max) return { lv, cur: Math.floor(x), next: masteryNeed(lv), stars: 0 };
+  const stars = Math.floor(x / MASTERY.star);
+  return { lv, cur: Math.floor(x - stars * MASTERY.star), next: MASTERY.star, stars };
 }
-// bonus permanents du niveau lv : +1 % de dégâts aux niveaux pairs, +1 % de PV aux impairs (à partir du 3), plafonnés
-export const masteryBonus = lv => ({ dmg: Math.min(MASTERY.cap, Math.floor(Math.max(0, lv) / 2) / 100), hp: Math.min(MASTERY.cap, Math.floor(Math.max(0, lv - 1) / 2) / 100) });
+// bonus permanents : +1,5 % de dégâts et de PV par niveau au-delà du 1er, +0,5 % par étoile (sans plafond)
+export const masteryBonus = (lv, stars = 0) => {
+  const v = MASTERY.per * Math.max(0, Math.min(MASTERY.max, lv) - 1) + MASTERY.starPer * Math.max(0, stars);
+  return { dmg: v, hp: v };
+};
 
 // ---------- Rythme visé (PACING_L2) ----------
 // Joueur « normal » : 30 à 45 min par jour, ~5 parties de 6 à 9 min (1 à 2 mondes). Mesures du simulateur (bot, tirage
@@ -634,6 +642,8 @@ export const masteryBonus = lv => ({ dmg: Math.min(MASTERY.cap, Math.floor(Math.
 //   20 du principal (relance de plus), 2e champion vers 12–15, Combo 2 500 pour les meilleurs.
 // - Jour 20 (100 parties) : Abysse X au monde 1 (~50 % pour un joueur avancé : « Seigneur de l'Abysse », le défi le plus
 //   long), Ver-Roi en Cauchemar, maîtrise 30 du principal (cadre doré), maîtrise 20 avec 3 champions (~85 parties).
+// Niveaux des champions (barème 1–10 + étoiles, voir MASTERY) : niveau 3–4 du principal au jour 1, 6–7 au jour 7, 10 vers
+// le jour 12–14 (≈ 30 parties avec lui), puis une étoile toutes les ≈ 6 parties ; 3 champions au niveau 10 vers le jour 20.
 //   Les paliers hauts des mondes 3 à 6 restent ouverts au-delà.
 // ===== L1 : saison « Pass d'expédition », quêtes de la semaine, calendrier de 20 jours, succès, titres =====
 // RYTHME (PACING) : calculé, pas deviné (à refaire si on touche aux valeurs ci-dessous).
@@ -731,7 +741,7 @@ export const TITLES = {
 };
 // titres des défis de déblocage (L2) et de la maîtrise 10 : choisis au même endroit que les autres
 for (const [id, name] of Object.entries(UNLOCK_TITLES)) TITLES[id] ??= { name, how: 'Défi de déblocage' };
-for (const c of Object.values(CLASSES)) TITLES['m_' + c.id] ??= { name: `Âme de ${c.name}`, how: `Maîtrise 10 avec ${c.name}` };
+for (const c of Object.values(CLASSES)) TITLES['m_' + c.id] ??= { name: `Âme de ${c.name}`, how: `Niveau ${MASTERY.at.title} avec ${c.name}` };
 // Catégories de l'écran Succès : nom et icône
 export const ACH_CATS = {
   combat: { name: 'Combat', icon: 'skull' },

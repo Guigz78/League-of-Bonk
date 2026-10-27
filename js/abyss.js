@@ -79,7 +79,7 @@ export function abyssInfo(z, t) {
   return `<p class="di-desc"><b class="ab-name">${esc(abyssName(t))}</b> · palier ${t}/${ABYSS_TIERS} au-delà de ${esc(N.name)}${abyssBeat(z) >= t ? ' · <b class="ab-won">battu</b>' : ''}</p>
     <div class="di-row bad">${iconImg('skull', 16)}<span>Monstres : PV <b>${mul(D.hp)}</b> · dégâts <b>${mul(D.dmg)}</b> · boss <b>${mul(D.boss)}</b> · nombre <b>+${Math.round((D.spawn - 1) * 100)} %</b></span></div>
     ${curseList(t)}
-    <div class="di-row good">${iconImg('gold', 16)}<span>Or <b>${mul(D.gold)}</b> · objets plus rares et plus puissants · XP de maîtrise et de saison en plus</span></div>`;
+    <div class="di-row good">${iconImg('gold', 16)}<span>Or <b>${mul(D.gold)}</b> · objets plus rares et plus puissants · XP du champion et de saison en plus</span></div>`;
 }
 
 // récompenses d'un palier (première victoire sur ce monde)
