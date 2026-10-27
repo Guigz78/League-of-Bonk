@@ -17,7 +17,7 @@ export function initC2(fx) {
   if (st.cryo) {
     // bloc de glace d'Hiver éternel : gros cristal translucide et éclats autour du monstre (taille 1 = rayon 16 px)
     const b = new Build(7);
-    b.add(G.ico(0.66, 0), '#d8f4ff', T(0, 0.62, 0, 1, 1.08, 1), 0.08);
+    b.add(G.ico(0.66, 0), '#b8e6ff', T(0, 0.62, 0, 1, 1.08, 1), 0.1);
     b.add(G.oct(0.42), W, T(0.5, 0.5, 0.22, 0.55, 1.5, 0.55, 0, 0, -0.5), 0.05);
     b.add(G.oct(0.38), '#bfeaff', T(-0.46, 0.45, -0.16, 0.55, 1.4, 0.55, 0.2, 0, 0.55), 0.05);
     b.add(G.oct(0.32), '#e8f8ff', T(0.06, 1.1, -0.3, 0.55, 1.5, 0.55, -0.4, 0, 0.1), 0.05);
@@ -112,7 +112,7 @@ export function frameC2(fx, dt) {
     // Morsure du givre : givre au pied des monstres ralentis
     let n = 0;
     for (const e of run.enemies) {
-      if (n >= 70 || !(e.chillT > now) || e.c2ice > now || !vis(e)) continue;
+      if (n >= 50 || !(e.chillT > now) || e.c2ice > now || !vis(e)) continue;
       n++;
       fx.ringAt(e.x, e.y, e.r * 1.2 + 4, FROST, 0.55, 0.14, 0.12, 1, e.x, 6, 0.4, 0.5);
       if (Math.random() < 0.025) fx.sparkle(e.x + rand(-e.r, e.r), e.y, e.r + 6, '#e8f8ff');
@@ -125,7 +125,7 @@ export function frameC2(fx, dt) {
       const left = e.c2ice - now, k = e.r / 16, grow = Math.min(1, (C2B.winter.dur - left) / 0.18 + 0.2), al = Math.min(1, left / 0.25);
       if (e.boss) { fx.ringAt(e.x, e.y, e.r * 1.4, '#e8f8ff', 0.8 * al, 0.12, 0.25, 1, t * 0.3, 10, 0.3, 0.6); if (Math.random() < 0.2) fx.sparkle(e.x + rand(-e.r, e.r), e.y, e.r * 2, W); continue; }
       const i = P.put(e.x * S, 0, e.y * S, e.x * 0.37, k * 1.15 * grow, k * 1.2 * grow, k * 1.15 * grow);
-      P.alpha(i, 0.72 * al);
+      P.alpha(i, 0.78 * al);
     }
     P.end();
     if (run.c2w && !run.dying) {

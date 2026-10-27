@@ -5,6 +5,13 @@
 // Leurs armes de départ sont partagées (Nova de givre, Champignons) : wpnMul / wpnCd les renforcent pour elles (run.wstats).
 // Événements pour le rendu (js/g3d/fx-c2.js) : 'ult' (kind = l'ultime), 'c2ice' (gel), 'c2shot' (tir ennemi brisé),
 // 'c2shatter' (la glace éclate), 'c2thorns' (coup d'épines), 'c2end'.
+// Équilibrage (simulateur de l'expédition en 3 niveaux, bot qui prend la 1re carte, Normal, monde 1 → 2 → 3, une
+// résurrection, 15 parties chacune) : boss du niveau 1 / niveau 2 / niveau 3 atteint / giga boss tué : Frida 14, 11, 10, 1
+// sur 10 ; Gaïa 9, 8, 7, 2 sur 7 (Lumi, Kira, Brok au même simulateur : 90 %, 63 %, 50 %, giga boss 5 sur 15). Avec les tomes
+// d'évolution de leurs armes débloqués (bottes, sagesse : verrouillés au tout début), même tirage pour tous : Frida 14, 7, 5,
+// 1/5 ; Gaïa 14, 11, 6, 1/6 ; Lumi 15, 7, 6, 3/6 ; Brok 15, 5, 2, 0/2. Difficile, monde 1 : Frida 5/10, Gaïa 3/10 (C1 : 2 à 3
+// sur 6). Sans bonus d'arme (wpnMul, wpnCd à 1) : Frida 6 puis 5 sur 10, Gaïa 7 puis 2 sur 10, aucun niveau 3 ; givre ×2 :
+// Frida atteint le niveau 3 12 fois sur 15 (trop sûre, ses coups ralentissent déjà tout) ; d'où ×1,6 et recharge ×0,7.
 import { sfx, buzz } from './audio.js';
 import { fmt } from './ui.js';
 
