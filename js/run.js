@@ -54,22 +54,26 @@ const WORLD_SHORT = ['Vallée', 'Jungle', 'Rivière', 'Pics Gelés', 'Marais', '
 // ---------- Expédition en 3 niveaux et giga boss (réglages exportés : le simulateur d'équilibrage peut les modifier) ----------
 // LEVELS : renfort propre à chaque niveau, en plus de BAL.st* (monde traversé) et du monde lui-même : hp / dmg des monstres,
 // spawn = cadence d'apparition, cap = monstres simultanés en plus, elite = intervalle entre deux élites, mods = pouvoirs
-// d'élite en plus, gold = or laissé par le boss
+// d'élite en plus, gold = or laissé par le boss. Le niveau 3 a des renforts < 1 : le monde, le monde traversé (BAL.st*) et le
+// temps de partie (carry*) s'y cumulent déjà (sans cela, simulateur : 0 % des bots arrivaient jusqu'au giga boss).
 export const LEVELS = [
   { hp: 1, dmg: 1, spawn: 1, cap: 0, elite: 1, mods: 0, gold: 1 },
   { hp: 1.1, dmg: 1.08, spawn: 1.12, cap: 16, elite: 0.85, mods: 0, gold: 1.15 },
-  { hp: 1.2, dmg: 1.15, spawn: 1.25, cap: 32, elite: 0.72, mods: 1, gold: 1.3 },
+  { hp: 0.8, dmg: 0.65, spawn: 1.12, cap: 20, elite: 0.85, mods: 0, gold: 1.3 },
 ];
 // GB : giga boss (js/giga.js). PV et dégâts relatifs au boss du monde du niveau 3 ; scale = taille (rayon 7 × scale, boss
 // du monde : 8) ; arena = rayon de l'arène ; intro = cinématique (s, invulnérable) ; ph2 / ph3 = seuils des phases (PV) ;
 // roar = rugissement d'un changement de phase (s). Attaques (index = phase − 1) : bonk = bonds écrasants (rayon, dégâts ×,
 // nombre), quake = ondes de choc à brèche (vitesse, portée, largeur de la brèche en rad, écart en s, nombre), laser = double
 // rayon tournant (portée, largeur, vitesse rad/s, durée), rain = météores de la pluie, fire = météore sur le joueur toutes les
-// fire s en phase 3, elites = élites appelées au début des phases 2 et 3, cd = délai entre deux attaques (s)
+// fire s en phase 3, elites = élites appelées au début des phases 2 et 3, cd = délai entre deux attaques (s).
+// Équilibrage (simulateur giga/sim.mjs, bot, Normal, monde 1 → 2 → 3, une résurrection, 30 parties, objets des mondes
+// battus sans améliorations) : niveau 3 atteint 50 %, giga boss tué 33 % de ceux qui l'atteignent, combat ~77 s ; avec les
+// améliorations de Boutique niv. 3 : voir le compte rendu ; sans équipement : niveau 3 ~50 %, giga boss rarement battu.
 export const GB = {
-  hp: 2.2, dmg: 1.15, scale: 14, speed: 0.85, arena: 560, intro: 3.2, ph2: 0.66, ph3: 0.33, roar: 1.6,
-  bonkR: 135, bonkDmg: 1.5, bonks: [1, 2, 3], quakeV: 290, quakeMax: 430, quakeGap: 0.95, quakeDt: 0.85, quakes: [2, 2, 3],
-  laserLen: 360, laserW: 38, laserSpin: 0.85, laserT: 4.2, rain: [14, 18, 24], fire: 3.2, elites: [0, 2, 2], cd: [1.6, 1.3, 0.95],
+  hp: 0.95, dmg: 0.62, scale: 14, speed: 0.85, arena: 560, intro: 3.2, ph2: 0.66, ph3: 0.33, roar: 1.6,
+  bonkR: 135, bonkDmg: 1.5, bonks: [1, 2, 2], quakeV: 290, quakeMax: 430, quakeGap: 0.95, quakeDt: 0.85, quakes: [2, 2, 3],
+  laserLen: 360, laserW: 38, laserSpin: 0.85, laserT: 4.2, rain: [14, 18, 24], fire: 4.2, elites: [0, 2, 2], cd: [1.6, 1.3, 0.95],
 };
 // Vol de vie (exporté : le simulateur d'équilibrage peut le modifier). Soin par seconde plafonné à rate × vol de vie
 // (en part des PV max, au plus cap = 6 %/s, atteint vers 30 %) : plus on en a, plus il soigne, même dans une horde.
