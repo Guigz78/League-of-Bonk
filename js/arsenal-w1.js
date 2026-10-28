@@ -271,8 +271,8 @@ addWeapons({
   hammer: {
     stats: ({ A, ar, h, L, E }) => {
       const k = (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
-      return E ? { dmg: A * 4.5 * k * 1.3, wave: A * 2 * k * 1.3, cd: 2.1 * h, n: 3, R: 150 * ar, stun: 0.6 }
-        : { dmg: A * 4.5 * k, wave: A * 2 * k, cd: (L(4) ? 2.5 : 3.1) * h, n: 1 + L(5), R: (L(3) ? 125 : 95) * ar, stun: 0 };
+      return E ? { dmg: A * 4.5 * k * 1.3, wave: A * 1.7 * k * 1.3, cd: 2.1 * h, n: 3, R: 150 * ar, stun: 0.6 }
+        : { dmg: A * 4.5 * k, wave: A * 1.7 * k, cd: (L(4) ? 2.5 : 3.1) * h, n: 1 + L(5), R: (L(3) ? 125 : 95) * ar, stun: 0 };
     },
     lines: [D_('Coup de marteau'), ['wave', 'Onde de choc', fI], CD, ['n', 'Marteaux', fN], ['R', 'Rayon de l\'onde', fI], ['stun', 'Étourdit', fS]],
     size: 'R',
@@ -326,7 +326,7 @@ addWeapons({
   // 11 grandes pointes en très large éventail, transpercent tout, gèlent 0,5 s et éclatent en fin de course (zone).
   icicles: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 1.25 * (L(3) ? 1.3 : 1);
+      const d = A * 1.05 * (L(3) ? 1.3 : 1);
       return E ? { dmg: d * 1.5, cd: 1.05 * h, n: 11, pierce: 99, len: 480 * ar, slow: 2, freeze: 0.5, burst: 54 * ar }
         : { dmg: d, cd: (L(5) ? 1.2 : 1.55) * h, n: 3 + L(2) * 2 + L(5) * 2, pierce: L(4) ? 5 : 2, len: (L(4) ? 430 : 360) * ar, slow: 1.5, freeze: 0 };
     },
@@ -373,7 +373,7 @@ addWeapons({
   // géants qui suivent leur cible, grêlons plus gros qui gèlent.
   hail: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 0.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      const d = A * 0.75 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
       return E ? { dmg: d * 1.35, cd: 3.4 * h, n: 2, R: 150 * ar, dur: 4.5, rate: 14, sR: 38 * ar, freeze: 0.4 }
         : { dmg: d, cd: (L(5) ? 3.5 : 4.3) * h, n: 1, R: (L(3) ? 115 : 92) * ar, dur: L(4) ? 3.5 : 2.6, rate: L(4) ? 10 : 7, sR: (L(3) ? 32 : 27) * ar, freeze: 0 };
     },
