@@ -235,15 +235,15 @@ const DRAW = {
     const E = w.evo;
     for (const o of w.q) {
       if (!o.on) continue;
-      const k = o.R / 22 * (E ? 1.1 : 1);
+      const k = 1.1 + o.R / 100; // taille du modèle (le cercle de prise montre le vrai rayon R)
       let up, pop = 1, sink = 0;
       if (o.s === 1) up = Math.min(1, (o.hold - o.c) / 0.07) * 1.42 + 0.05; // refermé sur sa proie
       else if (o.s === 2) { up = 1.47; sink = 1 - o.f / 0.35; } // cassé : s'enfonce
       else { const a = Math.max(0, o.arm); up = 0.1 + Math.min(1, a / 0.45) * 1.3; if (o.n === (E ? 3 : 1)) pop = backOut(clamp(1 - a / 0.45, 0, 1)) * 0.7 + 0.3; }
       const s = k * pop * (1 - sink * 0.6), y = -sink * 0.3;
       const i = P.base.put(o.x * S, y, o.y * S, o.a, s);
-      P.base.tint(i, col(E ? '#ffe9b0' : W));
-      for (let j = 0; j < 2; j++) jaw(P.jaw, o.x * S, y + 0.12 * s, o.y * S, o.a + j * Math.PI, up, s, o.s === 1 ? '#ffd0d0' : E ? '#ffe9b0' : W);
+      P.base.tint(i, col(E ? '#ffd890' : W));
+      for (let j = 0; j < 2; j++) jaw(P.jaw, o.x * S, y + 0.12 * s, o.y * S, o.a + j * Math.PI, up, s, o.s === 1 ? '#ffd0d0' : E ? '#e0ecff' : W);
       if (o.s === 0 && o.arm <= 0) { // armé : cercle de prise et voyant bleu qui clignote
         fx.ringAt(o.x, o.y, o.R, E ? GOLD : KIRA, 0.4, 0.05, 0.05, 1, t * 0.8 + o.a, 8, 0.5, 0.4, true);
         if (Math.sin(t * 6 + o.a * 3) > 0.3) fx.glow(o.x, o.y, 6, 10 * k, E ? GOLD : KIRA, 0.8);
@@ -278,7 +278,7 @@ const DRAW = {
       if (o.s === 0) {
         // le marteau descend du ciel en pivotant (de côté vers la verticale), annoncé par un cercle doré
         const q = clamp(o.t / o.dur, 0, 1), e = q * q;
-        h = 420 * (1 - e) + 0.45 * k * 20; th = 1.5 * (1 - e) + 0.15;
+        h = 300 * (1 - e) + 0.45 * k * 20; th = 1.3 * (1 - e) + 0.15;
         const kk = 0.3 + 0.7 * q;
         fx.ringAt(o.x, o.y, o.R, GOLD, 0.45 + 0.4 * q, 0.04, 0.06 + 0.14 * q, 1, -t * 1.2, 12, -0.6, 0.5, true);
         fx.ringAt(o.x, o.y, 26 + 14 * kk, W, 0.6 * q, 0.15, 0.2, 1, 0, 0, 0, 0.6, true);
@@ -300,10 +300,10 @@ const DRAW = {
     const E = w.evo;
     for (const o of w.q) {
       if (!o.on) continue;
-      const a = Math.atan2(o.vy, o.vx), z = 24, sc = E ? 1.6 : 1.1, ca = Math.cos(a), sa = Math.sin(a);
+      const a = Math.atan2(o.vy, o.vx), z = 24, sc = E ? 1.6 : 1.35, ca = Math.cos(a), sa = Math.sin(a);
       const i = P.spike.put(o.x * S, z * S, o.y * S, -a, sc, sc, sc);
       P.spike.tint(i, col(W));
-      fx.glow(o.x, o.y, z, E ? 22 : 14, ICE, 0.45);
+      fx.glow(o.x, o.y, z, E ? 22 : 18, ICE, 0.55);
       fx.line(o.x * S, z * S, o.y * S, (o.x - ca * 40) * S, z * S, (o.y - sa * 40) * S, E ? 0.5 : 0.3, ICE, 0.45);
       fx.shadow(o.x, o.y, 14 * sc, 0.2);
       if (Math.random() < 0.15) fx.sparkle(o.x, o.y, z, '#e8f8ff');
@@ -318,14 +318,14 @@ const DRAW = {
       fx.shadow(o.x, o.y, R * 1.5, 0.16 * fade);
       for (let j = 0; j < n; j++) {
         const an = j / n * TAU + t * 0.35 + o.x, r = R * (j % 2 ? 0.62 : 0.28), x = o.x + Math.cos(an) * r, y = o.y + Math.sin(an) * r * 0.8;
-        const i = fx.pf.put(x * S, (190 + (j % 3) * 14) * S, y * S, 0, (E ? 86 : 70) * (0.85 + (j % 3) * 0.12) * S);
-        fx.pf.tint(i, col(E ? (j % 2 ? '#5a6a88' : '#7a88a4') : (j % 2 ? '#8a98b0' : '#a8b4c8'))); fx.pf.alpha(i, 0.6 * fade);
+        const i = fx.pf.put(x * S, (115 + (j % 3) * 12) * S, y * S, 0, (E ? 86 : 70) * (0.85 + (j % 3) * 0.12) * S);
+        fx.pf.tint(i, col(E ? (j % 2 ? '#5a6a88' : '#7a88a4') : (j % 2 ? '#8a98b0' : '#a8b4c8'))); fx.pf.alpha(i, 0.7 * fade);
       }
-      if (E && Math.random() < 0.04) fx.glow(o.x + rand(-R, R) * 0.5, o.y, 200, R * 0.8, '#bfe0ff', 0.6);
+      if (E && Math.random() < 0.04) fx.glow(o.x + rand(-R, R) * 0.5, o.y, 125, R * 0.8, '#bfe0ff', 0.6);
     }
     for (const s of w.q2) { // grêlons : tombent en biais (vent), traînée blanche
       if (!s.on) continue;
-      const k = clamp(s.t / s.dur, 0, 1), h = 190 * (1 - k) + 4, x = s.x + (h - 4) * 0.18, X = x * S, Y = h * S, Z = s.y * S, sc = s.big ? 1.25 : 0.9;
+      const k = clamp(s.t / s.dur, 0, 1), h = 115 * (1 - k) + 4, x = s.x + (h - 4) * 0.18, X = x * S, Y = h * S, Z = s.y * S, sc = s.big ? 1.25 : 0.9;
       const i = P.stone.put(X, Y, Z, s.x + t * 9, sc);
       P.stone.tint(i, col(W));
       fx.line(X, Y, Z, X + 5 * S, Y + 28 * S, Z, 0.22, '#e8f8ff', 0.6);
