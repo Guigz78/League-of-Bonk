@@ -22,11 +22,13 @@ const MK = {
     for (const z of [-0.1, 0.1]) { b.add(G.cone(0.08, 0.24, 4), '#5a2440', T(0.36, 0.32, z)); b.add(G.box(0.07, 0.07, 0.07), '#ff3a52', T(0.55, 0.12, z * 0.8)); }
     b.add(G.cone(0.1, 0.3, 4), '#3a1628', T(-0.42, -0.02, 0, 1, 1, 1, 0, 0, PI / 2));
   }, 48),
-  // ailes : deux demi-disques plats (membranes) de part et d'autre du corps
+  // ailes : silhouette de chauve-souris (doigts pointus, bord festonné), à plat ; elles battent par l'échelle (rendu)
   wing: fx => addPool(fx, b => {
-    b.add(G.cyl(0.95, 0.95, 0.04, 5, 1, false, -PI / 2, PI), '#8a1e40', T(0, 0, 0.12, 0.6, 1, 1));
-    b.add(G.cyl(0.95, 0.95, 0.04, 5, 1, false, PI / 2, PI), '#8a1e40', T(0, 0, -0.12, 0.6, 1, 1));
-    b.add(G.box(0.7, 0.06, 0.06), '#2a0a18', T(0.05, 0.03, 0.55, 1, 1, 1, 0, 0.5, 0)); b.add(G.box(0.7, 0.06, 0.06), '#2a0a18', T(0.05, 0.03, -0.55, 1, 1, 1, 0, -0.5, 0));
+    const P = [[0.16, 0.1], [0.4, 0.52], [0.1, 1.2], [-0.02, 0.86], [-0.3, 1.0], [-0.24, 0.64], [-0.52, 0.66], [-0.36, 0.36], [-0.22, 0.1]];
+    const shapes = [1, -1].map(sg => new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y * sg))));
+    const g = new THREE.ShapeGeometry(shapes); g.rotateX(-PI / 2);
+    b.add(g, (x, y, z) => (Math.abs(z) > 0.75 ? '#5a0e26' : Math.abs(z) > 0.4 ? '#8a1a40' : '#a8284e'), null, 0.05);
+    for (const sg of [1, -1]) b.add(G.box(1.05, 0.05, 0.05), '#2a0a18', T(0.18, 0.02, 0.62 * sg, 1, 1, 1, 0, -1.25 * sg, 0));
   }, 48),
   // lance de sang (face à +X) : hampe sombre, fer cramoisi, garde pâle à pointes
   lance: fx => addPool(fx, b => {
@@ -56,7 +58,7 @@ const get = (st, fx, k) => st[k] || (st[k] = MK[k](fx));
 // ---------- Armes en cours ----------
 const DRAW = {
   bats(fx, st, w, s, t) {
-    const B = get(st, fx, 'bat'), Wg = get(st, fx, 'wing'), E = w.evo, k = E ? 1.9 : 1.5;
+    const B = get(st, fx, 'bat'), Wg = get(st, fx, 'wing'), E = w.evo, k = E ? 1.5 : 1.15;
     for (const b of s.list) {
       const a = Math.atan2(b.dy, b.dx), X = b.x * S, Y = b.z * S, Z = b.y * S, f = Math.sin(t * (b.m === 1 ? 30 : 20) + b.ph);
       B.put(X, Y, Z, -a, k);

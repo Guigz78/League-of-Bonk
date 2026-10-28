@@ -87,9 +87,9 @@ addWeapons({
       for (let i = 0; i < n; i++) {
         const b = B[i];
         if (b.m === 0) { // en vol autour de Nyx (cercle qui ondule) ; piqué quand sa recharge est finie
-          const a = w.a * 2.4 + i / n * TAU, r = 42 + Math.sin(w.a * 3 + i * 1.7) * 9, hx = p.x + Math.cos(a) * r, hy = p.y + Math.sin(a) * r * 0.75;
+          const a = w.a * 2.2 + i / n * TAU, r = 58 + Math.sin(w.a * 3 + i * 1.7) * 10, hx = p.x + Math.cos(a) * r, hy = p.y + Math.sin(a) * r * 0.75;
           const k = Math.min(1, dt * 9);
-          b.dx = hx - b.x; b.dy = hy - b.y; b.x += b.dx * k; b.y += b.dy * k; b.z = 36 + Math.sin(w.a * 6 + i) * 5;
+          b.dx = hx - b.x; b.dy = hy - b.y; b.x += b.dx * k; b.y += b.dy * k; b.z = 46 + Math.sin(w.a * 6 + i) * 6;
           if ((b.t -= dt) > 0) continue;
           let best = null, bd = Infinity, alt = null, ad = Infinity;
           for (const e of run.grid.query(p.x, p.y, S.R, Q)) {
@@ -117,8 +117,8 @@ addWeapons({
         }
         // retour vers Nyx
         const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy) || 1, step = S.v * 0.8 * dt;
-        b.dx = dx / d; b.dy = dy / d; b.z += (36 - b.z) * Math.min(1, dt * 5);
-        if (d < 46 + step) { b.m = 0; b.t = S.cd * rand(0.8, 1.2); } else { b.x += b.dx * step; b.y += b.dy * step; }
+        b.dx = dx / d; b.dy = dy / d; b.z += (46 - b.z) * Math.min(1, dt * 5);
+        if (d < 62 + step) { b.m = 0; b.t = S.cd * rand(0.8, 1.2); } else { b.x += b.dx * step; b.y += b.dy * step; }
       }
     },
   },
