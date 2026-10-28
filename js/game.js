@@ -65,8 +65,8 @@ function topbar() {
   const dot = !u ? '' : `<i class="sync ${st}"></i>`;
   return `<header class="topbar">
     <div class="tb-brand">League<span>of Bonk</span></div>
-    <span class="cur" aria-label="Pièces de forge">${iconImg('part', 18)}<b id="partsN">${fmt(partsTotal())}</b></span>
-    <span class="cur gold" aria-label="Or">${iconImg('gold', 18)}<b id="goldN">${fmt(save.gold)}</b></span>
+    <button class="cur" data-act="cur" data-k="parts" aria-label="Pièces de forge">${iconImg('part', 18)}<span class="cur-v"><b id="partsN">${fmt(partsTotal())}</b><small>Pièces</small></span></button>
+    <button class="cur gold" data-act="cur" data-k="gold" aria-label="Or">${iconImg('gold', 18)}<span class="cur-v"><b id="goldN">${fmt(save.gold)}</b><small>Or</small></span></button>
     <button class="icon-btn account" data-act="settings" aria-label="Compte et options">
       ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 22)}${dot}
     </button>
@@ -127,7 +127,7 @@ const afterSheet = () => { announceAchievements(); if (!battle) home(); };
 const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
-  play: () => zoneSheet(playZone()),
+  play: () => (save.stats.runs ? zoneSheet(playZone()) : (save.lastZone = 0, startRun(0, 0, 0))), // toute première partie : on joue tout de suite
   quests: () => questSheet().then(afterSheet),
   login: () => loginSheet().then(afterSheet),
   season: () => openPass(),
@@ -143,6 +143,10 @@ const handlers = {
   sellJunk: () => sellJunk(),
   chests: () => chestScreen(() => home('adventure')),
   defis: () => defisScreen(() => home()),
+  // touche une monnaie : à quoi elle sert et où l'obtenir
+  cur: el => toast(el.dataset.k === 'gold'
+    ? `${iconImg('gold', 16)} <b>Or</b> : améliorations de la Boutique, bonus et Forge. Gagné en partie et dans les coffres.`
+    : `${iconImg('part', 16)} <b>Pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
   forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
   craft: () => doCraft(),
   fuse: el => doFuse(el.dataset.all === '1'),
@@ -274,6 +278,7 @@ function adventureTab() {
       <div class="sc-info">
         <span class="sc-role">${esc(c.role)}</span>
         <h2 class="sc-name">${esc(c.name)}</h2>${heroTitle()}
+        <button class="sc-lvl" data-act="changeClass" aria-label="Niveau du champion">${iconImg('medal', 14)}Niveau ${masteryLv(save.cls)} du champion</button>
         <button class="sc-stats" data-act="allStats" aria-label="Toutes les statistiques">
           <span><small>PV</small><b>${fmt(st.hp)}</b></span><span><small>ATQ</small><b>${fmt(st.atk)}</b></span>
           <span><small>Critique</small><b>${pct(st.crit)}</b></span><span><small>Vitesse</small><b>${pct(st.speed)}</b></span>
@@ -286,8 +291,7 @@ function adventureTab() {
       <span class="pc-txt"><b>Jouer <i class="pc-dtag" style="--dc:${D.color}">${esc(D.name)}</i></b><small>Monde ${pz + 1} · ${esc(Z.name)}</small></span>
       <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
     </button>
-    ${quick}
-    ${defisTile()}
+    ${save.stats.runs ? `${quick}${defisTile()}` : ''}
     <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
     <div class="zones">${zones}</div>`;
 }
@@ -481,7 +485,7 @@ function classSelect(first) {
       ${first ? `<div class="title-logo"><div class="l1">League of</div><div class="l3">B<em>o</em>nk</div></div><p class="cs-sub">Choisissez votre champion</p>`
         : `<div class="cs-bar"><button class="icon-btn" data-act="back" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Champions</h2></div>`}
       <div class="cs-stage"><canvas class="cs-3d"></canvas><div class="cs-id"><span class="role">${esc(c.role)}</span><h3>${esc(c.name)}</h3></div></div>
-      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
+      <div class="cs-tabs">${Object.values(CLASSES).filter(k => !first || !clsLocked(k.id)).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
       <section class="cs-detail">
         <p class="cs-desc">${esc(c.desc)}</p>
         ${lk ? clsLockPanel(sel) : ''}
@@ -491,7 +495,7 @@ function classSelect(first) {
           <span>${iconImg('target', 16)}Critique<b>${pct(c.crit)}</b></span>
           <span>${iconImg('arrow', 16)}Vitesse<b>${pct(c.speed)}</b></span>
         </div>
-        <div class="cs-spells">
+        ${first ? `<div class="cs-spells"><div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>${esc(WEAPONS[c.weapon].desc)}</small></div></div></div>` : `<div class="cs-spells">
           <div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>Arme de départ · ${esc(WEAPONS[c.weapon].desc)}</small></div></div>
           <div class="cs-spell k-ult">${iconImg(ULTS[c.ult].icon, 26)}<div><b>${esc(ULTS[c.ult].name)}</b><small>Ultime · ${esc(ULTS[c.ult].desc)}</small></div></div>
           ${c.passive ? `<div class="cs-spell k-pas">${iconImg(c.passive.icon, 26)}<div><b>${esc(c.passive.name)}</b><small>Passif · ${esc(c.passive.desc)}</small></div></div>` : ''}
@@ -500,8 +504,8 @@ function classSelect(first) {
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
           <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
           <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
-        ${lk ? '' : `<h4 class="evo-t">Niveau du champion</h4>${masteryPanel(sel)}${auraPicker(sel)}`}
-        ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
+        ${lk ? '' : `<h4 class="evo-t">Niveau du champion</h4>${masteryPanel(sel)}${auraPicker(sel)}`}`}
+        ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment.</p>' : ''}
       </section>
       <div class="cs-foot"><button class="btn primary big" data-act="go" ${lk ? 'disabled' : ''}>${lk ? `${iconImg('lock', 16)} Verrouillé · ${esc(c.name)}` : `${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}`}</button></div>
     </div>`);
@@ -558,7 +562,7 @@ function startRun(z, diff = 0, abyss = 0) {
   }
   $('.run')?.classList.toggle('lefty', !!save.settings.lefty);
   hpBar(run);
-  if (!save.tutorialDone && save.stats.runs <= 1) tutorial(run);
+  if (!save.tutorialDone) tutorial(run); // guide en jeu tant qu'il n'a pas été suivi jusqu'au portail
 }
 
 // barre de PV du HUD (en haut, au-dessus de l'expérience) : suit les PV du champion à chaque image
@@ -586,41 +590,49 @@ function hpBar(r) {
   tick();
 }
 
-// ---------- Tutoriel (premier lancement) : 4 étapes courtes, la partie attend ----------
-const TUTO = [
-  { t: 'Bouger', ill: '<i class="ti-joy"></i><i class="ti-hero"></i>', p: 'Posez le doigt <b>n\'importe où</b> et glissez : votre champion court. Il <b>attaque tout seul</b> les monstres proches.' },
-  { t: 'Esquiver', ill: '<i class="ti-wave"></i><i class="ti-body"></i>', p: 'Un <b>cercle rouge</b> au sol ou un monstre qui <b>clignote</b> annonce une attaque : <b>écartez-vous</b> avant l\'impact. Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous !' },
-  { t: 'Monter de niveau', ill: '<i class="ti-xp"></i><div class="ti-cards"><i style="--d:0s"></i><i style="--d:.12s"></i><i style="--d:.24s"></i></div>', p: 'Ramassez les <b>cristaux bleus</b> pour gagner de l\'expérience. À chaque niveau, choisissez une <b>arme</b>, un <b>tome</b> ou une amélioration.' },
-  { t: 'Autel, boss, portail', ill: `<div class="ti-path"><span>${iconImg('skull', 34)}Autel</span><span>${iconImg('crown', 34)}Boss</span><span>${iconImg('portal', 34)}Portail</span></div>`, p: 'Suivez la flèche jusqu\'à l\'<b>autel au crâne rouge</b> pour invoquer le boss. Battu, il ouvre un <b>portail au centre de la carte</b> vers le niveau suivant, plus dur. Au niveau 3 : le <b>giga boss</b> !' },
+// ---------- Guide de la première partie : une seule consigne courte à la fois, en jouant ----------
+// Pas de pause ni de texte à lire avant de jouer : chaque consigne disparaît dès qu'elle est accomplie.
+const COACH = [
+  { ic: 'arrow', t: 'Glissez le doigt pour bouger', done: (r, S) => S.moved > 160 },
+  { ic: 'fist', t: 'Votre champion attaque tout seul', done: (r, S) => S.age > 2.6 },
+  { ic: 'upg', t: 'Ramassez les gemmes bleues', done: r => r.p.level > 1 || r.p.xp > 0 },
+  { ic: 'star', t: 'Choisissez une amélioration à chaque niveau', done: (r, S) => r.p.level > 1 && S.age > 3 },
+  { ic: 'crown', t: 'Suivez la flèche rouge jusqu\'à l\'autel du boss', done: r => r.bossSpawned, wait: r => r.p.level >= 3 || r.time > 60 },
+  { ic: 'skull', t: 'Battez le boss : écartez-vous des zones rouges', done: r => !!r.portal },
+  { ic: 'portal', t: 'Entrez dans le portail', done: r => !!r.entering || r.over },
 ];
 function tutorial(r) {
-  r.paused = true;
-  let k = 0;
   const w = document.createElement('div');
-  w.className = 'tuto';
+  w.className = 'coach';
+  r.coachOn = true; // moins de flèches de bord pendant le guide (overlay.js)
   $('.run')?.appendChild(w);
-  const draw = () => {
-    const s = TUTO[k];
-    w.innerHTML = `<div class="tu-card" key="${k}">
-      <div class="tu-ill">${s.ill}</div>
-      <span class="tu-step">Étape ${k + 1} / ${TUTO.length}</span><h3>${s.t}</h3><p>${s.p}</p>
-      <div class="tu-foot"><span class="tu-dots">${TUTO.map((_, i) => `<i class="${i <= k ? 'on' : ''}"></i>`).join('')}</span>
-        <button class="btn ghost small" data-t="skip">Passer</button><button class="btn primary" data-t="next">${k < TUTO.length - 1 ? 'Suivant' : 'C\'est parti'}</button></div>
-    </div>`;
+  const S = { k: -1, wait: false, age: 0, moved: 0, x: r.p.x, y: r.p.y, t: performance.now() };
+  const show = k => {
+    S.k = k; S.age = 0;
+    const c = COACH[k];
+    w.innerHTML = c ? `<div class="co-card">${iconImg(c.ic, 26)}<b>${c.t}</b></div>${k === 0 ? '<i class="co-finger"></i>' : ''}` : '';
+    w.classList.toggle('on', !!c);
+    if (c && k) sfx('tap');
   };
-  const end = () => {
-    save.tutorialDone = true; persist({ touch: false });
-    w.classList.add('out'); setTimeout(() => w.remove(), 200);
-    if (!r.over) { r.paused = false; r.last = performance.now(); }
+  const tick = () => {
+    if (!w.isConnected) return;
+    if (r.over) { w.remove(); return; }
+    const now = performance.now(), dt = Math.min(0.1, (now - S.t) / 1000); S.t = now;
+    if (!r.paused) {
+      S.age += dt;
+      S.moved += Math.hypot(r.p.x - S.x, r.p.y - S.y); S.x = r.p.x; S.y = r.p.y;
+      if (S.k < 0) show(0);
+      else if (S.wait) { if (COACH[S.k].wait(r)) { S.wait = false; show(S.k); } } // consigne suivante quand elle devient utile
+      else if (COACH[S.k].done(r, S)) {
+        const k = S.k + 1;
+        if (k >= COACH.length) { save.tutorialDone = true; r.coachOn = false; persist({ touch: false }); w.remove(); return; }
+        if (COACH[k].wait && !COACH[k].wait(r)) { S.k = k; S.wait = true; w.classList.remove('on'); } else show(k);
+      }
+    }
+    w.classList.toggle('hide', r.paused);
+    requestAnimationFrame(tick);
   };
-  draw();
-  w.addEventListener('pointerdown', e => e.stopPropagation());
-  w.addEventListener('click', e => {
-    const b = e.target.closest('[data-t]'); if (!b) return;
-    sfx('tap');
-    if (b.dataset.t === 'skip' || k >= TUTO.length - 1) return end();
-    k++; draw();
-  });
+  requestAnimationFrame(tick);
 }
 
 // évolution d'arme : cherche sa fiche dans les tables de data.js (nom de table libre), sinon nom par défaut
