@@ -44,7 +44,7 @@ export const CLASSES = {
     id: 'berserker', name: 'Ragnar', role: 'Berserker', locked: true,
     desc: 'Increvable et furieux : plus il est blessé, plus sa hache frappe fort.',
     hp: 152, atk: 12, crit: 0.06, speed: 0.97, rage: 0.4,
-    weapon: 'boomerang', ult: 'fury',
+    weapon: 'waraxe', ult: 'fury', // haches de guerre : son arme à lui (arsenal W3, js/arsenal-w3.js)
     passive: { name: 'Rage', icon: 'i_enrage', desc: 'Jusqu\'à +40 % de dégâts selon les PV manquants ; PV très élevés.' },
     colors: { 1: '#7a4a2a', 2: '#553018', 3: '#b08050', a: '#3a8ae0', h: '#e0662a', s: '#ffd2b0', d: '#e8a888', c: '#8a5a32' },
   },
@@ -977,3 +977,26 @@ export const ARSENAL = {
   druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
 };
 for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;
+
+// ===== Arsenal W3 (Ragnar, Gaïa) =====
+// Armes propres à Ragnar le Berserker (Haches de guerre = sa nouvelle arme de départ, à la place de la lame ricochet) et à
+// Gaïa la Druidesse (own : jamais proposées aux autres champions ni comptées dans les Défis). Statistiques et comportement :
+// js/arsenal-w3.js ; rendu : js/g3d/fx-w3.js. Évolutions : niveau 5 + leur tome.
+Object.assign(WEAPONS, {
+  waraxe:    { name: 'Haches de guerre', icon: 'waraxe', own: 'berserker', desc: 'Lance de lourdes haches qui fendent tout sur leur passage et éclatent en se plantant dans le sol.', lv: ['', '+30 % dégâts', '+1 hache', 'Impact plus large, plus rapide', '+1 hache, +30 % dégâts'] },
+  warcry:    { name: 'Cri de guerre', icon: 'warcry', own: 'berserker', desc: 'Ragnar rugit : une onde blesse, repousse et ralentit les ennemis autour de lui.', lv: ['', '+30 % dégâts', 'Onde plus grande', 'Plus fréquent', '+1 onde (écho), +40 % dégâts'] },
+  quake:     { name: 'Séisme', icon: 'quake', own: 'berserker', desc: 'Ragnar frappe le sol : une faille court vers la cible et blesse tout sur sa ligne.', lv: ['', '+30 % dégâts', '+1 faille', 'Failles plus longues, plus fréquentes', '+1 faille, +30 % dégâts'] },
+  whirlwind: { name: 'Tourbillon', icon: 'whirl', own: 'berserker', desc: 'Ragnar tourne sur lui-même, haches tendues, et frappe tout autour de lui.', lv: ['', '+30 % dégâts', 'Plus large, dure plus longtemps', 'Plus fréquent', '+30 % dégâts, frappe plus vite'] },
+  thorns:    { name: 'Ronces', icon: 'bramble', own: 'druid', desc: 'Fouets de ronces en ligne : ils blessent et empoisonnent tout ce qu\'ils touchent.', lv: ['', '+30 % dégâts', '+1 fouet', 'Plus longs, poison +40 %', '+1 fouet, plus rapides'] },
+  wisps:     { name: 'Esprits de la forêt', icon: 'wisp', own: 'druid', desc: 'Des feux follets tournent autour de Gaïa puis foncent éclater sur les ennemis ; chaque éclat la soigne un peu.', lv: ['', '+30 % dégâts', '+1 esprit', 'Renaissent plus vite, éclats plus larges', '+1 esprit, +30 % dégâts'] },
+  petals:    { name: 'Pluie de pétales', icon: 'petal', own: 'druid', desc: 'Une nuée de pétales tranchants suit Gaïa et coupe les ennemis qui la poursuivent.', lv: ['', 'Nuée plus large', '+35 % dégâts', '+1 nuée qui tourne autour d\'elle', '+40 % dégâts, coupe plus vite'] },
+});
+Object.assign(WEAPON_EVOS, {
+  waraxe:    { tome: 'power',  name: 'Haches du Tonnerre',    icon: 'waraxe',  desc: '4 haches : la foudre tombe là où chacune se plante et étourdit les ennemis.' },
+  warcry:    { tome: 'vital',  name: 'Rugissement du Jarl',   icon: 'warcry',  desc: '3 ondes géantes qui étourdissent ; chaque ennemi touché soigne Ragnar.' },
+  quake:     { tome: 'area',   name: 'Faille du Ragnarök',    icon: 'quake',   desc: '3 longues failles qui laissent des coulées de lave brûlantes.' },
+  whirlwind: { tome: 'haste',  name: 'Cyclone de fureur',     icon: 'whirl',   desc: 'Immense tourbillon de feu qui aspire les ennemis et explose à la fin.' },
+  thorns:    { tome: 'armor',  name: 'Ronces dévorantes',     icon: 'bramble', desc: '4 fouets tout autour qui immobilisent ; le poison passe aux voisins quand un ennemi meurt.' },
+  wisps:     { tome: 'magnet', name: 'Esprits ancestraux',    icon: 'wisp',    desc: '6 esprits dorés : éclats plus larges, ils brûlent tout sur leur passage.' },
+  petals:    { tome: 'crit',   name: 'Tempête de cerisiers',  icon: 'petal',   desc: '3 grandes nuées de pétales dorés qui coupent plus vite.' },
+});

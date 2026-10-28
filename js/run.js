@@ -14,6 +14,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES
 import { save, playerStats } from './save.js';
 import { canPickWeapon, canPickTome } from './unlocks.js';
 import { WX, shotWeapon } from './weapons-reg.js';
+import './arsenal-w3.js'; // armes de Ragnar et de Gaïa (haches de guerre, cri de guerre, séisme, tourbillon, ronces, esprits, pétales)
 import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';

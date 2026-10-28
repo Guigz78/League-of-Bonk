@@ -361,3 +361,26 @@ Object.assign(SFX, {
   thorns: () => { noise({ d: 0.07, v: 0.1, filter: ['bandpass', 1800], q: 3, sweepTo: 900 }); wood(r(500, 700), 0, 0.06); },
 });
 Object.assign(MIN_GAP, { thorns: 0.12, shatter: 0.2 });
+
+// ---------- Arsenal W3 : armes de Ragnar (haches, cri de guerre, séisme, tourbillon) et de Gaïa (ronces, esprits, pétales) ----------
+Object.assign(SFX, {
+  // hache lancée : lourd « vrou-vrou » qui tournoie ; hache plantée : « tchonk » sourd et cailloux
+  w3axe: () => { noise({ d: 0.22, v: 0.11, filter: ['bandpass', 520], q: 2, sweepTo: 1300 }); osc({ type: 'triangle', f: 160, to: 230, d: 0.18, v: 0.05, vib: 40, vibRate: 18 }); },
+  w3chop: () => { wood(r(150, 190), 0, 0.16); noise({ d: 0.12, v: 0.12, filter: ['lowpass', 900], sweepTo: 200 }); },
+  // foudre des haches du Tonnerre : craquement sec puis grondement
+  w3thunder: () => { noise({ d: 0.08, v: 0.2, filter: ['highpass', 2500] }); noise({ d: 0.5, v: 0.14, filter: ['lowpass', 400], at: 0.05, sweepTo: 80 }); },
+  // cri de guerre : rugissement grave qui monte (deux voix) et souffle
+  w3cry: () => { kazoo(110, 0.42, 0, 0.1, 165); kazoo(147, 0.38, 0.02, 0.07, 196); noise({ d: 0.4, v: 0.12, filter: ['bandpass', 600], q: 0.8, sweepTo: 1500 }); },
+  // séisme : coup de massue au sol et grondement qui roule
+  w3quake: () => { osc({ type: 'sine', f: 90, to: 32, d: 0.4, v: 0.24 }); noise({ d: 0.55, v: 0.15, filter: ['lowpass', 380], sweepTo: 90 }); wood(120, 0.06, 0.1); wood(95, 0.14, 0.08); },
+  // tourbillon : souffle qui tourne (filtre qui balaie)
+  w3whirl: () => { noise({ d: 0.26, v: 0.1, filter: ['bandpass', 800], q: 1.4, sweepTo: 2200 }); noise({ d: 0.18, v: 0.06, filter: ['bandpass', 2400], q: 2, at: 0.1, sweepTo: 900 }); },
+  // fouet de ronces : claquement vif et bruissement de feuilles
+  w3whip: () => { noise({ d: 0.05, v: 0.16, filter: ['highpass', 2600] }); noise({ d: 0.16, v: 0.07, filter: ['bandpass', 3400], q: 1.5, at: 0.03, sweepTo: 1800 }); wood(r(620, 760), 0.02, 0.05); },
+  // esprit qui fonce : petite cloche aérienne ; éclat : « pop » cristallin et accord doux
+  w3wisp: () => osc({ type: 'sine', f: r(1300, 1500), to: 2100, d: 0.14, v: 0.03, vib: 30, vibRate: 12 }),
+  w3pop: () => { pop(r(700, 820), 0, 0.08); [784, 988].forEach((f, i) => osc({ type: 'triangle', f, d: 0.18, v: 0.03, at: 0.02 + i * 0.04 })); },
+  // pétales : bruissement léger
+  w3petal: () => noise({ d: 0.22, v: 0.05, filter: ['bandpass', 4200], q: 1.2, sweepTo: 2600 }),
+});
+Object.assign(MIN_GAP, { w3axe: 0.08, w3chop: 0.07, w3thunder: 0.15, w3cry: 0.3, w3quake: 0.2, w3whirl: 0.15, w3whip: 0.08, w3wisp: 0.1, w3pop: 0.07, w3petal: 0.3 });
