@@ -165,7 +165,7 @@ addWeapons({
   // d'acier) : grands pièges qui se referment 3 fois.
   traps: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 2.6 * (L(3) ? 1.3 : 1), b = A * 0.5 * (L(3) ? 1.3 : 1);
+      const d = A * 3 * (L(3) ? 1.3 : 1), b = A * 0.6 * (L(3) ? 1.3 : 1);
       return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 3, R: 64 * ar, hold: 2.6, bleed: b * 1.5, snaps: 3, max: 9 }
         : { dmg: d, cd: (L(5) ? 1.9 : 2.4) * h, n: 1 + L(2) + L(5), R: (L(4) ? 52 : 40) * ar, hold: L(4) ? 2.2 : 1.6, bleed: b, snaps: 1, max: 5 + L(2) + L(5) };
     },
