@@ -9,6 +9,7 @@ import { initC1, eventC1, frameC1 } from './fx-c1.js'; // champions C1 (Nyx, Sor
 import { initC2, eventC2, frameC2 } from './fx-c2.js'; // champions C2 (Frida, Gaïa)
 import { initW1, eventW1, frameW1 } from './fx-w1.js'; // Arsenal W1 (armes de Lumi, Kira, Brok, Frida)
 import { frameW2 } from './fx-w2.js'; // arsenal W2 (armes de Nyx et de Sora)
+import { frameW3 } from './fx-w3.js'; // arsenal W3 (armes de Ragnar et de Gaïa)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -521,6 +522,7 @@ export class Fx {
     frameC2(this, dt); // champions C2
     frameW1(this, dt); // Arsenal W1
     frameW2(this, dt); // arsenal W2
+    frameW3(this, dt); // arsenal W3
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
