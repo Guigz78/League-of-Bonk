@@ -21,6 +21,8 @@ import { hubStrip, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet
 import { l2Home, endRunL2, l2Results, defisScreen, defisTile, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
 import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
+// mode histoire « La Grande Marmite » (chapitres, dialogues, récompenses)
+import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, storyEnd, storyBlock, storyTile, storyScreenHTML } from './story.js';
 
 const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
@@ -127,7 +129,9 @@ const afterSheet = () => { announceAchievements(); if (!battle) home(); };
 const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
-  play: () => (save.stats.runs ? zoneSheet(playZone()) : (save.lastZone = 0, startRun(0, 0, 0))), // toute première partie : on joue tout de suite
+  // tant que le monde 1 n'est pas battu, JOUER lance le chapitre 1 de l'histoire (tutoriel, partie facile) ; sinon la fiche du monde
+  play: () => (firstSteps() ? playChapter(0) : zoneSheet(playZone())),
+  story: () => storyScreen(),
   quests: () => questSheet().then(afterSheet),
   login: () => loginSheet().then(afterSheet),
   season: () => openPass(),
@@ -286,12 +290,16 @@ function adventureTab() {
         <div class="sc-links"><button class="link" data-act="changeClass">Changer</button><button class="link" data-act="allStats">Détails</button></div>
       </div>
     </section>
-    <button class="play-cta" data-act="play">
+    ${firstSteps() ? `<button class="play-cta" data-act="play">
+      <span class="pc-ic">${iconImg('play', 22)}</span>
+      <span class="pc-txt"><b>Jouer</b><small>Chapitre 1 · ${esc(chapter(0).title)}</small></span>
+      <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
+    </button>` : `<button class="play-cta" data-act="play">
       <span class="pc-ic">${iconImg('play', 22)}</span>
       <span class="pc-txt"><b>Jouer <i class="pc-dtag" style="--dc:${D.color}">${esc(D.name)}</i></b><small>Monde ${pz + 1} · ${esc(Z.name)}</small></span>
       <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
-    </button>
-    ${save.stats.runs ? `${quick}${defisTile()}` : ''}
+    </button>`}
+    ${save.stats.runs ? `${storyTile()}${quick}${defisTile()}` : ''}
     <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
     <div class="zones">${zones}</div>`;
 }
@@ -529,24 +537,51 @@ function classSelect(first) {
 // ---------- Partie ----------
 let run = null;
 let runBoosts = [];
+let storyCur = null; // chapitre de l'histoire en cours (null : expédition)
 
-function startRun(z, diff = 0, abyss = 0) {
+// premiers pas : monde 1 jamais battu et chapitre 1 pas terminé (JOUER lance le chapitre 1, le tutoriel)
+const firstSteps = () => !save.zoneCleared[0] && !storyDone();
+
+// lance un chapitre : bulles d'introduction (sur le décor du monde) puis la partie (Normal, un seul niveau)
+async function playChapter(n) {
+  const ch = chapter(n); if (!ch || !supported()) return supported() ? undefined : noWebGL();
+  music('menu');
+  await cutscene(n, 'intro');
+  startRun(ch.zone, 0, 0, { story: n });
+}
+
+// écran des chapitres
+function storyScreen() {
+  mount(storyScreenHTML());
+  bind($('.story-screen'), {
+    back: () => home('adventure'),
+    chapter: el => { sfx('tap'); playChapter(+el.dataset.n); },
+  });
+}
+
+// story = n° du chapitre (mode histoire : un seul niveau, dialogues, pas de menu de portail)
+function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
   if (!supported()) return noWebGL(); // rien n'est dépensé (bonus, partie comptée)
   diff = Math.max(0, Math.min(diff, maxDiff(z)));
   abyss = Math.max(0, Math.min(abyss | 0, abyssTop(z))); // L2 : palier d'Abysse (en Cauchemar)
   save.stats.runs++;
   const boosts = runBoosts = consumeBoosts(); // enregistre aussi la partie commencée
-  const zone = ZONES[z];
+  const zone = ZONES[z], ch = story == null ? null : chapter(story);
+  storyCur = ch ? story : null;
   run = new Run({
     zone,
     diff,
     abyss,
     boosts,
+    story: ch ? { n: story, giga: !!ch.giga } : null,
+    easy: !save.tutorialDone, // toute première partie : monstres et boss plus faibles (le guide montre tout en jouant)
+    onBoss: ch ? () => setTimeout(() => { if (run && !run.over) taunt(story); }, ch.giga ? 3600 : 700) : null,
     onPause: resume => pauseMenu(resume),
     onLevelUp: (title, opts, done, sub, extra) => levelUpMenu(title, opts, done, sub, extra),
     onChest: (c, gold, done) => chestMenu(c, gold, done),
     onDefeat: canRevive => defeatMenu(canRevive),
-    onPortal: (info, choose) => portalMenu(info, choose),
+    // mode histoire : au portail, les bulles de fin du chapitre puis le bilan
+    onPortal: ch ? (info, choose) => cutscene(story, 'outro', { inRun: true }).then(() => choose('home')) : (info, choose) => portalMenu(info, choose),
     onEnd: sum => endRun(zone, sum),
   });
   run.onPortal ??= (info, choose) => portalMenu(info, choose);
@@ -614,9 +649,11 @@ function tutorial(r) {
     w.classList.toggle('on', !!c);
     if (c && k) sfx('tap');
   };
+  const end = () => { save.tutorialDone = true; r.coachOn = false; persist({ touch: false }); w.remove(); };
   const tick = () => {
+    // partie finie : guide réussi si le boss est tombé (mode histoire : le portail mène directement au bilan)
+    if (r.over) { if (r.portal || r.gigaWon) end(); else w.remove(); return; }
     if (!w.isConnected) return;
-    if (r.over) { w.remove(); return; }
     const now = performance.now(), dt = Math.min(0.1, (now - S.t) / 1000); S.t = now;
     if (!r.paused) {
       S.age += dt;
@@ -625,7 +662,7 @@ function tutorial(r) {
       else if (S.wait) { if (COACH[S.k].wait(r)) { S.wait = false; show(S.k); } } // consigne suivante quand elle devient utile
       else if (COACH[S.k].done(r, S)) {
         const k = S.k + 1;
-        if (k >= COACH.length) { save.tutorialDone = true; r.coachOn = false; persist({ touch: false }); w.remove(); return; }
+        if (k >= COACH.length) { end(); return; }
         if (COACH[k].wait && !COACH[k].wait(r)) { S.k = k; S.wait = true; w.classList.remove('on'); } else show(k);
       }
     }
@@ -869,7 +906,7 @@ async function pauseMenu(resume) {
   const free = n => Array.from({ length: Math.max(0, n) }, () => '<span class="bl empty"><i>Emplacement libre</i></span>').join('');
   const hpK = Math.max(0, Math.min(1, p.hp / Math.max(1, p.maxHp)));
   const v = await modal({
-    title: `<span class="eyebrow">Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
+    title: `<span class="eyebrow">${run.story ? `Chapitre ${run.story.n + 1}` : `Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS}`} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
     body: `<div class="pz-sum">
         <div><small>Temps</small><b>${fmtTime(run.runTime ?? run.time ?? 0)}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
@@ -921,7 +958,7 @@ async function defeatMenu(canRevive) {
   const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0, z = run.zone;
   const kept = nLoot || run.cleared?.length ? `<p class="ko-kept">${iconImg('chest', 18)}<span>${nLoot ? `Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b>` : 'Vos mondes vaincus'}${nLoot && run.cleared?.length ? ' et les mondes vaincus sont conservés' : ' sont conservés'}.</span></p>` : '';
   const v = await modal({
-    title: `<span class="eyebrow">Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS} · ${run.boss?.giga && !run.boss.dead ? esc(DATA.GIGA.name) : `Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}`}</span>K.O.`,
+    title: `<span class="eyebrow">${run.story ? `Chapitre ${run.story.n + 1}` : `Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS}`} · ${run.boss?.giga && !run.boss.dead ? esc(DATA.GIGA.name) : `Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}`}</span>K.O.`,
     cls: 'ko-modal',
     body: `<div class="pz-sum">
         <div><small>Survie</small><b>${t}</b></div><div><small>Niveau</small><b>${run.p.level}</b></div>
@@ -1031,8 +1068,11 @@ function endRun(z, sum) {
   const pass = seasonRun({ ...sum, cleared, loot, heat, stage }); // L1 : XP de saison et compteurs des succès
   const got = checkAchievements();
   persist();
+  const story = storyCur == null ? null : storyEnd(storyCur, chapter(storyCur).giga ? !!sum.giga : cleared.includes(chapter(storyCur).zone));
+  storyCur = null;
+  if (story?.ok) save.tutorialDone = true; // chapitre réussi : le guide de la première partie ne revient plus
   const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass, route, gigaRec,
-    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start };
+    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start, story };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
   if (save.pendingChests.length) chestScreen(show, true); else show([]);
@@ -1311,8 +1351,9 @@ function summaryScreen(R, opened = []) {
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
-  const title = R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
-  const eyebrow = R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
+  const S = R.story;
+  const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite') : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
+  const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
@@ -1320,6 +1361,7 @@ function summaryScreen(R, opened = []) {
     <span class="eyebrow rs-eyebrow">${eyebrow}</span>
     <h2 class="rs-title">${title}</h2>
     <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
+    ${storyBlock(S)}
     ${gigaBlock}
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
@@ -1342,7 +1384,7 @@ function summaryScreen(R, opened = []) {
     ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns">
       <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
-      <button class="btn primary" data-act="again">${nextLabel}</button>
+      <button class="btn primary" data-act="${S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
     </div>
   </div>`);
   $$('.reward-screen .cu').forEach(el => countUp(el, +el.dataset.n || 0, 900));
@@ -1352,7 +1394,9 @@ function summaryScreen(R, opened = []) {
   bind($('.reward-screen'), {
     home: () => home('adventure'),
     season: () => seasonScreen(() => home('adventure')),
+    chapter: () => playChapter(S.ok ? S.next ?? S.n : S.n),
     again: () => {
+      if (S) return playChapter(S.n);
       save.diffSel[nextZ] = Math.min(nextK, maxDiff(nextZ));
       persist({ touch: false });
       home('adventure');

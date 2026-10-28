@@ -503,6 +503,7 @@ const ICON = {
   home: [IC.w, IC.w, '<path d="M4 11l8-7 8 7v9.5H4z" fill="T"/><path d="M10 20.5v-6h4v6"/>'],
   back: [IC.w, IC.w, '<path d="M15 4.5L7.5 12l7.5 7.5"/>'],
   next: [IC.w, IC.w, '<path d="M9 4.5l7.5 7.5L9 19.5"/>'],
+  book: [IC.gold, IC.gold, '<path d="M12 6.5C9.8 4.8 6.8 4.2 3 4.5v14c3.8-.3 6.8.3 9 2 2.2-1.7 5.2-2.3 9-2v-14c-3.8-.3-6.8.3-9 2z" fill="T"/><path d="M12 6.5v14M6 9h3M6 12.5h3M15 9h3M15 12.5h3"/>'],
   part: [IC.cyan, IC.cyan, '<path d="M12 3l7.5 4.5v9L12 21l-7.5-4.5v-9z" fill="T"/><circle cx="12" cy="12" r="3"/>'],
   pet: [IC.w, IC.gold, '<path d="M5 9.5L7 4l3 3.5h4L17 4l2 5.5V14a7 7 0 0 1-14 0z" fill="T"/><rect x="8.6" y="11" width="2" height="2" fill="S" stroke="none"/><rect x="13.4" y="11" width="2" height="2" fill="S" stroke="none"/>'],
   eye: [IC.w, IC.w, '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="T"/><circle cx="12" cy="12" r="3"/>'],

@@ -41,7 +41,7 @@ export const GIGA_METHODS = {
       if (ph[0]) ph[0].style.left = GB.ph2 * 100 + '%';
       if (ph[1]) ph[1].style.left = GB.ph3 * 100 + '%';
     }
-    this.gigaCard(auto ? 'Le chrono est écoulé : il vient à vous !' : 'Niveau 3 · le combat final de l\'expédition');
+    this.gigaCard(auto ? 'Le chrono est écoulé : il vient à vous !' : this.story ? 'Le combat final de l\'histoire' : 'Niveau 3 · le combat final de l\'expédition');
     this.emit('gigaSummon', { e: B, x: B.x, y: B.y, R: A ? A.R : GB.arena });
     this.burst(B.x, B.y, 80, 0, '#ff8a2a', 8);
     if (A) this.fx.push({ type: 'ring', x: A.x, y: A.y, r: A.R, life: 1, max: 1, color: '#ffb02a' });
