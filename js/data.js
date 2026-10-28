@@ -992,9 +992,9 @@ Object.assign(WEAPONS, {
 // évolutions (niveau 5 + tome) : jamais deux fois le même tome pour un champion
 Object.assign(WEAPON_EVOS, {
   starfall:    { tome: 'haste',  name: 'Pluie de comètes', icon: 'starfall', desc: '7 étoiles bleues plus larges et une comète géante sur la cible à chaque salve.' },
-  blastarrow:  { tome: 'power',  name: 'Flèche à fragmentation', icon: 'blastarrow', desc: '3 flèches, grosses explosions qui projettent 5 éclats explosifs.' },
+  blastarrow:  { tome: 'power',  name: 'Flèche à fragmentation', icon: 'blastarrow', desc: '3 flèches, grosses explosions qui projettent 6 éclats explosifs.' },
   traps:       { tome: 'armor',  name: 'Mâchoires d\'acier', icon: 'traps', desc: 'Grands pièges qui se referment 3 fois sur toute une meute et la font saigner plus.' },
-  shieldthrow: { tome: 'magnet', name: 'Rempart sacré', icon: 'shieldthrow', desc: '2 boucliers dorés, 10 rebonds : chaque rebond libère une onde sacrée qui étourdit.' },
+  shieldthrow: { tome: 'magnet', name: 'Rempart sacré', icon: 'shieldthrow', desc: '2 boucliers dorés, 9 rebonds : chaque rebond libère une onde sacrée qui étourdit.' },
   hammer:      { tome: 'power',  name: 'Jugement divin', icon: 'judgment', desc: '3 marteaux géants : double onde de choc qui étourdit les monstres.' },
   icicles:     { tome: 'crit',   name: 'Tempête de stalactites', icon: 'icicles', desc: '11 grandes pointes qui transpercent tout, gèlent et éclatent en fin de course.' },
   hail:        { tome: 'area',   name: 'Ouragan de grêle', icon: 'hail', desc: '2 orages géants qui suivent leur cible ; les grêlons gèlent.' },

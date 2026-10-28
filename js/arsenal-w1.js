@@ -70,7 +70,7 @@ addWeapons({
   // plus larges, chute plus rapide, et une comète géante sur la cible principale à chaque salve.
   starfall: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 2.4 * (L(3) ? 1.3 : 1) * (L(5) ? 1.3 : 1);
+      const d = A * 2 * (L(3) ? 1.3 : 1) * (L(5) ? 1.3 : 1);
       return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 7, R: 88 * ar, big: d * 4, bR: 140 * ar }
         : { dmg: d, cd: (L(4) ? 1.8 : 2.2) * h, n: 2 + L(2) + L(5) * 2, R: (L(4) ? 70 : 56) * ar };
     },
@@ -106,12 +106,12 @@ addWeapons({
 
   // ---------- Kira : Flèche explosive ----------
   // Flèche lente (330 px/s, ~480 px) qui explose sur le premier ennemi touché (ou en bout de course). Évoluée (Flèche à
-  // fragmentation) : 3 flèches, explosion plus grosse qui projette 5 éclats explosifs autour.
+  // fragmentation) : 3 flèches, explosion plus grosse qui projette 6 éclats explosifs autour.
   blastarrow: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 2.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
-      return E ? { dmg: d * 1.5, cd: 1.25 * h, n: 3, R: 92 * ar, frag: 5, fd: d * 0.45 }
-        : { dmg: d, cd: (L(5) ? 1.45 : 1.85) * h, n: 1 + L(4), R: (L(3) ? 76 : 60) * ar };
+      const d = A * 3 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      return E ? { dmg: d * 1.7, cd: 1.25 * h, n: 3, R: 108 * ar, frag: 6, fd: d * 0.6 }
+        : { dmg: d, cd: (L(5) ? 1.45 : 1.85) * h, n: 1 + L(4), R: (L(3) ? 84 : 64) * ar };
     },
     lines: [D_('Dégâts d\'explosion'), CD, ['n', 'Flèches', fN], ['R', 'Explosion', fI], ['frag', 'Éclats explosifs', fN]],
     size: 'R',
@@ -165,9 +165,9 @@ addWeapons({
   // d'acier) : grands pièges qui se referment 3 fois.
   traps: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 2 * (L(3) ? 1.3 : 1), b = A * 0.35 * (L(3) ? 1.3 : 1);
-      return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 3, R: 58 * ar, hold: 2.6, bleed: b * 1.5, snaps: 3, max: 9 }
-        : { dmg: d, cd: (L(5) ? 1.9 : 2.4) * h, n: 1 + L(2) + L(5), R: (L(4) ? 46 : 34) * ar, hold: L(4) ? 2.2 : 1.6, bleed: b, snaps: 1, max: 4 + L(2) + L(5) };
+      const d = A * 2.6 * (L(3) ? 1.3 : 1), b = A * 0.5 * (L(3) ? 1.3 : 1);
+      return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 3, R: 64 * ar, hold: 2.6, bleed: b * 1.5, snaps: 3, max: 9 }
+        : { dmg: d, cd: (L(5) ? 1.9 : 2.4) * h, n: 1 + L(2) + L(5), R: (L(4) ? 52 : 40) * ar, hold: L(4) ? 2.2 : 1.6, bleed: b, snaps: 1, max: 5 + L(2) + L(5) };
     },
     lines: [D_('Dégâts de morsure'), CD, ['n', 'Pièges', fN], ['hold', 'Immobilise', fS], ['bleed', 'Saignement', fI], ['R', 'Mâchoires', fI], ['snaps', 'Morsures par piège', fN]],
     size: 'R',
@@ -214,13 +214,13 @@ addWeapons({
 
   // ---------- Brok : Bouclier volant ----------
   // Le bouclier file vers la cible, la frappe et la repousse, puis rebondit vers l'ennemi le plus proche pas encore touché
-  // (à moins de 250 px), b fois, puis revient vers Brok. Évolué (Rempart sacré) : 2 boucliers dorés, 10 rebonds, chaque
-  // rebond libère une onde sacrée (la moitié des dégâts) qui étourdit les monstres un court instant.
+  // (à moins de 250 px), b fois, puis revient vers Brok. Évolué (Rempart sacré) : 2 boucliers dorés, 9 rebonds, chaque
+  // rebond libère une onde sacrée (30 % des dégâts) qui étourdit les monstres un court instant.
   shieldthrow: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 1.7 * (L(3) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
-      return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 2, b: 10, R: 30 * ar, wave: 62 * ar }
-        : { dmg: d, cd: (L(4) ? 1.8 : 2.2) * h, n: 1, b: 3 + L(2) * 2 + L(5) * 2, R: (L(4) ? 26 : 20) * ar };
+      const d = A * 2.2 * (L(3) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 2, b: 9, R: 30 * ar, wave: 62 * ar }
+        : { dmg: d, cd: (L(4) ? 1.8 : 2.2) * h, n: 1, b: 4 + L(2) * 2 + L(5) * 2, R: (L(4) ? 26 : 20) * ar };
     },
     lines: [D_('Dégâts par rebond'), CD, ['b', 'Rebonds', fN], ['n', 'Boucliers', fN], ['R', 'Taille', fI], ['wave', 'Onde sacrée', fI]],
     size: 'R',
@@ -244,7 +244,7 @@ addWeapons({
         // rebond : coup, recul, puis cible suivante
         run.hitEnemy(e, o.dmg, { knock: 300, kx: dx / d, ky: dy / d, color: E ? '#ffe48a' : '#bfe0ff' });
         if (o.h.length < 16) o.h.push(e);
-        if (E) zone(run, o.x, o.y, S.wave, o.dmg * 0.5, { color: '#ffe48a', knock: 160, quiet: true }, f => { if (!f.boss) f.freeze = Math.max(f.freeze, 0.35); });
+        if (E) zone(run, o.x, o.y, S.wave, o.dmg * 0.3, { color: '#ffe48a', knock: 160, quiet: true }, f => { if (!f.boss) f.freeze = Math.max(f.freeze, 0.3); });
         run.emit('w1', { kind: 'bounce', x: o.x, y: o.y, R: E ? S.wave : o.R * 2, evo: E });
         sfx('shield');
         o.tg = --o.left >= 0 && o.life > 0 ? next(run, o.x, o.y, o.h) : null;
@@ -271,7 +271,7 @@ addWeapons({
   hammer: {
     stats: ({ A, ar, h, L, E }) => {
       const k = (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
-      return E ? { dmg: A * 4.5 * k * 1.5, wave: A * 2 * k * 1.5, cd: 2.1 * h, n: 3, R: 150 * ar, stun: 0.8 }
+      return E ? { dmg: A * 4.5 * k * 1.3, wave: A * 2 * k * 1.3, cd: 2.1 * h, n: 3, R: 150 * ar, stun: 0.6 }
         : { dmg: A * 4.5 * k, wave: A * 2 * k, cd: (L(4) ? 2.5 : 3.1) * h, n: 1 + L(5), R: (L(3) ? 125 : 95) * ar, stun: 0 };
     },
     lines: [D_('Coup de marteau'), ['wave', 'Onde de choc', fI], CD, ['n', 'Marteaux', fN], ['R', 'Rayon de l\'onde', fI], ['stun', 'Étourdit', fS]],
@@ -302,7 +302,7 @@ addWeapons({
         }
         if (o.s === 1 && o.t >= o.dur + 0.3) { // évolué : 2e onde, plus large
           o.s = 2; o.t = 0;
-          zone(run, o.x, o.y, o.R * 1.5, o.wave * 0.6, { color: '#fff0a0', knock: 260, quiet: true }, e => { if (!e.boss) e.freeze = Math.max(e.freeze, S.stun * 0.5); });
+          zone(run, o.x, o.y, o.R * 1.5, o.wave * 0.5, { color: '#fff0a0', knock: 260, quiet: true }, e => { if (!e.boss) e.freeze = Math.max(e.freeze, S.stun * 0.5); });
           run.emit('w1', { kind: 'wave2', x: o.x, y: o.y, R: o.R * 1.5 });
           continue;
         }
@@ -373,8 +373,8 @@ addWeapons({
   // géants qui suivent leur cible, grêlons plus gros qui gèlent.
   hail: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 0.8 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
-      return E ? { dmg: d * 1.5, cd: 3.4 * h, n: 2, R: 150 * ar, dur: 4.5, rate: 14, sR: 38 * ar, freeze: 0.4 }
+      const d = A * 0.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      return E ? { dmg: d * 1.35, cd: 3.4 * h, n: 2, R: 150 * ar, dur: 4.5, rate: 14, sR: 38 * ar, freeze: 0.4 }
         : { dmg: d, cd: (L(5) ? 3.5 : 4.3) * h, n: 1, R: (L(3) ? 115 : 92) * ar, dur: L(4) ? 3.5 : 2.6, rate: L(4) ? 10 : 7, sR: (L(3) ? 32 : 27) * ar, freeze: 0 };
     },
     lines: [D_('Dégâts par grêlon'), CD, ['R', 'Zone de l\'orage', fI], ['dur', 'Durée', secS], ['rate', 'Grêlons par seconde', fN], ['n', 'Orages', fN], ['freeze', 'Gel', fS]],
