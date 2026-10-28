@@ -116,13 +116,13 @@ const DRAW = {
     }
   },
   shuriken(fx, st, w, s, t) {
-    const P = get(st, fx, 'star'), E = w.evo, k = E ? 1.45 : 1;
+    const P = get(st, fx, 'star'), E = w.evo, k = E ? 1.8 : 1.35;
     for (const q of s.list) {
       const fade = q.out > 0 ? clamp(q.out / 0.25, 0, 1) : 1, X = q.x * S, Y = 1.25, Z = q.y * S, v = Math.hypot(q.vx, q.vy) || 1;
       P.put(X, Y, Z, q.spin, k * (0.4 + 0.6 * fade));
-      fx.ra.ring(X, Y - 0.02, Z, 0.85 * k, col(E ? '#ffd54a' : LAV), (E ? 0.45 : 0.28) * fade, 0, 0.3, 0.75, -q.spin, 0, 0, 0.6); // flou de rotation
-      fx.line(X, Y, Z, (q.x - q.vx / v * (E ? 46 : 30)) * S, Y, (q.y - q.vy / v * (E ? 46 : 30)) * S, E ? 0.45 : 0.3, E ? MAG : VIO, 0.55 * fade);
-      fx.glow(q.x, q.y, 25, (E ? 26 : 16) * fade, E ? MAG : VIO, 0.6);
+      fx.ra.ring(X, Y - 0.02, Z, 0.85 * k, col(E ? '#ffd54a' : LAV), (E ? 0.6 : 0.45) * fade, 0, 0.35, 0.75, -q.spin, 0, 0, 0.6); // flou de rotation
+      fx.line(X, Y, Z, (q.x - q.vx / v * (E ? 56 : 40)) * S, Y, (q.y - q.vy / v * (E ? 56 : 40)) * S, E ? 0.6 : 0.45, E ? MAG : '#c08aff', 0.7 * fade);
+      fx.glow(q.x, q.y, 25, (E ? 30 : 22) * fade, E ? MAG : VIO, 0.7);
       fx.shadow(q.x, q.y, 22 * k, 0.2 * fade);
     }
   },
@@ -134,16 +134,17 @@ const DRAW = {
       fx.glow(b.x, b.y, b.z + 12, 9, '#ffb04a', 0.9);
       fx.shadow(b.x, b.y, 16, 0.3);
     }
-    for (const c of s.aux) { // nuages : bouffées qui tournent lentement et respirent, bord violet au sol
-      const a = clamp(c.t / 0.2, 0, 1) * clamp((c.dur - c.t) / 0.6, 0, 1), R = c.R, n = E ? 11 : 8, ph = c.ph + t * 0.35;
+    for (const c of s.aux) { // nuages : brume basse et translucide (on voit les monstres dedans), bouffées qui tournent et respirent
+      const a = clamp(c.t / 0.2, 0, 1) * clamp((c.dur - c.t) / 0.6, 0, 1), R = c.R, n = E ? 10 : 8, ph = c.ph + t * 0.35;
+      fx.ringAt(c.x, c.y, R, E ? '#3a2458' : '#5a4a7a', 0.2 * a, 0.001, 1, 1, 0, 0, 0, 0, false, 0.065);
       for (let i = 0; i < n; i++) {
-        const inner = i >= n - 3, an = ph * (inner ? -1.4 : 1) + i * TAU / (inner ? 3 : n - 3), d = R * (inner ? 0.25 : 0.62), br = 1 + Math.sin(t * 2 + i * 1.7) * 0.08;
-        const x = c.x + Math.cos(an) * d, y = c.y + Math.sin(an) * d * 0.8, h = (inner ? 30 : 16) + Math.sin(t * 1.5 + i) * 4;
-        const j = P.put(x * S, h * S, y * S, 0, R * (inner ? 1.0 : 0.85) * br * S * 1.25);
-        P.tint(j, col(i % 3 === 0 ? (E ? '#3a2a52' : '#7a6a98') : E ? '#241a36' : SMOKE));
-        P.alpha(j, (E ? 0.72 : 0.6) * a);
+        const inner = i >= n - 2, an = ph * (inner ? -1.4 : 1) + i * TAU / (inner ? 2 : n - 2), d = R * (inner ? 0.28 : 0.64), br = 1 + Math.sin(t * 2 + i * 1.7) * 0.08;
+        const x = c.x + Math.cos(an) * d, y = c.y + Math.sin(an) * d * 0.8, h = (inner ? 22 : 12) + Math.sin(t * 1.5 + i) * 3;
+        const j = P.put(x * S, h * S, y * S, 0, R * (inner ? 0.95 : 0.72) * br * S);
+        P.tint(j, col(i % 3 === 0 ? (E ? '#9a78c8' : '#cfc4e4') : E ? '#5e4a88' : '#9a8cbc'));
+        P.alpha(j, (E ? 0.5 : 0.42) * a);
       }
-      fx.ringAt(c.x, c.y, R, E ? MAG : VIO, 0.5 * a, 0.035, 0.12, 1, t * 0.4, 16, 0.4, 0.3, true, 0.08);
+      fx.ringAt(c.x, c.y, R, E ? MAG : VIO, 0.55 * a, 0.035, 0, 1, t * 0.4, 16, 0.4, 0.3, true, 0.08);
       if (E && Math.random() < 0.25) fx.sparkle(c.x + rand(-R, R) * 0.7, c.y + rand(-R, R) * 0.5, rand(10, 40), MAG);
     }
   },
@@ -153,6 +154,7 @@ const DRAW = {
       st.heroLoad = 1;
       import('./models-heroes.js').then(m => { st.heroMod = m.heroModel; }).catch(() => {});
     }
+    if (st.heroMod && !st.clones) clone(fx, st, 0).root.visible = false; // 1er clone préparé dès que l'arme est prise
     for (let i = 0; i < C.length; i++) {
       const c = C[i], a = clamp(c.t / 0.18, 0, 1) * clamp((c.dur - c.t) / 0.3, 0, 1);
       const m = clone(fx, st, i);
@@ -160,9 +162,9 @@ const DRAW = {
         m.root.visible = true;
         m.root.position.set(c.x * S, 0, c.y * S);
         m.update(dt, { t: g.t + i * 0.7, moving: !!c.m, speed01: 1, atk: c.atk, atkA: c.a, dirA: c.a });
-        m.U.uFx.value.w = 0.68 * a; m.U.uFx.value.x = c.t < 0.12 ? 0.6 : 0;
+        m.U.uFx.value.w = 0.78 * a; m.U.uFx.value.x = c.t < 0.12 ? 0.6 : 0.08;
       }
-      fx.glow(c.x, c.y, 22, 40, c.evo ? MAG : VIO, 0.45 * a);
+      fx.glow(c.x, c.y, 22, 46, c.evo ? MAG : VIO, 0.6 * a);
       fx.shadow(c.x, c.y, 30, 0.35 * a);
       fx.ringAt(c.x, c.y, 20, c.evo ? MAG : VIO, 0.8 * a, 0.18, 0.2, 1, -t * 2, 6, 0, 0.6, true, 0.09);
       if (c.m && Math.random() < 0.5 && fx.puffs.length < 200) fx.puffs.push({ x: c.x + rand(-6, 6), y: c.y + rand(-4, 4), z: rand(8, 30), vx: 0, vy: 0, vz: 12, s: rand(7, 11), life: 0.35, max: 0.35, a: 0.5, c: '#2a1a44' });
@@ -177,8 +179,8 @@ function clone(fx, st, i) {
   let m = L[i];
   const evo = Math.min(3, fx.run.p.evo | 0);
   if (!m) {
-    m = L[i] = st.heroMod(fx.run.cls.id === 'assassin' ? 'assassin' : 'assassin', evo); m.evo0 = evo;
-    m.root.traverse(o => { if (o.isMesh && o.material && !o.material.userData.w2) { const M = o.material; M.userData.w2 = 1; M.transparent = true; M.color.set('#9a7ae8'); m.U = M.userData.U; } });
+    m = L[i] = st.heroMod('assassin', evo); m.evo0 = evo;
+    m.root.traverse(o => { if (o.isMesh && o.material && !o.material.userData.w2) { const M = o.material; M.userData.w2 = 1; M.transparent = true; M.color.set('#c4acff'); m.U = M.userData.U; } });
     m.root.renderOrder = 3;
     fx.root.add(m.root);
     if (!st.disp) { st.disp = 1; const d0 = fx.dispose.bind(fx); fx.dispose = () => { for (const c of st.clones || []) c.dispose(); d0(); }; }

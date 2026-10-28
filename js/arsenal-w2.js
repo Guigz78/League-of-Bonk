@@ -285,7 +285,7 @@ addWeapons({
   // engloutissent les tirs ennemis.
   smoke: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.6 * 1.3 * 1.35 * 1.5, cd: 2.4 * h, n: 3, R: 125 * ar, dur: 4.5, wall: 1 }
+      ? { dmg: A * 0.6 * 1.3 * 1.35 * 1.5, cd: 2.4 * h, n: 3, R: 110 * ar, dur: 4.5, wall: 1 }
       : { dmg: A * 0.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.35 : 1), cd: (L(4) ? 2.6 : 3.2) * h, n: 1 + L(3) + L(5), R: (L(3) ? 86 : 74) * ar, dur: 3, wall: 0 },
     lines: [D_('Dégâts par bouffée'), ['n', 'Bombes', fN], ['R', 'Nuage', fI], ['wall', 'Arrête les tirs', yes], ['dur', 'Durée', secS], CD()],
     size: 'R',
