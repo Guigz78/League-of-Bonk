@@ -7,6 +7,7 @@ import { TOTEMS } from '../data.js';
 import { LOOT_GLOW } from './tex2d.js';
 import { initC1, eventC1, frameC1 } from './fx-c1.js'; // champions C1 (Nyx, Sora, Ragnar)
 import { initC2, eventC2, frameC2 } from './fx-c2.js'; // champions C2 (Frida, Gaïa)
+import { frameW3 } from './fx-w3.js'; // arsenal W3 (armes de Ragnar et de Gaïa)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -515,6 +516,7 @@ export class Fx {
     this.heroFx(dt);
     frameC1(this, dt); // champions C1
     frameC2(this, dt); // champions C2
+    frameW3(this, dt); // arsenal W3
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
