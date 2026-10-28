@@ -7,6 +7,7 @@ const FILES = [
   'js/art.js', 'js/pixel.js', 'js/ui.js', 'js/audio.js', 'js/ads.js', 'js/daily.js', 'js/native.js', 'js/weapons-reg.js', 'js/unlocks.js', 'js/mastery.js', 'js/abyss.js', 'js/season.js', 'js/season-ui.js', 'js/champions-c1.js', 'js/champions-c2.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'fonts/lilita-one-latin.woff2', 'fonts/lilita-one-latin-ext.woff2', 'fonts/rajdhani-500.woff2', 'fonts/rajdhani-600.woff2', 'fonts/rajdhani-700.woff2',
+  'js/arsenal-w1.js', 'js/g3d/fx-w1.js',
 ];
 
 self.addEventListener('install', e => {

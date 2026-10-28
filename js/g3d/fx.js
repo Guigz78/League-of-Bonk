@@ -7,6 +7,7 @@ import { TOTEMS } from '../data.js';
 import { LOOT_GLOW } from './tex2d.js';
 import { initC1, eventC1, frameC1 } from './fx-c1.js'; // champions C1 (Nyx, Sora, Ragnar)
 import { initC2, eventC2, frameC2 } from './fx-c2.js'; // champions C2 (Frida, Gaïa)
+import { initW1, eventW1, frameW1 } from './fx-w1.js'; // Arsenal W1 (armes de Lumi, Kira, Brok, Frida)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -80,6 +81,7 @@ export class Fx {
     for (let i = 0; i < 3; i++) this.rings.push({ x: p.x, y: p.y, r0: 10, r1: 150 + i * 70, t: -i * 0.12, max: 0.7, c: i ? '#c06aff' : '#7ae8ff', w: 7 });
     this.c1 = initC1(this); // champions C1 : ultimes, haches de Ragnar, fureur, danse des ombres (fx-c1.js)
     this.c2 = initC2(this); // champions C2 : hiver éternel, colère de la forêt, givre, sève (fx-c2.js)
+    this.w1 = initW1(this); // Arsenal W1 : étoiles, flèches explosives, pièges, boucliers, marteaux, stalactites, grêle (fx-w1.js)
   }
 
   // ---------- Petits outils ----------
@@ -147,6 +149,7 @@ export class Fx {
     const run = this.run, p = run.p;
     if (this.c1 && eventC1(this, ev)) return; // champions C1
     if (this.c2 && eventC2(this, ev)) return; // champions C2
+    if (ev.type === 'w1') return void eventW1(this, ev); // Arsenal W1
     switch (ev.type) {
       case 'hit': {
         const e = ev.e, h = e.r * 1.2 + e.fly;
@@ -515,6 +518,7 @@ export class Fx {
     this.heroFx(dt);
     frameC1(this, dt); // champions C1
     frameC2(this, dt); // champions C2
+    frameW1(this, dt); // Arsenal W1
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
