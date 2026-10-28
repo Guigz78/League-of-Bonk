@@ -977,3 +977,25 @@ export const ARSENAL = {
   druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
 };
 for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;
+
+// ===== Arsenal W1 : Lumi, Kira, Brok, Frida (comportement : js/arsenal-w1.js, rendu : js/g3d/fx-w1.js) =====
+// own : arme propre à un champion (comme la faux de Nyx : hors du compte des Défis). lv = textes des niveaux 2 à 5.
+Object.assign(WEAPONS, {
+  starfall:    { name: 'Pluie d\'étoiles', icon: 'starfall', own: 'mage', desc: 'Des étoiles tombent sur les ennemis à l\'écran : leur ombre au sol annonce l\'impact en zone.', lv: ['', '+1 étoile', '+30 % dégâts', 'Impacts plus larges, plus fréquents', '+2 étoiles, +30 % dégâts'] },
+  blastarrow:  { name: 'Flèche explosive', icon: 'blastarrow', own: 'archer', desc: 'Flèche lente qui explose en zone sur le premier ennemi touché.', lv: ['', '+30 % dégâts', 'Explosion plus large', '+1 flèche', '+40 % dégâts, plus rapide'] },
+  traps:       { name: 'Pièges à mâchoires', icon: 'traps', own: 'archer', desc: 'Pose des pièges autour de vous : ils immobilisent et blessent les ennemis qui marchent dessus.', lv: ['', '+1 piège', '+30 % dégâts', 'Mâchoires plus grandes, tiennent plus longtemps', '+1 piège, plus rapide'] },
+  shieldthrow: { name: 'Bouclier volant', icon: 'shieldthrow', own: 'knight', desc: 'Lance un bouclier qui rebondit d\'ennemi en ennemi en les repoussant.', lv: ['', '+2 rebonds', '+30 % dégâts', 'Plus grand, plus fréquent', '+2 rebonds, +40 % dégâts'] },
+  hammer:      { name: 'Marteau du jugement', icon: 'judgment', own: 'knight', desc: 'Un marteau sacré s\'abat sur l\'ennemi le plus fort : onde de choc tout autour.', lv: ['', '+30 % dégâts', 'Onde de choc plus large', 'Plus fréquent', '+40 % dégâts, 2e marteau'] },
+  icicles:     { name: 'Stalactites', icon: 'icicles', own: 'cryo', desc: 'Éventail de pointes de glace perçantes qui ralentissent.', lv: ['', '+2 pointes', '+30 % dégâts', 'Transpercent plus, portée accrue', '+2 pointes, plus rapide'] },
+  hail:        { name: 'Grêle', icon: 'hail', own: 'cryo', desc: 'Un orage de grêle s\'abat autour de la cible : grêlons en zone qui ralentissent.', lv: ['', '+30 % dégâts', 'Zone plus large', 'Dure plus longtemps, plus de grêlons', '+40 % dégâts, plus fréquent'] },
+});
+// évolutions (niveau 5 + tome) : jamais deux fois le même tome pour un champion
+Object.assign(WEAPON_EVOS, {
+  starfall:    { tome: 'haste',  name: 'Pluie de comètes', icon: 'starfall', desc: '7 étoiles bleues plus larges et une comète géante sur la cible à chaque salve.' },
+  blastarrow:  { tome: 'power',  name: 'Flèche à fragmentation', icon: 'blastarrow', desc: '3 flèches, grosses explosions qui projettent 5 éclats explosifs.' },
+  traps:       { tome: 'armor',  name: 'Mâchoires d\'acier', icon: 'traps', desc: 'Grands pièges qui se referment 3 fois sur toute une meute et la font saigner plus.' },
+  shieldthrow: { tome: 'magnet', name: 'Rempart sacré', icon: 'shieldthrow', desc: '2 boucliers dorés, 10 rebonds : chaque rebond libère une onde sacrée qui étourdit.' },
+  hammer:      { tome: 'power',  name: 'Jugement divin', icon: 'judgment', desc: '3 marteaux géants : double onde de choc qui étourdit les monstres.' },
+  icicles:     { tome: 'crit',   name: 'Tempête de stalactites', icon: 'icicles', desc: '11 grandes pointes qui transpercent tout, gèlent et éclatent en fin de course.' },
+  hail:        { tome: 'area',   name: 'Ouragan de grêle', icon: 'hail', desc: '2 orages géants qui suivent leur cible ; les grêlons gèlent.' },
+});

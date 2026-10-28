@@ -535,3 +535,17 @@ function svgIcon(name) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.7" stroke-linejoin="miter" stroke-linecap="square" stroke-miterlimit="6">${inner}</svg>`;
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
+
+// ===== Arsenal W1 : pluie d'étoiles (Lumi), flèche explosive et pièges (Kira), bouclier volant et marteau du jugement
+// (Brok), stalactites et grêle (Frida) =====
+// étoile à n branches (rayons R / r) centrée en (x, y), en chemin SVG
+const STARP = (x, y, R, r, n, a0 = -Math.PI / 2) => Array.from({ length: n * 2 }, (_, i) => { const a = a0 + i * Math.PI / n, k = i % 2 ? r : R; return `${i ? 'L' : 'M'}${(x + Math.cos(a) * k).toFixed(2)} ${(y + Math.sin(a) * k).toFixed(2)}`; }).join('') + 'z';
+Object.assign(ICON, {
+  starfall: [IC.gold, IC.gold, `<path d="${STARP(15.5, 8.5, 5.6, 2.4, 5)}" fill="T"/><path d="M3 13.5l5-5M3.5 19.5l7-7M9 21l3.5-3.5" stroke-opacity=".6"/>`],
+  blastarrow: [IC.w, IC.orange, `<path d="M3.5 20.5l8-8M3.5 16.5v4h4"/><path d="${STARP(15.5, 8.5, 6, 2.6, 8, -Math.PI / 8)}" fill="T" stroke="#ff7a2f"/>`],
+  traps: [IC.w, IC.cyan, '<path d="M3.5 12a8.5 6 0 0 1 17 0" fill="T"/><path d="M3.5 12a8.5 5.5 0 0 0 17 0"/><path d="M3.5 12l2.1-1.8 2.1 1.8 2.1-1.8 2.2 1.8 2.1-1.8 2.1 1.8 2.1-1.8 2.2 1.8"/><path d="M12 17.5v3.5M8.5 21h7" stroke-opacity=".6"/>'],
+  shieldthrow: [IC.gold, IC.blue, '<path d="M14.5 3.5l6.5 2.4v4.8c0 4-2.8 6.5-6.5 8-3.7-1.5-6.5-4-6.5-8V5.9z" fill="T"/><path d="M14.5 7v8M11 10.3h7"/><path d="M1.5 8.5h4M1.5 12h3.5M1.5 15.5h4" stroke-opacity=".55"/>'],
+  judgment: [IC.gold, IC.gold, '<rect x="2.8" y="10.5" width="10.5" height="6.5" transform="rotate(-40 8 13.7)" fill="T"/><path d="M10.6 10.8L20.5 2.5"/><path d="M2 21.5l2.2-2.2M6.5 22.3l.7-2.6M1.7 17l2.5-.5" stroke-opacity=".7"/>'],
+  icicles: [IC.cyan, IC.cyan, '<path d="M2.5 3.5h19"/><path d="M9.5 3.5h5L12 21z" fill="T"/><path d="M4 3.5h4l-2 10zM16 3.5h4l-2 12.5z" fill="T"/>'],
+  hail: [IC.w, IC.cyan, '<path d="M7 13.5a3.5 3.5 0 0 1-.3-7 5 5 0 0 1 9.6-1.2A3.9 3.9 0 0 1 17 13.5z" fill="T"/><rect x="6.5" y="16.5" width="2.6" height="2.6" fill="S" stroke="none"/><rect x="11" y="19.4" width="2.6" height="2.6" fill="S" stroke="none"/><rect x="15.4" y="16.5" width="2.6" height="2.6" fill="S" stroke="none"/>'],
+});

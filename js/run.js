@@ -14,6 +14,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES
 import { save, playerStats } from './save.js';
 import { canPickWeapon, canPickTome } from './unlocks.js';
 import { WX, shotWeapon } from './weapons-reg.js';
+import './arsenal-w1.js'; // armes de Lumi, Kira, Brok, Frida (Arsenal W1)
 import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
