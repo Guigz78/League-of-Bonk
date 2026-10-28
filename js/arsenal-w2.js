@@ -78,7 +78,7 @@ addWeapons({
     stats: ({ A, ar, h, L, E }) => E
       ? { dmg: A * 1.3 * 1.25 * 1.25, cd: 0.7 * h, n: 8, ls: 0.05, R: 330 * ar, chain: 1, v: 640 }
       : { dmg: A * (L(3) ? 1.3 : 1) * (L(5) ? 1.25 : 1), cd: (L(4) ? 0.9 : 1.15) * h, n: 2 + L(2) + L(4) + L(5), ls: 0.03, R: (L(3) ? 300 : 260) * ar, chain: 0, v: 560 },
-    lines: [D_('Dégâts par morsure'), ['n', 'Chauves-souris', fN], CD('Piqué toutes les'), ['ls', 'Vol de vie', pctS], ['R', 'Portée', fI], ['chain', 'Morsures en chaîne', fN]],
+    lines: [D_('Dégâts par morsure'), ['n', 'Chauves-souris', fN], ['chain', 'Morsures en chaîne', fN], ['ls', 'Vol de vie', pctS], CD('Piqué toutes les'), ['R', 'Portée', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p, B = s.list;
@@ -130,7 +130,7 @@ addWeapons({
     stats: ({ A, ar, h, L, E }) => E
       ? { dmg: A * 2.6 * 1.3 * 1.4 * 1.4, cd: 1.15 * h, n: 3, heal: 0.006, w: 30 * ar, spike: A * 2.6 * 1.3 * 1.4 * 0.9 }
       : { dmg: A * 2.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(4) ? 1.35 : 1.75) * h, n: 1 + L(3), heal: L(5) ? 0.006 : 0.004, w: 20 * ar, spike: 0 },
-    lines: [D_('Dégâts par lance'), CD(), ['n', 'Lances', fN], ['heal', 'Soin par ennemi', v => pctS(v) + ' des PV'], ['w', 'Largeur', fI], ['spike', 'Pieux de sang', v => (v ? fI(v) : 'non')]],
+    lines: [D_('Dégâts par lance'), ['n', 'Lances', fN], ['spike', 'Pieux de sang', v => (v ? fI(v) : 'non')], ['heal', 'Soin par ennemi', v => pctS(v) + ' des PV'], CD(), ['w', 'Largeur', fI]],
     size: 'w',
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p, L = s.list, X = s.aux, V = W2B.V;
@@ -181,9 +181,9 @@ addWeapons({
   // (dégâts ×3) un drain sur trois.
   cursering: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.55 * 1.35 * 1.3 * 1.5, cd: 2.4 * h, n: 2, R: 125 * ar, dur: 5, ls: 0.03, pull: 70 }
+      ? { dmg: A * 0.55 * 1.35 * 1.3 * 1.5, cd: 2.6 * h, n: 2, R: 125 * ar, dur: 6, ls: 0.03, pull: 70 }
       : { dmg: A * 0.55 * (L(4) ? 1.35 : 1) * (L(5) ? 1.3 : 1), cd: 4 * h, n: 1 + L(5), R: (L(2) ? 82 : 66) * ar, dur: L(3) ? 5.5 : 4, ls: 0.02, pull: 0 },
-    lines: [D_('Dégâts par drain'), ['R', 'Rayon', fI], ['dur', 'Durée', secS], CD('Nouveau cercle toutes les'), ['n', 'Cercles', fN], ['pull', 'Aspire les ennemis', yes]],
+    lines: [D_('Dégâts par drain'), ['R', 'Rayon', fI], ['pull', 'Aspire les ennemis', yes], ['n', 'Cercles', fN], ['dur', 'Durée', secS], CD('Nouveau cercle toutes les')],
     size: 'R',
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p, C = s.list, T = W2B.tick;
@@ -233,7 +233,7 @@ addWeapons({
     stats: ({ A, ar, h, L, E }) => E
       ? { dmg: A * 1.3 * 1.45, cd: 0.85 * h, n: 5, b: 7, R: 240 * ar, v: 660, grow: 0.12 }
       : { dmg: A * (L(3) ? 1.3 : 1), cd: (L(5) ? 1.0 : 1.3) * h, n: 1 + L(2) + L(5), b: 2 + L(4) * 2, R: 200 * ar, v: 600, grow: 0 },
-    lines: [D_('Dégâts par shuriken'), CD(), ['n', 'Shurikens', fN], ['b', 'Ricochets', fN], ['R', 'Portée des ricochets', fI], ['grow', 'Par ricochet', v => (v ? '+' + num(v * 100) + NB + '% de dégâts' : 'non')]],
+    lines: [D_('Dégâts par shuriken'), ['n', 'Shurikens', fN], ['b', 'Ricochets', fN], ['grow', 'Par ricochet', v => (v ? '+' + num(v * 100) + NB + '% de dégâts' : 'non')], CD(), ['R', 'Portée des ricochets', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p, L = s.list;
@@ -287,7 +287,7 @@ addWeapons({
     stats: ({ A, ar, h, L, E }) => E
       ? { dmg: A * 0.6 * 1.3 * 1.35 * 1.5, cd: 2.4 * h, n: 3, R: 125 * ar, dur: 4.5, wall: 1 }
       : { dmg: A * 0.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.35 : 1), cd: (L(4) ? 2.6 : 3.2) * h, n: 1 + L(3) + L(5), R: (L(3) ? 86 : 74) * ar, dur: 3, wall: 0 },
-    lines: [D_('Dégâts par bouffée'), CD(), ['n', 'Bombes', fN], ['R', 'Nuage', fI], ['dur', 'Durée', secS], ['wall', 'Arrête les tirs', yes]],
+    lines: [D_('Dégâts par bouffée'), ['n', 'Bombes', fN], ['R', 'Nuage', fI], ['wall', 'Arrête les tirs', yes], ['dur', 'Durée', secS], CD()],
     size: 'R',
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p, B = s.list, C = s.aux, T = W2B.tick;
@@ -348,7 +348,7 @@ addWeapons({
     stats: ({ A, ar, h, L, E }) => E
       ? { dmg: A * 1.2 * 1.3 * 1.3 * 1.4, cd: 3.4 * h, n: 3, dur: 4.2, R: 95 * ar, rate: 0.3, boom: 1 }
       : { dmg: A * 1.2 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 4.4 : 5.6) * h, n: 1 + L(5), dur: L(3) ? 4 : 3, R: (L(3) ? 82 : 70) * ar, rate: 0.42, boom: 0 },
-    lines: [D_('Dégâts par entaille'), ['n', 'Clones', fN], ['dur', 'Durée', secS], CD('Apparaît toutes les'), ['R', 'Portée', fI], ['rate', 'Entaille toutes les', secS], ['boom', 'Explose en disparaissant', yes]],
+    lines: [D_('Dégâts par entaille'), ['n', 'Clones', fN], ['boom', 'Explose en disparaissant', yes], ['dur', 'Durée', secS], CD('Apparaît toutes les'), ['R', 'Portée', fI], ['rate', 'Entaille toutes les', secS]],
     size: 'R',
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p, C = s.list;

@@ -58,7 +58,7 @@ const get = (st, fx, k) => st[k] || (st[k] = MK[k](fx));
 // ---------- Armes en cours ----------
 const DRAW = {
   bats(fx, st, w, s, t) {
-    const B = get(st, fx, 'bat'), Wg = get(st, fx, 'wing'), E = w.evo, k = E ? 1.5 : 1.15;
+    const B = get(st, fx, 'bat'), Wg = get(st, fx, 'wing'), E = w.evo, k = E ? 1.75 : 1.35;
     for (const b of s.list) {
       const a = Math.atan2(b.dy, b.dx), X = b.x * S, Y = b.z * S, Z = b.y * S, f = Math.sin(t * (b.m === 1 ? 30 : 20) + b.ph);
       B.put(X, Y, Z, -a, k);
