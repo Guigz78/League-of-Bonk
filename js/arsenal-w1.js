@@ -6,8 +6,11 @@
 // Rendu (js/g3d/fx-w1.js) : lit w.q / w.q2, les événements 'w1' (kind = star, blast, frag, snap, bounce, hammer, wave2,
 // shatter, hail, storm) et w.fn / w.fa (nombre de tirs, angle du dernier : geste d'attaque du héros). Données : data.js
 // (bloc « Arsenal W1 »), icônes : art.js, sons : audio.js.
-// Équilibrage (simulateur l2/sim.mjs, bot qui prend la 1re carte, Normal, monde 1 → 2, une résurrection) : voir le compte
-// rendu en tête de chaque arme.
+// Équilibrage (simulateur l2/sim.mjs, bot qui prend la 1re carte, Normal, monde 1 → 2, une résurrection) : boss du monde 1 /
+// du monde 2 tués. Avant les arsenaux (armes communes) : Lumi 8/8, 7/8 ; Kira 7/8, 6/8 ; Brok 18/20, 16/20 ; Frida 9/20,
+// 8/20. Arsenaux sans ces armes : Brok 5/8, 0/8 ; Frida 6/8, 0/8. Avec : Lumi 20/20, 17/20 ; Kira 20/24, 15/24 ; Brok
+// 9/12, 8/12 ; Frida 23/28, 15/28 (stalactites et grêle réduites : 75 % au 1er essai). Part des victimes : étoiles ~38 %,
+// flèche explosive ~33 %, pièges ~10 %, bouclier 15 à 45 %, marteau 16 à 50 %, stalactites ~12 %, grêle ~22 %.
 import { addWeapons } from './weapons-reg.js';
 import { sfx } from './audio.js';
 import { fmt } from './ui.js';
