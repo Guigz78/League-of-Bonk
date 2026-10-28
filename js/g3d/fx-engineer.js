@@ -96,7 +96,7 @@ function jag(fx, x0, y0, x1, y1, h, n, amp, wd, c, a) {
 // ---------- Armes en cours ----------
 const DRAW = {
   turret(fx, st, w, s, t) {
-    const B = get(st, fx, 'tbase'), Hd = get(st, fx, w.evo ? 'thead2' : 'thead'), E = w.evo, k0 = E ? 1.05 : 0.95;
+    const B = get(st, fx, 'tbase'), Hd = get(st, fx, w.evo ? 'thead2' : 'thead'), E = w.evo, k0 = E ? 1.5 : 1.35;
     for (const o of s.list) {
       const fall = clamp(o.t / 0.25, 0, 1), left = o.dur - o.t;
       if (left < 1 && Math.sin(t * 30) < 0) continue; // clignote avant de se démonter
@@ -132,13 +132,13 @@ const DRAW = {
     }
   },
   drone(fx, st, w, s, t) {
-    const D = get(st, fx, w.evo ? 'drone2' : 'drone'), E = w.evo, k = E ? 1.15 : 1;
+    const D = get(st, fx, w.evo ? 'drone2' : 'drone'), E = w.evo, k = E ? 1.6 : 1.4;
     for (const d of s.list) {
       if (d.m === 0) continue; // posé dans le sac
       const ca = Math.cos(d.a), sa = Math.sin(d.a), rk = d.kick * 3, X = (d.x - ca * rk) * S, Y = d.z * S, Z = (d.y - sa * rk) * S;
       D.put(X, Y + Math.sin(t * 9 + d.id) * 0.05, Z, -d.a, k);
       fx.ra.ring(X, Y + 0.2, Z, 0.95 * k, col(E ? '#ffe7a0' : '#d8f4ff'), 0.3, 0, 0.22, 1, t * 40 + d.id, 4, 0, 0.5); // hélices
-      fx.glow(d.x + ca * 7, d.y + sa * 7, d.z - 2, 7, CYAN, 0.9);
+      fx.glow(d.x + ca * 8 * k, d.y + sa * 8 * k, d.z - 2, 9, CYAN, 0.9);
       fx.glow(d.x, d.y, d.z - 8, 12, E ? '#ffd23a' : '#7ae8ff', 0.35); // poussée sous le drone
       fx.shadow(d.x, d.y, 20 * k, 0.22);
       if (d.kick > 0.6) fx.star(d.x + ca * 16, d.y + sa * 16, d.z - 4, 7, ICE, d.kick);
@@ -152,7 +152,7 @@ const DRAW = {
   },
   flamer(fx, st, w, s, t, dt) {
     const p = fx.run.p, E = w.evo, P = st.flames || (st.flames = Array.from({ length: 110 }, () => ({ on: false })));
-    const C0 = E ? '#e8fbff' : '#fff6c0', C1 = E ? '#5ae0ff' : '#ffb03a', C2 = E ? '#3a6aff' : '#ff4a1a';
+    const C0 = E ? '#c8f4ff' : '#ffe08a', C1 = E ? '#5ae0ff' : '#ffb03a', C2 = E ? '#3a6aff' : '#ff4a1a';
     if (s.on > 0 && !fx.run.dying) {
       // jet : nouvelles flammes depuis la buse (main gauche), lueur du cône au sol
       const R = s.R, ca = Math.cos(s.a), sa = Math.sin(s.a), nx = p.x + ca * 20, ny = p.y + sa * 20, n = E ? 4 : 3;
@@ -172,7 +172,7 @@ const DRAW = {
       if ((q.life -= dt) <= 0) { q.on = false; if (!E && Math.random() < 0.3 && fx.puffs.length < 200) fx.puffs.push({ x: q.x, y: q.y, z: q.z + 10, vx: 0, vy: 0, vz: 30, s: rand(8, 12), life: 0.5, max: 0.5, a: 0.35, c: '#5a5050' }); continue; }
       q.x += q.vx * dt; q.y += q.vy * dt; q.z += 30 * dt; q.vx *= 0.97; q.vy *= 0.97;
       const k = 1 - q.life / q.max, sz = (6 + k * 26) * q.s;
-      fx.glow(q.x, q.y, q.z, sz, k < 0.3 ? C0 : k < 0.65 ? C1 : C2, (1 - k) * 0.95);
+      fx.glow(q.x, q.y, q.z, sz, k < 0.25 ? C0 : k < 0.6 ? C1 : C2, (1 - k) * 0.8);
     }
     for (const o of s.aux) { // flaques de napalm
       const a = clamp(o.t / 0.2, 0, 1) * clamp((o.dur - o.t) / 0.6, 0, 1);
@@ -187,17 +187,17 @@ const DRAW = {
       if (m.t < 0) continue;
       if (m.t < m.fl) { // en vol, en cloche, en tournoyant
         const k = m.t / m.fl, x = m.sx + (m.x - m.sx) * k, y = m.sy + (m.y - m.sy) * k, h = 26 + Math.sin(k * PI) * 70 - k * 26;
-        M.put(x * S, h * S, y * S, k * 9, 0.85);
+        M.put(x * S, h * S, y * S, k * 9, 1.3);
         fx.shadow(x, y, 16, 0.25);
         continue;
       }
       if (!m.g_land) { m.g_land = 1; fx.puff(m.x, m.y, 3, 8, 0.5, '#c8c0b0'); }
       const armed = m.arm <= 0, blink = m.life < 1.5 ? Math.sin(t * 40) > 0 : Math.sin(t * 7 + m.id) > 0.2;
-      M.put(m.x * S, 0, m.y * S, m.id * 0.9, 0.9);
-      fx.shadow(m.x, m.y, 20, 0.25);
-      const lh = E ? 15 : 7;
-      if (blink || !armed) fx.glow(m.x, m.y, lh, armed ? 9 : 7, armed ? CYAN : '#ff4a3a', armed ? 0.95 : 0.8);
-      if (armed) fx.ringAt(m.x, m.y, 22, CYAN, 0.35, 0.08, 0, 1, t * 2 + m.id, 6, 0, 0.4, true, 0.07);
+      M.put(m.x * S, 0, m.y * S, m.id * 0.9, 1.45);
+      fx.shadow(m.x, m.y, 30, 0.3);
+      const lh = E ? 22 : 10;
+      if (blink || !armed) fx.glow(m.x, m.y, lh, armed ? 13 : 10, armed ? CYAN : '#ff4a3a', armed ? 0.95 : 0.85);
+      if (armed) fx.ringAt(m.x, m.y, 30, CYAN, 0.35, 0.08, 0, 1, t * 2 + m.id, 6, 0, 0.4, true, 0.07);
       if (E && Math.random() < 0.08) fx.sparkle(m.x + rand(-6, 6), m.y + rand(-4, 4), 16, ICE);
     }
     // arcs électriques de la grille Tesla (redessinés en zigzag à chaque image)
@@ -252,13 +252,14 @@ function orbital(fx, U, t) {
   }
   const pulse = 1 + Math.sin(t * 34) * 0.07, fade = clamp(U.t / 0.12, 0, 1) * clamp((O.dur - U.t) / 0.25, 0, 1);
   // colonne de lumière : grand halo cyan, corps bleu glacier, cœur blanc
-  fx.beam(x, y, R * 2.6 * pulse, 1500, CYAN, 0.55 * fade);
-  fx.beam(x, y, R * 1.35 * pulse, 1500, ICE, 0.85 * fade);
-  fx.beam(x, y, R * 0.55 * pulse, 1500, W, fade);
+  fx.beam(x, y, R * 2.2 * pulse, 1500, '#1aa8ff', 0.5 * fade);
+  fx.beam(x, y, R * 1.1 * pulse, 1500, CYAN, 0.8 * fade);
+  fx.beam(x, y, R * 0.4 * pulse, 1500, W, fade);
   // sol : disque brûlant, anneau qui tourne, lueur
-  fx.ringAt(x, y, R * 1.05, '#d8fcff', 0.75 * fade, 0.001, 1, 1, 0, 0, 0, 0, true, 0.1);
-  fx.ringAt(x, y, R * 1.25, CYAN, 0.9 * fade, 0.1, 0, 1, t * 5, 8, 0, 0.6, true, 0.11);
-  fx.glow(x, y, 12, R * 2.4, '#5ae8ff', 0.8 * fade);
+  fx.ringAt(x, y, R, '#2ab8ff', 0.4 * fade, 0.001, 1, 1, 0, 0, 0, 0, true, 0.1);
+  fx.ringAt(x, y, R * 0.45, W, 0.7 * fade, 0.001, 1, 1, 0, 0, 0, 0, true, 0.11);
+  fx.ringAt(x, y, R * 1.2, CYAN, 0.9 * fade, 0.08, 0, 1, t * 5, 8, 0, 0.6, true, 0.12);
+  fx.glow(x, y, 12, R * 1.8, '#3ad8ff', 0.55 * fade);
   // traînée calcinée, étincelles et fumée
   const L = U.g_l || (U.g_l = { x, y });
   if ((x - L.x) ** 2 + (y - L.y) ** 2 > 60 * 60) { fx.decal(x, y, R * 0.75, '#141018', 0.45); L.x = x; L.y = y; }
