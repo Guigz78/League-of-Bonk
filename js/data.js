@@ -587,7 +587,7 @@ export const CHEST_LOOT = [
 // 24 parties, monde 1 → 2, Normal) : tout débloqué (= avant) 79 % / 29 % (88 % / 56 % avec 18 parties d'avant L2) ;
 // 6 armes et 7 tomes libres 100 % / 100 % (2,2 évolutions par partie) ; 8 et 8 (retenu) 88 % / 63 % (1,5 évolution).
 export const LOCKED = {
-  w: ['shrooms', 'frost', 'snowball', 'scythe'],                  // faux sanglante : arme de Nyx seulement (aucun défi)
+  w: [],                                                         // armes : chaque champion a son arsenal (ARSENAL), plus de verrou
   t: ['boots', 'wisdom'],
   boost: ['trefle', 'depart', 'phenix', 'sang'],                 // libres en Boutique : vigueur, rage, sagesse, fortune, égide
 };
@@ -635,14 +635,14 @@ const abyssMax_ = s => Math.max(0, ...(s.abyss || []).map(n => +n || 0));
 export const UNLOCK_CHALLENGES = [
   // ---- premiers pas (premier jour) ----
   { id: 'kills1k', cat: 'start', icon: 'skull', name: 'Chasseur de monstres', txt: 'Battez 1 000 monstres', n: 1000, prog: st_('kills'), rw: { key: 't:boots', gold: 60 } },
-  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { key: 'w:shrooms', gold: 80 } },
+  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { gold: 80, chest: 1 } },
   { id: 'lvl15', cat: 'start', icon: 'upg', name: 'Montée en puissance', txt: 'Atteignez le niveau 15 dans une partie', n: 15, prog: st_('bestLevel'), rw: { key: 'boost:depart', gold: 60 } },
   { id: 'evo1', cat: 'start', icon: 'star', name: 'Alchimiste', txt: 'Faites évoluer une arme (niveau 5 + son tome)', n: 1, prog: st_('weaponEvos'), rw: { key: 't:wisdom', gold: 100 } },
   { id: 'chests5', cat: 'start', icon: 'chest', name: 'Pilleur', txt: 'Ouvrez 5 coffres de butin', n: 5, prog: st_('chests'), rw: { key: 'boost:trefle', gold: 80 } },
   { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le monde suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:sang', gold: 100 } },
-  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { key: 'w:frost', gold: 150 } },
+  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { gold: 150, chest: 1 } },
   // ---- armes : victimes cumulées avec une arme, évolutions ----
-  { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 6 000 monstres avec la Foudre', n: 6000, prog: wk_('lightning'), rw: { key: 'w:snowball', gold: 150 } },
+  { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 6 000 monstres avec la Foudre', n: 6000, prog: wk_('lightning'), rw: { gold: 150, chest: 2 } },
   { id: 'wk_orbs', cat: 'weapons', icon: 'bind', name: 'Gardien des orbes', txt: 'Battez 2 500 monstres avec les Orbes spirituels', n: 2500, prog: wk_('orbs'), rw: { key: 'aura:orbit', gold: 150 } },
   { id: 'wk_boomerang', cat: 'weapons', icon: 'spin', name: 'Retour à l\'envoyeur', txt: 'Battez 5 000 monstres avec la Lame ricochet', n: 5000, prog: wk_('boomerang'), rw: { key: 'aura:steel', gold: 150 } },
   { id: 'wk_aura', cat: 'weapons', icon: 'cloak', name: 'Cœur ardent', txt: 'Battez 3 000 monstres avec la Cape solaire', n: 3000, prog: wk_('aura'), rw: { key: 'aura:sun', gold: 150 } },
@@ -960,3 +960,20 @@ export const ACH_MORE = [
   ach('pass20', 'loyal', 'Pass d\'expédition', 'Atteindre le palier 20 d\'une saison.', 'tierBest', 20, 200),
   ach('pass40', 'loyal', 'Saison accomplie', 'Atteindre le palier 40 d\'une saison.', 'tierBest', 40, 500),
 ];
+
+// ===== Arsenaux : des attaques propres à chaque champion =====
+// Demande du joueur : « les personnages ont tous les mêmes attaques, je veux que ce soit propre à chacun ». Chaque
+// champion a ses 4 armes (la 1re = arme de départ) et seules les siennes lui sont proposées en partie (unlocks.js
+// canPickWeapon). Les tomes restent communs. Les nouvelles armes sont décrites par js/arsenal-*.js (weapons-reg.js) ;
+// un id encore absent de WEAPONS est simplement ignoré.
+export const ARSENAL = {
+  mage:      ['beam', 'orbs', 'lightning', 'starfall'],        // lumière : rayon, orbes, foudre, pluie d'étoiles
+  archer:    ['arrows', 'boomerang', 'blastarrow', 'traps'],   // chasse : flèches, chakram, flèche explosive, pièges
+  knight:    ['sword', 'aura', 'shieldthrow', 'hammer'],       // paladin : épée, cape solaire, bouclier lancé, marteau
+  vampire:   ['scythe', 'bats', 'bloodlance', 'cursering'],    // sang : faux, chauves-souris, lance de sang, cercle maudit
+  assassin:  ['daggers', 'shuriken', 'smoke', 'shadowclone'],  // ombre : dagues, shurikens, fumigènes, clone d'ombre
+  berserker: ['waraxe', 'warcry', 'quake', 'whirlwind'],       // nord : haches de guerre, cri de guerre, séisme, tourbillon
+  cryo:      ['frost', 'snowball', 'icicles', 'hail'],         // glace : nova de givre, boule de neige, stalactites, grêle
+  druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
+};
+for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;

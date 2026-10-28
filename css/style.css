@@ -1928,3 +1928,10 @@ button.itile:active { transform: translateY(1px); }
 .ms-up.star { background: linear-gradient(90deg, rgba(63,208,255,.14), var(--s1) 75%); border-color: rgba(63,208,255,.5); }
 .ms-up.star small { color: var(--cy); }
 @keyframes msUp { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* ===== Arsenal du champion (écran des champions) ===== */
+.cs-arsenal { display: grid; gap: 6px; padding: 10px 12px; background: var(--s1); border: 1px solid var(--ln); }
+.cs-arsenal > small { font: 700 11px/1.2 var(--fd); letter-spacing: .12em; text-transform: uppercase; color: var(--tx3); }
+.cs-arsenal > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.cs-arm { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; text-align: center; background: var(--bg1); border: 1px solid var(--ln); min-width: 0; }
+.cs-arm b { font: 700 12px/1.15 var(--fd); letter-spacing: .03em; overflow-wrap: anywhere; }

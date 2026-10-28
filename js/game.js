@@ -493,6 +493,7 @@ function classSelect(first) {
         </div>
         <div class="cs-spells">
           <div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>Arme de départ · ${esc(WEAPONS[c.weapon].desc)}</small></div></div>
+          ${(c.arsenal || []).filter(id => id !== c.weapon && WEAPONS[id]).length ? `<div class="cs-arsenal"><small>Arsenal de ${esc(c.name)} : armes à gagner en partie</small><div>${c.arsenal.filter(id => id !== c.weapon && WEAPONS[id]).map(id => `<span class="cs-arm" title="${esc(WEAPONS[id].desc)}">${iconImg(WEAPONS[id].icon, 20)}<b>${esc(WEAPONS[id].name)}</b></span>`).join('')}</div></div>` : ''}
           <div class="cs-spell k-ult">${iconImg(ULTS[c.ult].icon, 26)}<div><b>${esc(ULTS[c.ult].name)}</b><small>Ultime · ${esc(ULTS[c.ult].desc)}</small></div></div>
           ${c.passive ? `<div class="cs-spell k-pas">${iconImg(c.passive.icon, 26)}<div><b>${esc(c.passive.name)}</b><small>Passif · ${esc(c.passive.desc)}</small></div></div>` : ''}
         </div>

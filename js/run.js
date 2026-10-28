@@ -13,6 +13,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES
   WEAPON_EVOS, LEVEL_RARITY, WEAPON_RARITY_DMG, REROLLS, SKIPS, COMBO_WINDOW, COMBO_STEPS, MASTERY, masteryOf, masteryPerks } from './data.js';
 import { save, playerStats } from './save.js';
 import { canPickWeapon, canPickTome } from './unlocks.js';
+import { WX, shotWeapon } from './weapons-reg.js';
 import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -110,6 +111,7 @@ const WLINES = {
 };
 // projectiles -> arme qui les tire (victimes par arme, run.track.weaponKills) ; la flèche de cristal évoluée vient des flèches
 const SHOT_W = { arrow: 'arrows', boom: 'boomerang', dagger: 'daggers', snow: 'snowball' };
+const wlines = id => WLINES[id] || WX[id]?.lines; // lignes des cartes : armes de base puis armes des arsenaux
 const WSIZE = { beam: 'w', sword: 'R', orbs: 'R', aura: 'R', lightning: 'R', boomerang: 'R', shrooms: 'R', frost: 'R', snowball: 'R', scythe: 'R' };
 // tomes et bénédictions -> caractéristique de derive() ; DLINES : [libellé, format(valeur, valeur de base)]
 const TOME_KEY = { power: 'dmgMul', haste: 'haste', boots: 'speed', vital: 'maxHp', magnet: 'magnet', crit: 'crit', armor: 'armor', wisdom: 'xpMul', area: 'area', vamp: 'lifesteal' };
@@ -564,6 +566,7 @@ export class Run {
   wstats(id, lv, p = this.p, x = null) {
     // wpnMul / wpnCd : bonus du champion sur sa propre arme de départ quand elle est partagée (dagues de Sora, givre de Frida…)
     const A = p.atk * p.dmgMul * (1 + (x?.rb || 0)) * (WMUL[id] || 1) * (id === this.cls.weapon && this.cls.wpnMul || 1), ar = p.area, h = p.haste * (id === this.cls.weapon && this.cls.wpnCd || 1), L = k => (lv >= k ? 1 : 0);
+    if (WX[id]) return WX[id].stats({ A, ar, h, L, lv, E: !!x?.evo, p, run: this }); // armes des arsenaux (weapons-reg.js)
     if (x?.evo) switch (id) { // armes évoluées : bien plus fortes, et un comportement à part (updateWeapons)
       case 'beam': return { dmg: A * 1.9 * 1.3 * 1.4 * 1.5, cd: 0.75 * h, n: 4, w: 44 * ar, len: 430 * ar };
       case 'arrows': return { dmg: A * 1.3 * 1.5, cd: 0.36 * h, n: 7, pierce: 4, big: A * 6 };
@@ -668,19 +671,19 @@ export class Run {
       const w = p.weapons.find(x => x.id === c.id);
       if (!w) return { lines };
       const a = this.wstats(c.id, w.lv, p, w), b = this.wstats(c.id, w.lv, p, { ...w, evo: true });
-      for (const [k, label, f] of WLINES[c.id] || []) if (b[k] != null && a[k] != null && Math.abs(a[k] - b[k]) > 1e-6) L(label, f(a[k]), f(b[k]));
+      for (const [k, label, f] of wlines(c.id) || []) if (b[k] != null && a[k] != null && Math.abs(a[k] - b[k]) > 1e-6) L(label, f(a[k]), f(b[k]));
       return { lines: lines.slice(0, 4), rarity: R.name, evo: true };
     }
     if (c.kind === 'weapon') {
       const w = p.weapons.find(x => x.id === c.id), lv0 = w ? w.lv : 0, lv1 = Math.min(MAX_LEVEL, lv0 + 1);
       const a = lv0 ? this.wstats(c.id, lv0, p, w) : null, b = this.wstats(c.id, lv1, p, { evo: false, rb: (w?.rb || 0) + (WEAPON_RARITY_DMG[c.rarity || 0] || 0) });
-      for (const [k, label, f] of WLINES[c.id] || []) {
+      for (const [k, label, f] of wlines(c.id) || []) {
         if (b[k] == null) continue;
         // nouvelle arme : ses valeurs de départ (sans les « 0 ») ; amélioration : seulement ce qui change
         if (a ? Math.abs(a[k] - b[k]) < 1e-6 : !b[k] || (k === 'n' && b[k] < 2)) continue;
         L(label, a ? f(a[k]) : null, f(b[k]));
       }
-      if (!lines.length) L(WLINES[c.id]?.[0][1] || 'Dégâts', fmt(a?.dmg || 0), fmt(b.dmg));
+      if (!lines.length) L(wlines(c.id)?.[0][1] || 'Dégâts', fmt(a?.dmg || 0), fmt(b.dmg));
       return { lines: lines.slice(0, a ? 4 : 3), rarity: R.name, hint: this.evoHint(c) };
     }
     if (c.kind === 'tome' || c.kind === 'boon') {
@@ -693,8 +696,8 @@ export class Run {
       const w0 = p.weapons[0];
       if (w0 && (key === 'dmgMul' || key === 'haste' || key === 'area')) {
         const wa = this.wstats(w0.id, w0.lv, { ...p, ...a }, w0), wb = this.wstats(w0.id, w0.lv, { ...p, ...b }, w0);
-        const k = key === 'dmgMul' ? 'dmg' : key === 'haste' ? 'cd' : WSIZE[w0.id];
-        const f = (WLINES[w0.id] || []).find(x => x[0] === k);
+        const k = key === 'dmgMul' ? 'dmg' : key === 'haste' ? 'cd' : WSIZE[w0.id] || WX[w0.id]?.size;
+        const f = (wlines(w0.id) || []).find(x => x[0] === k);
         if (f && wa[k] != null) L(`${WEAPONS[w0.id].name} · ${f[1].toLowerCase()}`, f[2](wa[k]), f[2](wb[k]));
       }
       if (c.kind === 'boon' && c.id === 'hp') L('PV', fmt(p.hp), fmt(b.maxHp));
@@ -1972,6 +1975,7 @@ export class Run {
           sfx('scythe');
           break;
         }
+        default: WX[w.id]?.fire(this, w, S, E, dt); // armes des arsenaux (weapons-reg.js)
       }
     }
     this.curW = 'shrooms';
@@ -2006,7 +2010,7 @@ export class Run {
     const p = this.p, near = [];
     for (const s of this.shots) {
       s.life -= dt;
-      this.curW = s.type === 'crystal' ? (s.evo ? 'arrows' : null) : SHOT_W[s.type] || null;
+      this.curW = s.type === 'crystal' ? (s.evo ? 'arrows' : null) : SHOT_W[s.type] || shotWeapon(s.type);
       if (s.type === 'snow') {
         s.t += dt;
         const k = Math.min(1, s.t / s.dur);
