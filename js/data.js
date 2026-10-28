@@ -991,7 +991,7 @@ Object.assign(WEAPONS, {
 });
 Object.assign(WEAPON_EVOS, {
   bats:        { tome: 'haste',  name: 'Nuée de la Lune de sang',   icon: 'bats',        desc: '8 chauves-souris géantes : chaque piqué enchaîne 2 morsures et vole plus de vie.' },
-  bloodlance:  { tome: 'crit',   name: 'Pieu de la Reine écarlate', icon: 'bloodlance',  desc: '3 lances qui soignent plus ; des pieux de sang jaillissent du sol sur leur passage.' },
+  bloodlance:  { tome: 'crit',   name: 'Pieu de la Reine écarlate', icon: 'bloodlance',  desc: '3 lances de sang ; des pieux de sang jaillissent du sol sur tout leur passage.' },
   cursering:   { tome: 'magnet', name: 'Gouffre maudit',            icon: 'cursering',   desc: 'Grands cercles qui aspirent les ennemis, drainent plus fort et lâchent des ondes de sang.' },
   shuriken:    { tome: 'crit',   name: 'Tempête d\'étoiles',        icon: 'shuriken',    desc: '5 shurikens géants, 7 ricochets ; chaque ricochet frappe plus fort.' },
   smoke:       { tome: 'area',   name: 'Voile de l\'ombre',         icon: 'smokebomb',   desc: 'Immenses nuages qui durent plus longtemps et engloutissent les tirs ennemis.' },

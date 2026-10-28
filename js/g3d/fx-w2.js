@@ -142,7 +142,7 @@ const DRAW = {
         const x = c.x + Math.cos(an) * d, y = c.y + Math.sin(an) * d * 0.8, h = (inner ? 22 : 12) + Math.sin(t * 1.5 + i) * 3;
         const j = P.put(x * S, h * S, y * S, 0, R * (inner ? 0.95 : 0.72) * br * S);
         P.tint(j, col(i % 3 === 0 ? (E ? '#9a78c8' : '#cfc4e4') : E ? '#5e4a88' : '#9a8cbc'));
-        P.alpha(j, (E ? 0.5 : 0.42) * a);
+        P.alpha(j, (E ? 0.4 : 0.38) * a);
       }
       fx.ringAt(c.x, c.y, R, E ? MAG : VIO, 0.55 * a, 0.035, 0, 1, t * 0.4, 16, 0.4, 0.3, true, 0.08);
       if (E && Math.random() < 0.25) fx.sparkle(c.x + rand(-R, R) * 0.7, c.y + rand(-R, R) * 0.5, rand(10, 40), MAG);

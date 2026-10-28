@@ -124,7 +124,7 @@ addWeapons({
   },
 
   // Lance de sang : lance longue portée vers la cible, qui transperce tout et soigne Nyx pour chaque monstre transpercé
-  // (au plus W2B.healN par lance). Évoluée (Pieu de la Reine écarlate) : 3 lances, soin plus fort, et des pieux de sang
+  // (au plus W2B.healN par lance). Évoluée (Pieu de la Reine écarlate) : 3 lances plus fortes, et des pieux de sang
   // jaillissent du sol sur tout leur passage quand elles s'arrêtent.
   bloodlance: {
     stats: ({ A, ar, h, L, E }) => E
