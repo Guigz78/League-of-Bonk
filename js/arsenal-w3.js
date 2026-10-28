@@ -6,6 +6,11 @@
 // recharges × h (hâte), tailles × ar (tome de taille), comme run.wstats. Effets ponctuels pour le rendu : run.fx
 // { type: 'w3…' } (fx-w3.js). Un ennemi n'est touché qu'une fois par onde / faille : e.hitT[clé] = n° de l'onde (4 clés
 // tournantes, jamais plus de 4 en même temps), sans allocation.
+// Équilibrage (simulateur l2/sim.mjs, bot qui prend la 1re carte, Normal, monde 1 → 2, boss tués, 30 parties chacun) :
+// Ragnar 30/30 puis 24/30 (main avant les arsenaux, lame ricochet et armes communes : 28/30 puis 26/30 ; arsenal sans ses
+// nouvelles armes : 18/20 puis 4/20), Gaïa 25/30 puis 16/30 (main : 22/30 puis 14/30 ; sans ses armes : 11/20 puis 0/20).
+// Difficile, monde 1 : Ragnar 8/10, Gaïa 4/10 (main : 7/10, 3/10). Premier essai : haches ×1,3 et cri ×1,2 plus forts
+// (Ragnar 20/20 puis 20/20, haches 55 % des victimes), ronces, esprits, pétales ×0,77 (Gaïa 14/20 puis 5/20).
 import { addWeapons } from './weapons-reg.js';
 import { sfx } from './audio.js';
 import { fmt } from './ui.js';
@@ -55,15 +60,19 @@ function heal(run, s, amt) {
   p.hp += h; s.hs += h;
   if (run.runTime >= s.ht && s.hs >= 1) { run.text(p.x + rand(-8, 8), p.y, 76, '+' + fmt(s.hs), '#7aff6a', 1.1); s.hs = 0; s.ht = run.runTime + 0.55; }
 }
-// ennemis d'un segment (ronces) : départ (x, y), direction (cx, cy), de d0 à d1, demi-largeur hw ; appelle f(e, along)
-function onLine(run, x, y, cx, cy, d0, d1, hw, f) {
+// ennemis d'un segment (failles, ronces) : départ (x, y), direction (cx, cy), de d0 à d1, demi-largeur hw ; remplit LN
+// (monstres) et LS (côté : > 0 à gauche de la ligne), renvoie leur nombre (tableaux réutilisés : aucune allocation)
+const LN = [], LS = [];
+function onLine(run, x, y, cx, cy, d0, d1, hw) {
   const m = (d0 + d1) / 2;
+  let n = 0;
   for (const e of run.grid.query(x + cx * m, y + cy * m, (d1 - d0) / 2 + hw + 40, Q)) {
     if (e.dead || e.burrowed) continue;
-    const dx = e.x - x, dy = e.y - y, al = dx * cx + dy * cy;
-    if (al < d0 - e.r * 0.5 || al > d1 + e.r * 0.5 || Math.abs(-dx * cy + dy * cx) > hw + e.r * 0.6) continue;
-    f(e, al, -dx * cy + dy * cx);
+    const dx = e.x - x, dy = e.y - y, al = dx * cx + dy * cy, sd = -dx * cy + dy * cx;
+    if (al < d0 - e.r * 0.5 || al > d1 + e.r * 0.5 || Math.abs(sd) > hw + e.r * 0.6) continue;
+    LN[n] = e; LS[n++] = sd;
   }
+  return n;
 }
 
 // Réglages communs (exportés : le simulateur d'équilibrage peut les modifier)
@@ -226,19 +235,20 @@ addWeapons({
         if (f.d < f.len) { // le front de la faille avance
           const d0 = f.d;
           f.d = Math.min(f.len, f.d + W3B.quakeV * dt);
-          onLine(run, f.x, f.y, f.cx, f.cy, d0 - 6, f.d, f.w / 2, (e, al, side) => {
-            if (e.hitT[f.key] === f) return;
+          for (let i = 0, m = onLine(run, f.x, f.y, f.cx, f.cy, d0 - 6, f.d, f.w / 2); i < m; i++) {
+            const e = LN[i];
+            if (e.dead || e.hitT[f.key] === f) continue;
             e.hitT[f.key] = f;
-            const sg = side >= 0 ? 1 : -1;
+            const sg = LS[i] >= 0 ? 1 : -1;
             run.hitEnemy(e, S.dmg, { knock: 170, kx: -f.cy * sg, ky: f.cx * sg, color: '#ffb04a' });
             if (!e.dead) e.slow = Math.max(e.slow, 0.8);
-          });
+          }
           F[n++] = f; continue;
         }
         f.t += dt;
         if (f.lava && (f.k -= dt) <= 0) { // coulée de lave : brûle tout ce qui est sur la faille
           f.k += W3B.lavaK;
-          onLine(run, f.x, f.y, f.cx, f.cy, 0, f.len, f.w * 0.45, e => run.hitEnemy(e, f.lava, { quiet: true, color: '#ff7a2a' }));
+          for (let i = 0, m = onLine(run, f.x, f.y, f.cx, f.cy, 0, f.len, f.w * 0.45); i < m; i++) run.hitEnemy(LN[i], f.lava, { quiet: true, color: '#ff7a2a' });
         }
         if (f.t < (f.lava ? W3B.lavaT : 0.55)) F[n++] = f;
       }
@@ -328,14 +338,15 @@ addWeapons({
         v.t += dt;
         const d0 = v.d;
         v.d = v.len * Math.min(1, v.t / 0.15);
-        if (v.d > d0) onLine(run, p.x, p.y, v.cx, v.cy, Math.max(0, d0 - 8), v.d, 15, e => {
-          if (v.hit.includes(e)) return;
+        for (let i = 0, m = v.d > d0 ? onLine(run, p.x, p.y, v.cx, v.cy, Math.max(0, d0 - 8), v.d, 15) : 0; i < m; i++) {
+          const e = LN[i];
+          if (e.dead || v.hit.includes(e)) continue;
           v.hit.push(e);
           run.hitEnemy(e, S.dmg, { knock: 60, kx: v.cx, ky: v.cy, color: '#b8ff6a' });
-          if (e.dead) return;
+          if (e.dead) continue;
           poison(P, e, S.psn);
           if (S.root) { if (e.boss) e.slow = Math.max(e.slow, S.root * 2); else { e.freeze = Math.max(e.freeze, S.root); if (!(e.c2root > run.runTime + S.root)) e.c2root = run.runTime + S.root; } }
-        });
+        }
         if (v.t < 0.32) V[n++] = v;
       }
       V.length = n;
