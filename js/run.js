@@ -46,7 +46,9 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // WMUL : multiplicateur de dégâts par arme (équilibrage des classes : chaque champion commence avec la sienne)
 export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25, scythe: 1.1 };
 // hp / dmg : PV et dégâts de tous les monstres (compensent la puissance des évolutions d'armes, raretés et combos)
-export const BAL = { comboXp: 0.1, hp: 1.3, dmg: 1.12, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
+export const BAL = { xpA: 6, xpB: 6, xpE: 1.8, comboXp: 0.1, hp: 1.45, dmg: 1.22, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
+// XP pour passer du niveau L au suivant (partie) : xpA + xpB × (L − 1) + L^xpE, de plus en plus long à chaque niveau
+const xpNeed = L => Math.round(BAL.xpA + BAL.xpB * (L - 1) + Math.pow(L, BAL.xpE));
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -88,6 +90,12 @@ export const GB = {
 // Équilibrage (simulateur, 312 parties) : boss du monde 1 vaincu 86 %, monde 2 51 % (sans ces ajouts : 85 % et 49 %) ;
 // bot qui prend le vol de vie en priorité (~21 %) : 83 % et 44 %, il tient mieux mais tue moins vite.
 export const LS = { cap: 0.06, rate: 0.2, max: 0.35, base: 0.01, dag: 0.06, sun: 0.2 };
+// EASY : toute première partie (tutoriel, chapitre 1 du mode histoire) : PV / dégâts des monstres, PV du boss, apparitions.
+// Simulateur (bot débutant, monde 1, sans résurrection, 24 parties) : boss tué 88 % avec boss 0,55 (56 % sans EASY).
+// STORY : mode histoire (un seul niveau par chapitre) ; gigaHp = PV de Gorgoth au chapitre final (relatifs au giga boss
+// d'un niveau 1 : sans cela, il serait à peine plus résistant que le boss du chapitre 6).
+export const EASY = { hp: 0.6, dmg: 0.5, boss: 0.45, spawn: 0.8 };
+export const STORY_GB = { gigaHp: 1.6 };
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
 const NB = ' ';
@@ -149,7 +157,7 @@ class Grid {
 }
 
 export class Run {
-  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal }) {
+  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal, onBoss, story = null, easy = false }) {
     this.zone = zone;
     this.startZone = zone.id;
     this.diffId = Math.max(0, Math.min(DIFFICULTIES.length - 1, diff | 0));
@@ -160,6 +168,8 @@ export class Run {
     this.curse = this.diff.curses || new Set();
     this.cls = CLASSES[save.cls];
     this.onEnd = onEnd; this.onPause = onPause; this.onLevelUp = onLevelUp; this.onChest = onChest; this.onDefeat = onDefeat; this.onPortal = onPortal;
+    // mode histoire : { n (chapitre, 0..6), giga (Gorgoth au lieu du boss du monde) } : un seul niveau ; tutoriel : partie facile
+    this.story = story; this.easy = !!easy; this.onBoss = onBoss;
     // bonus choisis avant la partie (déjà consommés par l'interface)
     this.boosts = [...new Set(boosts || [])].filter(id => BOOSTS[id]);
     const has = id => this.boosts.includes(id);
@@ -185,7 +195,7 @@ export class Run {
       maxHp: st.hp, hp: st.hp, atk: st.atk, crit: st.crit, regen: st.regen * 0.1 * this.diff.heal,
       speed: 160 * st.speed, magnet: 95 * st.magnet * (save.pet === 'phenix' ? 1.4 : 1),
       armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1, critMul: 2,
-      inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: 5, ult: 0,
+      inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: xpNeed(1), ult: 0,
       weapons: [], tomes: {}, boons: {}, evo: 0,
       tv: {}, bv: {}, tr: {}, // valeurs cumulées des tomes / bénédictions (selon la rareté des cartes), rareté max par tome
     };
@@ -237,7 +247,7 @@ export class Run {
     this.setupWorld();
     if (has('depart')) { // départ éclair : niveau 4, 3 améliorations à choisir tout de suite
       const p = this.p;
-      p.level = 4; p.xpNext = Math.round(5 + 3 * 4 + Math.pow(4, 1.6)); this.pending = 3;
+      p.level = 4; p.xpNext = xpNeed(4); this.pending = 3;
     }
   }
 
@@ -255,7 +265,7 @@ export class Run {
     this.nextElite = 35;
     // niveau de l'expédition (0 à 2) : renforts LEVELS ; le dernier niveau se termine par le giga boss (giga.js)
     const LV = this.lv = LEVELS[Math.min(this.stage, LEVELS.length - 1)];
-    this.gigaLevel = this.stage >= EXPE_LEVELS - 1;
+    this.gigaLevel = this.stage >= EXPE_LEVELS - 1 || !!this.story?.giga;
     this.eliteGap = (z.id ? 30 : 34) * D.elite * LV.elite;
     this.swarms = [0.25, 0.46, 0.66, 0.85].map(f => f * this.duration);
     this.swarmN = 0;
@@ -274,6 +284,8 @@ export class Run {
     // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
     const st = this.stage, carry = this.runTime;
     this.sk = { hp: (1 + BAL.stHp * st) * (1 + carry / BAL.carryHp) * LV.hp, dmg: (1 + BAL.stDmg * st) * (1 + carry / BAL.carryDmg) * LV.dmg, boss: 1 + BAL.stBoss * st };
+    if (this.story?.giga) this.sk.boss *= STORY_GB.gigaHp;
+    if (this.easy) { this.sk.hp *= EASY.hp; this.sk.dmg *= EASY.dmg; this.sk.boss *= EASY.boss; this.wm.spawn *= EASY.spawn; }
     this.placeInterest();
   }
 
@@ -303,7 +315,7 @@ export class Run {
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
         <div class="minibar" id="minibar" hidden><div class="mb-n" id="miniName"></div><div class="mb-bar"><i id="miniFill"></i></div></div>
         <div class="banner" id="banner"></div>
-        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu'elles n'explosent.</div>
+        ${!save.tutorialDone ? '' : '<div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu\'elles n\'explosent.</div>'}
         <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 32)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
       </div>
     </div>`);
@@ -319,7 +331,7 @@ export class Run {
     this.renderLoadout();
     this.renderEvo();
     this.renderWorld();
-    this.banner(`<small>Niveau 1/${EXPE_LEVELS} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
+    if (save.tutorialDone) this.banner(`<small>${this.story ? `Chapitre ${this.story.n + 1}` : `Niveau 1/${EXPE_LEVELS}`} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
     if (this.abyss) setTimeout(() => { if (!this.over) this.banner(`<small>${esc(abyssName(this.abyss))} · malédictions</small>${curseList(this.abyss, 'small')}`, 3200, 'small abyss'); }, 2500);
     music('zone' + this.zone.id);
     this.last = performance.now();
@@ -619,7 +631,7 @@ export class Run {
   // niveau de l'expédition et monde courant dans le bandeau du haut : « Niveau 2/3 · Jungle »
   renderWorld() {
     const el = $('#worldTag'); if (!el) return;
-    el.innerHTML = `Niveau <b>${this.stage + 1}/${EXPE_LEVELS}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
+    el.innerHTML = this.story ? `Chapitre <b>${this.story.n + 1}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}` : `Niveau <b>${this.stage + 1}/${EXPE_LEVELS}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
     el.classList.toggle('giga', !!this.gigaLevel);
   }
 
@@ -1124,6 +1136,7 @@ export class Run {
     this.emit('bossSummon', { x: B.x, y: B.y, auto: !!auto });
     this.emit('arena', { x: A.x, y: A.y, R: A.R });
     this.emit('boss', { e: B });
+    this.onBoss?.(def);
     if (G) return this.gigaIntro(B, auto); // cinématique, barre spéciale, musique (giga.js)
     const bb = $('#bossbar');
     if (bb) { bb.hidden = false; bb.classList.remove('giga'); $('#bossName').innerHTML = `<span class="tag boss">BOSS</span>${esc(def.name)}`; }
@@ -2077,7 +2090,7 @@ export class Run {
       if (ls > 0) {
         this.lsPool += Math.min(d, Math.max(0, e.hp)) * ls;
         // orbes de sang vers le héros (rendu 3D), s'il y a des PV à rendre : d'autant plus fréquentes que le vol de vie est haut (au plus 8/s)
-        if (this.runTime >= this.lsEvT && p.hp < p.maxHp - 1 && !this.dying) { this.lsEvT = this.runTime + clamp(0.0125 / ls, 0.125, 0.6); this.emit('lifesteal', { x: e.x, y: e.y, h: e.r * 1.2 + e.fly }); }
+        if (this.runTime >= this.lsEvT && p.hp < p.maxHp - 1 && !this.dying) { this.lsEvT = this.runTime + clamp(0.03 / ls, 0.4, 1); this.emit('lifesteal', { x: e.x, y: e.y, h: e.r * 1.2 + e.fly }); }
       }
     }
     e.hp -= d;
@@ -2235,7 +2248,7 @@ export class Run {
     this.emit('portalOpen', { x: 0, y: 0 });
     const bb = $('#bossbar'); if (bb) bb.hidden = true;
     const lv = this.stage + 2;
-    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${lv >= EXPE_LEVELS ? 'Portail ouvert vers le niveau du giga boss !' : `Portail ouvert vers le niveau ${lv} !`}`, 2600, 'boss portal');
+    this.banner(`<small>${esc(e.def.name)} est vaincu !</small>${this.story ? 'Chapitre terminé : entrez dans le portail !' : lv >= EXPE_LEVELS ? 'Portail ouvert vers le niveau du giga boss !' : `Portail ouvert vers le niveau ${lv} !`}`, 2600, 'boss portal');
     this.shake = 16;
     p.inv = Math.max(p.inv, 1.5);
     stopMusic(); sfx('win'); sfx('portal'); buzz(100);
@@ -2436,7 +2449,7 @@ export class Run {
   // monde du niveau suivant de l'expédition : le monde suivant ; s'il n'existe pas (ou a déjà été visité), le monde débloqué
   // le plus avancé pas encore visité. null après le dernier niveau (ou le giga boss vaincu).
   nextZone() {
-    if (this.gigaWon || this.stage + 1 >= EXPE_LEVELS) return null;
+    if (this.story || this.gigaWon || this.stage + 1 >= EXPE_LEVELS) return null; // mode histoire : un seul niveau
     const nx = ZONES[this.zone.id + 1], seen = id => this.route.includes(id);
     if (nx && !seen(nx.id)) return nx;
     const top = Math.max(save.unlockedZone || 0, this.zone.id), open = ZONES.filter(z => !seen(z.id) && z.id <= top);
@@ -2499,7 +2512,7 @@ export class Run {
     while (p.xp >= p.xpNext) {
       p.xp -= p.xpNext;
       p.level++;
-      p.xpNext = Math.round(5 + (p.level - 1) * 4 + Math.pow(p.level, 1.6));
+      p.xpNext = xpNeed(p.level);
       this.pending++;
       this.emit('levelup', { level: p.level });
     }
@@ -2640,7 +2653,7 @@ export class Run {
       : this.mini && !this.mini.dead ? 'Battez le champion !'
       : this.phase === 'build' && this.swarms.length && this.swarms[0] - this.time < 8 ? 'Une horde approche !'
       : this.phase === 'breather' ? 'Répit…'
-      : this.time < 25 ? 'Survivez !' : 'Trouvez l\'autel';
+      : this.time < 25 ? 'Survivez et montez de niveau !' : 'Allez à l\'autel du boss';
     lbl.classList.toggle('hot', ot || left < 30 || !!this.portal || (this.phase === 'build' && this.swarms.length > 0 && this.swarms[0] - this.time < 8));
     $('#killsN').textContent = cnum(this.kills);
     $('#goldRun').textContent = cnum(this.gold);

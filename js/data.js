@@ -229,9 +229,9 @@ export const DIFFICULTIES = [
   { id: 0, name: 'Normal', icon: 'star', color: '#5ae87a', desc: 'Le défi prévu pour découvrir la zone.',
     hp: 1, dmg: 1, speed: 1, spawn: 1, elite: 1, mods: 1, boss: 1, heal: 1, gold: 1, rarity: 0, itemMult: 1 },
   { id: 1, name: 'Difficile', icon: 'i_enrage', color: '#ffb03a', desc: 'Monstres plus coriaces, plus rapides et plus nombreux.',
-    hp: 1.8, dmg: 1.55, speed: 1.08, spawn: 1.25, elite: 0.8, mods: 1, boss: 1.85, heal: 0.75, gold: 1.6, rarity: 0.08, itemMult: 1.25 },
+    hp: 2.1, dmg: 1.75, speed: 1.08, spawn: 1.25, elite: 0.8, mods: 1, boss: 2.2, heal: 0.75, gold: 1.6, rarity: 0.08, itemMult: 1.25 },
   { id: 2, name: 'Cauchemar', icon: 'skull', color: '#ff4a6a', desc: 'Élites à deux pouvoirs, soins réduits de moitié.',
-    hp: 2.5, dmg: 1.95, speed: 1.15, spawn: 1.45, elite: 0.68, mods: 2, boss: 2.6, heal: 0.5, gold: 2.4, rarity: 0.16, itemMult: 1.5 },
+    hp: 3, dmg: 2.3, speed: 1.15, spawn: 1.45, elite: 0.68, mods: 2, boss: 3.2, heal: 0.5, gold: 2.4, rarity: 0.16, itemMult: 1.5 },
 ];
 
 // Pouvoirs des élites (tirés au hasard, affichés dans leur nom). f = accord au féminin.
@@ -467,7 +467,7 @@ export const PARTS = {
 export const FORGE = {
   craft: { parts: 5, gold: [40, 120, 320, 800] },
   fuse: 4,
-  upgrade: { max: 5, per: 0.12, parts: [2, 2, 3, 3, 4], gold: [30, 60, 110, 180, 280] },
+  upgrade: { max: 5, per: 0.08, parts: [2, 2, 3, 3, 4], gold: [30, 60, 110, 180, 280] },
   salvage: [2, 2, 3, 3],
 };
 
@@ -531,13 +531,17 @@ export const RENAMED = {
 // Chaque objet a sa caractéristique principale (arme : ATQ, armure : PV, bijou : au choix) plus des bonus tirés au
 // hasard : 1 (commun) à 4 (légendaire). roll = valeur par rareté [commun, rare, épique, légendaire] avant le bonus de zone.
 // fmt : 'flat' (+12), 'pct' (+5 %), 'regen' (+0,3 PV/s, unités de 0,1). max = plafond total une fois tout additionné.
+// Équilibrage de l'équipement (le jeu était trop facile : 2 mondes d'objets +3 multipliaient les dégâts par ~12) :
+// ATQ, critique, dégâts critiques et vitesse d'attaque des objets nettement réduits ; les objets déjà possédés sont
+// recalculés une fois à la même échelle (save.js migrateItems, ITEM_RESCALE).
+export const ITEM_RESCALE = { atk: 0.3, hp: 0.72, crit: 0.6, critDmg: 0.63, haste: 0.67 };
 export const AFFIXES = {
-  atk:       { name: 'Dégâts', fmt: 'flat', roll: [3, 6, 10, 16] },
-  hp:        { name: 'PV max', fmt: 'flat', roll: [12, 24, 40, 64] },
-  crit:      { name: 'Chance de critique', fmt: 'pct', roll: [0.03, 0.05, 0.08, 0.12], max: 0.75 },
-  critDmg:   { name: 'Dégâts critiques', fmt: 'pct', roll: [0.15, 0.25, 0.4, 0.6] },
+  atk:       { name: 'Dégâts', fmt: 'flat', roll: [1, 2, 3, 4.5] },
+  hp:        { name: 'PV max', fmt: 'flat', roll: [10, 18, 30, 46] },
+  crit:      { name: 'Chance de critique', fmt: 'pct', roll: [0.02, 0.03, 0.05, 0.07], max: 0.6 },
+  critDmg:   { name: 'Dégâts critiques', fmt: 'pct', roll: [0.1, 0.16, 0.25, 0.38] },
   lifesteal: { name: 'Vol de vie', fmt: 'pct', roll: [0.01, 0.02, 0.035, 0.05], max: 0.15 },
-  haste:     { name: 'Vitesse d\'attaque', fmt: 'pct', roll: [0.04, 0.07, 0.1, 0.15], max: 0.6 },
+  haste:     { name: 'Vitesse d\'attaque', fmt: 'pct', roll: [0.03, 0.05, 0.07, 0.1], max: 0.5 },
   speed:     { name: 'Vitesse de course', fmt: 'pct', roll: [0.03, 0.05, 0.08, 0.12], max: 0.5 },
   area:      { name: 'Taille des attaques', fmt: 'pct', roll: [0.05, 0.08, 0.12, 0.18] },
   armor:     { name: 'Armure', fmt: 'pct', roll: [0.02, 0.04, 0.06, 0.09], max: 0.5 },
@@ -884,6 +888,7 @@ export const TITLES = {
   archiviste:  { name: 'Archiviste', how: 'Succès « Archiviste »' },
   pilier:      { name: 'Pilier de la guilde', how: 'Succès « Pilier de la guilde »' },
   roi:         { name: 'Tombeur de rois', how: 'Succès « Briseur de rois »' },
+  soupe:       { name: 'Héros de la Soupe', how: 'Mode histoire : chapitre 7' },
 };
 // titres des défis de déblocage (L2) et de la maîtrise 10 : choisis au même endroit que les autres
 for (const [id, name] of Object.entries(UNLOCK_TITLES)) TITLES[id] ??= { name, how: 'Défi de déblocage' };

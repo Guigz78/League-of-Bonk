@@ -105,6 +105,10 @@ const r = (a, b) => a + Math.random() * (b - a);
 
 const SFX = {
   tap: () => pop(r(700, 900), 0, 0.09),
+  // voix du mode histoire (bulles de dialogue) : champion, Pompon (aiguë), boss (grave)
+  talk: () => { pop(r(420, 520), 0, 0.06); pop(r(520, 620), 0.07, 0.05); },
+  talkHi: () => { pop(r(1000, 1200), 0, 0.05); pop(r(1200, 1400), 0.06, 0.05); },
+  talkLow: () => { wood(r(180, 230), 0, 0.12); wood(r(150, 190), 0.09, 0.1); },
   pick: () => { pop(700); pop(1050, 0.05); },
   jump: () => whistle(320, 980, 0.22, 0, 0.09),
   hit: () => wood(r(650, 1000), 0, 0.07),

@@ -21,6 +21,8 @@ import { hubStrip, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet
 import { l2Home, endRunL2, l2Results, defisScreen, defisTile, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
 import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
+// mode histoire « La Grande Marmite » (chapitres, dialogues, récompenses)
+import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, storyEnd, storyBlock, storyTile, storyScreenHTML } from './story.js';
 
 const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
@@ -65,8 +67,8 @@ function topbar() {
   const dot = !u ? '' : `<i class="sync ${st}"></i>`;
   return `<header class="topbar">
     <div class="tb-brand">League<span>of Bonk</span></div>
-    <span class="cur" aria-label="Pièces de forge">${iconImg('part', 18)}<b id="partsN">${fmt(partsTotal())}</b></span>
-    <span class="cur gold" aria-label="Or">${iconImg('gold', 18)}<b id="goldN">${fmt(save.gold)}</b></span>
+    <button class="cur" data-act="cur" data-k="parts" aria-label="Pièces de forge">${iconImg('part', 18)}<span class="cur-v"><b id="partsN">${fmt(partsTotal())}</b><small>Pièces</small></span></button>
+    <button class="cur gold" data-act="cur" data-k="gold" aria-label="Or">${iconImg('gold', 18)}<span class="cur-v"><b id="goldN">${fmt(save.gold)}</b><small>Or</small></span></button>
     <button class="icon-btn account" data-act="settings" aria-label="Compte et options">
       ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 22)}${dot}
     </button>
@@ -127,7 +129,9 @@ const afterSheet = () => { announceAchievements(); if (!battle) home(); };
 const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
-  play: () => zoneSheet(playZone()),
+  // tant que le monde 1 n'est pas battu, JOUER lance le chapitre 1 de l'histoire (tutoriel, partie facile) ; sinon la fiche du monde
+  play: () => (firstSteps() ? playChapter(0) : zoneSheet(playZone())),
+  story: () => storyScreen(),
   quests: () => questSheet().then(afterSheet),
   login: () => loginSheet().then(afterSheet),
   season: () => openPass(),
@@ -143,6 +147,10 @@ const handlers = {
   sellJunk: () => sellJunk(),
   chests: () => chestScreen(() => home('adventure')),
   defis: () => defisScreen(() => home()),
+  // touche une monnaie : à quoi elle sert et où l'obtenir
+  cur: el => toast(el.dataset.k === 'gold'
+    ? `${iconImg('gold', 16)} <b>Or</b> : améliorations de la Boutique, bonus et Forge. Gagné en partie et dans les coffres.`
+    : `${iconImg('part', 16)} <b>Pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
   forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
   craft: () => doCraft(),
   fuse: el => doFuse(el.dataset.all === '1'),
@@ -274,6 +282,7 @@ function adventureTab() {
       <div class="sc-info">
         <span class="sc-role">${esc(c.role)}</span>
         <h2 class="sc-name">${esc(c.name)}</h2>${heroTitle()}
+        <button class="sc-lvl" data-act="changeClass" aria-label="Niveau du champion">${iconImg('medal', 14)}Niveau ${masteryLv(save.cls)} du champion</button>
         <button class="sc-stats" data-act="allStats" aria-label="Toutes les statistiques">
           <span><small>PV</small><b>${fmt(st.hp)}</b></span><span><small>ATQ</small><b>${fmt(st.atk)}</b></span>
           <span><small>Critique</small><b>${pct(st.crit)}</b></span><span><small>Vitesse</small><b>${pct(st.speed)}</b></span>
@@ -281,13 +290,16 @@ function adventureTab() {
         <div class="sc-links"><button class="link" data-act="changeClass">Changer</button><button class="link" data-act="allStats">Détails</button></div>
       </div>
     </section>
-    <button class="play-cta" data-act="play">
+    ${firstSteps() ? `<button class="play-cta" data-act="play">
+      <span class="pc-ic">${iconImg('play', 22)}</span>
+      <span class="pc-txt"><b>Jouer</b><small>Chapitre 1 · ${esc(chapter(0).title)}</small></span>
+      <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
+    </button>` : `<button class="play-cta" data-act="play">
       <span class="pc-ic">${iconImg('play', 22)}</span>
       <span class="pc-txt"><b>Jouer <i class="pc-dtag" style="--dc:${D.color}">${esc(D.name)}</i></b><small>Monde ${pz + 1} · ${esc(Z.name)}</small></span>
       <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
-    </button>
-    ${quick}
-    ${defisTile()}
+    </button>`}
+    ${save.stats.runs ? `${storyTile()}${quick}${defisTile()}` : ''}
     <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
     <div class="zones">${zones}</div>`;
 }
@@ -481,7 +493,7 @@ function classSelect(first) {
       ${first ? `<div class="title-logo"><div class="l1">League of</div><div class="l3">B<em>o</em>nk</div></div><p class="cs-sub">Choisissez votre champion</p>`
         : `<div class="cs-bar"><button class="icon-btn" data-act="back" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Champions</h2></div>`}
       <div class="cs-stage"><canvas class="cs-3d"></canvas><div class="cs-id"><span class="role">${esc(c.role)}</span><h3>${esc(c.name)}</h3></div></div>
-      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
+      <div class="cs-tabs">${Object.values(CLASSES).filter(k => !first || !clsLocked(k.id)).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
       <section class="cs-detail">
         <p class="cs-desc">${esc(c.desc)}</p>
         ${lk ? clsLockPanel(sel) : ''}
@@ -491,7 +503,7 @@ function classSelect(first) {
           <span>${iconImg('target', 16)}Critique<b>${pct(c.crit)}</b></span>
           <span>${iconImg('arrow', 16)}Vitesse<b>${pct(c.speed)}</b></span>
         </div>
-        <div class="cs-spells">
+        ${first ? `<div class="cs-spells"><div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>${esc(WEAPONS[c.weapon].desc)}</small></div></div></div>` : `<div class="cs-spells">
           <div class="cs-spell">${iconImg(WEAPONS[c.weapon].icon, 26)}<div><b>${esc(WEAPONS[c.weapon].name)}</b><small>Arme de départ · ${esc(WEAPONS[c.weapon].desc)}</small></div></div>
           ${(c.arsenal || []).filter(id => id !== c.weapon && WEAPONS[id]).length ? `<div class="cs-arsenal"><small>Arsenal de ${esc(c.name)} : armes à gagner en partie</small><div>${c.arsenal.filter(id => id !== c.weapon && WEAPONS[id]).map(id => `<span class="cs-arm" title="${esc(WEAPONS[id].desc)}">${iconImg(WEAPONS[id].icon, 20)}<b>${esc(WEAPONS[id].name)}</b></span>`).join('')}</div></div>` : ''}
           <div class="cs-spell k-ult">${iconImg(ULTS[c.ult].icon, 26)}<div><b>${esc(ULTS[c.ult].name)}</b><small>Ultime · ${esc(ULTS[c.ult].desc)}</small></div></div>
@@ -501,8 +513,8 @@ function classSelect(first) {
         <div class="evo-chain">${EVOLUTIONS[c.id].map((e, i) => `<span class="evo ${e.aura ? 'final' : ''}" style="--d:${(i * 0.05).toFixed(2)}s${e.aura ? `;--aura:${e.aura}` : ''}">
           <em>${i ? `Niv. ${e.lvl}` : 'Départ'}</em><span class="evo-img"><img class="px spr" src="${heroURL(c.id, null, i)}" alt=""></span>
           <b>${esc(i ? e.name.replace(c.name + ' ', '') : c.name)}</b></span>`).join('')}</div>
-        ${lk ? '' : `<h4 class="evo-t">Niveau du champion</h4>${masteryPanel(sel)}${auraPicker(sel)}`}
-        ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment. L\'équipement et les améliorations sont partagés.</p>' : ''}
+        ${lk ? '' : `<h4 class="evo-t">Niveau du champion</h4>${masteryPanel(sel)}${auraPicker(sel)}`}`}
+        ${first ? '<p class="cs-note">Vous pourrez changer de champion à tout moment.</p>' : ''}
       </section>
       <div class="cs-foot"><button class="btn primary big" data-act="go" ${lk ? 'disabled' : ''}>${lk ? `${iconImg('lock', 16)} Verrouillé · ${esc(c.name)}` : `${first ? 'Commencer' : 'Choisir'} · ${esc(c.name)}`}</button></div>
     </div>`);
@@ -526,24 +538,51 @@ function classSelect(first) {
 // ---------- Partie ----------
 let run = null;
 let runBoosts = [];
+let storyCur = null; // chapitre de l'histoire en cours (null : expédition)
 
-function startRun(z, diff = 0, abyss = 0) {
+// premiers pas : monde 1 jamais battu et chapitre 1 pas terminé (JOUER lance le chapitre 1, le tutoriel)
+const firstSteps = () => !save.zoneCleared[0] && !storyDone();
+
+// lance un chapitre : bulles d'introduction (sur le décor du monde) puis la partie (Normal, un seul niveau)
+async function playChapter(n) {
+  const ch = chapter(n); if (!ch || !supported()) return supported() ? undefined : noWebGL();
+  music('menu');
+  await cutscene(n, 'intro');
+  startRun(ch.zone, 0, 0, { story: n });
+}
+
+// écran des chapitres
+function storyScreen() {
+  mount(storyScreenHTML());
+  bind($('.story-screen'), {
+    back: () => home('adventure'),
+    chapter: el => { sfx('tap'); playChapter(+el.dataset.n); },
+  });
+}
+
+// story = n° du chapitre (mode histoire : un seul niveau, dialogues, pas de menu de portail)
+function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
   if (!supported()) return noWebGL(); // rien n'est dépensé (bonus, partie comptée)
   diff = Math.max(0, Math.min(diff, maxDiff(z)));
   abyss = Math.max(0, Math.min(abyss | 0, abyssTop(z))); // L2 : palier d'Abysse (en Cauchemar)
   save.stats.runs++;
   const boosts = runBoosts = consumeBoosts(); // enregistre aussi la partie commencée
-  const zone = ZONES[z];
+  const zone = ZONES[z], ch = story == null ? null : chapter(story);
+  storyCur = ch ? story : null;
   run = new Run({
     zone,
     diff,
     abyss,
     boosts,
+    story: ch ? { n: story, giga: !!ch.giga } : null,
+    easy: !save.tutorialDone, // toute première partie : monstres et boss plus faibles (le guide montre tout en jouant)
+    onBoss: ch ? () => setTimeout(() => { if (run && !run.over) taunt(story); }, ch.giga ? 3600 : 700) : null,
     onPause: resume => pauseMenu(resume),
     onLevelUp: (title, opts, done, sub, extra) => levelUpMenu(title, opts, done, sub, extra),
     onChest: (c, gold, done) => chestMenu(c, gold, done),
     onDefeat: canRevive => defeatMenu(canRevive),
-    onPortal: (info, choose) => portalMenu(info, choose),
+    // mode histoire : au portail, les bulles de fin du chapitre puis le bilan
+    onPortal: ch ? (info, choose) => cutscene(story, 'outro', { inRun: true }).then(() => choose('home')) : (info, choose) => portalMenu(info, choose),
     onEnd: sum => endRun(zone, sum),
   });
   run.onPortal ??= (info, choose) => portalMenu(info, choose);
@@ -559,7 +598,7 @@ function startRun(z, diff = 0, abyss = 0) {
   }
   $('.run')?.classList.toggle('lefty', !!save.settings.lefty);
   hpBar(run);
-  if (!save.tutorialDone && save.stats.runs <= 1) tutorial(run);
+  if (!save.tutorialDone) tutorial(run); // guide en jeu tant qu'il n'a pas été suivi jusqu'au portail
 }
 
 // barre de PV du HUD (en haut, au-dessus de l'expérience) : suit les PV du champion à chaque image
@@ -587,41 +626,51 @@ function hpBar(r) {
   tick();
 }
 
-// ---------- Tutoriel (premier lancement) : 4 étapes courtes, la partie attend ----------
-const TUTO = [
-  { t: 'Bouger', ill: '<i class="ti-joy"></i><i class="ti-hero"></i>', p: 'Posez le doigt <b>n\'importe où</b> et glissez : votre champion court. Il <b>attaque tout seul</b> les monstres proches.' },
-  { t: 'Esquiver', ill: '<i class="ti-wave"></i><i class="ti-body"></i>', p: 'Un <b>cercle rouge</b> au sol ou un monstre qui <b>clignote</b> annonce une attaque : <b>écartez-vous</b> avant l\'impact. Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous !' },
-  { t: 'Monter de niveau', ill: '<i class="ti-xp"></i><div class="ti-cards"><i style="--d:0s"></i><i style="--d:.12s"></i><i style="--d:.24s"></i></div>', p: 'Ramassez les <b>cristaux bleus</b> pour gagner de l\'expérience. À chaque niveau, choisissez une <b>arme</b>, un <b>tome</b> ou une amélioration.' },
-  { t: 'Autel, boss, portail', ill: `<div class="ti-path"><span>${iconImg('skull', 34)}Autel</span><span>${iconImg('crown', 34)}Boss</span><span>${iconImg('portal', 34)}Portail</span></div>`, p: 'Suivez la flèche jusqu\'à l\'<b>autel au crâne rouge</b> pour invoquer le boss. Battu, il ouvre un <b>portail au centre de la carte</b> vers le niveau suivant, plus dur. Au niveau 3 : le <b>giga boss</b> !' },
+// ---------- Guide de la première partie : une seule consigne courte à la fois, en jouant ----------
+// Pas de pause ni de texte à lire avant de jouer : chaque consigne disparaît dès qu'elle est accomplie.
+const COACH = [
+  { ic: 'arrow', t: 'Glissez le doigt pour bouger', done: (r, S) => S.moved > 160 },
+  { ic: 'fist', t: 'Votre champion attaque tout seul', done: (r, S) => S.age > 2.6 },
+  { ic: 'upg', t: 'Ramassez les gemmes bleues', done: r => r.p.level > 1 || r.p.xp > 0 },
+  { ic: 'star', t: 'Choisissez une amélioration à chaque niveau', done: (r, S) => r.p.level > 1 && S.age > 3 },
+  { ic: 'crown', t: 'Suivez la flèche rouge jusqu\'à l\'autel du boss', done: r => r.bossSpawned, wait: r => r.p.level >= 3 || r.time > 60 },
+  { ic: 'skull', t: 'Battez le boss : écartez-vous des zones rouges', done: r => !!r.portal },
+  { ic: 'portal', t: 'Entrez dans le portail', done: r => !!r.entering || r.over },
 ];
 function tutorial(r) {
-  r.paused = true;
-  let k = 0;
   const w = document.createElement('div');
-  w.className = 'tuto';
+  w.className = 'coach';
+  r.coachOn = true; // moins de flèches de bord pendant le guide (overlay.js)
   $('.run')?.appendChild(w);
-  const draw = () => {
-    const s = TUTO[k];
-    w.innerHTML = `<div class="tu-card" key="${k}">
-      <div class="tu-ill">${s.ill}</div>
-      <span class="tu-step">Étape ${k + 1} / ${TUTO.length}</span><h3>${s.t}</h3><p>${s.p}</p>
-      <div class="tu-foot"><span class="tu-dots">${TUTO.map((_, i) => `<i class="${i <= k ? 'on' : ''}"></i>`).join('')}</span>
-        <button class="btn ghost small" data-t="skip">Passer</button><button class="btn primary" data-t="next">${k < TUTO.length - 1 ? 'Suivant' : 'C\'est parti'}</button></div>
-    </div>`;
+  const S = { k: -1, wait: false, age: 0, moved: 0, x: r.p.x, y: r.p.y, t: performance.now() };
+  const show = k => {
+    S.k = k; S.age = 0;
+    const c = COACH[k];
+    w.innerHTML = c ? `<div class="co-card">${iconImg(c.ic, 26)}<b>${c.t}</b></div>${k === 0 ? '<i class="co-finger"></i>' : ''}` : '';
+    w.classList.toggle('on', !!c);
+    if (c && k) sfx('tap');
   };
-  const end = () => {
-    save.tutorialDone = true; persist({ touch: false });
-    w.classList.add('out'); setTimeout(() => w.remove(), 200);
-    if (!r.over) { r.paused = false; r.last = performance.now(); }
+  const end = () => { save.tutorialDone = true; r.coachOn = false; persist({ touch: false }); w.remove(); };
+  const tick = () => {
+    // partie finie : guide réussi si le boss est tombé (mode histoire : le portail mène directement au bilan)
+    if (r.over) { if (r.portal || r.gigaWon) end(); else w.remove(); return; }
+    if (!w.isConnected) return;
+    const now = performance.now(), dt = Math.min(0.1, (now - S.t) / 1000); S.t = now;
+    if (!r.paused) {
+      S.age += dt;
+      S.moved += Math.hypot(r.p.x - S.x, r.p.y - S.y); S.x = r.p.x; S.y = r.p.y;
+      if (S.k < 0) show(0);
+      else if (S.wait) { if (COACH[S.k].wait(r)) { S.wait = false; show(S.k); } } // consigne suivante quand elle devient utile
+      else if (COACH[S.k].done(r, S)) {
+        const k = S.k + 1;
+        if (k >= COACH.length) { end(); return; }
+        if (COACH[k].wait && !COACH[k].wait(r)) { S.k = k; S.wait = true; w.classList.remove('on'); } else show(k);
+      }
+    }
+    w.classList.toggle('hide', r.paused);
+    requestAnimationFrame(tick);
   };
-  draw();
-  w.addEventListener('pointerdown', e => e.stopPropagation());
-  w.addEventListener('click', e => {
-    const b = e.target.closest('[data-t]'); if (!b) return;
-    sfx('tap');
-    if (b.dataset.t === 'skip' || k >= TUTO.length - 1) return end();
-    k++; draw();
-  });
+  requestAnimationFrame(tick);
 }
 
 // évolution d'arme : cherche sa fiche dans les tables de data.js (nom de table libre), sinon nom par défaut
@@ -858,7 +907,7 @@ async function pauseMenu(resume) {
   const free = n => Array.from({ length: Math.max(0, n) }, () => '<span class="bl empty"><i>Emplacement libre</i></span>').join('');
   const hpK = Math.max(0, Math.min(1, p.hp / Math.max(1, p.maxHp)));
   const v = await modal({
-    title: `<span class="eyebrow">Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
+    title: `<span class="eyebrow">${run.story ? `Chapitre ${run.story.n + 1}` : `Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS}`} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
     body: `<div class="pz-sum">
         <div><small>Temps</small><b>${fmtTime(run.runTime ?? run.time ?? 0)}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
@@ -910,7 +959,7 @@ async function defeatMenu(canRevive) {
   const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0, z = run.zone;
   const kept = nLoot || run.cleared?.length ? `<p class="ko-kept">${iconImg('chest', 18)}<span>${nLoot ? `Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b>` : 'Vos mondes vaincus'}${nLoot && run.cleared?.length ? ' et les mondes vaincus sont conservés' : ' sont conservés'}.</span></p>` : '';
   const v = await modal({
-    title: `<span class="eyebrow">Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS} · ${run.boss?.giga && !run.boss.dead ? esc(DATA.GIGA.name) : `Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}`}</span>K.O.`,
+    title: `<span class="eyebrow">${run.story ? `Chapitre ${run.story.n + 1}` : `Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS}`} · ${run.boss?.giga && !run.boss.dead ? esc(DATA.GIGA.name) : `Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}`}</span>K.O.`,
     cls: 'ko-modal',
     body: `<div class="pz-sum">
         <div><small>Survie</small><b>${t}</b></div><div><small>Niveau</small><b>${run.p.level}</b></div>
@@ -1020,8 +1069,11 @@ function endRun(z, sum) {
   const pass = seasonRun({ ...sum, cleared, loot, heat, stage }); // L1 : XP de saison et compteurs des succès
   const got = checkAchievements();
   persist();
+  const story = storyCur == null ? null : storyEnd(storyCur, chapter(storyCur).giga ? !!sum.giga : cleared.includes(chapter(storyCur).zone));
+  storyCur = null;
+  if (story?.ok) save.tutorialDone = true; // chapitre réussi : le guide de la première partie ne revient plus
   const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass, route, gigaRec,
-    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start };
+    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start, story };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
   if (save.pendingChests.length) chestScreen(show, true); else show([]);
@@ -1300,8 +1352,9 @@ function summaryScreen(R, opened = []) {
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
-  const title = R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
-  const eyebrow = R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
+  const S = R.story;
+  const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite') : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
+  const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
@@ -1309,6 +1362,7 @@ function summaryScreen(R, opened = []) {
     <span class="eyebrow rs-eyebrow">${eyebrow}</span>
     <h2 class="rs-title">${title}</h2>
     <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
+    ${storyBlock(S)}
     ${gigaBlock}
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
@@ -1331,7 +1385,7 @@ function summaryScreen(R, opened = []) {
     ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns">
       <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
-      <button class="btn primary" data-act="again">${nextLabel}</button>
+      <button class="btn primary" data-act="${S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
     </div>
   </div>`);
   $$('.reward-screen .cu').forEach(el => countUp(el, +el.dataset.n || 0, 900));
@@ -1341,7 +1395,9 @@ function summaryScreen(R, opened = []) {
   bind($('.reward-screen'), {
     home: () => home('adventure'),
     season: () => seasonScreen(() => home('adventure')),
+    chapter: () => playChapter(S.ok ? S.next ?? S.n : S.n),
     again: () => {
+      if (S) return playChapter(S.n);
       save.diffSel[nextZ] = Math.min(nextK, maxDiff(nextZ));
       persist({ touch: false });
       home('adventure');

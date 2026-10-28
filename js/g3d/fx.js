@@ -132,10 +132,10 @@ export class Fx {
   }
   // éclats colorés d'un monstre qui meurt (petits cubes façon voxel)
   chunks(e) {
-    const n = e.boss ? 26 : e.elite ? 14 : 6, pal = e.def.pal, h = e.r * 1.2 + e.fly;
+    const n = e.boss ? 26 : e.elite ? 12 : 3, pal = e.def.pal, h = e.r * 1.2 + e.fly; // peu d'éclats sur les monstres ordinaires : l'écran reste lisible
     for (let i = 0; i < n && this.debris.length < 200; i++) {
       const a = Math.random() * TAU, s = rand(60, 200) * (e.boss ? 1.6 : 1);
-      this.debris.push({ x: e.x, y: e.y, z: h * rand(0.4, 1), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, vz: rand(150, 380), r: rand(2.5, 5) * (e.boss ? 2 : e.elite ? 1.4 : 1), c: col(pal[i % 3]), rot: Math.random() * TAU, vr: rand(-14, 14), life: rand(0.5, 0.9) });
+      this.debris.push({ x: e.x, y: e.y, z: h * rand(0.4, 1), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, vz: rand(150, 380), r: rand(2.5, 5) * (e.boss ? 2 : e.elite ? 1.4 : 1), c: col(pal[i % 3]), rot: Math.random() * TAU, vr: rand(-14, 14), life: e.boss || e.elite ? rand(0.5, 0.9) : rand(0.3, 0.5) });
     }
   }
   confetti() {
@@ -174,8 +174,8 @@ export class Fx {
       case 'swarm': for (let i = 0; i < 2; i++) this.ring(p.x, p.y, 520, 160, i ? '#ffffff' : '#ff4a3a', i ? 5 : 8, 0.7, -i * 0.12); break;
       case 'kill': {
         const e = ev.e;
-        this.decal(e.x, e.y, e.r * (e.boss ? 1.6 : 1.1), shade(e.def.pal[1], -0.3), 0.45);
-        this.puff(e.x, e.y, e.boss ? 14 : e.elite ? 8 : 4, e.r * 0.7, 0.7);
+        if (e.boss || e.elite) this.decal(e.x, e.y, e.r * (e.boss ? 1.6 : 1.1), shade(e.def.pal[1], -0.3), 0.45); // pas de taches au sol pour les monstres ordinaires
+        this.puff(e.x, e.y, e.boss ? 14 : e.elite ? 8 : 2, e.r * 0.7, 0.6);
         this.chunks(e);
         if (e.elite || e.boss) this.bursts.push({ x: e.x, y: e.y, h: e.r, r: e.r * (e.boss ? 5 : 3), t: 0, max: e.boss ? 0.8 : 0.45, c: e.boss ? '#ffe48a' : '#d08aff' });
         else this.ring(e.x, e.y, e.r * 0.4, e.r * 1.8, '#ffffff', 5, 0.25);
@@ -780,7 +780,7 @@ export class Fx {
 
   // vol de vie : 2 orbes (filets de gouttes de sang) partent du monstre touché et filent en cloche vers le héros (même s'il bouge)
   bloodOrbs(ev) {
-    for (let k = 0; k < 2; k++) {
+    for (let k = 0; k < 1; k++) { // une seule goutte par soin : moins de « boules » qui traversent l'écran
       const o = this.blood[this.bloodI], a = Math.random() * TAU, r = rand(18, 46);
       this.bloodI = (this.bloodI + 1) % this.blood.length;
       o.on = 1; o.t = -k * 0.07; o.max = rand(0.36, 0.48);

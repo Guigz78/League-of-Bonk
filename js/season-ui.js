@@ -76,7 +76,7 @@ export function hubStrip() {
   const qDone = qs.filter(q => q.prog >= q.n).length, wDone = ws.filter(q => q.prog >= q.n).length;
   const qHot = qs.some(q => q.ready) || ws.some(q => q.ready);
   const nx = I.max ? null : rwItems(SEASON_TRACK[I.tier])[0];
-  const x2 = I.bonus > 0 ? `<b class="ps-x2">${iconImg('bolt', 12)}XP ×${SEASON_XP.bonusMul} · ${Math.ceil(I.bonus / 60)} min</b>` : '';
+  const x2 = I.bonus > 0 ? `<b class="ps-x2" title="Bonus du jour : XP du pass doublée pendant vos premières minutes de jeu">${iconImg('bolt', 12)}XP ×${SEASON_XP.bonusMul} encore ${Math.ceil(I.bonus / 60)} min</b>` : '';
   const lDay = L.ready ? L.day + 1 : L.day || L.len;
   return `<button class="pass-strip ${I.ready.length ? 'hot' : ''}" data-act="season" aria-label="Pass d'expédition">
       <span class="ps-lv"><small>Palier</small><b>${I.tier}</b></span>
@@ -84,6 +84,7 @@ export function hubStrip() {
         <span class="ps-top"><span class="eyebrow">Pass d'expédition</span><em>S${I.n} · ${I.left} j</em></span>
         <span class="pbar"><i style="width:${I.max ? 100 : (I.cur / I.need * 100).toFixed(1)}%"></i></span>
         <span class="ps-sub"><span>${I.max ? 'Palier maximum !' : `${fmt(I.cur)} / ${fmt(I.need)} XP`}</span>${x2}</span>
+        <small class="ps-help">Jouez pour gagner de l'XP de pass et débloquer des récompenses</small>
       </span>
       <span class="ps-next">${I.ready.length ? `<b class="ps-ready">${I.ready.length}</b><small>à réclamer</small>` : nx ? `<span class="ps-ic">${nx.html}</span><small>Palier ${I.tier + 1}</small>` : `<span class="ps-ic">${iconImg('crown', 26)}</span><small>Terminé</small>`}</span>
     </button>
