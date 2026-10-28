@@ -72,7 +72,7 @@ export const CLASSES = {
   engineer: {
     id: 'engineer', name: 'Tess', role: 'Ingénieure', locked: true,
     desc: 'Ses tourelles et ses drones se battent pour elle pendant qu\'elle bricole la suite.',
-    hp: 125, atk: 14, crit: 0.08, speed: 1, gadget: 0.3, pickup: 0.1,
+    hp: 130, atk: 14, crit: 0.08, speed: 1, gadget: 0.3, pickup: 0.1,
     weapon: 'turret', ult: 'orbital',
     passive: { name: 'Bricoleuse', icon: 'wrench', desc: 'Tourelles, drones et mines durent 30 % plus longtemps ; ramassage +10 %.' },
     colors: { 1: '#ff8a2a', 2: '#c85a1a', 3: '#f4ece0', a: '#3ae0ff', h: '#7a3a1c', s: '#ffd8b8', d: '#e8b090', c: '#4a5266' },

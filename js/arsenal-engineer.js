@@ -104,9 +104,10 @@ const atk = (run, a) => run.fx.push({ type: 'engAtk', a, life: 0.2, max: 0.2 });
 
 // Réglages communs (exportés : le simulateur d'équilibrage peut les modifier)
 // bullet / laser / missile = vitesses (px/s) ; drone : rayon de vol autour de Tess, vitesse de retour ; flamme : vitesse
-// de rotation du jet (rad/s), flaques de napalm (intervalle, durée, au plus pools à la fois) ; mines : portée du lancer,
-// rayon de déclenchement (en plus de la taille du monstre), saut des décharges, réserve (au plus caps mines posées)
-export const ENGW = { bullet: 760, laser: 820, missile: 430, orbit: 70, back: 560, turn: 5, puddle: 0.3, pDur: 3, pools: 10,
+// de rotation du jet (rad/s), flaques de napalm (intervalle, durée, au plus pools à la fois), recul et ralentissement (s) des
+// monstres brûlés ; mines : portée du lancer, rayon de déclenchement (en plus de la taille du monstre), saut des
+// décharges, réserve (au plus caps mines posées), arcs de la grille Tesla (portée, largeur, intervalle)
+export const ENGW = { bullet: 760, laser: 820, missile: 430, orbit: 70, back: 560, turn: 5, puddle: 0.3, pDur: 3, pools: 10, fKnock: 45, fSlow: 0.4,
   throwMin: 55, throwMax: 140, trig: 20, jump: 170, caps: [10, 14], link: 230, linkW: 30, linkT: 0.35 };
 
 addWeapons({
@@ -218,7 +219,8 @@ addWeapons({
             if (d > R + e.r * 0.5) continue;
             const al = dx * ca + dy * sa;
             if (d > 26 && (al <= 0 || Math.abs(Math.atan2(-dx * sa + dy * ca, al)) > half + Math.atan(e.r / d))) continue;
-            run.hitEnemy(e, S.dmg, { quiet: true, color: E ? '#7ad8ff' : '#ffb04a', knock: 25, kx: ca, ky: sa });
+            run.hitEnemy(e, S.dmg, { quiet: true, color: E ? '#7ad8ff' : '#ffb04a', knock: ENGW.fKnock, kx: ca, ky: sa });
+            if (!e.dead && !e.boss) e.slow = Math.max(e.slow, ENGW.fSlow); // les monstres en feu reculent et ralentissent
           }
           sfx('flame');
         }
