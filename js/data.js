@@ -998,6 +998,7 @@ Object.assign(WEAPON_EVOS, {
   hammer:      { tome: 'power',  name: 'Jugement divin', icon: 'judgment', desc: '3 marteaux géants : double onde de choc qui étourdit les monstres.' },
   icicles:     { tome: 'crit',   name: 'Tempête de stalactites', icon: 'icicles', desc: '11 grandes pointes qui transpercent tout, gèlent et éclatent en fin de course.' },
   hail:        { tome: 'area',   name: 'Ouragan de grêle', icon: 'hail', desc: '2 orages géants qui suivent leur cible ; les grêlons gèlent.' },
+});
 // ===== Arsenal W2 (Nyx, Sora) =====
 // Armes propres à Nyx la Vampire et à Sora l'Ombre (own : jamais proposées aux autres champions ni comptées dans les Défis).
 // Statistiques et comportement : js/arsenal-w2.js ; rendu : js/g3d/fx-w2.js. Évolutions : niveau 5 + leur tome.
