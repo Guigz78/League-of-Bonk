@@ -181,7 +181,7 @@ addWeapons({
   // (dégâts ×3) un drain sur trois.
   cursering: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.55 * 1.35 * 1.3 * 1.5, cd: 2.6 * h, n: 2, R: 125 * ar, dur: 6, ls: 0.03, pull: 70 }
+      ? { dmg: A * 0.55 * 1.35 * 1.3 * 1.6, cd: 3.2 * h, n: 2, R: 110 * ar, dur: 6, ls: 0.03, pull: 70 }
       : { dmg: A * 0.55 * (L(4) ? 1.35 : 1) * (L(5) ? 1.3 : 1), cd: 4 * h, n: 1 + L(5), R: (L(2) ? 82 : 66) * ar, dur: L(3) ? 5.5 : 4, ls: 0.02, pull: 0 },
     lines: [D_('Dégâts par drain'), ['R', 'Rayon', fI], ['pull', 'Aspire les ennemis', yes], ['n', 'Cercles', fN], ['dur', 'Durée', secS], CD('Nouveau cercle toutes les')],
     size: 'R',
@@ -198,7 +198,7 @@ addWeapons({
             // un peu devant la cible, côté Nyx : les monstres y entrent en avançant
             C.push({ x: e.x + (p.x - e.x) * 0.2, y: e.y + (p.y - e.y) * 0.2, R: S.R, t: 0, dur: S.dur, k: 0.15, n: 0, evo: E });
           }
-          while (C.length > 6) C.shift();
+          while (C.length > S.n * 2) C.shift(); // au plus 2 cercles par cercle lancé à la fois
           sfx('curse');
         }
       }

@@ -32,15 +32,16 @@ const MK = {
   }, 48),
   // lance de sang (face à +X) : hampe sombre, fer cramoisi, garde pâle à pointes
   lance: fx => addPool(fx, b => {
-    b.add(G.box(1.8, 0.09, 0.09), '#4a0a18', T(-0.25, 0, 0));
-    b.add(G.cone(0.18, 0.8, 4), '#ff3a52', T(1.0, 0, 0, 1, 1, 1, 0, 0, -PI / 2), 0.1);
-    b.add(G.box(0.1, 0.1, 0.48), '#e8c0c8', T(0.58, 0, 0));
-    for (const z of [-0.26, 0.26]) b.add(G.cone(0.06, 0.26, 4), '#e8c0c8', T(0.48, 0, z, 1, 1, 1, 0, 0, PI / 2));
-    b.add(G.oct(0.13), '#ff3a52', T(-1.18, 0, 0));
+    b.add(G.box(1.8, 0.15, 0.15), '#5a0c1e', T(-0.25, 0, 0));
+    b.add(G.cone(0.3, 0.95, 4), '#ff3a52', T(1.05, 0, 0, 0.45, 1, 1, 0, 0, -PI / 2), 0.1); // fer plat et large, vu d'en haut
+    b.add(G.cone(0.15, 0.6, 4), '#ffd0d8', T(0.98, 0.07, 0, 0.3, 1, 1, 0, 0, -PI / 2));
+    b.add(G.box(0.14, 0.14, 0.62), '#e8c0c8', T(0.56, 0, 0));
+    for (const z of [-0.34, 0.34]) b.add(G.cone(0.08, 0.34, 4), '#e8c0c8', T(0.44, 0, z, 1, 1, 1, 0, 0, PI / 2));
+    b.add(G.oct(0.2), '#ff3a52', T(-1.2, 0, 0));
   }, 24),
   // pieu de sang qui jaillit du sol (non éclairé : couleur vive)
   spike: fx => addPool(fx, b => {
-    const c = (x, y) => (y > 1.0 ? '#ffb0bc' : y > 0.55 ? '#e8203e' : '#6a0818');
+    const c = (x, y) => (y > 0.6 ? '#ff9aaa' : y > 0.3 ? '#f0203e' : '#8a0c22');
     b.add(G.cone(0.22, 1.35, 5), c, T(0, 0.67, 0), 0.08);
     b.add(G.cone(0.13, 0.8, 5), c, T(0.2, 0.36, 0.08, 1, 1, 1, 0, 0, -0.45), 0.08);
   }, 140, basicV(fx)),
@@ -74,13 +75,14 @@ const DRAW = {
     }
   },
   bloodlance(fx, st, w, s, t) {
-    const P = get(st, fx, 'lance'), E = w.evo, k = E ? 1.35 : 1.1;
+    const P = get(st, fx, 'lance'), E = w.evo, k = E ? 1.75 : 1.45;
     for (const l of s.list) {
-      const X = l.x * S, Y = 1.4, Z = l.y * S, ca = Math.cos(l.a), sa = Math.sin(l.a);
+      const X = l.x * S, Y = 1.4, Z = l.y * S, ca = Math.cos(l.a), sa = Math.sin(l.a), L = E ? 150 : 110;
       P.put(X, Y, Z, -l.a, k);
-      fx.line(X, Y, Z, (l.x - ca * (E ? 120 : 85)) * S, Y, (l.y - sa * (E ? 120 : 85)) * S, E ? 0.75 : 0.5, BLOOD, 0.55);
-      fx.line(X, Y, Z, (l.x - ca * 40) * S, Y, (l.y - sa * 40) * S, 0.2, PALE, 0.8);
-      fx.glow(l.x + ca * 20 * k, l.y + sa * 20 * k, 28, E ? 30 : 22, BLOOD, 0.85);
+      // traînée de sang : large halo cramoisi, cœur pâle (lisible sur l'herbe comme sur la pierre)
+      fx.line(X, Y, Z, (l.x - ca * L) * S, Y, (l.y - sa * L) * S, E ? 1.5 : 1.15, BLOOD, 0.5);
+      fx.line(X, Y, Z, (l.x - ca * L * 0.6) * S, Y, (l.y - sa * L * 0.6) * S, E ? 0.45 : 0.35, PALE, 0.85);
+      fx.glow(l.x + ca * 22 * k, l.y + sa * 22 * k, 28, E ? 34 : 26, BLOOD, 0.9);
       fx.shadow(l.x, l.y, 30 * k, 0.22);
       if (Math.random() < 0.35 && fx.sparks.length < 190) fx.sparks.push({ x: l.x - ca * 20, y: l.y - sa * 20, z: 26, vx: -ca * 40, vy: -sa * 40, vz: -40, life: 0.35, max: 0.35, c: DEEP, w: 2.4 }); // gouttes
     }
@@ -95,7 +97,7 @@ const DRAW = {
       // mare sombre, bord cramoisi en tirets qui tourne, anneau de runes violet en sens contraire
       fx.ringAt(c.x, c.y, R, '#2a0418', 0.4 * a, 0.001, 1, 1, 0, 0, 0, 0, false, 0.065);
       fx.ringAt(c.x, c.y, R, BLOOD, 0.95 * a, 0.07, 0.1, 1, t * 0.8, 12, 0.6, 0.55, true, 0.075);
-      fx.ringAt(c.x, c.y, R * 0.7, CURSE, 0.75 * a, 0.06, 0, 1, -t * 1.3, 6, -1.2, 0.4, true, 0.08);
+      if (!E) fx.ringAt(c.x, c.y, R * 0.7, CURSE, 0.75 * a, 0.06, 0, 1, -t * 1.3, 6, -1.2, 0.4, true, 0.08);
       // étoile maudite (5 traits au sol) qui tourne lentement
       const r = R * 0.68, a0 = t * 0.5 + c.x;
       for (let i = 0; i < 5; i++) {
@@ -103,7 +105,7 @@ const DRAW = {
         fx.line((c.x + Math.cos(p0) * r) * S, 0.12, (c.y + Math.sin(p0) * r) * S, (c.x + Math.cos(p1) * r) * S, 0.12, (c.y + Math.sin(p1) * r) * S, 0.12, '#ff4a6a', 0.6 * a);
       }
       if (E) { // gouffre : spirales qui tournent vite vers le centre, cœur sombre
-        for (let i = 0; i < 3; i++) fx.ringAt(c.x, c.y, R * (0.92 - i * 0.26), i % 2 ? CURSE : BLOOD, 0.7 * a, 0.09, 0, 0.22, -t * (3 + i) + i * 2, 0, 0, 0.5, true, 0.085);
+        for (let i = 0; i < 3; i++) fx.ringAt(c.x, c.y, R * (0.88 - i * 0.26), i % 2 ? CURSE : '#ff5a8a', 0.6 * a, 0.08, 0, 0.2, -t * (3 + i) + i * 2, 0, 0, 0.5, true, 0.085);
         fx.glow(c.x, c.y, 6, R * 0.5, '#5a0a3a', 0.5 * a);
       }
       // âmes drainées : lueurs qui montent du bord vers le centre
