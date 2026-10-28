@@ -229,9 +229,9 @@ export const DIFFICULTIES = [
   { id: 0, name: 'Normal', icon: 'star', color: '#5ae87a', desc: 'Le défi prévu pour découvrir la zone.',
     hp: 1, dmg: 1, speed: 1, spawn: 1, elite: 1, mods: 1, boss: 1, heal: 1, gold: 1, rarity: 0, itemMult: 1 },
   { id: 1, name: 'Difficile', icon: 'i_enrage', color: '#ffb03a', desc: 'Monstres plus coriaces, plus rapides et plus nombreux.',
-    hp: 1.8, dmg: 1.55, speed: 1.08, spawn: 1.25, elite: 0.8, mods: 1, boss: 1.85, heal: 0.75, gold: 1.6, rarity: 0.08, itemMult: 1.25 },
+    hp: 2.1, dmg: 1.75, speed: 1.08, spawn: 1.25, elite: 0.8, mods: 1, boss: 2.2, heal: 0.75, gold: 1.6, rarity: 0.08, itemMult: 1.25 },
   { id: 2, name: 'Cauchemar', icon: 'skull', color: '#ff4a6a', desc: 'Élites à deux pouvoirs, soins réduits de moitié.',
-    hp: 2.5, dmg: 1.95, speed: 1.15, spawn: 1.45, elite: 0.68, mods: 2, boss: 2.6, heal: 0.5, gold: 2.4, rarity: 0.16, itemMult: 1.5 },
+    hp: 3, dmg: 2.3, speed: 1.15, spawn: 1.45, elite: 0.68, mods: 2, boss: 3.2, heal: 0.5, gold: 2.4, rarity: 0.16, itemMult: 1.5 },
 ];
 
 // Pouvoirs des élites (tirés au hasard, affichés dans leur nom). f = accord au féminin.

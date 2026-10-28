@@ -42,7 +42,7 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // WMUL : multiplicateur de dégâts par arme (équilibrage des classes : chaque champion commence avec la sienne)
 export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25, scythe: 1.1 };
 // hp / dmg : PV et dégâts de tous les monstres (compensent la puissance des évolutions d'armes, raretés et combos)
-export const BAL = { xpA: 5, xpB: 4, xpE: 1.6, comboXp: 0.1, hp: 1.3, dmg: 1.12, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
+export const BAL = { xpA: 6, xpB: 6, xpE: 1.8, comboXp: 0.1, hp: 1.45, dmg: 1.22, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
 // XP pour passer du niveau L au suivant (partie) : xpA + xpB × (L − 1) + L^xpE, de plus en plus long à chaque niveau
 const xpNeed = L => Math.round(BAL.xpA + BAL.xpB * (L - 1) + Math.pow(L, BAL.xpE));
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
@@ -300,7 +300,7 @@ export class Run {
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
         <div class="minibar" id="minibar" hidden><div class="mb-n" id="miniName"></div><div class="mb-bar"><i id="miniFill"></i></div></div>
         <div class="banner" id="banner"></div>
-        <div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu'elles n'explosent.</div>
+        ${!save.tutorialDone ? '' : '<div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu\'elles n\'explosent.</div>'}
         <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 32)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
       </div>
     </div>`);
@@ -316,7 +316,7 @@ export class Run {
     this.renderLoadout();
     this.renderEvo();
     this.renderWorld();
-    this.banner(`<small>Niveau 1/${EXPE_LEVELS} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
+    if (save.tutorialDone) this.banner(`<small>Niveau 1/${EXPE_LEVELS} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
     if (this.abyss) setTimeout(() => { if (!this.over) this.banner(`<small>${esc(abyssName(this.abyss))} · malédictions</small>${curseList(this.abyss, 'small')}`, 3200, 'small abyss'); }, 2500);
     music('zone' + this.zone.id);
     this.last = performance.now();
@@ -2072,7 +2072,7 @@ export class Run {
       if (ls > 0) {
         this.lsPool += Math.min(d, Math.max(0, e.hp)) * ls;
         // orbes de sang vers le héros (rendu 3D), s'il y a des PV à rendre : d'autant plus fréquentes que le vol de vie est haut (au plus 8/s)
-        if (this.runTime >= this.lsEvT && p.hp < p.maxHp - 1 && !this.dying) { this.lsEvT = this.runTime + clamp(0.0125 / ls, 0.125, 0.6); this.emit('lifesteal', { x: e.x, y: e.y, h: e.r * 1.2 + e.fly }); }
+        if (this.runTime >= this.lsEvT && p.hp < p.maxHp - 1 && !this.dying) { this.lsEvT = this.runTime + clamp(0.03 / ls, 0.4, 1); this.emit('lifesteal', { x: e.x, y: e.y, h: e.r * 1.2 + e.fly }); }
       }
     }
     e.hp -= d;

@@ -176,13 +176,14 @@ export class Objects {
       if (!near(it.x, it.y)) continue;
       const bob = Math.sin(t * 4 + it.x * 0.05) * 0.12, X = it.x * S, Z = it.y * S;
       if (it.type === 'xp') {
-        const v = it.v, k = v >= 30 ? 3 : v >= 10 ? 2 : v >= 3 ? 1 : 0, s = 0.75 + k * 0.22;
+        const v = it.v, k = v >= 30 ? 3 : v >= 10 ? 2 : v >= 3 ? 1 : 0, s = 1.05 + k * 0.25; // gemmes plus grosses et toujours lumineuses : faciles à repérer
         const i = this.gem.put(X, 0.55 + bob + k * 0.08, Z, t * 2 + (it.spin || 0), s);
         this.gem.tint(i, col(GEM[k]));
-        if (k >= 1 || it.pull) fx.glow3(X, 0.6 + k * 0.08, Z, 1.2 + k * 0.5, GEM[k], k >= 2 ? 0.55 : 0.35);
+        fx.glow3(X, 0.6 + k * 0.08, Z, 1.6 + k * 0.5, GEM[k], k >= 2 ? 0.6 : 0.42);
         fx.shadow(it.x, it.y, 12 + k * 3, 0.22);
       } else if (it.type === 'gold') {
-        this.coin.put(X, 0.6 + bob, Z, t * 5 + (it.spin || it.x), 0.9);
+        this.coin.put(X, 0.6 + bob, Z, t * 5 + (it.spin || it.x), 1.15);
+        fx.glow3(X, 0.6, Z, 1.4, '#ffd54a', 0.3);
         fx.shadow(it.x, it.y, 13, 0.22);
       } else if (it.type === 'heart') {
         const s = 1.05 + Math.sin(t * 8) * 0.08;

@@ -313,9 +313,9 @@ export class Overlay {
     for (const T0 of run.totems || []) if (!T0.used && Math.hypot(T0.x - p.x, T0.y - p.y) < 900) pts.push([T0, TOTEMS[T0.kind]?.color || '#ffffff', 9, this.icons[T0.kind]]);
     for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 800) pts.push([c, '#ffcf40', 8, this.ico.chest]);
     for (const it of run.pickups) if (it.type === 'loot' && !it.hidden && Math.hypot(it.x - p.x, it.y - p.y) < 900) pts.push([it, LOOT_GLOW[it.tier] || '#ffffff', 9, this.ico.chest]);
-    // au plus 6 flèches (les plus proches, le boss d'abord) : l'écran reste lisible
+    // au plus 4 flèches (2 pendant le guide de la première partie), les plus proches et le boss d'abord : l'écran reste lisible
     const d2p = o => (o.x - p.x) ** 2 + (o.y - p.y) ** 2;
-    const shown = pts.filter(([o]) => off(o)).sort((a, b) => (b[0] === run.boss) - (a[0] === run.boss) || d2p(a[0]) - d2p(b[0])).slice(0, 6);
+    const shown = pts.filter(([o]) => off(o)).sort((a, b) => (b[0] === run.boss) - (a[0] === run.boss) || d2p(a[0]) - d2p(b[0])).slice(0, run.coachOn ? 2 : 4);
     g.lineJoin = 'round';
     for (const [o, c, size, ic] of shown) {
       const a = dirTo(o), [ax0, ay0] = toEdge(a), b = Math.sin(t * 6) * 2;

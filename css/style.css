@@ -1945,3 +1945,16 @@ button.itile:active { transform: translateY(1px); }
 .ps-help { display: block; margin-top: 3px; font-size: 11px; line-height: 1.2; color: var(--tx3); }
 .sc-lvl { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 6px; padding: 0; font: 700 12px/1.2 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: var(--cy); background: none; border: 0; cursor: pointer; }
 .sc-lvl img { width: 14px; height: 14px; }
+
+/* ===== Guide de la première partie : une consigne courte à la fois, en bas de l'écran ===== */
+.coach { position: absolute; left: 0; right: 0; top: calc(var(--safe-t, 0px) + 222px); z-index: 30; display: grid; justify-items: center; pointer-events: none; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; }
+.coach.on { opacity: 1; transform: none; }
+.coach.hide { opacity: 0; }
+.co-card { display: flex; align-items: center; gap: 12px; max-width: min(360px, 88%); padding: 12px 16px; background: rgba(8,11,18,.88); border: 1px solid rgba(245,180,0,.6); box-shadow: 0 6px 24px rgba(0,0,0,.4); animation: coPulse 1.6s ease-in-out infinite; }
+.co-card img { flex: none; width: 26px; height: 26px; }
+.co-card b { font: 700 17px/1.2 var(--fd); letter-spacing: .04em; text-transform: uppercase; color: #fff; }
+@keyframes coPulse { 50% { border-color: rgba(245,180,0,1); box-shadow: 0 6px 28px rgba(245,180,0,.25); } }
+/* doigt qui glisse (première consigne) */
+.co-finger { position: relative; width: 120px; height: 70px; margin-top: 12px; }
+.co-finger::before { content: ''; position: absolute; left: 10px; top: 20px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 0 0 6px rgba(255,255,255,.18); animation: coSwipe 1.4s ease-in-out infinite; }
+@keyframes coSwipe { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateX(72px); opacity: 0; } }
