@@ -68,7 +68,7 @@ function taken(B, e) { for (const o of B) if (o.tg === e) return true; return fa
 // Réglages communs (exportés : le simulateur d'équilibrage peut les modifier)
 // lance : V = vitesse (px/s), range = portée, healN = ennemis transpercés qui soignent au plus par lance ;
 // tick = intervalle des dégâts des zones (cercle maudit, nuages) ; clone : vitesse de course
-export const W2B = { V: 780, range: 560, healN: 5, tick: 0.5, cloneV: 420 };
+export const W2B = { V: 780, range: 560, healN: 4, tick: 0.5, cloneV: 420 };
 
 addWeapons({
   // ---------- Nyx ----------
@@ -128,8 +128,8 @@ addWeapons({
   // jaillissent du sol sur tout leur passage quand elles s'arrêtent.
   bloodlance: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 2.6 * 1.3 * 1.4 * 1.4, cd: 1.15 * h, n: 3, heal: 0.006, w: 30 * ar, spike: A * 2.6 * 1.3 * 1.4 * 0.9 }
-      : { dmg: A * 2.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(4) ? 1.35 : 1.75) * h, n: 1 + L(3), heal: L(5) ? 0.006 : 0.004, w: 20 * ar, spike: 0 },
+      ? { dmg: A * 2.6 * 1.3 * 1.4 * 1.3, cd: 1.15 * h, n: 3, heal: 0.005, w: 30 * ar, spike: A * 2.6 * 1.3 * 1.4 * 0.8 }
+      : { dmg: A * 2.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(4) ? 1.35 : 1.75) * h, n: 1 + L(3), heal: L(5) ? 0.005 : 0.003, w: 20 * ar, spike: 0 },
     lines: [D_('Dégâts par lance'), ['n', 'Lances', fN], ['spike', 'Pieux de sang', v => (v ? fI(v) : 'non')], ['heal', 'Soin par ennemi', v => pctS(v) + ' des PV'], CD(), ['w', 'Largeur', fI]],
     size: 'w',
     fire(run, w, S, E, dt) {
@@ -181,7 +181,7 @@ addWeapons({
   // (dégâts ×3) un drain sur trois.
   cursering: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.55 * 1.35 * 1.3 * 1.6, cd: 3.2 * h, n: 2, R: 110 * ar, dur: 6, ls: 0.03, pull: 70 }
+      ? { dmg: A * 0.55 * 1.35 * 1.3 * 1.45, cd: 3.2 * h, n: 2, R: 110 * ar, dur: 6, ls: 0.03, pull: 70 }
       : { dmg: A * 0.55 * (L(4) ? 1.35 : 1) * (L(5) ? 1.3 : 1), cd: 4 * h, n: 1 + L(5), R: (L(2) ? 82 : 66) * ar, dur: L(3) ? 5.5 : 4, ls: 0.02, pull: 0 },
     lines: [D_('Dégâts par drain'), ['R', 'Rayon', fI], ['pull', 'Aspire les ennemis', yes], ['n', 'Cercles', fN], ['dur', 'Durée', secS], CD('Nouveau cercle toutes les')],
     size: 'R',
@@ -228,11 +228,11 @@ addWeapons({
   // ---------- Sora ----------
   // Shurikens : étoiles lancées vers la cible qui ricochent d'ennemi en ennemi (le plus proche pas encore touché ; seul
   // contre un boss, elles rebondissent sur lui). Évolués (Tempête d'étoiles) : 5 shurikens géants, 7 ricochets, chaque
-  // ricochet frappe 12 % plus fort.
+  // ricochet frappe 10 % plus fort.
   shuriken: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 1.3 * 1.45, cd: 0.85 * h, n: 5, b: 7, R: 240 * ar, v: 660, grow: 0.12 }
-      : { dmg: A * (L(3) ? 1.3 : 1), cd: (L(5) ? 1.0 : 1.3) * h, n: 1 + L(2) + L(5), b: 2 + L(4) * 2, R: 200 * ar, v: 600, grow: 0 },
+      ? { dmg: A * 0.92 * 1.3 * 1.4, cd: 0.85 * h, n: 5, b: 7, R: 240 * ar, v: 660, grow: 0.1 }
+      : { dmg: A * 0.92 * (L(3) ? 1.3 : 1), cd: (L(5) ? 1.0 : 1.3) * h, n: 1 + L(2) + L(5), b: 2 + L(4) * 2, R: 200 * ar, v: 600, grow: 0 },
     lines: [D_('Dégâts par shuriken'), ['n', 'Shurikens', fN], ['b', 'Ricochets', fN], ['grow', 'Par ricochet', v => (v ? '+' + num(v * 100) + NB + '% de dégâts' : 'non')], CD(), ['R', 'Portée des ricochets', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
