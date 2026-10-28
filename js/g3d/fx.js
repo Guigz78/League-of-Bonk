@@ -7,6 +7,7 @@ import { TOTEMS } from '../data.js';
 import { LOOT_GLOW } from './tex2d.js';
 import { initC1, eventC1, frameC1 } from './fx-c1.js'; // champions C1 (Nyx, Sora, Ragnar)
 import { initC2, eventC2, frameC2 } from './fx-c2.js'; // champions C2 (Frida, Gaïa)
+import { eventEng, frameEng } from './fx-engineer.js'; // Tess l'ingénieure (armes, frappe orbitale)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -147,6 +148,7 @@ export class Fx {
     const run = this.run, p = run.p;
     if (this.c1 && eventC1(this, ev)) return; // champions C1
     if (this.c2 && eventC2(this, ev)) return; // champions C2
+    if (eventEng(this, ev)) return; // Tess : frappe orbitale
     switch (ev.type) {
       case 'hit': {
         const e = ev.e, h = e.r * 1.2 + e.fly;
@@ -515,6 +517,7 @@ export class Fx {
     this.heroFx(dt);
     frameC1(this, dt); // champions C1
     frameC2(this, dt); // champions C2
+    frameEng(this, dt); // Tess : tourelles, drones, flammes, mines, frappe orbitale
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
