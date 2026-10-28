@@ -169,7 +169,7 @@ addWeapons({
       return E ? { dmg: d * 1.5, cd: 1.5 * h, n: 3, R: 64 * ar, hold: 2.6, bleed: b * 1.5, snaps: 3, max: 9 }
         : { dmg: d, cd: (L(5) ? 1.9 : 2.4) * h, n: 1 + L(2) + L(5), R: (L(4) ? 52 : 40) * ar, hold: L(4) ? 2.2 : 1.6, bleed: b, snaps: 1, max: 5 + L(2) + L(5) };
     },
-    lines: [D_('Dégâts de morsure'), CD, ['n', 'Pièges', fN], ['hold', 'Immobilise', fS], ['bleed', 'Saignement', fI], ['R', 'Mâchoires', fI], ['snaps', 'Morsures par piège', fN]],
+    lines: [D_('Dégâts de morsure'), CD, ['n', 'Pièges', fN], ['hold', 'Immobilise', fS], ['bleed', 'Saignement (0,3 s)', fI], ['R', 'Mâchoires', fI], ['snaps', 'Morsures par piège', fN]],
     size: 'R',
     fire(run, w, S, E, dt) {
       sync(run, w);
