@@ -527,6 +527,15 @@ Object.assign(ICON, {
   leaf: [IC.green, IC.green, '<path d="M4.5 19.5C4.5 10.5 10 4.5 19.5 4.5c0 9.5-5.5 15-15 15z" fill="T"/><path d="M4.5 19.5L14 10M8.8 15.2h4M11.3 12.7V9.2"/>'],
   forest: [IC.green, IC.green, '<path d="M12 2.5l6 7.5h-3.2l4.2 6H5l4.2-6H6z" fill="T"/><path d="M12 16v3M7.5 21.5c1.4-1.8 2.9-2.6 4.5-2.6s3.1.8 4.5 2.6"/><path d="M2.8 14.2l2.4 1.3M21.2 14.2l-2.4 1.3M3.2 19.2l2.2-.5M20.8 19.2l-2.2-.5" stroke="#ff7ab8"/>'],
 });
+// arsenal W2 : chauves-souris, lance de sang, cercle maudit (Nyx) ; shurikens, bombe fumigène, clone d'ombre (Sora)
+Object.assign(ICON, {
+  bats: [IC.w, IC.red, '<path d="M12 9.2l-1.2-1.8-.4 2.2C8 9.2 5 7.6 2.5 5.5c.3 3.5 1.9 6.3 4.5 7.7.6-1 1.6-1.3 2.4-.8.2 1.2 1.2 2.2 2.6 4.1 1.4-1.9 2.4-2.9 2.6-4.1.8-.5 1.8-.2 2.4.8 2.6-1.4 4.2-4.2 4.5-7.7-2.5 2.1-5.5 3.7-7.9 4.1l-.4-2.2z" fill="T"/><path d="M11 11.3h.1M13 11.3h.1" stroke="#ff4d5e" stroke-width="2"/>'],
+  bloodlance: [IC.w, IC.red, '<path d="M3.5 20.5L14 10"/><path d="M20.5 3.5l-1.6 6.1-2.6 2.6-4.5-4.5 2.6-2.6z" fill="T" stroke="#ff4d5e"/><path d="M6 10.5l1.7 2.6a2 2 0 1 1-3.4 0z" fill="#ff4d5e" stroke="none"/>'],
+  cursering: [IC.red, IC.violet, '<ellipse cx="12" cy="14.5" rx="9" ry="5" fill="T"/><path d="M12 10.2l2.6 8.2-7.2-5h9.2l-7.2 5z"/><path d="M12 2.5v3.5M8 3.8l1.2 2.6M16 3.8l-1.2 2.6" stroke="#a855f7"/>'],
+  shuriken: [IC.w, IC.violet, '<path d="M12 2.5l2.2 7.3 7.3 2.2-7.3 2.2-2.2 7.3-2.2-7.3L2.5 12l7.3-2.2z" fill="T"/><circle cx="12" cy="12" r="1.8"/>'],
+  smokebomb: [IC.w, IC.violet, '<circle cx="9" cy="15" r="6" fill="T"/><path d="M13.2 10.8L15.8 8.2c.4-1.5 1.6-2.4 3-2.2"/><path d="M19.5 3v1.6M21.6 5.6H20" stroke="#ff7a2f"/><circle cx="18.6" cy="16.6" r="2.4" stroke="#a855f7"/><circle cx="20.8" cy="12.2" r="1.6" stroke="#a855f7"/>'],
+  shadowclone: [IC.violet, IC.violet, '<circle cx="9" cy="6.5" r="2.8" fill="T"/><path d="M4 20.5c0-4.4 2.2-7.5 5-7.5s5 3.1 5 7.5z" fill="T"/><circle cx="16" cy="6.5" r="2.8" stroke-opacity=".5"/><path d="M14.6 13.4c.4-.3.9-.4 1.4-.4 2.8 0 5 3.1 5 7.5h-5" stroke-opacity=".5"/>'],
+});
 
 function svgIcon(name) {
   const [c, t, body] = ICON[name];

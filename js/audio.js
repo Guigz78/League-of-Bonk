@@ -386,3 +386,23 @@ Object.assign(SFX, {
   hailstorm: () => noise({ d: 0.8, v: 0.1, filter: ['bandpass', 2500], q: 0.7, sweepTo: 900 }),
 });
 Object.assign(MIN_GAP, { star: 0.06, comet: 0.2, blast: 0.08, snap: 0.07, shield: 0.06, hammer: 0.15, icicle: 0.08, hail: 0.035 });
+// ---------- Arsenal W2 : armes de Nyx (chauves-souris, lance de sang, cercle maudit) et de Sora (shurikens, fumigènes, clone) ----------
+Object.assign(SFX, {
+  // chauve-souris : petit cri aigu qui descend et froissement d'ailes
+  bat: () => { osc({ type: 'sine', f: r(2600, 3300), to: 1700, d: 0.06, v: 0.03 }); noise({ d: 0.06, v: 0.05, filter: ['bandpass', 1400], q: 2, at: 0.02 }); },
+  // lance de sang : souffle qui monte et tintement grave
+  lance: () => { noise({ d: 0.16, v: 0.1, filter: ['bandpass', 700], q: 1.5, sweepTo: 2600 }); osc({ type: 'triangle', f: 520, to: 260, d: 0.14, v: 0.05, at: 0.03 }); },
+  // pieux de sang qui jaillissent : craquements secs en cascade
+  spikes: () => { for (let i = 0; i < 4; i++) wood(r(300, 460), i * 0.04, 0.08); noise({ d: 0.18, v: 0.1, filter: ['lowpass', 900], sweepTo: 200 }); },
+  // cercle maudit : accord grave et voilé qui ondule
+  curse: () => { [147, 175].forEach((f, i) => osc({ type: 'sawtooth', f, to: f * 0.94, d: 0.4, v: 0.035, at: i * 0.03, filter: ['lowpass', 700], vib: 4, vibRate: 5 })); noise({ d: 0.3, v: 0.06, filter: ['bandpass', 400], q: 2 }); },
+  // shuriken : sifflement métallique qui tourne
+  shuriken: () => { osc({ type: 'triangle', f: r(2200, 2500), to: 3200, d: 0.08, v: 0.03, vib: 300, vibRate: 40 }); noise({ d: 0.08, v: 0.07, filter: ['highpass', 3000] }); },
+  // lancer (bombe fumigène) puis « pouf » de fumée
+  throw: () => noise({ d: 0.1, v: 0.08, filter: ['bandpass', 1200], q: 1.5, sweepTo: 2400 }),
+  smoke: () => { noise({ d: 0.35, v: 0.13, filter: ['lowpass', 1100], sweepTo: 250 }); pop(240, 0, 0.08); },
+  // clone d'ombre : « fsst » qui descend et carillon sourd ; entaille : coup de lame bref
+  clone: () => { whistle(1500, 400, 0.22, 0, 0.05); noise({ d: 0.18, v: 0.08, filter: ['highpass', 2200], sweepTo: 700 }); },
+  cut: () => noise({ d: 0.07, v: 0.09, filter: ['bandpass', 3000], q: 2, sweepTo: 1200 }),
+});
+Object.assign(MIN_GAP, { bat: 0.1, lance: 0.1, spikes: 0.15, curse: 0.25, shuriken: 0.08, throw: 0.1, smoke: 0.12, clone: 0.2, cut: 0.08 });

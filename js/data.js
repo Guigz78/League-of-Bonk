@@ -998,4 +998,22 @@ Object.assign(WEAPON_EVOS, {
   hammer:      { tome: 'power',  name: 'Jugement divin', icon: 'judgment', desc: '3 marteaux géants : double onde de choc qui étourdit les monstres.' },
   icicles:     { tome: 'crit',   name: 'Tempête de stalactites', icon: 'icicles', desc: '11 grandes pointes qui transpercent tout, gèlent et éclatent en fin de course.' },
   hail:        { tome: 'area',   name: 'Ouragan de grêle', icon: 'hail', desc: '2 orages géants qui suivent leur cible ; les grêlons gèlent.' },
+// ===== Arsenal W2 (Nyx, Sora) =====
+// Armes propres à Nyx la Vampire et à Sora l'Ombre (own : jamais proposées aux autres champions ni comptées dans les Défis).
+// Statistiques et comportement : js/arsenal-w2.js ; rendu : js/g3d/fx-w2.js. Évolutions : niveau 5 + leur tome.
+Object.assign(WEAPONS, {
+  bats:        { name: 'Nuée de chauves-souris', icon: 'bats', own: 'vampire', desc: 'Des chauves-souris foncent sur les ennemis proches, les mordent et volent la vie.', lv: ['', '+1 chauve-souris', '+30 % dégâts, plus loin', '+1 chauve-souris, piqués plus fréquents', '+1 chauve-souris, +25 % dégâts'] },
+  bloodlance:  { name: 'Lance de sang', icon: 'bloodlance', own: 'vampire', desc: 'Lance perçante à longue portée : chaque ennemi transpercé vous soigne.', lv: ['', '+30 % dégâts', '+1 lance', 'Plus fréquente', '+40 % dégâts, soigne plus'] },
+  cursering:   { name: 'Cercle maudit', icon: 'cursering', own: 'vampire', desc: 'Cercle au sol sous la cible : il draine et ralentit les ennemis en continu.', lv: ['', 'Cercle plus grand', 'Dure plus longtemps', '+35 % dégâts', '+1 cercle, +30 % dégâts'] },
+  shuriken:    { name: 'Shurikens', icon: 'shuriken', own: 'assassin', desc: 'Étoiles de lancer qui ricochent d\'ennemi en ennemi.', lv: ['', '+1 shuriken', '+30 % dégâts', '+2 ricochets', '+1 shuriken, plus rapide'] },
+  smoke:       { name: 'Bombes fumigènes', icon: 'smokebomb', own: 'assassin', desc: 'Bombes qui éclatent en nuages : les ennemis dedans ralentissent et sont blessés.', lv: ['', '+30 % dégâts', '+1 bombe, nuage plus grand', 'Plus fréquentes', '+1 bombe, +35 % dégâts'] },
+  shadowclone: { name: 'Clone d\'ombre', icon: 'shadowclone', own: 'assassin', desc: 'Un clone de Sora surgit près de la cible et tranche les ennemis autour de lui.', lv: ['', '+30 % dégâts', 'Dure plus longtemps, plus grande portée', 'Apparaît plus souvent', '+1 clone, +30 % dégâts'] },
+});
+Object.assign(WEAPON_EVOS, {
+  bats:        { tome: 'haste',  name: 'Nuée de la Lune de sang',   icon: 'bats',        desc: '8 chauves-souris géantes : chaque piqué enchaîne 2 morsures et vole plus de vie.' },
+  bloodlance:  { tome: 'crit',   name: 'Pieu de la Reine écarlate', icon: 'bloodlance',  desc: '3 lances de sang ; des pieux de sang jaillissent du sol sur tout leur passage.' },
+  cursering:   { tome: 'magnet', name: 'Gouffre maudit',            icon: 'cursering',   desc: 'Grands cercles qui aspirent les ennemis, drainent plus fort et lâchent des ondes de sang.' },
+  shuriken:    { tome: 'crit',   name: 'Tempête d\'étoiles',        icon: 'shuriken',    desc: '5 shurikens géants, 7 ricochets ; chaque ricochet frappe plus fort.' },
+  smoke:       { tome: 'area',   name: 'Voile de l\'ombre',         icon: 'smokebomb',   desc: 'Immenses nuages qui durent plus longtemps et engloutissent les tirs ennemis.' },
+  shadowclone: { tome: 'power',  name: 'Légion d\'ombres',          icon: 'shadowclone', desc: '3 clones qui tranchent plus vite et explosent en se dissipant.' },
 });
