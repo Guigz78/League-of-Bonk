@@ -67,6 +67,16 @@ export const CLASSES = {
     passive: { name: 'Sève vivante', icon: 'leaf', desc: 'Régénère 0,8 % des PV par seconde ; ramassage +20 %.' },
     colors: { 1: '#5a8a3a', 2: '#3a6228', 3: '#9ad06a', a: '#ff7ab8', h: '#a0582a', s: '#ffd8b8', d: '#e8b090', c: '#6a4426' },
   },
+  // ---- Tess l'ingénieure (à débloquer : défi, clé 'cls:engineer'). Talents (js/champion-engineer.js) : gadget = durée en
+  // plus de ses tourelles, drones et mines (js/arsenal-engineer.js), pickup = ramassage en plus (save.playerStats)
+  engineer: {
+    id: 'engineer', name: 'Tess', role: 'Ingénieure', locked: true,
+    desc: 'Ses tourelles et ses drones se battent pour elle pendant qu\'elle bricole la suite.',
+    hp: 120, atk: 14, crit: 0.08, speed: 1, gadget: 0.3, pickup: 0.1,
+    weapon: 'turret', ult: 'orbital',
+    passive: { name: 'Bricoleuse', icon: 'wrench', desc: 'Tourelles, drones et mines durent 30 % plus longtemps ; ramassage +10 %.' },
+    colors: { 1: '#ff8a2a', 2: '#c85a1a', 3: '#f4ece0', a: '#3ae0ff', h: '#7a3a1c', s: '#ffd8b8', d: '#e8b090', c: '#4a5266' },
+  },
 };
 
 // Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
@@ -128,6 +138,14 @@ export const EVOLUTIONS = {
     { name: 'Gaïa Écorce', lvl: 11, colors: { 1: '#3a6a3a', 2: '#28482a', 3: '#7ab85a', c: '#5a3a1e', a: '#ffc23a' } },
     { name: 'Gaïa Cerf Doré', lvl: 19, colors: { 1: '#2a5a4a', 2: '#1a3a30', 3: '#5ae0a0', c: '#4a2e18', a: '#ff8ad8', h: '#e0a050' } },
     { name: 'Gaïa Mère Nature', lvl: 28, aura: '#7aff5a', colors: { 1: '#8ae05a', 2: '#4a9a3a', 3: '#e0ffb0', c: '#8a5a2a', a: '#ff9ad8', h: '#d8ff8a' } },
+  ],
+  // ---- Tess (ingénieure) ----
+  engineer: [
+    { name: 'Tess' },
+    { name: 'Tess Mécano', lvl: 5, colors: { 1: '#ff7a1a', 3: '#ffffff', a: '#5ae8ff' } },
+    { name: 'Tess Turbo', lvl: 11, colors: { 1: '#e8502a', 2: '#a8321a', c: '#3a4258', a: '#4af0ff' } },
+    { name: 'Tess Cyber', lvl: 19, colors: { 1: '#2e3e62', 2: '#1c2842', 3: '#d8f4ff', c: '#ff8a2a', a: '#5affd8', h: '#5a2a14' } },
+    { name: 'Tess Oméga', lvl: 28, aura: '#ffaa22', colors: { 1: '#eef2fa', 2: '#a8b4cc', 3: '#ffffff', c: '#ff8a1a', a: '#ffd23a', h: '#ff9a3a' } },
   ],
 };
 
@@ -977,3 +995,26 @@ export const ARSENAL = {
   druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
 };
 for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;
+
+// ===== Tess l'ingénieure (engineer) : ultime, arsenal, défi =====
+// Ultime et passif : js/champion-engineer.js ; armes (statistiques, comportement) : js/arsenal-engineer.js ; rendu :
+// js/g3d/fx-engineer.js et js/g3d/models-hero-engineer.js. Ses 4 armes lui sont propres (own) ; évolutions : niveau 5 + tome.
+ULTS.orbital = { name: 'Frappe orbitale', icon: 'orbital', desc: 'Un énorme laser tombe du ciel et balaie la zone en spirale autour de vous.' };
+Object.assign(WEAPONS, {
+  turret:    { name: 'Tourelle', icon: 'turret', own: 'engineer', desc: 'Pose des tourelles qui tirent sur les ennemis proches.', lv: ['', '+30 % dégâts', '+1 tourelle', 'Tirs plus rapides', '+1 tourelle, +30 % dégâts'] },
+  drone:     { name: 'Drone d\'appui', icon: 'drone', own: 'engineer', desc: 'Des drones décollent de son sac, tournent autour d\'elle et tirent.', lv: ['', '+1 drone', '+30 % dégâts', 'Volent plus longtemps, rechargent plus vite', '+1 drone, +25 % dégâts'] },
+  flamer:    { name: 'Lance-flammes', icon: 'flamer', own: 'engineer', desc: 'Crache un cône de feu devant elle.', lv: ['', '+30 % dégâts', 'Cône plus long et plus large', 'Crache plus longtemps', '+40 % dégâts, plus fréquent'] },
+  shockmine: { name: 'Mines électriques', icon: 'shockmine', own: 'engineer', desc: 'Sème des mines qui électrocutent en chaîne les ennemis proches.', lv: ['', '+1 mine', '+30 % dégâts', 'La décharge saute sur 2 ennemis de plus', '+1 mine, plus fréquentes'] },
+});
+Object.assign(WEAPON_EVOS, {
+  turret:    { tome: 'armor', name: 'Batterie lance-missiles', icon: 'turret',    desc: 'Tourelles blindées à double canon : tirs rapides et missiles explosifs.' },
+  drone:     { tome: 'haste', name: 'Escadrille',              icon: 'drone',     desc: '4 drones qui ne se posent plus jamais et tirent des lasers perçants.' },
+  flamer:    { tome: 'area',  name: 'Napalm',                  icon: 'flamer',    desc: 'Flammes bleues bien plus longues qui laissent des flaques de feu au sol.' },
+  shockmine: { tome: 'power', name: 'Grille Tesla',            icon: 'shockmine', desc: 'Mines reliées par des arcs électriques qui foudroient tout ce qui passe entre elles.' },
+});
+ARSENAL.engineer = ['turret', 'drone', 'flamer', 'shockmine']; // atelier : tourelle, drone, lance-flammes, mines électriques
+CLASSES.engineer.arsenal = ARSENAL.engineer;
+// défi de déblocage (rangé après ceux des autres champions) ; aura de maîtrise
+UNLOCK_CHALLENGES.splice(UNLOCK_CHALLENGES.findIndex(c => c.id === 'mastery10'), 0,
+  { id: 'engineer', cat: 'champions', need: 'engineer', icon: 'wrench', name: 'Pièces détachées', txt: 'Ouvrez 30 coffres de butin', n: 30, prog: st_('chests'), rw: { key: 'cls:engineer', gold: 200 } });
+MASTERY.aura.engineer = '#2ae8c8';

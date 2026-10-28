@@ -361,3 +361,27 @@ Object.assign(SFX, {
   thorns: () => { noise({ d: 0.07, v: 0.1, filter: ['bandpass', 1800], q: 3, sweepTo: 900 }); wood(r(500, 700), 0, 0.06); },
 });
 Object.assign(MIN_GAP, { thorns: 0.12, shatter: 0.2 });
+
+// ---------- Tess l'ingénieure : tourelle, drones, lance-flammes, mines électriques, frappe orbitale ----------
+Object.assign(SFX, {
+  // tourelle posée : clang métallique puis servo qui monte ; tir : petit « tac » sec ; missile : souffle et boum sourd
+  turret: () => { wood(300, 0, 0.12); noise({ d: 0.06, v: 0.12, filter: ['highpass', 2500] }); osc({ type: 'square', f: 220, to: 660, d: 0.18, v: 0.03, at: 0.06, filter: ['lowpass', 1500] }); },
+  tshot: () => { osc({ type: 'square', f: r(900, 1100), to: 300, d: 0.05, v: 0.025, filter: ['lowpass', 2200] }); noise({ d: 0.03, v: 0.05, filter: ['highpass', 3000] }); },
+  missile: () => { noise({ d: 0.25, v: 0.14, filter: ['lowpass', 1500], sweepTo: 150 }); osc({ type: 'sine', f: 150, to: 50, d: 0.22, v: 0.14 }); },
+  // drone qui décolle : bourdonnement d'hélices qui monte ; tir de drone : « piou » aigu
+  drone: () => osc({ type: 'sawtooth', f: 180, to: 420, d: 0.3, v: 0.03, vib: 30, vibRate: 40, filter: ['lowpass', 1800] }),
+  dshot: () => osc({ type: 'square', f: r(2000, 2300), to: 900, d: 0.07, v: 0.022, filter: ['lowpass', 3500] }),
+  // lance-flammes : allumage « fwoomp » puis grondement du jet
+  flameon: () => { noise({ d: 0.25, v: 0.16, filter: ['lowpass', 600], sweepTo: 2200 }); pop(160, 0, 0.08); },
+  flame: () => noise({ d: 0.16, v: 0.07, filter: ['bandpass', 900], q: 0.7, sweepTo: 600 }),
+  // mines : lancer (sifflet et cliquetis), pose (bip d'armement), décharge (grésillement électrique), arcs de la grille
+  minethrow: () => { whistle(900, 1500, 0.12, 0, 0.03); wood(r(700, 900), 0.02, 0.06); },
+  mineland: () => { wood(r(380, 460), 0, 0.08); osc({ type: 'sine', f: 1800, d: 0.05, v: 0.02, at: 0.05 }); },
+  shock: () => { osc({ type: 'sawtooth', f: 120, to: 60, d: 0.2, v: 0.08, vib: 40, vibRate: 60 }); noise({ d: 0.18, v: 0.14, filter: ['highpass', 2200], sweepTo: 5000 }); osc({ type: 'square', f: 1800, to: 400, d: 0.12, v: 0.03, at: 0.02 }); },
+  arc: () => osc({ type: 'sawtooth', f: 100, d: 0.12, v: 0.03, vib: 25, vibRate: 50, filter: ['bandpass', 1400], q: 2 }),
+  // frappe orbitale : bips du satellite et sifflement de charge ; impact énorme ; ronflement du laser qui balaie
+  orbital: () => { [0, 0.1].forEach(at => osc({ type: 'square', f: 1760, d: 0.05, v: 0.03, at, filter: ['lowpass', 3000] })); osc({ type: 'sine', f: 300, to: 2400, d: 0.5, v: 0.06, at: 0.05 }); noise({ d: 0.45, v: 0.06, filter: ['bandpass', 1500], q: 2, sweepTo: 5000 }); },
+  orbhit: () => { noise({ d: 0.8, v: 0.25, filter: ['lowpass', 1600], sweepTo: 120 }); osc({ type: 'sine', f: 90, to: 30, d: 0.7, v: 0.28 }); osc({ type: 'sawtooth', f: 220, to: 110, d: 0.6, v: 0.06, filter: ['lowpass', 900] }); },
+  laser: () => { osc({ type: 'sawtooth', f: r(95, 105), d: 0.22, v: 0.05, filter: ['lowpass', 700] }); noise({ d: 0.2, v: 0.06, filter: ['bandpass', 2500], q: 1 }); },
+});
+Object.assign(MIN_GAP, { turret: 0.15, tshot: 0.07, missile: 0.1, drone: 0.2, dshot: 0.06, flameon: 0.2, flame: 0.11, minethrow: 0.15, mineland: 0.06, shock: 0.08, arc: 0.3, laser: 0.2 });

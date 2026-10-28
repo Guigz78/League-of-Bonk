@@ -14,6 +14,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, ZONES, MAX_WEAPONS, MAX_TOMES
 import { save, playerStats } from './save.js';
 import { canPickWeapon, canPickTome } from './unlocks.js';
 import { WX, shotWeapon } from './weapons-reg.js';
+import './arsenal-engineer.js'; // armes de Tess (tourelle, drone d'appui, lance-flammes, mines électriques)
 import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -24,6 +25,7 @@ import { EXPE_LEVELS, GIGA } from './data.js';
 import { GIGA_METHODS } from './giga.js';
 import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
 import { C2, isUltC2 } from './champions-c2.js'; // champions C2 (Frida, Gaïa) : ultimes, passifs, effets en cours
+import { ENG, isUltEng } from './champion-engineer.js'; // Tess l'ingénieure : frappe orbitale
 
 const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
@@ -861,6 +863,7 @@ export class Run {
     this.updateHeal(dt);
     if (this.c1d || this.c1f) this.tickC1(dt); // champions C1 : danse des ombres, fureur en cours
     if (this.c2w || this.c2t || this.cls.regenPct) this.tickC2(dt); // champions C2 : sève de Gaïa, hiver éternel, épines
+    if (this.engU) this.tickEng(dt); // Tess : frappe orbitale en cours
 
     this.spawn(dt);
     this.grid.clear();
@@ -2554,6 +2557,7 @@ export class Run {
     this.ultFlash = 0.5;
     if (isUltC1(this.cls.ult)) this.ultC1(A); // champions C1 : festin de sang, danse des ombres, fureur
     else if (isUltC2(this.cls.ult)) this.ultC2(A); // champions C2 : hiver éternel, colère de la forêt
+    else if (isUltEng(this.cls.ult)) this.ultEng(A); // Tess : frappe orbitale
     else if (this.cls.ult === 'nova') {
       const R = 300 * p.area;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.6, max: 0.6, color: '#ffd54a' });
@@ -2703,3 +2707,5 @@ Object.assign(Run.prototype, GIGA_METHODS);
 Object.assign(Run.prototype, C1);
 // champions C2 (Frida, Gaïa) : ultimes, passifs et effets en cours (js/champions-c2.js)
 Object.assign(Run.prototype, C2);
+// Tess l'ingénieure : frappe orbitale (js/champion-engineer.js)
+Object.assign(Run.prototype, ENG);

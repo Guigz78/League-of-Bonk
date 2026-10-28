@@ -528,6 +528,16 @@ Object.assign(ICON, {
   forest: [IC.green, IC.green, '<path d="M12 2.5l6 7.5h-3.2l4.2 6H5l4.2-6H6z" fill="T"/><path d="M12 16v3M7.5 21.5c1.4-1.8 2.9-2.6 4.5-2.6s3.1.8 4.5 2.6"/><path d="M2.8 14.2l2.4 1.3M21.2 14.2l-2.4 1.3M3.2 19.2l2.2-.5M20.8 19.2l-2.2-.5" stroke="#ff7ab8"/>'],
 });
 
+// Tess l'ingénieure : clé à molette (Bricoleuse), frappe orbitale, tourelle, drone d'appui, lance-flammes, mines électriques
+Object.assign(ICON, {
+  wrench: [IC.orange, IC.orange, '<path d="M13.4 11a4.6 4.6 0 0 1-.6-6.2 4.6 4.6 0 0 1 5.5-1.3l-2.9 2.9.5 2.2 2.2.5 2.9-2.9a4.6 4.6 0 0 1-1.3 5.5 4.6 4.6 0 0 1-6.3-.7z" fill="T"/><path d="M12.6 11.5L4.2 19.9"/>'],
+  orbital: [IC.cyan, IC.cyan, '<rect x="10" y="2.5" width="4" height="3" fill="S" stroke="none"/><path d="M3.5 2.5h5v3h-5zM15.5 2.5h5v3h-5z"/><path d="M10.4 8.5h3.2l1.6 10h-6.4z" fill="T"/><path d="M4 20.5c2-1.3 4.7-2 8-2s6 .7 8 2" stroke="#ff7a2f"/>'],
+  turret: [IC.w, IC.orange, '<path d="M6.5 9h8v6h-8z" fill="T"/><path d="M14.5 10.6h7M14.5 13.4h5"/><path d="M10.5 15v3M10.5 18l-5 3.5M10.5 18l5 3.5"/><circle cx="9.5" cy="12" r="1.4" fill="#3fd0ff" stroke="none"/>'],
+  drone: [IC.w, IC.cyan, '<rect x="9" y="9" width="6" height="6" fill="T"/><path d="M9 9L7 7M15 9l2-2M9 15l-2 2M15 15l2 2"/><circle cx="5.2" cy="5.2" r="2.7"/><circle cx="18.8" cy="5.2" r="2.7"/><circle cx="5.2" cy="18.8" r="2.7"/><circle cx="18.8" cy="18.8" r="2.7"/><circle cx="12" cy="12" r="1.3" fill="S" stroke="none"/>'],
+  flamer: [IC.w, IC.orange, '<path d="M2.5 10.5h6v3h-6z" fill="T"/><path d="M8.5 11.2h2.5v1.6H8.5"/><path d="M11.5 12c2.8-3.6 6.3-5.8 10-6-1.5 1.7-1.5 3.1-.5 4.3-1.1.7-1.1 1.9 0 2.6-1 .9-.9 2.4.4 3.3-3.7.1-7.1-1.4-9.9-4.2z" fill="T" stroke="#ff7a2f"/>'],
+  shockmine: [IC.cyan, IC.cyan, '<ellipse cx="12" cy="16.5" rx="8" ry="3.5" fill="T"/><path d="M8 16.5a4 4 0 0 1 8 0M12 12.5V10"/><path d="M5 6.5l2 2-1.5 1 2 2M19 6.5l-2 2 1.5 1-2 2M12.6 2.5L11 5.5h2l-1.6 3" stroke="#ffd23a"/>'],
+});
+
 function svgIcon(name) {
   const [c, t, body] = ICON[name];
   const tint = t + '38';
