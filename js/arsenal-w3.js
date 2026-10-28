@@ -85,8 +85,8 @@ addWeapons({
   // et étourdit les monstres touchés.
   waraxe: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 1.5 * 1.3 * 1.3 * 1.3, cd: 1.0 * h, n: 4, R: 70 * ar, imp: A * 0.9 * 1.3 * 1.3 * 1.3, bolt: A * 1.6 * 1.3 }
-      : { dmg: A * 1.5 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 1.05 : 1.3) * h, n: 1 + L(3) + L(5), R: (L(4) ? 62 : 50) * ar, imp: A * 0.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), bolt: 0 },
+      ? { dmg: A * 1.15 * 1.3 * 1.3 * 1.3, cd: 1.0 * h, n: 4, R: 70 * ar, imp: A * 0.7 * 1.3 * 1.3 * 1.3, bolt: A * 1.2 * 1.3 }
+      : { dmg: A * 1.15 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 1.05 : 1.3) * h, n: 1 + L(3) + L(5), R: (L(4) ? 62 : 50) * ar, imp: A * 0.7 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), bolt: 0 },
     lines: [D_('Dégâts par hache'), ['imp', 'Éclat à l\'impact', fI], ['n', 'Haches', fN], ['bolt', 'Foudre à l\'impact', orNo(fI)], CD(), ['R', 'Zone d\'impact', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -156,8 +156,8 @@ addWeapons({
   // géantes qui étourdissent (stun) et soignent Ragnar pour chaque monstre touché (au plus 10 par onde).
   warcry: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 1.9 * 1.3 * 1.4 * 1.3, cd: 2.6 * h, R: 250 * ar, n: 3, stun: 0.7, heal: 0.004 }
-      : { dmg: A * 1.9 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(4) ? 2.9 : 3.6) * h, R: (L(3) ? 205 : 170) * ar, n: 1 + L(5), stun: 0, heal: 0 },
+      ? { dmg: A * 1.55 * 1.3 * 1.4 * 1.3, cd: 2.6 * h, R: 250 * ar, n: 3, stun: 0.7, heal: 0.004 }
+      : { dmg: A * 1.55 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), cd: (L(4) ? 2.9 : 3.6) * h, R: (L(3) ? 205 : 170) * ar, n: 1 + L(5), stun: 0, heal: 0 },
     lines: [D_('Dégâts de l\'onde'), ['R', 'Portée', fI], ['n', 'Ondes', fN], ['stun', 'Étourdit', orNo(secS)], ['heal', 'Soin par ennemi', orNo(v => pctS(v) + ' des PV')], CD()],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -251,8 +251,8 @@ addWeapons({
   // tourbillon de feu qui aspire les monstres vers lui et explose à la fin (dégâts ×3, gros recul).
   whirlwind: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.85 * 1.3 * 1.3 * 1.35, cd: 2.2 * h, R: 140 * ar, dur: 2.6, rate: 0.17, pull: 1 }
-      : { dmg: A * 0.85 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 2.7 : 3.4) * h, R: (L(3) ? 104 : 86) * ar, dur: L(3) ? 1.9 : 1.5, rate: L(5) ? 0.2 : 0.25, pull: 0 },
+      ? { dmg: A * 1.1 * 1.3 * 1.3 * 1.35, cd: 2.2 * h, R: 140 * ar, dur: 2.6, rate: 0.17, pull: 1 }
+      : { dmg: A * 1.1 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 2.7 : 3.4) * h, R: (L(3) ? 104 : 86) * ar, dur: L(3) ? 1.9 : 1.5, rate: L(5) ? 0.2 : 0.25, pull: 0 },
     lines: [D_('Dégâts par coup'), ['R', 'Rayon', fI], ['dur', 'Durée', secS], ['rate', 'Frappe toutes les', secS], ['pull', 'Aspire les ennemis', yes], CD()],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -302,8 +302,8 @@ addWeapons({
   // 4 fouets tout autour qui immobilisent (root s), et le poison passe à 2 voisins quand un monstre empoisonné meurt.
   thorns: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 1.0 * 1.3 * 1.3, cd: 1.15 * h, n: 4, len: 290 * ar, psn: A * 0.32 * 1.3 * 1.4 * 1.4, root: 0.6, spread: 1 }
-      : { dmg: A * 1.0 * (L(2) ? 1.3 : 1), cd: (L(5) ? 1.3 : 1.6) * h, n: 1 + L(3) + L(5), len: (L(4) ? 250 : 210) * ar, psn: A * 0.32 * (L(2) ? 1.3 : 1) * (L(4) ? 1.4 : 1), root: 0, spread: 0 },
+      ? { dmg: A * 1.3 * 1.3 * 1.3, cd: 1.15 * h, n: 4, len: 290 * ar, psn: A * 0.42 * 1.3 * 1.4 * 1.4, root: 0.6, spread: 1 }
+      : { dmg: A * 1.3 * (L(2) ? 1.3 : 1), cd: (L(5) ? 1.3 : 1.6) * h, n: 1 + L(3) + L(5), len: (L(4) ? 250 : 210) * ar, psn: A * 0.42 * (L(2) ? 1.3 : 1) * (L(4) ? 1.4 : 1), root: 0, spread: 0 },
     lines: [D_('Dégâts du fouet'), ['psn', 'Poison (toutes les 0,5 s)', fI], ['n', 'Fouets', fN], ['root', 'Immobilise', orNo(secS)], ['spread', 'Poison contagieux', yes], ['len', 'Longueur', fI], CD()],
     size: 'len',
     fire(run, w, S, E, dt) {
@@ -368,8 +368,8 @@ addWeapons({
   // (Esprits ancestraux) : 6 grands esprits dorés, éclats plus larges, ils brûlent aussi les monstres qu'ils traversent (burn).
   wisps: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 1.6 * 1.3 * 1.3 * 1.3, cd: 1.0 * h, n: 6, R: 70 * ar, heal: 0.004, burn: A * 0.45 }
-      : { dmg: A * 1.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 1.3 : 1.7) * h, n: 2 + L(3) + L(5), R: (L(4) ? 54 : 44) * ar, heal: 0.003, burn: 0 },
+      ? { dmg: A * 2.1 * 1.3 * 1.3 * 1.3, cd: 1.0 * h, n: 6, R: 70 * ar, heal: 0.004, burn: A * 0.6 }
+      : { dmg: A * 2.1 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: (L(4) ? 1.3 : 1.7) * h, n: 2 + L(3) + L(5), R: (L(4) ? 54 : 44) * ar, heal: 0.003, burn: 0 },
     lines: [D_('Dégâts par éclat'), ['n', 'Esprits', fN], ['heal', 'Soin par éclat', v => pctS(v) + ' des PV'], ['burn', 'Brûlent au passage', orNo(fI)], CD('Renaissent en'), ['R', 'Zone d\'éclat', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -428,8 +428,8 @@ addWeapons({
   // coupé. Niveau 4 : une 2e nuée tourne autour d'elle. Évoluée (Tempête de cerisiers) : 3 grandes nuées dorées.
   petals: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.5 * 1.35 * 1.4 * 1.35, cd: 0.3 * h, n: 3, R: 112 * ar }
-      : { dmg: A * 0.5 * (L(3) ? 1.35 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.34 : 0.4) * h, n: 1 + L(4), R: (L(2) ? 92 : 78) * ar },
+      ? { dmg: A * 0.65 * 1.35 * 1.4 * 1.35, cd: 0.3 * h, n: 3, R: 112 * ar }
+      : { dmg: A * 0.65 * (L(3) ? 1.35 : 1) * (L(5) ? 1.4 : 1), cd: (L(5) ? 0.34 : 0.4) * h, n: 1 + L(4), R: (L(2) ? 92 : 78) * ar },
     lines: [D_('Dégâts par coupure'), ['n', 'Nuées', fN], ['R', 'Rayon', fI], CD('Coupe toutes les')],
     size: 'R',
     fire(run, w, S, E, dt) {

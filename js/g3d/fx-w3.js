@@ -111,11 +111,13 @@ const DRAW = {
       const step = 24, n = Math.floor(f.d / step), lava = f.lava > 0, done = f.d >= f.len, fade = done ? clamp(1 - f.t / (lava ? W3B.lavaT : 0.55), 0, 1) : 1;
       let px = f.x, py = f.y;
       for (let i = 1; i <= n; i++) {
-        const di = i * step, j = Math.sin(i * 12.9898 + f.seed) * f.w * 0.16, x = f.x + f.cx * di - f.cy * j, y = f.y + f.cy * di + f.cx * j;
-        // fissure : trait sombre au sol, cœur de magma (lave : plus vif et qui palpite)
-        fx.line(px * S, 0.08, py * S, x * S, 0.08, y * S, f.w * 0.2 * S, '#1a0c06', 0.85 * fade);
-        const glowA = lava ? (0.7 + Math.sin(t * 9 + i) * 0.25) * fade : 0.7 * fade * clamp(1 - (f.d - di) / 200 - (done ? f.t * 2 : 0), 0, 1);
-        if (glowA > 0.02) fx.line(px * S, 0.1, py * S, x * S, 0.1, y * S, f.w * (lava ? 0.11 : 0.07) * S, lava ? '#ff6a1a' : EMBER, glowA);
+        const di = i * step, j = Math.sin(i * 12.9898 + f.seed) * f.w * 0.28, x = f.x + f.cx * di - f.cy * j, y = f.y + f.cy * di + f.cx * j;
+        // fissure : sol fendu (taches sombres en zigzag), trait noir, cœur de magma (lave : plus vif et qui palpite)
+        fx.ringAt(x, y, f.w * (0.3 + 0.1 * Math.sin(i * 7.3 + f.seed)), '#24140a', 0.6 * fade, 0.001, 1, 1, 0, 0, 0, 0, false, 0.066);
+        fx.line(px * S, 0.08, py * S, x * S, 0.08, y * S, f.w * 0.16 * S, '#120804', 0.9 * fade);
+        const glowA = lava ? (0.75 + Math.sin(t * 9 + i) * 0.25) * fade : 0.8 * fade * clamp(1 - (f.d - di) / 220 - (done ? f.t * 2 : 0), 0, 1);
+        if (glowA > 0.02) fx.line(px * S, 0.1, py * S, x * S, 0.1, y * S, f.w * (lava ? 0.12 : 0.07) * S, lava ? '#ff6a1a' : EMBER, glowA);
+        if (lava && i % 2 === 0) fx.ringAt(x, y, f.w * 0.26, '#ff5a1a', 0.45 * glowA, 0.001, 1, 1, 0, 0, 0, 0, true, 0.07);
         if (lava && i % 3 === 0) fx.glow(x, y, 6, f.w * 0.9, '#ff5a1a', 0.35 * fade);
         if (lava && Math.random() < 0.02 * fade && fx.sparks.length < 180) fx.sparks.push({ x, y, z: 4, vx: 0, vy: 0, vz: rand(60, 140), life: 0.5, max: 0.5, c: Math.random() < 0.5 ? '#ffb02a' : '#ff4a1a', w: 2.4 });
         // rochers qui jaillissent derrière le front, puis rentrent dans le sol
@@ -168,11 +170,11 @@ const DRAW = {
       for (let i = 1; i <= n; i++) {
         const u = i / n, d = 8 + (L - 8) * u, off = Math.sin(u * 7 - v.t * 40) * wave * v.side * (1 - u * 0.5);
         const x = p.x + v.cx * d - v.cy * off, y = p.y + v.cy * d + v.cx * off, z = 26 - u * 16;
-        fx.line(px * S, pz * S, py * S, x * S, z * S, y * S, (E ? 0.62 : 0.5) * (1 - u * 0.35), VINE, 0.95);
-        fx.line(px * S, pz * S, py * S, x * S, z * S, y * S, (E ? 0.24 : 0.18) * (1 - u * 0.35), E ? '#d07aff' : '#9ae05a', 0.9);
+        fx.line(px * S, pz * S, py * S, x * S, z * S, y * S, (E ? 1.2 : 1.0) * (1 - u * 0.35), VINE, 0.95);
+        fx.line(px * S, pz * S, py * S, x * S, z * S, y * S, (E ? 0.45 : 0.36) * (1 - u * 0.35), E ? '#d07aff' : '#9ae05a', 0.95);
         // épines de chaque côté, pointées vers l'extérieur
         const sd = i % 2 ? 1 : -1, a = Math.atan2(v.cy, v.cx) + sd * 1.25;
-        Tp.put(x * S, z * S, y * S, -a, (E ? 1.15 : 0.95) * (1 - u * 0.3));
+        Tp.put(x * S, z * S, y * S, -a, (E ? 1.9 : 1.6) * (1 - u * 0.3));
         if (E && i % 3 === 0) fx.glow(x, y, z, 10, '#ff7ab8', 0.6);
         px = x; py = y; pz = z;
       }
@@ -194,9 +196,10 @@ const DRAW = {
     for (const b of s.list) {
       if (b.m === 2 && b.g <= 0.05) continue;
       const g = b.m === 2 ? b.g * 0.6 : 1, k = (E ? 1.45 : 1) * g, fl = 1 + Math.sin(t * 22 + b.ph) * 0.12;
-      fx.glow(b.x, b.y, b.z, 17 * k * fl, c2, 0.55);
-      fx.glow(b.x, b.y, b.z, 8 * k, c, 0.95);
-      fx.star(b.x, b.y, b.z + 1, 5 * k, W, 0.9);
+      fx.glow(b.x, b.y, b.z, 30 * k * fl, c2, 0.6);
+      fx.ringAt(b.x, b.y, 12 * k, c2, 0.5, 0.25, 0.1, 1, 0, 0, 0, 0.4, true, 0.09);
+      fx.glow(b.x, b.y, b.z, 14 * k, c, 1);
+      fx.star(b.x, b.y, b.z + 1, 9 * k, W, 1);
       // traînée de flamme (derrière le mouvement)
       const d = Math.hypot(b.dx, b.dy) || 1, L = (b.m === 1 ? 34 : 14) * k, ux = b.dx / d, uy = b.dy / d;
       fx.line(b.x * S, b.z * S, b.y * S, (b.x - ux * L) * S, (b.z + 4) * S, (b.y - uy * L) * S, 0.5 * k, c2, 0.55);
@@ -210,11 +213,11 @@ const DRAW = {
     for (const z of s.list) {
       const R = z.R, a = z.g, sg = z.i % 2 ? -1 : 1;
       // tapis de pétales au sol, anneau rose en tirets qui tourne
-      fx.ringAt(z.x, z.y, R, E ? '#ffcf6a' : PINK, 0.13 * a, 0.001, 1, 1, 0, 0, 0, 0, true, 0.08);
-      fx.ringAt(z.x, z.y, R, E ? GOLD : '#ffb8e4', 0.6 * a, 0.035, 0, 1, t * 0.7 * sg, 12, 0.5 * sg, 0.4, true, 0.1);
+      fx.ringAt(z.x, z.y, R, E ? '#ffcf6a' : PINK, 0.2 * a, 0.001, 1, 1, 0, 0, 0, 0, true, 0.08);
+      fx.ringAt(z.x, z.y, R, E ? GOLD : '#ffb8e4', 0.9 * a, 0.06, 0, 1, t * 0.7 * sg, 12, 0.5 * sg, 0.5, true, 0.1);
       for (let j = 0; j < m; j++) { // pétales qui tourbillonnent en tombant (positions tirées du temps : aucun état)
         const an = t * (1.4 + fract(j * 0.37) * 0.8) * sg + j * 2.39996, rr = R * (0.2 + 0.78 * fract(j * 0.618 + z.i * 0.3)), h = 74 - (t * (38 + (j % 4) * 6) + j * 17.3) % 74;
-        const x = z.x + Math.cos(an) * rr, y = z.y + Math.sin(an) * rr * 0.9, fl = Math.sin(t * 7 + j * 1.3), kk = (E ? 0.62 : 0.52) * a;
+        const x = z.x + Math.cos(an) * rr, y = z.y + Math.sin(an) * rr * 0.9, fl = Math.sin(t * 7 + j * 1.3), kk = (E ? 1.05 : 0.9) * a;
         const i = P.put(x * S, (h + 3) * S, y * S, t * 3 + j, kk * (0.45 + 0.55 * Math.abs(fl)), kk, kk);
         P.tint(i, col(E ? (j % 3 ? GOLD : '#fff0c8') : j % 4 === 0 ? W : j % 2 ? PINK : '#ff6ab0'));
       }
