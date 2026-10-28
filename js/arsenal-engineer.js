@@ -116,8 +116,8 @@ addWeapons({
   // blindées à double canon, tirs bien plus rapides, et un tir sur 4 est un missile qui suit sa cible et explose.
   turret: {
     stats: ({ A, ar, h, L, E, run }) => E
-      ? { dmg: A * 0.95 * 1.3 * 1.3 * 1.35, cd: 2.4 * h, n: 4, rate: 0.3 * h, R: 300 * ar, dur: 9 * gk(run), mis: A * 0.95 * 1.3 * 1.3 * 3.2, mR: 70 * ar }
-      : { dmg: A * 0.95 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: 3.2 * h, n: 2 + L(3) + L(5), rate: (L(4) ? 0.42 : 0.55) * h, R: 260 * ar, dur: 7 * gk(run), mis: 0, mR: 0 },
+      ? { dmg: A * 1.0 * 1.3 * 1.3 * 1.35, cd: 2.4 * h, n: 4, rate: 0.3 * h, R: 300 * ar, dur: 9 * gk(run), mis: A * 1.0 * 1.3 * 1.3 * 3.2, mR: 70 * ar }
+      : { dmg: A * 1.0 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: 3.2 * h, n: 2 + L(3) + L(5), rate: (L(4) ? 0.42 : 0.55) * h, R: 260 * ar, dur: 7 * gk(run), mis: 0, mR: 0 },
     lines: [D_('Dégâts par tir'), ['n', 'Tourelles', fN], ['rate', 'Tir toutes les', secS], ['mis', 'Missiles', v => (v ? fI(v) : 'non')], ['dur', 'Durée', secS], CD('Nouvelle tourelle toutes les'), ['R', 'Portée', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
