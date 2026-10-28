@@ -20,13 +20,13 @@ function gear(s, col, x, y, z, r, { ry = 0, n = 8, glow = 0, hub = null, th = 0.
   s.add('cyl:8', hub || shade(col, -0.3), B.clone().multiply(RX(PI / 2)).multiply(SC(r * 0.55, th + 0.03, r * 0.55)), { grad: 0, glow: glow * 0.6 });
 }
 // petit drone (vue de 3/4) : corps, œil, 4 bras et disques d'hélices
-function miniDrone(s, x, y, z, k, body, eye) {
+function miniDrone(s, x, y, z, k, body, eye, rotor = '#8a96aa') {
   s.put('rbox:0.3', body, x, y, z, 0.26 * k, 0.12 * k, 0.26 * k, 0, 0, 0, { grad: 0.1 });
   s.put('sph:6:4', eye, x, y - 0.02 * k, z + 0.13 * k, 0.09 * k, 0.09 * k, 0.06 * k, 0, 0, 0, { grad: 0, glow: 1 });
   for (let i = 0; i < 4; i++) {
     const a = PI / 4 + i * PI / 2, cx = Math.cos(a) * 0.2 * k, cz = Math.sin(a) * 0.2 * k;
     s.put('box', DARK, x + cx / 2, y + 0.02 * k, z + cz / 2, 0.22 * k, 0.03 * k, 0.04 * k, 0, -a, 0, { grad: 0 });
-    s.put('cyl:8', '#d8f4ff', x + cx, y + 0.05 * k, z + cz, 0.2 * k, 0.015, 0.2 * k, 0, 0, 0, { grad: 0, glow: 0.4 });
+    s.put('cyl:8', rotor, x + cx, y + 0.05 * k, z + cz, 0.2 * k, 0.015, 0.2 * k, 0, 0, 0, { grad: 0 });
   }
 }
 
@@ -130,7 +130,7 @@ function buildEngineer(sh, C, evo, K) {
     H.put('rbox:0.3', DARK, 0, 2.13, 0.08, 1.04, 0.14, 0.8, -0.12, 0, 0, { grad: 0 });
     H.put('rbox:0.3', neon, 0, 2.12, 0.46, 0.78, 0.14, 0.06, -0.15, 0, 0, { grad: 0, glow: 1.1 });
   } else {
-    H.put('tor:0.12:4:14', DARK, 0, 2.15, 0.0, 1.0, 1.0, 0.98, PI / 2 - 0.15, 0, 0, { grad: 0 }); // sangle
+    H.put('tor:0.06:4:16', DARK, 0, 2.14, -0.04, 1.04, 1.0, 1.0, PI / 2 - 0.12, 0, 0, { grad: 0 }); // sangle
     for (const sd of [1, -1]) {
       H.put('cyl:10', omega ? BRASS : '#a8743a', 0.2 * sd, 2.2, 0.4, 0.3, 0.12, 0.3, PI / 2 - 0.5, 0, 0, { grad: 0 });
       H.put('cyl:10', omega ? '#ffd23a' : neon, 0.2 * sd, 2.22, 0.45, 0.22, 0.04, 0.22, PI / 2 - 0.5, 0, 0, { grad: 0, glow: 0.5 + ng * 0.4 });
@@ -144,7 +144,7 @@ function buildEngineer(sh, C, evo, K) {
   W.put('rbox:0.2', steelW, sx, 0.86 + 0.55 * kk, sz, 0.15 * kk, 1.0 * kk, 0.1, 0, 0, 0, { grad: 0.1 });
   W.put('rbox:0.3', omega ? BRASS : '#c83a2a', sx, 0.66, sz, 0.2, 0.44, 0.15, 0, 0, 0, { grad: 0.1 });
   W.put('cyl:6', DARK, sx, 0.4, sz, 0.12, 0.06, 0.12, 0, 0, 0, { grad: 0 });
-  W.add('arc:0.15:4.4:12', steelW, MT(sx, hy, sz).multiply(RZ(PI / 2 - 5.34)).multiply(SC(0.6 * kk, 0.6 * kk, 0.8)), { grad: 0.1 });
+  W.add('arc:0.21:4.4:12', steelW, MT(sx, hy, sz).multiply(RZ(PI / 2 - 5.34)).multiply(SC(0.56 * kk, 0.56 * kk, 0.7)), { grad: 0.1 });
   W.put('cyl:8', steelW, sx, hy - 0.17 * kk, sz, 0.3 * kk, 0.12, 0.3 * kk, PI / 2, 0, 0, { grad: 0.1 }); // vis de réglage
   W.put('box', DARK, sx, hy - 0.17 * kk, sz + 0.07, 0.2 * kk, 0.03, 0.02, 0, 0, 0, { grad: 0 });
   if (evo >= 2) W.put('box', neon, sx, 0.86 + 0.6 * kk, sz + 0.055, 0.05, 0.7 * kk, 0.02, 0, 0, 0, { grad: 0, glow: 1 }); // rainure d'énergie
@@ -160,7 +160,7 @@ function buildEngineer(sh, C, evo, K) {
     OF.put('box', neon, 0.53, 0.94, 0.11, 0.13, 0.02, 0.11, 0, 0, 0, { grad: 0, glow: 0.9 });
   }
   // ---- stades ----
-  if (cyber) for (let i = 0; i < 2; i++) { const a = i * PI; miniDrone(FL, Math.cos(a) * 0.95, 1.55 + i * 0.2, Math.sin(a) * 0.95, 1.1, '#e8ecf4', neon); } // mini-drones en orbite
+  if (cyber) for (let i = 0; i < 2; i++) { const a = i * PI; miniDrone(FL, Math.cos(a) * 1.0, 1.15 + i * 0.3, Math.sin(a) * 1.0, 0.95, '#ff8a2a', neon); } // mini-drones en orbite
   if (omega) {
     // ailes de plaques chromées bordées de lumière, grande roue dentée lumineuse dans le dos, étincelles en orbite
     for (const [bn, sd] of [['wingL', 1], ['wingR', -1]]) {
