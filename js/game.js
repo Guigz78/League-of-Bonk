@@ -65,8 +65,8 @@ function topbar() {
   const dot = !u ? '' : `<i class="sync ${st}"></i>`;
   return `<header class="topbar">
     <div class="tb-brand">League<span>of Bonk</span></div>
-    <span class="cur" aria-label="Pièces de forge">${iconImg('part', 18)}<b id="partsN">${fmt(partsTotal())}</b></span>
-    <span class="cur gold" aria-label="Or">${iconImg('gold', 18)}<b id="goldN">${fmt(save.gold)}</b></span>
+    <button class="cur" data-act="cur" data-k="parts" aria-label="Pièces de forge">${iconImg('part', 18)}<span class="cur-v"><b id="partsN">${fmt(partsTotal())}</b><small>Pièces</small></span></button>
+    <button class="cur gold" data-act="cur" data-k="gold" aria-label="Or">${iconImg('gold', 18)}<span class="cur-v"><b id="goldN">${fmt(save.gold)}</b><small>Or</small></span></button>
     <button class="icon-btn account" data-act="settings" aria-label="Compte et options">
       ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 22)}${dot}
     </button>
@@ -143,6 +143,11 @@ const handlers = {
   sellJunk: () => sellJunk(),
   chests: () => chestScreen(() => home('adventure')),
   defis: () => defisScreen(() => home()),
+  // touche une monnaie : à quoi elle sert et où l'obtenir
+  cur: el => toast(el.dataset.k === 'gold'
+    ? `${iconImg('gold', 16)} <b>Or</b> : améliorations de la Boutique, bonus et Forge. Gagné en partie et dans les coffres.`
+    : `${iconImg('part', 16)} <b>Pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
+  guide: () => { save.guideOff = true; persist(); home(); },
   forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
   craft: () => doCraft(),
   fuse: el => doFuse(el.dataset.all === '1'),
@@ -274,6 +279,7 @@ function adventureTab() {
       <div class="sc-info">
         <span class="sc-role">${esc(c.role)}</span>
         <h2 class="sc-name">${esc(c.name)}</h2>${heroTitle()}
+        <button class="sc-lvl" data-act="changeClass" aria-label="Niveau du champion">${iconImg('medal', 14)}Niveau ${masteryLv(save.cls)} du champion</button>
         <button class="sc-stats" data-act="allStats" aria-label="Toutes les statistiques">
           <span><small>PV</small><b>${fmt(st.hp)}</b></span><span><small>ATQ</small><b>${fmt(st.atk)}</b></span>
           <span><small>Critique</small><b>${pct(st.crit)}</b></span><span><small>Vitesse</small><b>${pct(st.speed)}</b></span>
@@ -286,10 +292,26 @@ function adventureTab() {
       <span class="pc-txt"><b>Jouer <i class="pc-dtag" style="--dc:${D.color}">${esc(D.name)}</i></b><small>Monde ${pz + 1} · ${esc(Z.name)}</small></span>
       <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
     </button>
+    ${guideCard()}
     ${quick}
     ${defisTile()}
     <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
     <div class="zones">${zones}</div>`;
+}
+
+// « Comment jouer » : 4 étapes d'une expédition, affiché les premières parties (fermable)
+function guideCard() {
+  if (save.guideOff || (save.stats.runs || 0) >= 6) return '';
+  const step = (n, ic, b, s) => `<li><i class="gd-n">${n}</i>${iconImg(ic, 22)}<span><b>${b}</b><small>${s}</small></span></li>`;
+  return `<section class="guide-card">
+      <div class="gd-h"><b>Comment jouer</b><button class="link" data-act="guide">Compris</button></div>
+      <ol>
+        ${step(1, 'arrow', 'Déplacez-vous', 'Glissez le doigt : votre champion attaque tout seul.')}
+        ${step(2, 'upg', 'Montez de niveau', 'Ramassez les gemmes d\'XP et choisissez une amélioration à chaque niveau.')}
+        ${step(3, 'crown', 'Battez le boss', 'Suivez la flèche rouge jusqu\'à l\'autel du boss, puis battez-le.')}
+        ${step(4, 'portal', 'Prenez le portail', 'Niveau suivant, plus dur. Au niveau 3 : le giga boss !')}
+      </ol>
+    </section>`;
 }
 
 // cases de difficulté battues sous le nom du monde

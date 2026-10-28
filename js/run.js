@@ -42,7 +42,9 @@ const HARD_CAP = 250;   // monstres simultanés au maximum (rendu instancié)
 // WMUL : multiplicateur de dégâts par arme (équilibrage des classes : chaque champion commence avec la sienne)
 export const WMUL = { arrows: 0.82, beam: 1.3, sword: 1.25, scythe: 1.1 };
 // hp / dmg : PV et dégâts de tous les monstres (compensent la puissance des évolutions d'armes, raretés et combos)
-export const BAL = { comboXp: 0.1, hp: 1.3, dmg: 1.12, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
+export const BAL = { xpA: 5, xpB: 4, xpE: 1.6, comboXp: 0.1, hp: 1.3, dmg: 1.12, bossHp: 50, bossDmg: 1.4, zHp: 0.5, zDmg: 0.25, zBoss: 1.1, stHp: 1.15, stDmg: 1.0, stBoss: 2.35, carryHp: 300, carryDmg: 700 };
+// XP pour passer du niveau L au suivant (partie) : xpA + xpB × (L − 1) + L^xpE, de plus en plus long à chaque niveau
+const xpNeed = L => Math.round(BAL.xpA + BAL.xpB * (L - 1) + Math.pow(L, BAL.xpE));
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -180,7 +182,7 @@ export class Run {
       maxHp: st.hp, hp: st.hp, atk: st.atk, crit: st.crit, regen: st.regen * 0.1 * this.diff.heal,
       speed: 160 * st.speed, magnet: 95 * st.magnet * (save.pet === 'phenix' ? 1.4 : 1),
       armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1, critMul: 2,
-      inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: 5, ult: 0,
+      inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: xpNeed(1), ult: 0,
       weapons: [], tomes: {}, boons: {}, evo: 0,
       tv: {}, bv: {}, tr: {}, // valeurs cumulées des tomes / bénédictions (selon la rareté des cartes), rareté max par tome
     };
@@ -232,7 +234,7 @@ export class Run {
     this.setupWorld();
     if (has('depart')) { // départ éclair : niveau 4, 3 améliorations à choisir tout de suite
       const p = this.p;
-      p.level = 4; p.xpNext = Math.round(5 + 3 * 4 + Math.pow(4, 1.6)); this.pending = 3;
+      p.level = 4; p.xpNext = xpNeed(4); this.pending = 3;
     }
   }
 
@@ -2492,7 +2494,7 @@ export class Run {
     while (p.xp >= p.xpNext) {
       p.xp -= p.xpNext;
       p.level++;
-      p.xpNext = Math.round(5 + (p.level - 1) * 4 + Math.pow(p.level, 1.6));
+      p.xpNext = xpNeed(p.level);
       this.pending++;
       this.emit('levelup', { level: p.level });
     }
@@ -2633,7 +2635,7 @@ export class Run {
       : this.mini && !this.mini.dead ? 'Battez le champion !'
       : this.phase === 'build' && this.swarms.length && this.swarms[0] - this.time < 8 ? 'Une horde approche !'
       : this.phase === 'breather' ? 'Répit…'
-      : this.time < 25 ? 'Survivez !' : 'Trouvez l\'autel';
+      : this.time < 25 ? 'Survivez et montez de niveau !' : 'Allez à l\'autel du boss';
     lbl.classList.toggle('hot', ot || left < 30 || !!this.portal || (this.phase === 'build' && this.swarms.length > 0 && this.swarms[0] - this.time < 8));
     $('#killsN').textContent = cnum(this.kills);
     $('#goldRun').textContent = cnum(this.gold);

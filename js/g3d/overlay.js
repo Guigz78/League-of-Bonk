@@ -36,6 +36,8 @@ export class Overlay {
     this.flashA = 0.55; this.flashC = '235,225,255'; this.edgeA = 0; this.edgeC = '255,40,40'; this.otPulse = 0; this.flashHurt = 0;
     this.icons = {};
     for (const k in TOTEMS) { const im = new Image(); im.src = iconURL(TOTEMS[k].icon); this.icons[k] = im; }
+    // pictogrammes des flèches de bord d'écran (on sait ce qu'il y a au bout de chaque flèche)
+    this.ico = {}; for (const k of ['crown', 'chest', 'skull', 'star']) { const im = new Image(); im.src = iconURL(k); this.ico[k] = im; }
     this.vign = null;
   }
 
@@ -250,7 +252,7 @@ export class Overlay {
       if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 5) * 6, '#8a3aff', '#7ae8ff', 'PORTAIL', 1.1);
     } else if (Al && !Al.used && !run.arena && Math.hypot(Al.x - p.x, Al.y - p.y) > 220) {
       const [x, y] = this.gfx.ws(Al.x, Al.y, 120);
-      if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 4) * 5, '#d81e2e', '#ff8a5a', 'BOSS', 0.9);
+      if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 4) * 5, '#d81e2e', '#ff8a5a', 'AUTEL DU BOSS', 0.9);
     }
   }
   // repère carré : étiquette sombre à angles coupés, liseré de couleur à gauche, flèche pleine vers le bas
@@ -303,26 +305,35 @@ export class Overlay {
     };
     const off = o => { const [x, y, ok] = this.gfx.ws(o.x, o.y, 20); return !ok || x < 0 || x > vw || y < top - 40 || y > vh; };
     const pts = [];
-    if (run.boss && !run.boss.dead) pts.push([run.boss, '#ff2a4a', 15]);
-    for (const c of run.dropChests) if (!c.open) pts.push([c, '#c06aff', 11]);
-    for (const e of run.enemies) if (e.elite && !e.dead && !e.boss) pts.push([e, '#c06aff', 10]);
-    for (const s of run.shrines) if (!s.used && Math.hypot(s.x - p.x, s.y - p.y) < 1000) pts.push([s, '#4fd0ff', 9]);
-    for (const T0 of run.totems || []) if (!T0.used && Math.hypot(T0.x - p.x, T0.y - p.y) < 900) pts.push([T0, TOTEMS[T0.kind]?.color || '#ffffff', 9]);
-    for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 800) pts.push([c, '#ffcf40', 8]);
-    for (const it of run.pickups) if (it.type === 'loot' && !it.hidden && Math.hypot(it.x - p.x, it.y - p.y) < 900) pts.push([it, LOOT_GLOW[it.tier] || '#ffffff', 9]);
+    // [cible, couleur, taille, pictogramme] : boss, coffres d'élite, élites, autels de bonus, totems, coffres, butin
+    if (run.boss && !run.boss.dead) pts.push([run.boss, '#ff2a4a', 15, this.ico.crown]);
+    for (const c of run.dropChests) if (!c.open) pts.push([c, '#c06aff', 11, this.ico.chest]);
+    for (const e of run.enemies) if (e.elite && !e.dead && !e.boss) pts.push([e, '#c06aff', 10, this.ico.skull]);
+    for (const s of run.shrines) if (!s.used && Math.hypot(s.x - p.x, s.y - p.y) < 1000) pts.push([s, '#4fd0ff', 9, this.ico.star]);
+    for (const T0 of run.totems || []) if (!T0.used && Math.hypot(T0.x - p.x, T0.y - p.y) < 900) pts.push([T0, TOTEMS[T0.kind]?.color || '#ffffff', 9, this.icons[T0.kind]]);
+    for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 800) pts.push([c, '#ffcf40', 8, this.ico.chest]);
+    for (const it of run.pickups) if (it.type === 'loot' && !it.hidden && Math.hypot(it.x - p.x, it.y - p.y) < 900) pts.push([it, LOOT_GLOW[it.tier] || '#ffffff', 9, this.ico.chest]);
+    // au plus 6 flèches (les plus proches, le boss d'abord) : l'écran reste lisible
+    const d2p = o => (o.x - p.x) ** 2 + (o.y - p.y) ** 2;
+    const shown = pts.filter(([o]) => off(o)).sort((a, b) => (b[0] === run.boss) - (a[0] === run.boss) || d2p(a[0]) - d2p(b[0])).slice(0, 6);
     g.lineJoin = 'round';
-    for (const [o, c, size] of pts) {
-      if (!off(o)) continue;
+    for (const [o, c, size, ic] of shown) {
       const a = dirTo(o), [ax0, ay0] = toEdge(a), b = Math.sin(t * 6) * 2;
       g.save(); g.translate(ax0 - Math.cos(a) * b, ay0 - Math.sin(a) * b); g.rotate(a);
       g.fillStyle = 'rgba(6,8,13,.85)'; g.beginPath(); g.moveTo(size + 3.5, 0); g.lineTo(-size * 0.7 - 2.5, -size * 0.8 - 2.5); g.lineTo(-size * 0.7 - 2.5, size * 0.8 + 2.5); g.closePath(); g.fill();
       g.fillStyle = c; g.beginPath(); g.moveTo(size, 0); g.lineTo(-size * 0.7, -size * 0.8); g.lineTo(-size * 0.7, size * 0.8); g.closePath(); g.fill();
       g.restore();
+      // pictogramme posé juste derrière la flèche (vers le centre de l'écran)
+      if (ic?.complete && ic.naturalWidth) {
+        const S = 18, ix = ax0 - Math.cos(a) * (size + 16), iy = ay0 - Math.sin(a) * (size + 16);
+        g.fillStyle = 'rgba(6,8,13,.78)'; g.fillRect(ix - S / 2 - 3, iy - S / 2 - 3, S + 6, S + 6);
+        g.drawImage(ic, ix - S / 2, iy - S / 2, S, S);
+      }
     }
     // grande flèche vers le portail (ou l'autel du boss avant l'invocation)
     let tg = null, c1, c2, label;
     if (run.portal && run.portal.t > 0.5) { tg = run.portal; c1 = '#8a3aff'; c2 = '#7ae8ff'; label = 'PORTAIL'; }
-    else if (run.altar && !run.altar.used && !run.arena) { tg = run.altar; c1 = '#d81e2e'; c2 = '#ff9a5a'; label = 'BOSS'; }
+    else if (run.altar && !run.altar.used && !run.arena) { tg = run.altar; c1 = '#d81e2e'; c2 = '#ff9a5a'; label = 'AUTEL DU BOSS'; }
     if (!tg) return;
     const [x, y, ok] = this.gfx.ws(tg.x, tg.y, 40);
     if (ok && x > 20 && x < vw - 20 && y > top - 60 && y < vh - 60) return;

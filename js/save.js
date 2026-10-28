@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -53,6 +53,7 @@ export function freshSave() {
     title: null,        // titre affiché sous le nom du champion
     run: null,
     nextId: 1,
+    itemsV: 2,          // échelle des statistiques d'objets (migrateItems)
   };
 }
 
@@ -85,6 +86,7 @@ function migrate(s) {
   renameOld(out);
   migrateL2(out, s);
   migrateL1(out, base, s);
+  migrateItems(out, s);
   return out;
 }
 
@@ -116,6 +118,17 @@ function migrateL2(out, s) {
     out.l2New = true;
   }
   out.l2 = 1;
+}
+
+// équilibrage de l'équipement (une fois, itemsV 2) : les objets déjà possédés passent à l'échelle actuelle
+function migrateItems(out, s) {
+  if ((s.itemsV || 1) >= 2) { out.itemsV = 2; return; }
+  for (const it of out.inventory || []) {
+    const b = { ...(it.base || it.stat || {}) };
+    for (const [k, f] of Object.entries(ITEM_RESCALE)) if (typeof b[k] === 'number') b[k] = AFFIXES[k]?.fmt === 'pct' ? Math.max(0.005, r3(b[k] * f)) : Math.max(1, Math.round(b[k] * f));
+    it.base = b; it.stat = statsAt(b, it.lv || 0);
+  }
+  out.itemsV = 2;
 }
 
 // L1 : compteurs des succès toujours complets (anciennes sauvegardes : boss par champion = parties gagnées avec lui),
@@ -261,7 +274,7 @@ function affixValue(k, ri, zone, mult, r, main = false) {
   const A = AFFIXES[k];
   const v = A.roll[ri] * mult * (0.85 + r() * 0.3) * (main && k === 'regen' ? 2 : 1);
   if (A.fmt === 'pct') return Math.max(0.005, r3(v * (1 + zone * 0.12)));
-  return Math.max(1, Math.round(v * (1 + zone * 0.45)));
+  return Math.max(1, Math.round(v * (1 + zone * 0.35)));
 }
 
 // objet : caractéristique principale + 1 (commun) à 4 (légendaire) bonus, + un effet unique sur les légendaires.
@@ -294,7 +307,7 @@ export function makeBossItem(zone) {
 }
 
 // puissance d'un objet (tri, comparaison, équipement automatique) : chaque bonus converti en « points »
-const POWER = { atk: 3, hp: 0.6, crit: 200, critDmg: 50, lifesteal: 500, haste: 170, speed: 150, area: 90, armor: 350,
+const POWER = { atk: 9, hp: 0.8, crit: 300, critDmg: 50, lifesteal: 500, haste: 170, speed: 150, area: 90, armor: 350,
   regen: 2.5, thorns: 20, dodge: 350, xp: 50, magnet: 25, gold: 50, ult: 45 };
 export function itemPower(it) {
   if (!it) return 0;
@@ -399,8 +412,8 @@ export function canUpgrade(it) {
 export function statsAt(base, lv) {
   const m = 1 + FORGE.upgrade.per * lv, out = {};
   for (const [k, v] of Object.entries(base)) {
-    if (AFFIXES[k]?.fmt === 'pct') out[k] = r3(Math.max(v * m, v + 0.005 * lv));
-    else out[k] = Math.max(Math.round(v * m), k === 'atk' || k === 'hp' ? v + lv : v);
+    if (AFFIXES[k]?.fmt === 'pct') out[k] = r3(Math.max(v * m, v + 0.003 * lv));
+    else out[k] = Math.max(Math.round(v * m), k === 'atk' ? v + Math.ceil(lv / 2) : k === 'hp' ? v + 2 * lv : v);
   }
   return out;
 }
