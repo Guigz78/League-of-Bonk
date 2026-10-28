@@ -116,8 +116,8 @@ addWeapons({
   // blindées à double canon, tirs bien plus rapides, et un tir sur 4 est un missile qui suit sa cible et explose.
   turret: {
     stats: ({ A, ar, h, L, E, run }) => E
-      ? { dmg: A * 0.62 * 1.3 * 1.3 * 1.35, cd: 2.4 * h, n: 4, rate: 0.3 * h, R: 300 * ar, dur: 9 * gk(run), mis: A * 0.62 * 1.3 * 1.3 * 3.2, mR: 70 * ar }
-      : { dmg: A * 0.62 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: 3.2 * h, n: 2 + L(3) + L(5), rate: (L(4) ? 0.42 : 0.55) * h, R: 260 * ar, dur: 7 * gk(run), mis: 0, mR: 0 },
+      ? { dmg: A * 0.95 * 1.3 * 1.3 * 1.35, cd: 2.4 * h, n: 4, rate: 0.3 * h, R: 300 * ar, dur: 9 * gk(run), mis: A * 0.95 * 1.3 * 1.3 * 3.2, mR: 70 * ar }
+      : { dmg: A * 0.95 * (L(2) ? 1.3 : 1) * (L(5) ? 1.3 : 1), cd: 3.2 * h, n: 2 + L(3) + L(5), rate: (L(4) ? 0.42 : 0.55) * h, R: 260 * ar, dur: 7 * gk(run), mis: 0, mR: 0 },
     lines: [D_('Dégâts par tir'), ['n', 'Tourelles', fN], ['rate', 'Tir toutes les', secS], ['mis', 'Missiles', v => (v ? fI(v) : 'non')], ['dur', 'Durée', secS], CD('Nouvelle tourelle toutes les'), ['R', 'Portée', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -156,8 +156,8 @@ addWeapons({
   // tirent des lasers perçants.
   drone: {
     stats: ({ A, ar, h, L, E, run }) => E
-      ? { dmg: A * 0.6 * 1.3 * 1.25 * 1.4, n: 4, rate: 0.32 * h, R: 300 * ar, pierce: 2, dur: 0, cd: 0 }
-      : { dmg: A * 0.6 * (L(3) ? 1.3 : 1) * (L(5) ? 1.25 : 1), n: 1 + L(2) + L(5), rate: 0.4 * h, R: 270 * ar, pierce: 0, dur: (L(4) ? 9 : 7) * gk(run), cd: (L(4) ? 3 : 4) * h },
+      ? { dmg: A * 1.05 * 1.3 * 1.25 * 1.4, n: 4, rate: 0.32 * h, R: 300 * ar, pierce: 2, dur: 0, cd: 0 }
+      : { dmg: A * 1.05 * (L(3) ? 1.3 : 1) * (L(5) ? 1.25 : 1), n: 1 + L(2) + L(5), rate: 0.4 * h, R: 270 * ar, pierce: 0, dur: (L(4) ? 9 : 7) * gk(run), cd: (L(4) ? 3 : 4) * h },
     lines: [D_('Dégâts par tir'), ['n', 'Drones', fN], ['pierce', 'Transperce', fP], ['rate', 'Tir toutes les', secS], ['dur', 'Autonomie', v => (v ? secS(v) : 'illimitée')], CD('Recharge', v => (v ? secS(v) : 'aucune')), ['R', 'Portée', fI]],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -198,8 +198,8 @@ addWeapons({
   // monstres du cône brûlent. Évolué (Napalm) : flammes bleues plus longues et plus larges qui laissent des flaques de feu.
   flamer: {
     stats: ({ A, ar, h, L, E }) => E
-      ? { dmg: A * 0.35 * 1.3 * 1.4 * 1.45, tick: 0.12, R: 230 * ar, arc: 0.95, dur: 2.2, cd: 1.7 * h, pool: A * 0.35 * 1.3 * 1.4 * 1.2, pR: 56 * ar }
-      : { dmg: A * 0.35 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), tick: 0.12, R: (L(3) ? 175 : 145) * ar, arc: L(3) ? 0.8 : 0.62, dur: L(4) ? 1.8 : 1.3, cd: (L(5) ? 1.8 : 2.2) * h, pool: 0, pR: 0 },
+      ? { dmg: A * 0.62 * 1.3 * 1.4 * 1.45, tick: 0.12, R: 230 * ar, arc: 0.95, dur: 2.2, cd: 1.7 * h, pool: A * 0.62 * 1.3 * 1.4 * 1.2, pR: 56 * ar }
+      : { dmg: A * 0.62 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1), tick: 0.12, R: (L(3) ? 175 : 145) * ar, arc: L(3) ? 0.8 : 0.62, dur: L(4) ? 1.8 : 1.3, cd: (L(5) ? 1.8 : 2.2) * h, pool: 0, pR: 0 },
     lines: [D_('Dégâts par brûlure'), ['R', 'Portée', fI], ['arc', 'Ouverture', v => num(v * 180 / Math.PI) + NB + '°'], ['pool', 'Flaques de feu', v => (v ? fI(v) : 'non')], ['dur', 'Jet', secS], CD(), ['tick', 'Brûle toutes les', secS]],
     size: 'R',
     fire(run, w, S, E, dt) {
@@ -251,8 +251,8 @@ addWeapons({
   // plus de mines, et chaque mine est reliée à sa voisine par un arc électrique qui foudroie tout ce qui passe entre elles.
   shockmine: {
     stats: ({ A, ar, h, L, E, run }) => E
-      ? { dmg: A * 1.6 * 1.3 * 1.45, n: 3, cd: 1.7 * h, R: 72 * ar, chain: 6, cdmg: 0.75, dur: 14 * gk(run), arc: A * 0.55 * 1.3 }
-      : { dmg: A * 1.6 * (L(3) ? 1.3 : 1), n: 1 + L(2) + L(5), cd: (L(5) ? 2.2 : 2.8) * h, R: 60 * ar, chain: 2 + L(4) * 2, cdmg: 0.7, dur: 12 * gk(run), arc: 0 },
+      ? { dmg: A * 3 * 1.3 * 1.45, n: 3, cd: 1.7 * h, R: 72 * ar, chain: 6, cdmg: 0.75, dur: 14 * gk(run), arc: A * 1.3 }
+      : { dmg: A * 3 * (L(3) ? 1.3 : 1), n: 1 + L(2) + L(5), cd: (L(5) ? 2.2 : 2.8) * h, R: 60 * ar, chain: 2 + L(4) * 2, cdmg: 0.7, dur: 12 * gk(run), arc: 0 },
     lines: [D_('Dégâts de la décharge'), ['n', 'Mines', fN], ['chain', 'Sauts de l\'éclair', fN], ['arc', 'Arcs entre les mines', v => (v ? fI(v) : 'non')], CD(), ['R', 'Zone', fI], ['dur', 'Durée', secS]],
     size: 'R',
     fire(run, w, S, E, dt) {
