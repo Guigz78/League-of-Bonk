@@ -888,6 +888,7 @@ export const TITLES = {
   archiviste:  { name: 'Archiviste', how: 'Succès « Archiviste »' },
   pilier:      { name: 'Pilier de la guilde', how: 'Succès « Pilier de la guilde »' },
   roi:         { name: 'Tombeur de rois', how: 'Succès « Briseur de rois »' },
+  soupe:       { name: 'Héros de la Soupe', how: 'Mode histoire : chapitre 7' },
 };
 // titres des défis de déblocage (L2) et de la maîtrise 10 : choisis au même endroit que les autres
 for (const [id, name] of Object.entries(UNLOCK_TITLES)) TITLES[id] ??= { name, how: 'Défi de déblocage' };
