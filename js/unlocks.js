@@ -17,7 +17,8 @@ export const unlocked = key => !!keys()[key];
 // arme ('w'), tome ('t') ou bonus ('boost') : libre s'il n'est pas verrouillé au départ, ou s'il a été débloqué
 export const isFree = (kind, id) => !(LOCKED[kind] || []).includes(id) || unlocked(kind + ':' + id);
 // l'arme de départ d'un champion lui reste toujours ouverte
-export const canPickWeapon = (id, cls) => isFree('w', id) || CLASSES[cls]?.weapon === id;
+// armes : celles de l'arsenal du champion seulement (data.js ARSENAL) ; son arme de départ est toujours permise
+export const canPickWeapon = (id, cls) => CLASSES[cls]?.weapon === id || ((CLASSES[cls]?.arsenal || [id]).includes(id) && isFree('w', id));
 export const canPickTome = id => isFree('t', id);
 export const clsLocked = id => !!CLASSES[id]?.locked && !unlocked('cls:' + id);
 export const unlockedBoostIds = () => Object.keys(BOOSTS).filter(id => isFree('boost', id));

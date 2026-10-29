@@ -528,6 +528,25 @@ Object.assign(ICON, {
   leaf: [IC.green, IC.green, '<path d="M4.5 19.5C4.5 10.5 10 4.5 19.5 4.5c0 9.5-5.5 15-15 15z" fill="T"/><path d="M4.5 19.5L14 10M8.8 15.2h4M11.3 12.7V9.2"/>'],
   forest: [IC.green, IC.green, '<path d="M12 2.5l6 7.5h-3.2l4.2 6H5l4.2-6H6z" fill="T"/><path d="M12 16v3M7.5 21.5c1.4-1.8 2.9-2.6 4.5-2.6s3.1.8 4.5 2.6"/><path d="M2.8 14.2l2.4 1.3M21.2 14.2l-2.4 1.3M3.2 19.2l2.2-.5M20.8 19.2l-2.2-.5" stroke="#ff7ab8"/>'],
 });
+// arsenal W2 : chauves-souris, lance de sang, cercle maudit (Nyx) ; shurikens, bombe fumigène, clone d'ombre (Sora)
+Object.assign(ICON, {
+  bats: [IC.w, IC.red, '<path d="M12 9.2l-1.2-1.8-.4 2.2C8 9.2 5 7.6 2.5 5.5c.3 3.5 1.9 6.3 4.5 7.7.6-1 1.6-1.3 2.4-.8.2 1.2 1.2 2.2 2.6 4.1 1.4-1.9 2.4-2.9 2.6-4.1.8-.5 1.8-.2 2.4.8 2.6-1.4 4.2-4.2 4.5-7.7-2.5 2.1-5.5 3.7-7.9 4.1l-.4-2.2z" fill="T"/><path d="M11 11.3h.1M13 11.3h.1" stroke="#ff4d5e" stroke-width="2"/>'],
+  bloodlance: [IC.w, IC.red, '<path d="M3.5 20.5L14 10"/><path d="M20.5 3.5l-1.6 6.1-2.6 2.6-4.5-4.5 2.6-2.6z" fill="T" stroke="#ff4d5e"/><path d="M6 10.5l1.7 2.6a2 2 0 1 1-3.4 0z" fill="#ff4d5e" stroke="none"/>'],
+  cursering: [IC.red, IC.violet, '<ellipse cx="12" cy="14.5" rx="9" ry="5" fill="T"/><path d="M12 10.2l2.6 8.2-7.2-5h9.2l-7.2 5z"/><path d="M12 2.5v3.5M8 3.8l1.2 2.6M16 3.8l-1.2 2.6" stroke="#a855f7"/>'],
+  shuriken: [IC.w, IC.violet, '<path d="M12 2.5l2.2 7.3 7.3 2.2-7.3 2.2-2.2 7.3-2.2-7.3L2.5 12l7.3-2.2z" fill="T"/><circle cx="12" cy="12" r="1.8"/>'],
+  smokebomb: [IC.w, IC.violet, '<circle cx="9" cy="15" r="6" fill="T"/><path d="M13.2 10.8L15.8 8.2c.4-1.5 1.6-2.4 3-2.2"/><path d="M19.5 3v1.6M21.6 5.6H20" stroke="#ff7a2f"/><circle cx="18.6" cy="16.6" r="2.4" stroke="#a855f7"/><circle cx="20.8" cy="12.2" r="1.6" stroke="#a855f7"/>'],
+  shadowclone: [IC.violet, IC.violet, '<circle cx="9" cy="6.5" r="2.8" fill="T"/><path d="M4 20.5c0-4.4 2.2-7.5 5-7.5s5 3.1 5 7.5z" fill="T"/><circle cx="16" cy="6.5" r="2.8" stroke-opacity=".5"/><path d="M14.6 13.4c.4-.3.9-.4 1.4-.4 2.8 0 5 3.1 5 7.5h-5" stroke-opacity=".5"/>'],
+});
+// arsenal W3 : haches de guerre, cri de guerre, séisme, tourbillon (Ragnar) ; ronces, esprits de la forêt, pétales (Gaïa)
+Object.assign(ICON, {
+  waraxe: [IC.w, IC.blue, '<path d="M13 9l2.5-2.5 5.5 2c.8 4.1-.8 4.9-2.5 5.5z" fill="T"/><path d="M4 20.5L16.5 8"/><path d="M6.2 16.2l1.6 1.6" stroke="#3b8cff"/>'],
+  warcry: [IC.w, IC.orange, '<path d="M4 11a5 5 0 0 1 10 0z" fill="T"/><path d="M5 11v4.5c0 2 1.6 3.5 4 3.5s4-1.5 4-3.5V11M4.2 9.6C2.5 8.6 2 6.5 2.6 4.5M13.8 9.6c1.2-.6 1.8-1.8 1.8-3.2"/><rect x="7.8" y="14.2" width="2.6" height="2.2" fill="S" stroke="none"/><path d="M16.6 12.6c1 1.3 1 3.7 0 5M19.4 10.6c2 2.5 2 6.6 0 9" stroke="#ff7a2f"/>'],
+  quake: [IC.w, IC.orange, '<path d="M2.5 14.5h19l-2 6.5h-15z" fill="T"/><path d="M5.5 21l3-3.8 2.2 1.4 2.8-4.1 2.2 1.4 2.3-3.4" stroke="#ff7a2f"/><path d="M8 9.5l1.6-1.6 1.6 1.6-1.6 1.6zM14.4 6l1.3-1.3L17 6l-1.3 1.3zM18.4 10l1-1 1 1-1 1z"/>'],
+  whirl: [IC.w, IC.orange, '<path d="M10 12a2 2 0 1 1 4 0 4 4 0 1 1-8 0 6 6 0 1 1 12 0"/><path d="M16.5 3l4.5 1.2-1.2 4.5zM7.5 21L3 19.8l1.2-4.5z" fill="T"/><path d="M20 15.5c-.6 2-1.8 3.4-3.5 4.4" stroke="#ff7a2f"/>'],
+  bramble: [IC.green, IC.green, '<path d="M3 20.5c3-1 4-4 6.5-5.5S14 13 15.5 10 18 5.2 20.5 4.2"/><path d="M7.2 15.6l-1.9-1.2M10.6 14.2l.6 2M13.8 12l-1.9-.6M16.2 8.6l1.9.4M18.6 5.6l-.8-1.8"/><path d="M6 4.5l1.8 2.7a2.1 2.1 0 1 1-3.6 0z" fill="T"/><circle cx="20.6" cy="4.1" r="1.4" stroke="#ff7ab8"/>'],
+  wisp: [IC.green, IC.cyan, '<path d="M12 21c-3.3 0-5.5-2.3-5.5-5.2 0-3.8 4-5.2 3.6-9.8 2.6 1.5 4.2 3.4 4.4 6 .8-.8 1.2-2 1.2-3.2 1.6 1.6 1.8 3.7 1.8 5.4 0 3.5-2.3 6.8-5.5 6.8z" fill="T"/><rect x="9.6" y="14.6" width="1.6" height="1.6" fill="S" stroke="none"/><rect x="12.8" y="14.6" width="1.6" height="1.6" fill="S" stroke="none"/><path d="M18.5 2.5v3M17 4h3M4.5 6.5v2M3.5 7.5h2" stroke="#ff7ab8"/>'],
+  petal: ['#ff7ab8', '#ff7ab8', '<path d="M12 11.5c-1.6-2.9-1.1-6.4 1.8-8.6 1.6 2.9 1.1 6.4-1.8 8.6z" fill="T"/><path d="M12 11.5c-1.6-2.9-1.1-6.4 1.8-8.6 1.6 2.9 1.1 6.4-1.8 8.6z" fill="T" transform="rotate(120 12 12.5)"/><path d="M12 11.5c-1.6-2.9-1.1-6.4 1.8-8.6 1.6 2.9 1.1 6.4-1.8 8.6z" fill="T" transform="rotate(240 12 12.5)"/><path d="M3.5 20.5c.9-1.3 2.4-1.7 3.7-1.1-.9 1.3-2.4 1.7-3.7 1.1zM17.5 21.5c.7-1.1 2-1.4 3-1-.7 1.1-2 1.4-3 1z" stroke="#e9edf3"/>'],
+});
 
 function svgIcon(name) {
   const [c, t, body] = ICON[name];
@@ -536,3 +555,17 @@ function svgIcon(name) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.7" stroke-linejoin="miter" stroke-linecap="square" stroke-miterlimit="6">${inner}</svg>`;
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
+
+// ===== Arsenal W1 : pluie d'étoiles (Lumi), flèche explosive et pièges (Kira), bouclier volant et marteau du jugement
+// (Brok), stalactites et grêle (Frida) =====
+// étoile à n branches (rayons R / r) centrée en (x, y), en chemin SVG
+const STARP = (x, y, R, r, n, a0 = -Math.PI / 2) => Array.from({ length: n * 2 }, (_, i) => { const a = a0 + i * Math.PI / n, k = i % 2 ? r : R; return `${i ? 'L' : 'M'}${(x + Math.cos(a) * k).toFixed(2)} ${(y + Math.sin(a) * k).toFixed(2)}`; }).join('') + 'z';
+Object.assign(ICON, {
+  starfall: [IC.gold, IC.gold, `<path d="${STARP(15.5, 8.5, 5.6, 2.4, 5)}" fill="T"/><path d="M3 13.5l5-5M3.5 19.5l7-7M9 21l3.5-3.5" stroke-opacity=".6"/>`],
+  blastarrow: [IC.w, IC.orange, `<path d="M3.5 20.5l8-8M3.5 16.5v4h4"/><path d="${STARP(15.5, 8.5, 6, 2.6, 8, -Math.PI / 8)}" fill="T" stroke="#ff7a2f"/>`],
+  traps: [IC.w, IC.cyan, '<path d="M3.5 12a8.5 6 0 0 1 17 0" fill="T"/><path d="M3.5 12a8.5 5.5 0 0 0 17 0"/><path d="M3.5 12l2.1-1.8 2.1 1.8 2.1-1.8 2.2 1.8 2.1-1.8 2.1 1.8 2.1-1.8 2.2 1.8"/><path d="M12 17.5v3.5M8.5 21h7" stroke-opacity=".6"/>'],
+  shieldthrow: [IC.gold, IC.blue, '<path d="M14.5 3.5l6.5 2.4v4.8c0 4-2.8 6.5-6.5 8-3.7-1.5-6.5-4-6.5-8V5.9z" fill="T"/><path d="M14.5 7v8M11 10.3h7"/><path d="M1.5 8.5h4M1.5 12h3.5M1.5 15.5h4" stroke-opacity=".55"/>'],
+  judgment: [IC.gold, IC.gold, '<rect x="2.8" y="10.5" width="10.5" height="6.5" transform="rotate(-40 8 13.7)" fill="T"/><path d="M10.6 10.8L20.5 2.5"/><path d="M2 21.5l2.2-2.2M6.5 22.3l.7-2.6M1.7 17l2.5-.5" stroke-opacity=".7"/>'],
+  icicles: [IC.cyan, IC.cyan, '<path d="M2.5 3.5h19"/><path d="M9.5 3.5h5L12 21z" fill="T"/><path d="M4 3.5h4l-2 10zM16 3.5h4l-2 12.5z" fill="T"/>'],
+  hail: [IC.w, IC.cyan, '<path d="M7 13.5a3.5 3.5 0 0 1-.3-7 5 5 0 0 1 9.6-1.2A3.9 3.9 0 0 1 17 13.5z" fill="T"/><rect x="6.5" y="16.5" width="2.6" height="2.6" fill="S" stroke="none"/><rect x="11" y="19.4" width="2.6" height="2.6" fill="S" stroke="none"/><rect x="15.4" y="16.5" width="2.6" height="2.6" fill="S" stroke="none"/>'],
+});

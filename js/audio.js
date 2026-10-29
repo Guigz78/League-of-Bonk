@@ -365,3 +365,70 @@ Object.assign(SFX, {
   thorns: () => { noise({ d: 0.07, v: 0.1, filter: ['bandpass', 1800], q: 3, sweepTo: 900 }); wood(r(500, 700), 0, 0.06); },
 });
 Object.assign(MIN_GAP, { thorns: 0.12, shatter: 0.2 });
+
+// ---------- Arsenal W1 : étoiles de Lumi, flèche explosive et pièges de Kira, bouclier et marteau de Brok, glace de Frida ----------
+Object.assign(SFX, {
+  // salve d'étoiles : petit arpège céleste ; impact : tintement aigu qui retombe + souffle ; comète : grondement et carillon
+  starcast: () => [1568, 2093, 2637].forEach((f, i) => osc({ type: 'sine', f, d: 0.16, v: 0.025, at: i * 0.05 })),
+  star: () => { osc({ type: 'sine', f: r(1900, 2300), to: 900, d: 0.16, v: 0.04 }); noise({ d: 0.12, v: 0.08, filter: ['highpass', 2800], sweepTo: 1200 }); osc({ type: 'sine', f: 180, to: 70, d: 0.14, v: 0.08 }); },
+  comet: () => { noise({ d: 0.4, v: 0.2, filter: ['lowpass', 1600], sweepTo: 140 }); osc({ type: 'sine', f: 200, to: 50, d: 0.35, v: 0.18 }); [1319, 1760, 2349].forEach((f, i) => osc({ type: 'sine', f, d: 0.3, v: 0.03, at: 0.05 + i * 0.05 })); },
+  // flèche explosive : corde lourde au tir, explosion sèche (bruit grave + carré qui tombe)
+  bowheavy: () => { osc({ type: 'triangle', f: 320, to: 110, d: 0.14, v: 0.08 }); noise({ d: 0.12, v: 0.07, filter: ['bandpass', 700], q: 2, sweepTo: 2000 }); },
+  blast: () => { noise({ d: 0.28, v: 0.2, filter: ['lowpass', 1800], sweepTo: 130 }); osc({ type: 'square', f: 150, to: 45, d: 0.22, v: 0.08, filter: ['lowpass', 700] }); pop(480, 0, 0.05); },
+  // pièges : cliquetis en posant, « clac » métallique quand les mâchoires se referment
+  trapset: () => { wood(1500, 0, 0.05); wood(1100, 0.05, 0.04); },
+  snap: () => { noise({ d: 0.05, v: 0.2, filter: ['highpass', 2600] }); osc({ type: 'square', f: 950, to: 280, d: 0.07, v: 0.06, filter: ['bandpass', 1500], q: 3 }); wood(480, 0.02, 0.1); },
+  // bouclier : souffle au lancer, « bong » métallique à chaque rebond
+  shieldthrow: () => noise({ d: 0.2, v: 0.1, filter: ['bandpass', 700], q: 1.5, sweepTo: 1800 }),
+  shield: () => { osc({ type: 'triangle', f: r(680, 780), to: 480, d: 0.18, v: 0.07 }); osc({ type: 'sine', f: r(1400, 1600), d: 0.25, v: 0.03, vib: 20, vibRate: 30 }); },
+  // marteau du jugement : chœur qui monte à l'appel, coup sourd + accord sacré à l'impact
+  hammercall: () => whistle(400, 1200, 0.4, 0, 0.04),
+  hammer: () => { osc({ type: 'sine', f: 110, to: 34, d: 0.45, v: 0.26 }); noise({ d: 0.4, v: 0.22, filter: ['lowpass', 900], sweepTo: 90 }); [523, 784, 1047].forEach((f, i) => osc({ type: 'triangle', f, d: 0.5, v: 0.03, at: 0.04 + i * 0.03 })); },
+  // stalactites : éclats de verre qui sifflent ; grêle : petits « tic » et bourrasque à la formation de l'orage
+  icicle: () => { for (let i = 0; i < 3; i++) osc({ type: 'triangle', f: r(2400, 3400), to: r(1600, 2200), d: 0.08, v: 0.025, at: i * 0.02 }); noise({ d: 0.1, v: 0.06, filter: ['highpass', 3500] }); },
+  hail: () => wood(r(1800, 2600), 0, 0.035),
+  hailstorm: () => noise({ d: 0.8, v: 0.1, filter: ['bandpass', 2500], q: 0.7, sweepTo: 900 }),
+});
+Object.assign(MIN_GAP, { star: 0.06, comet: 0.2, blast: 0.08, snap: 0.07, shield: 0.06, hammer: 0.15, icicle: 0.08, hail: 0.035 });
+// ---------- Arsenal W2 : armes de Nyx (chauves-souris, lance de sang, cercle maudit) et de Sora (shurikens, fumigènes, clone) ----------
+Object.assign(SFX, {
+  // chauve-souris : petit cri aigu qui descend et froissement d'ailes
+  bat: () => { osc({ type: 'sine', f: r(2600, 3300), to: 1700, d: 0.06, v: 0.03 }); noise({ d: 0.06, v: 0.05, filter: ['bandpass', 1400], q: 2, at: 0.02 }); },
+  // lance de sang : souffle qui monte et tintement grave
+  lance: () => { noise({ d: 0.16, v: 0.1, filter: ['bandpass', 700], q: 1.5, sweepTo: 2600 }); osc({ type: 'triangle', f: 520, to: 260, d: 0.14, v: 0.05, at: 0.03 }); },
+  // pieux de sang qui jaillissent : craquements secs en cascade
+  spikes: () => { for (let i = 0; i < 4; i++) wood(r(300, 460), i * 0.04, 0.08); noise({ d: 0.18, v: 0.1, filter: ['lowpass', 900], sweepTo: 200 }); },
+  // cercle maudit : accord grave et voilé qui ondule
+  curse: () => { [147, 175].forEach((f, i) => osc({ type: 'sawtooth', f, to: f * 0.94, d: 0.4, v: 0.035, at: i * 0.03, filter: ['lowpass', 700], vib: 4, vibRate: 5 })); noise({ d: 0.3, v: 0.06, filter: ['bandpass', 400], q: 2 }); },
+  // shuriken : sifflement métallique qui tourne
+  shuriken: () => { osc({ type: 'triangle', f: r(2200, 2500), to: 3200, d: 0.08, v: 0.03, vib: 300, vibRate: 40 }); noise({ d: 0.08, v: 0.07, filter: ['highpass', 3000] }); },
+  // lancer (bombe fumigène) puis « pouf » de fumée
+  throw: () => noise({ d: 0.1, v: 0.08, filter: ['bandpass', 1200], q: 1.5, sweepTo: 2400 }),
+  smoke: () => { noise({ d: 0.35, v: 0.13, filter: ['lowpass', 1100], sweepTo: 250 }); pop(240, 0, 0.08); },
+  // clone d'ombre : « fsst » qui descend et carillon sourd ; entaille : coup de lame bref
+  clone: () => { whistle(1500, 400, 0.22, 0, 0.05); noise({ d: 0.18, v: 0.08, filter: ['highpass', 2200], sweepTo: 700 }); },
+  cut: () => noise({ d: 0.07, v: 0.09, filter: ['bandpass', 3000], q: 2, sweepTo: 1200 }),
+});
+Object.assign(MIN_GAP, { bat: 0.1, lance: 0.1, spikes: 0.15, curse: 0.25, shuriken: 0.08, throw: 0.1, smoke: 0.12, clone: 0.2, cut: 0.08 });
+// ---------- Arsenal W3 : armes de Ragnar (haches, cri de guerre, séisme, tourbillon) et de Gaïa (ronces, esprits, pétales) ----------
+Object.assign(SFX, {
+  // hache lancée : lourd « vrou-vrou » qui tournoie ; hache plantée : « tchonk » sourd et cailloux
+  w3axe: () => { noise({ d: 0.22, v: 0.11, filter: ['bandpass', 520], q: 2, sweepTo: 1300 }); osc({ type: 'triangle', f: 160, to: 230, d: 0.18, v: 0.05, vib: 40, vibRate: 18 }); },
+  w3chop: () => { wood(r(150, 190), 0, 0.16); noise({ d: 0.12, v: 0.12, filter: ['lowpass', 900], sweepTo: 200 }); },
+  // foudre des haches du Tonnerre : craquement sec puis grondement
+  w3thunder: () => { noise({ d: 0.08, v: 0.2, filter: ['highpass', 2500] }); noise({ d: 0.5, v: 0.14, filter: ['lowpass', 400], at: 0.05, sweepTo: 80 }); },
+  // cri de guerre : rugissement grave qui monte (deux voix) et souffle
+  w3cry: () => { kazoo(110, 0.42, 0, 0.1, 165); kazoo(147, 0.38, 0.02, 0.07, 196); noise({ d: 0.4, v: 0.12, filter: ['bandpass', 600], q: 0.8, sweepTo: 1500 }); },
+  // séisme : coup de massue au sol et grondement qui roule
+  w3quake: () => { osc({ type: 'sine', f: 90, to: 32, d: 0.4, v: 0.24 }); noise({ d: 0.55, v: 0.15, filter: ['lowpass', 380], sweepTo: 90 }); wood(120, 0.06, 0.1); wood(95, 0.14, 0.08); },
+  // tourbillon : souffle qui tourne (filtre qui balaie)
+  w3whirl: () => { noise({ d: 0.26, v: 0.1, filter: ['bandpass', 800], q: 1.4, sweepTo: 2200 }); noise({ d: 0.18, v: 0.06, filter: ['bandpass', 2400], q: 2, at: 0.1, sweepTo: 900 }); },
+  // fouet de ronces : claquement vif et bruissement de feuilles
+  w3whip: () => { noise({ d: 0.05, v: 0.16, filter: ['highpass', 2600] }); noise({ d: 0.16, v: 0.07, filter: ['bandpass', 3400], q: 1.5, at: 0.03, sweepTo: 1800 }); wood(r(620, 760), 0.02, 0.05); },
+  // esprit qui fonce : petite cloche aérienne ; éclat : « pop » cristallin et accord doux
+  w3wisp: () => osc({ type: 'sine', f: r(1300, 1500), to: 2100, d: 0.14, v: 0.03, vib: 30, vibRate: 12 }),
+  w3pop: () => { pop(r(700, 820), 0, 0.08); [784, 988].forEach((f, i) => osc({ type: 'triangle', f, d: 0.18, v: 0.03, at: 0.02 + i * 0.04 })); },
+  // pétales : bruissement léger
+  w3petal: () => noise({ d: 0.22, v: 0.05, filter: ['bandpass', 4200], q: 1.2, sweepTo: 2600 }),
+});
+Object.assign(MIN_GAP, { w3axe: 0.08, w3chop: 0.07, w3thunder: 0.15, w3cry: 0.3, w3quake: 0.2, w3whirl: 0.15, w3whip: 0.08, w3wisp: 0.1, w3pop: 0.07, w3petal: 0.3 });

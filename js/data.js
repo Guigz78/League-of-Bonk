@@ -44,7 +44,7 @@ export const CLASSES = {
     id: 'berserker', name: 'Ragnar', role: 'Berserker', locked: true,
     desc: 'Increvable et furieux : plus il est blessé, plus sa hache frappe fort.',
     hp: 152, atk: 12, crit: 0.06, speed: 0.97, rage: 0.4,
-    weapon: 'boomerang', ult: 'fury',
+    weapon: 'waraxe', ult: 'fury', // haches de guerre : son arme à lui (arsenal W3, js/arsenal-w3.js)
     passive: { name: 'Rage', icon: 'i_enrage', desc: 'Jusqu\'à +40 % de dégâts selon les PV manquants ; PV très élevés.' },
     colors: { 1: '#7a4a2a', 2: '#553018', 3: '#b08050', a: '#3a8ae0', h: '#e0662a', s: '#ffd2b0', d: '#e8a888', c: '#8a5a32' },
   },
@@ -591,7 +591,7 @@ export const CHEST_LOOT = [
 // 24 parties, monde 1 → 2, Normal) : tout débloqué (= avant) 79 % / 29 % (88 % / 56 % avec 18 parties d'avant L2) ;
 // 6 armes et 7 tomes libres 100 % / 100 % (2,2 évolutions par partie) ; 8 et 8 (retenu) 88 % / 63 % (1,5 évolution).
 export const LOCKED = {
-  w: ['shrooms', 'frost', 'snowball', 'scythe'],                  // faux sanglante : arme de Nyx seulement (aucun défi)
+  w: [],                                                         // armes : chaque champion a son arsenal (ARSENAL), plus de verrou
   t: ['boots', 'wisdom'],
   boost: ['trefle', 'depart', 'phenix', 'sang'],                 // libres en Boutique : vigueur, rage, sagesse, fortune, égide
 };
@@ -639,14 +639,14 @@ const abyssMax_ = s => Math.max(0, ...(s.abyss || []).map(n => +n || 0));
 export const UNLOCK_CHALLENGES = [
   // ---- premiers pas (premier jour) ----
   { id: 'kills1k', cat: 'start', icon: 'skull', name: 'Chasseur de monstres', txt: 'Battez 1 000 monstres', n: 1000, prog: st_('kills'), rw: { key: 't:boots', gold: 60 } },
-  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { key: 'w:shrooms', gold: 80 } },
+  { id: 'boss1', cat: 'start', icon: 'crown', name: 'Premier trophée', txt: 'Battez votre premier boss', n: 1, prog: st_('wins'), rw: { gold: 80, chest: 1 } },
   { id: 'lvl15', cat: 'start', icon: 'upg', name: 'Montée en puissance', txt: 'Atteignez le niveau 15 dans une partie', n: 15, prog: st_('bestLevel'), rw: { key: 'boost:depart', gold: 60 } },
   { id: 'evo1', cat: 'start', icon: 'star', name: 'Alchimiste', txt: 'Faites évoluer une arme (niveau 5 + son tome)', n: 1, prog: st_('weaponEvos'), rw: { key: 't:wisdom', gold: 100 } },
   { id: 'chests5', cat: 'start', icon: 'chest', name: 'Pilleur', txt: 'Ouvrez 5 coffres de butin', n: 5, prog: st_('chests'), rw: { key: 'boost:trefle', gold: 80 } },
   { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le monde suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:sang', gold: 100 } },
-  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { key: 'w:frost', gold: 150 } },
+  { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { gold: 150, chest: 1 } },
   // ---- armes : victimes cumulées avec une arme, évolutions ----
-  { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 6 000 monstres avec la Foudre', n: 6000, prog: wk_('lightning'), rw: { key: 'w:snowball', gold: 150 } },
+  { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 6 000 monstres avec la Foudre', n: 6000, prog: wk_('lightning'), rw: { gold: 150, chest: 2 } },
   { id: 'wk_orbs', cat: 'weapons', icon: 'bind', name: 'Gardien des orbes', txt: 'Battez 2 500 monstres avec les Orbes spirituels', n: 2500, prog: wk_('orbs'), rw: { key: 'aura:orbit', gold: 150 } },
   { id: 'wk_boomerang', cat: 'weapons', icon: 'spin', name: 'Retour à l\'envoyeur', txt: 'Battez 5 000 monstres avec la Lame ricochet', n: 5000, prog: wk_('boomerang'), rw: { key: 'aura:steel', gold: 150 } },
   { id: 'wk_aura', cat: 'weapons', icon: 'cloak', name: 'Cœur ardent', txt: 'Battez 3 000 monstres avec la Cape solaire', n: 3000, prog: wk_('aura'), rw: { key: 'aura:sun', gold: 150 } },
@@ -965,3 +965,83 @@ export const ACH_MORE = [
   ach('pass20', 'loyal', 'Pass d\'expédition', 'Atteindre le palier 20 d\'une saison.', 'tierBest', 20, 200),
   ach('pass40', 'loyal', 'Saison accomplie', 'Atteindre le palier 40 d\'une saison.', 'tierBest', 40, 500),
 ];
+
+// ===== Arsenaux : des attaques propres à chaque champion =====
+// Demande du joueur : « les personnages ont tous les mêmes attaques, je veux que ce soit propre à chacun ». Chaque
+// champion a ses 4 armes (la 1re = arme de départ) et seules les siennes lui sont proposées en partie (unlocks.js
+// canPickWeapon). Les tomes restent communs. Les nouvelles armes sont décrites par js/arsenal-*.js (weapons-reg.js) ;
+// un id encore absent de WEAPONS est simplement ignoré.
+export const ARSENAL = {
+  mage:      ['beam', 'orbs', 'lightning', 'starfall'],        // lumière : rayon, orbes, foudre, pluie d'étoiles
+  archer:    ['arrows', 'boomerang', 'blastarrow', 'traps'],   // chasse : flèches, chakram, flèche explosive, pièges
+  knight:    ['sword', 'aura', 'shieldthrow', 'hammer'],       // paladin : épée, cape solaire, bouclier lancé, marteau
+  vampire:   ['scythe', 'bats', 'bloodlance', 'cursering'],    // sang : faux, chauves-souris, lance de sang, cercle maudit
+  assassin:  ['daggers', 'shuriken', 'smoke', 'shadowclone'],  // ombre : dagues, shurikens, fumigènes, clone d'ombre
+  berserker: ['waraxe', 'warcry', 'quake', 'whirlwind'],       // nord : haches de guerre, cri de guerre, séisme, tourbillon
+  cryo:      ['frost', 'snowball', 'icicles', 'hail'],         // glace : nova de givre, boule de neige, stalactites, grêle
+  druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
+};
+for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;
+
+// ===== Arsenal W1 : Lumi, Kira, Brok, Frida (comportement : js/arsenal-w1.js, rendu : js/g3d/fx-w1.js) =====
+// own : arme propre à un champion (comme la faux de Nyx : hors du compte des Défis). lv = textes des niveaux 2 à 5.
+Object.assign(WEAPONS, {
+  starfall:    { name: 'Pluie d\'étoiles', icon: 'starfall', own: 'mage', desc: 'Des étoiles tombent sur les ennemis à l\'écran : leur ombre au sol annonce l\'impact en zone.', lv: ['', '+1 étoile', '+30 % dégâts', 'Impacts plus larges, plus fréquents', '+2 étoiles, +30 % dégâts'] },
+  blastarrow:  { name: 'Flèche explosive', icon: 'blastarrow', own: 'archer', desc: 'Flèche lente qui explose en zone sur le premier ennemi touché.', lv: ['', '+30 % dégâts', 'Explosion plus large', '+1 flèche', '+40 % dégâts, plus rapide'] },
+  traps:       { name: 'Pièges à mâchoires', icon: 'traps', own: 'archer', desc: 'Pose des pièges autour de vous : ils immobilisent et blessent les ennemis qui marchent dessus.', lv: ['', '+1 piège', '+30 % dégâts', 'Mâchoires plus grandes, tiennent plus longtemps', '+1 piège, plus rapide'] },
+  shieldthrow: { name: 'Bouclier volant', icon: 'shieldthrow', own: 'knight', desc: 'Lance un bouclier qui rebondit d\'ennemi en ennemi en les repoussant.', lv: ['', '+2 rebonds', '+30 % dégâts', 'Plus grand, plus fréquent', '+2 rebonds, +40 % dégâts'] },
+  hammer:      { name: 'Marteau du jugement', icon: 'judgment', own: 'knight', desc: 'Un marteau sacré s\'abat sur l\'ennemi le plus fort : onde de choc tout autour.', lv: ['', '+30 % dégâts', 'Onde de choc plus large', 'Plus fréquent', '+40 % dégâts, 2e marteau'] },
+  icicles:     { name: 'Stalactites', icon: 'icicles', own: 'cryo', desc: 'Éventail de pointes de glace perçantes qui ralentissent.', lv: ['', '+2 pointes', '+30 % dégâts', 'Transpercent plus, portée accrue', '+2 pointes, plus rapide'] },
+  hail:        { name: 'Grêle', icon: 'hail', own: 'cryo', desc: 'Un orage de grêle s\'abat autour de la cible : grêlons en zone qui ralentissent.', lv: ['', '+30 % dégâts', 'Zone plus large', 'Dure plus longtemps, plus de grêlons', '+40 % dégâts, plus fréquent'] },
+});
+// évolutions (niveau 5 + tome) : jamais deux fois le même tome pour un champion
+Object.assign(WEAPON_EVOS, {
+  starfall:    { tome: 'haste',  name: 'Pluie de comètes', icon: 'starfall', desc: '7 étoiles bleues plus larges et une comète géante sur la cible à chaque salve.' },
+  blastarrow:  { tome: 'power',  name: 'Flèche à fragmentation', icon: 'blastarrow', desc: '3 flèches, grosses explosions qui projettent 6 éclats explosifs.' },
+  traps:       { tome: 'armor',  name: 'Mâchoires d\'acier', icon: 'traps', desc: 'Grands pièges qui se referment 3 fois sur toute une meute et la font saigner plus.' },
+  shieldthrow: { tome: 'magnet', name: 'Rempart sacré', icon: 'shieldthrow', desc: '2 boucliers dorés, 9 rebonds : chaque rebond libère une onde sacrée qui étourdit.' },
+  hammer:      { tome: 'power',  name: 'Jugement divin', icon: 'judgment', desc: '3 marteaux géants : double onde de choc qui étourdit les monstres.' },
+  icicles:     { tome: 'crit',   name: 'Tempête de stalactites', icon: 'icicles', desc: '11 grandes pointes qui transpercent tout, gèlent et éclatent en fin de course.' },
+  hail:        { tome: 'area',   name: 'Ouragan de grêle', icon: 'hail', desc: '2 orages géants qui suivent leur cible ; les grêlons gèlent.' },
+});
+// ===== Arsenal W2 (Nyx, Sora) =====
+// Armes propres à Nyx la Vampire et à Sora l'Ombre (own : jamais proposées aux autres champions ni comptées dans les Défis).
+// Statistiques et comportement : js/arsenal-w2.js ; rendu : js/g3d/fx-w2.js. Évolutions : niveau 5 + leur tome.
+Object.assign(WEAPONS, {
+  bats:        { name: 'Nuée de chauves-souris', icon: 'bats', own: 'vampire', desc: 'Des chauves-souris foncent sur les ennemis proches, les mordent et volent la vie.', lv: ['', '+1 chauve-souris', '+30 % dégâts, plus loin', '+1 chauve-souris, piqués plus fréquents', '+1 chauve-souris, +25 % dégâts'] },
+  bloodlance:  { name: 'Lance de sang', icon: 'bloodlance', own: 'vampire', desc: 'Lance perçante à longue portée : chaque ennemi transpercé vous soigne.', lv: ['', '+30 % dégâts', '+1 lance', 'Plus fréquente', '+40 % dégâts, soigne plus'] },
+  cursering:   { name: 'Cercle maudit', icon: 'cursering', own: 'vampire', desc: 'Cercle au sol sous la cible : il draine et ralentit les ennemis en continu.', lv: ['', 'Cercle plus grand', 'Dure plus longtemps', '+35 % dégâts', '+1 cercle, +30 % dégâts'] },
+  shuriken:    { name: 'Shurikens', icon: 'shuriken', own: 'assassin', desc: 'Étoiles de lancer qui ricochent d\'ennemi en ennemi.', lv: ['', '+1 shuriken', '+30 % dégâts', '+2 ricochets', '+1 shuriken, plus rapide'] },
+  smoke:       { name: 'Bombes fumigènes', icon: 'smokebomb', own: 'assassin', desc: 'Bombes qui éclatent en nuages : les ennemis dedans ralentissent et sont blessés.', lv: ['', '+30 % dégâts', '+1 bombe, nuage plus grand', 'Plus fréquentes', '+1 bombe, +35 % dégâts'] },
+  shadowclone: { name: 'Clone d\'ombre', icon: 'shadowclone', own: 'assassin', desc: 'Un clone de Sora surgit près de la cible et tranche les ennemis autour de lui.', lv: ['', '+30 % dégâts', 'Dure plus longtemps, plus grande portée', 'Apparaît plus souvent', '+1 clone, +30 % dégâts'] },
+});
+Object.assign(WEAPON_EVOS, {
+  bats:        { tome: 'haste',  name: 'Nuée de la Lune de sang',   icon: 'bats',        desc: '8 chauves-souris géantes : chaque piqué enchaîne 2 morsures et vole plus de vie.' },
+  bloodlance:  { tome: 'crit',   name: 'Pieu de la Reine écarlate', icon: 'bloodlance',  desc: '3 lances de sang ; des pieux de sang jaillissent du sol sur tout leur passage.' },
+  cursering:   { tome: 'magnet', name: 'Gouffre maudit',            icon: 'cursering',   desc: 'Grands cercles qui aspirent les ennemis, drainent plus fort et lâchent des ondes de sang.' },
+  shuriken:    { tome: 'crit',   name: 'Tempête d\'étoiles',        icon: 'shuriken',    desc: '5 shurikens géants, 7 ricochets ; chaque ricochet frappe plus fort.' },
+  smoke:       { tome: 'area',   name: 'Voile de l\'ombre',         icon: 'smokebomb',   desc: 'Immenses nuages qui durent plus longtemps et engloutissent les tirs ennemis.' },
+  shadowclone: { tome: 'power',  name: 'Légion d\'ombres',          icon: 'shadowclone', desc: '3 clones qui tranchent plus vite et explosent en se dissipant.' },
+});
+// ===== Arsenal W3 (Ragnar, Gaïa) =====
+// Armes propres à Ragnar le Berserker (Haches de guerre = sa nouvelle arme de départ, à la place de la lame ricochet) et à
+// Gaïa la Druidesse (own : jamais proposées aux autres champions ni comptées dans les Défis). Statistiques et comportement :
+// js/arsenal-w3.js ; rendu : js/g3d/fx-w3.js. Évolutions : niveau 5 + leur tome.
+Object.assign(WEAPONS, {
+  waraxe:    { name: 'Haches de guerre', icon: 'waraxe', own: 'berserker', desc: 'Lance de lourdes haches qui fendent tout sur leur passage et éclatent en se plantant dans le sol.', lv: ['', '+30 % dégâts', '+1 hache', 'Impact plus large, plus rapide', '+1 hache, +30 % dégâts'] },
+  warcry:    { name: 'Cri de guerre', icon: 'warcry', own: 'berserker', desc: 'Ragnar rugit : une onde blesse, repousse et ralentit les ennemis autour de lui.', lv: ['', '+30 % dégâts', 'Onde plus grande', 'Plus fréquent', '+1 onde (écho), +40 % dégâts'] },
+  quake:     { name: 'Séisme', icon: 'quake', own: 'berserker', desc: 'Ragnar frappe le sol : une faille court vers la cible et blesse tout sur sa ligne.', lv: ['', '+30 % dégâts', '+1 faille', 'Failles plus longues, plus fréquentes', '+1 faille, +30 % dégâts'] },
+  whirlwind: { name: 'Tourbillon', icon: 'whirl', own: 'berserker', desc: 'Ragnar tourne sur lui-même, haches tendues, et frappe tout autour de lui.', lv: ['', '+30 % dégâts', 'Plus large, dure plus longtemps', 'Plus fréquent', '+30 % dégâts, frappe plus vite'] },
+  thorns:    { name: 'Ronces', icon: 'bramble', own: 'druid', desc: 'Fouets de ronces en ligne : ils blessent et empoisonnent tout ce qu\'ils touchent.', lv: ['', '+30 % dégâts', '+1 fouet', 'Plus longs, poison +40 %', '+1 fouet, plus rapides'] },
+  wisps:     { name: 'Esprits de la forêt', icon: 'wisp', own: 'druid', desc: 'Des feux follets tournent autour de Gaïa puis foncent éclater sur les ennemis ; chaque éclat la soigne un peu.', lv: ['', '+30 % dégâts', '+1 esprit', 'Renaissent plus vite, éclats plus larges', '+1 esprit, +30 % dégâts'] },
+  petals:    { name: 'Pluie de pétales', icon: 'petal', own: 'druid', desc: 'Une nuée de pétales tranchants suit Gaïa et coupe les ennemis qui la poursuivent.', lv: ['', 'Nuée plus large', '+35 % dégâts', '+1 nuée qui tourne autour d\'elle', '+40 % dégâts, coupe plus vite'] },
+});
+Object.assign(WEAPON_EVOS, {
+  waraxe:    { tome: 'power',  name: 'Haches du Tonnerre',    icon: 'waraxe',  desc: '4 haches : la foudre tombe là où chacune se plante et étourdit les ennemis.' },
+  warcry:    { tome: 'vital',  name: 'Rugissement du Jarl',   icon: 'warcry',  desc: '3 ondes géantes qui étourdissent ; chaque ennemi touché soigne Ragnar.' },
+  quake:     { tome: 'area',   name: 'Faille du Ragnarök',    icon: 'quake',   desc: '3 longues failles qui laissent des coulées de lave brûlantes.' },
+  whirlwind: { tome: 'haste',  name: 'Cyclone de fureur',     icon: 'whirl',   desc: 'Immense tourbillon de feu qui aspire les ennemis et explose à la fin.' },
+  thorns:    { tome: 'armor',  name: 'Ronces dévorantes',     icon: 'bramble', desc: '4 fouets tout autour qui immobilisent ; le poison passe aux voisins quand un ennemi meurt.' },
+  wisps:     { tome: 'magnet', name: 'Esprits ancestraux',    icon: 'wisp',    desc: '6 esprits dorés : éclats plus larges, ils brûlent tout sur leur passage.' },
+  petals:    { tome: 'crit',   name: 'Tempête de cerisiers',  icon: 'petal',   desc: '3 grandes nuées de pétales dorés qui coupent plus vite.' },
+});
