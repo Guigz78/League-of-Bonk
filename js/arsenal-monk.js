@@ -169,7 +169,7 @@ addWeapons({
           const dx = e.x - o.x, dy = e.y - o.y, d = Math.hypot(dx, dy);
           if (d - e.r * 0.5 > o.r || o.h.includes(e)) continue;
           if (o.h.length < 64) o.h.push(e);
-          run.hitEnemy(e, o.dmg, { knock: 420, kx: dx / (d || 1), ky: dy / (d || 1), color: '#ffe0a0' });
+          run.hitEnemy(e, o.dmg, { knock: 340, kx: dx / (d || 1), ky: dy / (d || 1), color: '#ffe0a0' });
           if (S.stun && !e.dead) hold(e, S.stun);
           if (S.heal && o.hl < 8 && !run.dying) { o.hl++; run.lsPool += p.maxHp * S.heal; }
         }

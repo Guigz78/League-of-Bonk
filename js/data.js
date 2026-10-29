@@ -72,7 +72,7 @@ export const CLASSES = {
   monk: {
     id: 'monk', name: 'Kenji', role: 'Moine', locked: true,
     desc: 'Ses poings frappent en rafale ; plus le combo monte, plus il frappe vite.',
-    hp: 120, atk: 14, crit: 0.1, speed: 1.04, flow: 0.02, dodge: 0.08,
+    hp: 115, atk: 14, crit: 0.1, speed: 1.04, flow: 0.02, dodge: 0.08,
     weapon: 'fists', ult: 'thousand',
     passive: { name: 'Flux du combo', icon: 'flow', desc: 'Vitesse d\'attaque +2 % par tranche de 25 de combo (+20 % au plus) ; 8 % d\'esquive.' },
     colors: { 1: '#f4a024', 2: '#c8302a', 3: '#ffd27a', a: '#ffc23a', h: '#ffd2b0', s: '#ffd2b0', d: '#e8a888', c: '#7a3a1a' },
