@@ -527,6 +527,15 @@ Object.assign(ICON, {
   leaf: [IC.green, IC.green, '<path d="M4.5 19.5C4.5 10.5 10 4.5 19.5 4.5c0 9.5-5.5 15-15 15z" fill="T"/><path d="M4.5 19.5L14 10M8.8 15.2h4M11.3 12.7V9.2"/>'],
   forest: [IC.green, IC.green, '<path d="M12 2.5l6 7.5h-3.2l4.2 6H5l4.2-6H6z" fill="T"/><path d="M12 16v3M7.5 21.5c1.4-1.8 2.9-2.6 4.5-2.6s3.1.8 4.5 2.6"/><path d="M2.8 14.2l2.4 1.3M21.2 14.2l-2.4 1.3M3.2 19.2l2.2-.5M20.8 19.2l-2.2-.5" stroke="#ff7ab8"/>'],
 });
+// Kenji le moine : poings de fer, paume de ki, vague de chi, dragon de ki, mille poings, flux du combo
+Object.assign(ICON, {
+  fists: [IC.orange, IC.gold, '<path d="M5 9.5h11.5a3 3 0 0 1 3 3v2.5a5 5 0 0 1-5 5H8.5A3.5 3.5 0 0 1 5 16.5z" fill="T"/><path d="M8.6 9.5V5.6M12.2 9.5V5M15.8 9.5V6M5 13.5h5.5M9 20v2.5M14.5 20v2.5" /><path d="M2.5 9.5h2M2.5 13h2" stroke="#e9edf3"/>'],
+  kipalm: [IC.gold, IC.orange, '<circle cx="14.5" cy="9.5" r="5.5" fill="T"/><circle cx="14.5" cy="9.5" r="2" fill="S" stroke="none"/><path d="M3 21.5l5.5-5.5M3.5 15.5l4.2.3.3 4.2"/><path d="M14.5 1.5v1.6M22.5 9.5h-1.6M20.2 3.8l-1.2 1.2" stroke="#e9edf3"/>'],
+  chiwave: [IC.gold, IC.gold, '<circle cx="12" cy="12" r="3" fill="T"/><path d="M7.6 7.6a6.2 6.2 0 0 0 0 8.8M16.4 7.6a6.2 6.2 0 0 1 0 8.8M4.4 4.4a10.7 10.7 0 0 0 0 15.2M19.6 4.4a10.7 10.7 0 0 1 0 15.2"/>'],
+  kidragon: [IC.gold, IC.orange, '<path d="M2.5 20.5c3.2 0 4-3.5 6.8-3.5s3 3.5 5.7 3.5 3.8-3.8 2-6.8-4.8-3.4-4.8-6.4 2.3-4.8 5-4.8"/><path d="M17.2 2.5l4.3 1.4-2.6 3.4-2.8-1.3z" fill="T"/><path d="M19.6 1.8l1.2-1M8 14.6l-.8-2M13.2 15.4l.6-2.1" stroke="#e9edf3"/>'],
+  thousand: [IC.orange, IC.gold, '<path d="M12 1.8l1.9 5 5.1-1.8-2.9 4.6 4.8 2.6-5.3.9.6 5.3-4.2-3.4-4.2 3.4.6-5.3-5.3-.9 4.8-2.6-2.9-4.6 5.1 1.8z" fill="T"/><circle cx="12" cy="11" r="2.2" fill="S" stroke="none"/><path d="M5 21.5h14" stroke="#e9edf3"/>'],
+  flow: [IC.orange, IC.gold, '<circle cx="12" cy="12" r="9" fill="T"/><path d="M12 3a4.5 4.5 0 0 1 0 9 4.5 4.5 0 0 0 0 9"/><circle cx="12" cy="7.5" r="1.3" fill="S" stroke="none"/><circle cx="12" cy="16.5" r="1.3"/>'],
+});
 
 function svgIcon(name) {
   const [c, t, body] = ICON[name];

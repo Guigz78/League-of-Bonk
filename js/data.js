@@ -67,6 +67,16 @@ export const CLASSES = {
     passive: { name: 'Sève vivante', icon: 'leaf', desc: 'Régénère 0,8 % des PV par seconde ; ramassage +20 %.' },
     colors: { 1: '#5a8a3a', 2: '#3a6228', 3: '#9ad06a', a: '#ff7ab8', h: '#a0582a', s: '#ffd8b8', d: '#e8b090', c: '#6a4426' },
   },
+  // ---- Kenji le moine (à débloquer : défi, clé 'cls:monk'). Talents (js/champion-monk.js) : flow = vitesse d'attaque en plus
+  // par tranche de 25 de combo (plafond MKB.flow.max), dodge = esquive (ajoutée à l'équipement, comme Sora)
+  monk: {
+    id: 'monk', name: 'Kenji', role: 'Moine', locked: true,
+    desc: 'Ses poings frappent en rafale ; plus le combo monte, plus il frappe vite.',
+    hp: 120, atk: 14, crit: 0.1, speed: 1.04, flow: 0.02, dodge: 0.08,
+    weapon: 'fists', ult: 'thousand',
+    passive: { name: 'Flux du combo', icon: 'flow', desc: 'Vitesse d\'attaque +2 % par tranche de 25 de combo (+20 % au plus) ; 8 % d\'esquive.' },
+    colors: { 1: '#f4a024', 2: '#c8302a', 3: '#ffd27a', a: '#ffc23a', h: '#ffd2b0', s: '#ffd2b0', d: '#e8a888', c: '#7a3a1a' },
+  },
 };
 
 // Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
@@ -128,6 +138,14 @@ export const EVOLUTIONS = {
     { name: 'Gaïa Écorce', lvl: 11, colors: { 1: '#3a6a3a', 2: '#28482a', 3: '#7ab85a', c: '#5a3a1e', a: '#ffc23a' } },
     { name: 'Gaïa Cerf Doré', lvl: 19, colors: { 1: '#2a5a4a', 2: '#1a3a30', 3: '#5ae0a0', c: '#4a2e18', a: '#ff8ad8', h: '#e0a050' } },
     { name: 'Gaïa Mère Nature', lvl: 28, aura: '#7aff5a', colors: { 1: '#8ae05a', 2: '#4a9a3a', 3: '#e0ffb0', c: '#8a5a2a', a: '#ff9ad8', h: '#d8ff8a' } },
+  ],
+  // ---- Kenji (moine) : 1 robe safran, 2 écharpe, 3 liserés, a = ki, c = perles et bandeaux sombres ----
+  monk: [
+    { name: 'Kenji' },
+    { name: 'Kenji Tigre', lvl: 5, colors: { 1: '#ff9a1a', 2: '#2a1a14', 3: '#ffcf5a', a: '#ffb02a', c: '#5a2a10' } },
+    { name: 'Kenji Grue', lvl: 11, colors: { 1: '#f4f0e8', 2: '#d02a2a', 3: '#ffffff', a: '#7ae0ff', c: '#2a2a34' } },
+    { name: 'Kenji Dragon', lvl: 19, colors: { 1: '#b8202a', 2: '#e6b422', 3: '#ffe07a', a: '#5affa8', c: '#1a5a3a' } },
+    { name: 'Kenji Éveillé', lvl: 28, aura: '#ffb43a', colors: { 1: '#ffe9b0', 2: '#ff9a1a', 3: '#ffffff', a: '#fff0a0', c: '#e6b422' } },
   ],
 };
 
@@ -977,3 +995,27 @@ export const ARSENAL = {
   druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
 };
 for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;
+
+// ===== Kenji le moine (monk) : ultime, arsenal, défi =====
+// Ultime et passif : js/champion-monk.js ; armes (statistiques, comportement) : js/arsenal-monk.js ; rendu :
+// js/g3d/fx-monk.js et js/g3d/models-hero-monk.js. Ses 4 armes lui sont propres (own) ; évolutions : niveau 5 + tome.
+ULTS.thousand = { name: 'Mille poings', icon: 'thousand', desc: 'Une rafale de poings fantômes frappe tout devant vous (intouchable), puis une grande onde de ki.' };
+Object.assign(WEAPONS, {
+  fists:    { name: 'Poings de fer', icon: 'fists', own: 'monk', desc: 'Enchaînement rapide de coups de poing devant vous ; un coup sur trois frappe fort et repousse.', lv: ['', '+30 % dégâts', 'Plus grande portée', 'Le coup final frappe tout autour', '+40 % dégâts, plus rapide'] },
+  kipalm:   { name: 'Paume de ki', icon: 'kipalm', own: 'monk', desc: 'Boule d\'énergie qui traverse tous les ennemis sur sa route.', lv: ['', '+30 % dégâts', 'Boule plus grosse', '+1 boule', '+40 % dégâts, plus fréquente'] },
+  chiwave:  { name: 'Vague de chi', icon: 'chiwave', own: 'monk', desc: 'Onde circulaire qui part de vous et repousse fort les ennemis.', lv: ['', '+30 % dégâts', 'Onde plus large', 'Double onde', '+40 % dégâts, plus fréquente'] },
+  kidragon: { name: 'Dragon de ki', icon: 'kidragon', own: 'monk', desc: 'Un dragon d\'énergie serpente vers les ennemis et mord tout ce qu\'il traverse.', lv: ['', '+30 % dégâts', 'Plus grand, vit plus longtemps', '+1 dragon', '+40 % dégâts, plus fréquent'] },
+});
+// évolutions (niveau 5 + tome) : un tome différent par arme
+Object.assign(WEAPON_EVOS, {
+  fists:    { tome: 'haste', name: 'Rafale du tigre',   icon: 'fists',    desc: 'Coups bien plus rapides : chaque poing projette un poing de ki qui transperce ; coup final tout autour.' },
+  kipalm:   { tome: 'power', name: 'Paume céleste',     icon: 'kipalm',   desc: '2 énormes sphères de ki qui traversent tout et explosent en bout de course.' },
+  chiwave:  { tome: 'vital', name: 'Marée de sérénité', icon: 'chiwave',  desc: '3 grandes ondes qui étourdissent les monstres ; chaque ennemi touché vous soigne un peu.' },
+  kidragon: { tome: 'area',  name: 'Dragon céleste',    icon: 'kidragon', desc: '2 dragons dorés géants qui vivent plus longtemps et plongent en explosant.' },
+});
+ARSENAL.monk = ['fists', 'kipalm', 'chiwave', 'kidragon']; // temple : poings de fer, paume de ki, vague de chi, dragon de ki
+CLASSES.monk.arsenal = ARSENAL.monk;
+// défi de déblocage (rangé après ceux des autres champions) ; aura de maîtrise
+UNLOCK_CHALLENGES.splice(UNLOCK_CHALLENGES.findIndex(c => c.id === 'mastery10'), 0,
+  { id: 'monk', cat: 'champions', need: 'monk', icon: 'flow', name: 'Le flux intérieur', txt: 'Réussissez un combo de 500', n: 500, prog: rec_('combo'), rw: { key: 'cls:monk', gold: 200 } });
+MASTERY.aura.monk = '#ffb43a';
