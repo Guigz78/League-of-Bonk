@@ -53,7 +53,7 @@ export const PIR = {
       else { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * B.reach; x = p.x + Math.cos(a) * d; y = p.y + Math.sin(a) * d * 0.85; }
       const A = this.arena;
       if (A) { const ax = x - A.x, ay = y - A.y, d = Math.hypot(ax, ay); if (d > A.R - 20) { x = A.x + ax / d * (A.R - 20); y = A.y + ay / d * (A.R - 20); } }
-      b.on = true; b.x = clamp(x, -HALF + 40, HALF - 40); b.y = clamp(y, -HALF + 40, HALF - 40);
+      b.on = true; b.rs = 0; b.x = clamp(x, -HALF + 40, HALF - 40); b.y = clamp(y, -HALF + 40, HALF - 40); // rs : départ à placer par le rendu
       b.sx = sx + U.side * 30; b.sy = U.sy + rand(-B.hull, B.hull); b.t = -i * 0.05; b.dur = B.fly + rand(0, B.spread);
       i++;
     }

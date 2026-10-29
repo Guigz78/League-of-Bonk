@@ -225,7 +225,9 @@ function ship(fx, st, dt, t) {
   if (sh.out) sh.out += dt;
   const inK = clamp(sh.t / 0.45, 0, 1), outK = clamp(sh.out / 0.7, 0, 1);
   if (outK >= 1 || sh.t > 6) { st.ship = null; return; }
-  const off = (1 - inK * inK * (3 - 2 * inK)) * 260 + outK * outK * 300, x = p.x - sh.side * (B.side + off), y = p.y + 20, h = B.alt + Math.sin(t * 2) * 6;
+  // au bord de l'écran quelle que soit sa largeur (demi-largeur visible au niveau de Morgane, en px du jeu) : coque à moitié visible
+  const g = fx.gfx, half = g.ppu && g.vw ? g.vw / 2 / g.ppu() : B.side + 12, cx = g.cam ? g.cam.x : p.x;
+  const off = (1 - inK * inK * (3 - 2 * inK)) * 260 + outK * outK * 300, x = cx - sh.side * (half - 12 + off), y = p.y + 20, h = B.alt + Math.sin(t * 2) * 6;
   const P = get(st, fx, 'galleon'), r = Math.sin(sh.t * 18) * sh.roll * 0.12 * sh.side, k = 1.05;
   // coque penchée (roulis) : base X = côté, Y = haut, Z = longueur
   P.putB(x * S, h * S, y * S, Math.cos(r) * k, Math.sin(r) * k, 0, -Math.sin(r) * k, Math.cos(r) * k, 0, 0, 0, k);
@@ -237,10 +239,11 @@ function broadside(fx, st, U, t) {
   const B = get(st, fx, 'ball');
   for (const b of U.balls) {
     if (!b.on || b.t < 0) continue;
-    const h0 = PIRB.broadside.alt + 30, k = clamp(b.t / b.dur, 0, 1), x = b.sx + (b.x - b.sx) * k, y = b.sy + (b.y - b.sy) * k, h = h0 * (1 - k) + Math.sin(k * PI) * 210;
+    if (!b.rs) { b.rs = 1; const sh = st.ship; if (sh?.x != null) { b.rx = sh.x + U.side * 26; b.ry = sh.y + (b.sy - U.sy); } else { b.rx = b.sx; b.ry = b.sy; } } // départ : les sabords du navire (rendu)
+    const sx = b.rx, sy = b.ry, h0 = PIRB.broadside.alt + 30, k = clamp(b.t / b.dur, 0, 1), x = sx + (b.x - sx) * k, y = sy + (b.y - sy) * k, h = h0 * (1 - k) + Math.sin(k * PI) * 210;
     B.put(x * S, h * S, y * S, t * 6 + b.x, 0.85);
     fx.glow(x, y, h, 16, FIRE, 0.8);
-    const k0 = Math.max(0, k - 0.06), x0 = b.sx + (b.x - b.sx) * k0, y0 = b.sy + (b.y - b.sy) * k0, hp = h0 * (1 - k0) + Math.sin(k0 * PI) * 210; // traînée de feu
+    const k0 = Math.max(0, k - 0.06), x0 = sx + (b.x - sx) * k0, y0 = sy + (b.y - sy) * k0, hp = h0 * (1 - k0) + Math.sin(k0 * PI) * 210; // traînée de feu
     fx.line(x * S, h * S, y * S, x0 * S, hp * S, y0 * S, 0.7, '#ff7a2a', 0.6);
     if (Math.random() < 0.4 && fx.puffs.length < 200) fx.puffs.push({ x, y, z: h, vx: 0, vy: 0, vz: 10, s: rand(6, 9), life: 0.5, max: 0.5, a: 0.4, c: '#a8a098' });
     // cible au sol : anneau rouge qui se resserre, ombre qui grandit
