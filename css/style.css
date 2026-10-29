@@ -935,7 +935,8 @@ button.itile:active { transform: translateY(1px); }
 .card-up.evo::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255,240,190,.28), transparent); animation: sheen 2s .3s ease-in-out infinite; }
 /* Relancer / Passer : toujours visibles en bas, même si les cartes défilent */
 .lu-foot { position: sticky; bottom: 0; z-index: 3; display: flex; gap: 8px; margin-top: 4px; padding-top: 10px; background: linear-gradient(180deg, rgba(4,6,10,0), rgba(4,6,10,.92) 40%); }
-.lu-foot .btn { flex: 1; }
+.lu-foot .btn { flex: 1 1 0; min-width: 0; padding: 0 10px; white-space: nowrap; }
+@media (max-width: 360px) { .lu-foot .btn { gap: 5px; letter-spacing: .06em; font-size: 14px; } } /* iPhone SE : « Passer (1) » tient dans l'écran */
 .lu-foot .btn b { font-weight: 700; color: var(--acc); }
 .lu-foot .btn:disabled b { color: inherit; }
 .lvl-ov .lvlup::after { content: ''; display: block; height: 2px; margin: 12px auto 0; width: 0; background: var(--acc); }
