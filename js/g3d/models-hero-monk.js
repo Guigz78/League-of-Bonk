@@ -26,16 +26,15 @@ function mala(s, col, big, { y = 1.3, rx = 0.42, rz = 0.33, drop = 0.34, n = 16,
   s.put('sph:7:5', big, 0, fy, fz, r * 1.7, r * 1.7, r * 1.6, 0, 0, 0, { grad: 0, glow: glow + 0.2 });
   s.put('cone:5', tassel, 0, fy - 0.18, fz, 0.1, 0.22, 0.08, 0, 0, 0, { grad: 0.1, glow: glow * 0.5 });
 }
-// poing bandé (os d'un bras, côté sd) : main serrée, bandes, anneau de fer au poignet, flammes de ki (glow)
+// poing bandé (os d'un bras, côté sd) : bandes sur la main, jointures, anneau de fer au poignet (brassard coloré à partir
+// du stade 1), flammes de ki sur le dos du poing (glow)
 function fist(s, sd, C, evo, { ring = IRON, ki = 0 } = {}) {
   const x = 0.53 * sd;
-  s.put('rbox:0.4', WRAP, x, 0.76, 0.04, 0.27, 0.24, 0.27, 0, 0, 0, { grad: 0.12 });
-  for (const y of [0.7, 0.8]) s.put('box', shade(WRAP, -0.12), x, y, 0.04, 0.285, 0.03, 0.285, 0, 0, 0, { grad: 0 });
-  s.put('box', shade(WRAP, -0.08), x, 0.8, 0.18, 0.2, 0.08, 0.02, 0, 0, 0, { grad: 0 }); // jointures
-  s.put('rbox:0.3', WRAP, x, 0.9, 0.02, 0.25, 0.12, 0.25, 0, 0, 0, { grad: 0.05 });
-  s.put('tor:0.22:4:10', ring, x, 0.92, 0.02, 0.3, 0.3, 0.3, PI / 2, 0, 0, { grad: 0, glow: ring === GOLD ? 0.4 : 0.1 });
-  if (evo >= 2) s.put('tor:0.22:4:10', ring, x, 1.0, 0.02, 0.28, 0.28, 0.28, PI / 2, 0, 0, { grad: 0, glow: ring === GOLD ? 0.4 : 0.1 });
-  if (ki) for (let i = 0; i < 3; i++) s.put('cone:4', i === 1 ? '#ffffff' : C.a, x + (i - 1) * 0.07, 0.66, 0.05 + (i === 1 ? 0.05 : 0), 0.1, 0.22 + ki * 0.1, 0.1, PI, 0, (i - 1) * 0.3, { grad: 0, glow: 1.1 }); // flammes de ki sous le poing
+  for (const y of [0.7, 0.82]) s.put('box', shade(WRAP, -0.14), x, y, 0.04, 0.255, 0.03, 0.255, 0, 0, 0, { grad: 0 });
+  s.put('box', '#ffffff', x, 0.76, 0.17, 0.18, 0.1, 0.02, 0, 0, 0, { grad: 0 }); // jointures
+  if (evo >= 1) s.put('rbox:0.3', ring, x, 0.93, 0.02, 0.27, 0.15, 0.27, 0, 0, 0, { grad: 0.05, glow: ring === GOLD ? 0.4 : 0 });
+  else s.put('tor:0.16:4:10', ring, x, 0.9, 0.02, 0.29, 0.29, 0.29, PI / 2, 0, 0, { grad: 0, glow: 0.1 });
+  if (ki) for (let i = 0; i < 2; i++) s.put('cone:4', i ? '#ffffff' : C.a, x + sd * 0.1, 0.84 + i * 0.03, -0.06 - i * 0.04, 0.12 - i * 0.04, 0.3 + ki * 0.08, 0.12 - i * 0.04, -0.3, 0, -sd * 0.3, { grad: 0, glow: 1.1 });
 }
 // plume (grue) : longue feuille blanche à pointe noire, plantée en (x, y, z) et penchée de (rx, rz)
 function feather(s, x, y, z, rx, rz, L, w = 0.16) {
@@ -69,7 +68,7 @@ function buildMonk(sh, C, evo, K) {
   CH.put('rbox:0.3', skin, -0.2, 1.2, 0.02, 0.36, 0.22, 0.5, 0, 0, 0, { grad: 0.05 }); // haut du torse côté droit
   CH.put('box', shade(robe, -0.1), -0.02, 1.14, 0.265, 0.04, 0.32, 0.02, 0, 0, -0.85, { grad: 0 }); // revers de la robe
   for (const z of [0.275, -0.275]) CH.put('box', drape, 0.04, 1.03, z, 0.26, 0.8, 0.05, 0, 0, -0.86, { grad: 0.05 });
-  CH.put('sph:7:5', drape, 0.32, 1.27, 0, 0.42, 0.26, 0.56, 0, 0, -0.3, { grad: 0.15 }); // étole sur l'épaule gauche
+  CH.put('sph:7:5', drape, 0.3, 1.28, 0, 0.34, 0.17, 0.5, 0, 0, -0.3, { grad: 0.15 }); // étole sur l'épaule gauche
   if (tiger) for (let i = 0; i < 4; i++) CH.put('box', '#ff9a1a', 0.2 - i * 0.12, 1.25 - i * 0.12, 0.3, 0.05, 0.26, 0.02, 0, 0, 0.7, { grad: 0 }); // rayures de tigre
   if (dragon) for (let i = 0; i < 5; i++) CH.put('sph:5:3', light, 0.2 - i * 0.1, 1.22 - i * 0.09, 0.3, 0.1, 0.07, 0.03, 0, 0, -0.86, { grad: 0, glow: 0.3 }); // écailles d'or
   // chapelet de perles (lumineux pour l'Éveillé)
@@ -77,10 +76,9 @@ function buildMonk(sh, C, evo, K) {
   // bras : manche courte à gauche, bras droit nu ; poings bandés
   K.arm(AL, 1, robe, skin, { w: 0.25, glove: WRAP });
   K.arm(AR, -1, skin, skin, { w: 0.26, glove: WRAP });
-  const ring = woke ? GOLD : dragon ? JADE : evo === 1 ? dark : IRON;
+  const ring = woke ? GOLD : dragon ? JADE : crane ? '#d02a2a' : evo === 1 ? '#2a1a14' : IRON;
   fist(AL, 1, C, evo, { ring, ki: evo >= 3 ? evo - 2 : 0 });
   fist(AR, -1, C, evo, { ring, ki: evo >= 3 ? evo - 2 : 0 });
-  if (evo >= 1) for (const [s, sd] of [[AL, 1], [AR, -1]]) s.put('rbox:0.3', woke ? GOLD : dragon ? JADE : crane ? '#ffffff' : dark, 0.53 * sd, 1.0, 0.02, 0.28, 0.16, 0.28, 0, 0, 0, { grad: 0, glow: woke ? 0.4 : 0 }); // brassards
   // tête rasée : dôme rond et brillant, points d'encens, oreilles un peu grandes, regard calme et déterminé
   K.headBlock(H, C);
   H.put('hemi:10:5', skin, 0, 2.05, 0.02, 0.94, 0.5, 0.86, 0, 0, 0, { grad: -0.05 });
@@ -92,8 +90,8 @@ function buildMonk(sh, C, evo, K) {
   // bandeau noué derrière la tête (dès le Tigre), pans qui flottent
   if (evo >= 1 && !woke) {
     const band = tiger ? '#ff9a1a' : crane ? '#d02a2a' : '#e6b422';
-    H.put('tor:0.14:4:16', band, 0, 2.04, 0.02, 1.0, 1.0, 0.92, PI / 2 - 0.08, 0, 0, { grad: 0 });
-    if (tiger) for (const a of [-0.5, 0, 0.5]) H.put('box', '#2a1a14', Math.sin(a) * 0.5, 2.04, Math.cos(a) * 0.46, 0.05, 0.1, 0.03, 0, a, 0, { grad: 0 });
+    H.put('rbox:0.45', band, 0, 2.02, 0.02, 1.0, 0.17, 0.93, 0, 0, 0, { grad: 0 });
+    if (tiger) for (const a of [-0.5, 0, 0.5]) H.put('box', '#2a1a14', Math.sin(a) * 0.49, 2.02, Math.cos(a) * 0.46, 0.05, 0.14, 0.03, 0, a, 0, { grad: 0 });
     for (const sd of [1, -1]) HR.put('rbox:0.3', band, sd * 0.12, 1.86, -0.56, 0.12, 0.42, 0.04, 0.5, 0, sd * 0.35, { grad: 0.05 });
     HR.put('sph:6:4', band, 0, 2.02, -0.46, 0.16, 0.14, 0.12, 0, 0, 0, { grad: 0 });
   }
@@ -107,9 +105,9 @@ function buildMonk(sh, C, evo, K) {
   }
   if (woke) { // troisième œil, auréole dorée derrière la tête
     H.put('oct', '#ffffff', 0, 2.06, 0.45, 0.1, 0.14, 0.05, 0, 0, 0, { grad: 0, glow: 1.2 });
-    HR.put('tor:0.1:4:24', GOLD, 0, 2.05, -0.5, 1.5, 1.5, 1.5, 0, 0, 0, { grad: 0, glow: 1.1 });
-    HR.put('tor:0.06:4:24', '#ffffff', 0, 2.05, -0.52, 1.2, 1.2, 1.2, 0, 0, 0, { grad: 0, glow: 1.2 });
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; HR.put('cone:4', '#fff0a0', Math.cos(a) * 0.86, 2.05 + Math.sin(a) * 0.86, -0.5, 0.08, 0.2, 0.05, 0, 0, a - PI / 2, { grad: 0, glow: 1 }); }
+    HR.put('tor:0.1:4:24', GOLD, 0, 2.05, -0.5, 1.3, 1.3, 1.3, 0, 0, 0, { grad: 0, glow: 1.1 });
+    HR.put('tor:0.06:4:24', '#ffffff', 0, 2.05, -0.52, 1.04, 1.04, 1.04, 0, 0, 0, { grad: 0, glow: 1.2 });
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; HR.put('cone:4', '#fff0a0', Math.cos(a) * 0.76, 2.05 + Math.sin(a) * 0.76, -0.5, 0.08, 0.2, 0.05, 0, 0, a - PI / 2, { grad: 0, glow: 1 }); }
   }
   // pans de la ceinture dans le dos (os de la cape : ils flottent quand il court) ; longs et rayés au Tigre
   const tail = tiger ? '#2a1a14' : drape;
