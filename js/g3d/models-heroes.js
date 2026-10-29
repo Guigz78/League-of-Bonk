@@ -5,6 +5,7 @@ import { THREE, PI, TAU, clamp, lerp, damp, smooth, angDiff, yawOf, shade, mixC,
 import { CLASSES, EVOLUTIONS } from '../data.js';
 import { HEROES_C1 } from './models-heroes-c1.js'; // Nyx, Sora, Ragnar (champions C1)
 import { HEROES_C2 } from './models-heroes-c2.js'; // Frida, Gaïa (champions C2)
+import { HEROES_ENG } from './models-hero-engineer.js'; // Tess (ingénieure)
 
 // os : [parent, x, y, z] (pivots au repos, le modèle regarde vers +Z, sa gauche est +X)
 const BONES = {
@@ -363,7 +364,7 @@ function heroShapes(clsId, evo) {
   const k = clsId + ':' + evo;
   if (!SHAPES.has(k)) {
     const o = {}, get = n => o[n] || (o[n] = new Shape());
-    (BUILD[clsId] || HEROES_C1[clsId]?.build || HEROES_C2[clsId]?.build || buildKnight)(get, heroColors(clsId, evo), evo, KIT);
+    (BUILD[clsId] || HEROES_C1[clsId]?.build || HEROES_C2[clsId]?.build || HEROES_ENG[clsId]?.build || buildKnight)(get, heroColors(clsId, evo), evo, KIT);
     SHAPES.set(k, o);
   }
   return SHAPES.get(k);
@@ -531,6 +532,7 @@ export function heroModel(clsId, evo = 0) {
         const u = 1 - atk, w = smooth(atk / 0.45);
         if (HEROES_C1[clsId]?.atk) HEROES_C1[clsId].atk(b, w, u, atk); // champions C1 : faux, dagues, hache
         else if (HEROES_C2[clsId]?.atk) HEROES_C2[clsId].atk(b, w, u, atk); // champions C2 : sceptre de glace, bâton
+        else if (HEROES_ENG[clsId]?.atk) HEROES_ENG[clsId].atk(b, w, u, atk); // Tess : clé à molette abattue
         else if (clsId === 'knight') {
           // grand coup d'épée horizontal : bras levé sur le côté, balayage vers l'avant et à travers
           const s = smooth(u / 0.28), lift = smooth(u / 0.08);

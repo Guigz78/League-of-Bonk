@@ -10,6 +10,7 @@ import { initC2, eventC2, frameC2 } from './fx-c2.js'; // champions C2 (Frida, G
 import { initW1, eventW1, frameW1 } from './fx-w1.js'; // Arsenal W1 (armes de Lumi, Kira, Brok, Frida)
 import { frameW2 } from './fx-w2.js'; // arsenal W2 (armes de Nyx et de Sora)
 import { frameW3 } from './fx-w3.js'; // arsenal W3 (armes de Ragnar et de Gaïa)
+import { eventEng, frameEng } from './fx-engineer.js'; // Tess l'ingénieure (armes, frappe orbitale)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -152,6 +153,7 @@ export class Fx {
     if (this.c1 && eventC1(this, ev)) return; // champions C1
     if (this.c2 && eventC2(this, ev)) return; // champions C2
     if (ev.type === 'w1') return void eventW1(this, ev); // Arsenal W1
+    if (eventEng(this, ev)) return; // Tess : frappe orbitale
     switch (ev.type) {
       case 'hit': {
         const e = ev.e, h = e.r * 1.2 + e.fly;
@@ -523,6 +525,7 @@ export class Fx {
     frameW1(this, dt); // Arsenal W1
     frameW2(this, dt); // arsenal W2
     frameW3(this, dt); // arsenal W3
+    frameEng(this, dt); // Tess : tourelles, drones, flammes, mines, frappe orbitale
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)
