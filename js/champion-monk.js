@@ -4,6 +4,13 @@
 // Ses 4 armes (Poings de fer, Paume de ki, Vague de chi, Dragon de ki) sont dans js/arsenal-monk.js.
 // Événements pour le rendu (js/g3d/fx-monk.js) : 'ult' (kind 'thousand'), 'mkfist' (un tir de la rafale), 'mkwave' (onde
 // de ki finale), 'mkflow' (palier du flux), 'mkend' (rafale interrompue).
+// Équilibrage (simulateur l2/sim.mjs, bot qui prend la 1re carte, Normal, monde 1 → 2, une résurrection, 24 parties) : boss
+// du monde 1 / du monde 2 tués. Premiers Poings de fer (0,62 × attaque, arc de 63°) : 6/12, 6/12 (le bot tue trop peu au
+// début, niveau 4 à la fin du chrono). Poings à 0,85 : 21/24, 21/24 puis 23/24, 21/24 (115 PV) : en tête, avec un combo
+// moyen de 1 900 (le flux au maximum presque tout le temps). Retenu (armes ×0,9 environ) : 22/24 (92 %), 17/24 (71 %) ;
+// Difficile, monde 1 : 7/10 (3/10 sans résurrection). Autres champions au même simulateur (arsenaux complets, Arsenal W1 et
+// Tess) : Lumi 100 % / 85 %, Kira 83 % / 63 %, Brok 75 % / 67 %, Frida 82 % / 54 %, Tess 100 % / 81 %. Part des victimes :
+// paume ~34 %, dragon ~25 %, vague ~22 %, poings ~20 %.
 import { sfx, buzz } from './audio.js';
 
 // Réglages (exportés : le simulateur d'équilibrage peut les modifier). Dégâts en multiples de A = attaque × dégâts ×

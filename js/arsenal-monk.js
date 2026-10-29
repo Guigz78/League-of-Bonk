@@ -71,7 +71,7 @@ addWeapons({
   // projette un poing de ki qui transperce (w.q).
   fists: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 0.85 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      const d = A * 0.77 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
       return E ? { dmg: d * 1.3, cd: 0.2 * h, R: 112 * ar, fin: d * 1.3 * 2.3, arc: 0.8, all: 1, ki: d * 0.8, kR: 220 * ar }
         : { dmg: d, cd: (L(5) ? 0.28 : 0.33) * h, R: (L(3) ? 104 : 90) * ar, fin: d * 2.3, arc: 0.75, all: L(4) };
     },
@@ -110,7 +110,7 @@ addWeapons({
   // Évoluée (Paume céleste) : 2 énormes sphères qui explosent en bout de course.
   kipalm: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 1.6 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      const d = A * 1.4 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
       return E ? { dmg: d * 1.35, cd: 1.1 * h, n: 2, r: 34 * ar, v: 360, life: 1.35, boom: d * 1.4, bR: 120 * ar }
         : { dmg: d, cd: (L(5) ? 1.2 : 1.5) * h, n: 1 + L(4), r: (L(3) ? 24 : 17) * ar, v: 400, life: 1.15 };
     },
@@ -151,7 +151,7 @@ addWeapons({
   // rend un peu de PV (réserve de soin commune avec le vol de vie, au plus 8 monstres par onde).
   chiwave: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 1.5 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      const d = A * 1.35 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
       return E ? { dmg: d * 1.4, cd: 1.7 * h, R: 230 * ar, n: 3, stun: 0.6, heal: 0.004 }
         : { dmg: d, cd: (L(5) ? 1.9 : 2.4) * h, R: (L(3) ? 185 : 150) * ar, n: 1 + L(4) };
     },
@@ -197,7 +197,7 @@ addWeapons({
   // qui plongent en explosant à la fin.
   kidragon: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 0.8 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      const d = A * 0.7 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
       return E ? { dmg: d * 1.3, cd: 3.4 * h, n: 2, r: 34 * ar, life: 5, v: 330, boom: d * 3.5, bR: 130 * ar }
         : { dmg: d, cd: (L(5) ? 3.8 : 4.6) * h, n: 1 + L(4), r: (L(3) ? 27 : 22) * ar, life: L(3) ? 3.8 : 3, v: 300 };
     },
