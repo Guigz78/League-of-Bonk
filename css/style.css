@@ -1935,3 +1935,11 @@ button.itile:active { transform: translateY(1px); }
 .cs-arsenal > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .cs-arm { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; text-align: center; background: var(--bg1); border: 1px solid var(--ln); min-width: 0; }
 .cs-arm b { font: 700 12px/1.15 var(--fd); letter-spacing: .03em; overflow-wrap: anywhere; }
+
+/* ---------- Écran des champions sur petit écran (iPhone SE) : jusqu'à 4 rangées de 3 onglets visibles au-dessus du bouton ---------- */
+@media (max-height: 600px) {
+  .cs-stage { height: 170px; }
+  .cs-stage canvas { width: 152px; height: 170px; }
+  .cs-tab { height: 54px; }
+  .cs-tab > img { width: 30px; height: 30px; }
+}
