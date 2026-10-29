@@ -77,11 +77,12 @@ export const MONK = {
     if (c.flow) {
       const F = MKB.flow, k = Math.min(F.max, Math.floor(this.combo / F.per) * c.flow);
       if (k !== (this.mkF || 0)) {
-        const up = k > (this.mkF || 0), p = this.p;
+        const k0 = this.mkF || 0, up = k > k0, p = this.p;
         this.mkF = k; this.recalc();
         if (up) {
-          const max = k >= F.max - 1e-9;
-          this.text(p.x, p.y, 96, max ? 'Flux maximal !' : 'Flux +' + pct(k), max ? '#ffd54a' : '#ffc23a', max ? 1.2 : 0.95);
+          // texte à mi-chemin et au plafond seulement (les paliers du combo ont déjà le leur) ; anneau à chaque palier
+          const max = k >= F.max - 1e-9, half = k0 < F.max / 2 && k >= F.max / 2 - 1e-9;
+          if (max || half) this.text(p.x, p.y, 44, max ? 'Flux maximal !' : 'Flux +' + pct(k), max ? '#ffd54a' : '#ffc23a', max ? 1.15 : 0.95);
           this.emit('mkflow', { k, max });
           if (max) sfx('flowmax');
         }

@@ -13,14 +13,15 @@ const NS = 16; // points de la traînée d'un dragon (comme arsenal-monk.js)
 
 // ---------- Modèles (unités 3D : 1 = 20 px), créés une fois ----------
 function init(fx) {
-  const unlit = new THREE.MeshBasicMaterial({ vertexColors: true }), ghost = alphaMat({ vertexColors: true, blending: ADD });
+  const unlit = new THREE.MeshBasicMaterial({ vertexColors: true }), ghost = alphaMat({ vertexColors: true });
   fx.mats.push(unlit, ghost);
   // poing (vers +X) : bloc des doigts, jointures, pouce, poignet bandé
   const f = new Build(3);
-  f.add(G.box(0.9, 0.7, 0.8), W, T(0.1, 0, 0), 0.04);
-  for (let i = 0; i < 4; i++) f.add(G.box(0.24, 0.2, 0.18), '#fff6d8', T(0.58, 0.24 - i * 0.16 + 0.08, 0.16 * (i % 2 ? 1 : 0.6) - 0.1, 1, 1, 1), 0.02);
-  f.add(G.box(0.5, 0.22, 0.24), '#fff0c0', T(0.2, -0.3, 0.38));
-  f.add(G.cyl(0.36, 0.4, 0.5, 6), '#ffe0a0', T(-0.5, 0, 0, 1, 1, 1, 0, 0, Math.PI / 2));
+  f.add(G.box(0.9, 0.7, 0.8), '#ffe8b0', T(0.1, 0, 0), 0.04);
+  for (let i = 0; i < 4; i++) f.add(G.box(0.24, 0.2, 0.2), W, T(0.58, 0.27 - i * 0.18, 0.02, 1, 1, 1), 0.02);
+  f.add(G.box(0.5, 0.22, 0.24), '#fff4d8', T(0.2, -0.3, 0.38));
+  f.add(G.cyl(0.36, 0.4, 0.5, 6), '#d89a50', T(-0.5, 0, 0, 1, 1, 1, 0, 0, Math.PI / 2));
+  f.add(G.cyl(0.42, 0.42, 0.12, 6), '#8a5a3a', T(-0.36, 0, 0, 1, 1, 1, 0, 0, Math.PI / 2));
   // boule de ki : cœur facetté ; tête de dragon (vers +X) : museau, mâchoire ouverte, cornes, moustaches, crinière ;
   // anneau du corps : écailles en couronne et nageoire dorsale
   const b = new Build(4); b.add(G.ico(0.5, 1), W, T(), 0.03);
@@ -45,6 +46,7 @@ function init(fx) {
     head: new Pool(fx.root, h.geo(), unlit, 8, { color: true, order: 6 }),
     seg: new Pool(fx.root, s.geo(), unlit, 8 * NS, { color: true, order: 6 }),
     fists: [], // poings fantômes en vol : { x, y, a, d, t, max, s, c }
+    arcs: [], // croissants d'impact : { x, y, a, R, arc, t, max, c }
     flowK: 0,
   };
 }
@@ -53,6 +55,11 @@ function init(fx) {
 function ghostFist(st, x, y, a, d, max, s, c) {
   if (st.fists.length >= 44) st.fists.shift();
   st.fists.push({ x, y, a, d, t: 0, max, s, c });
+}
+// croissant d'impact devant Kenji : arc de rayon R (demi-angle arc) qui s'ouvre et s'efface
+function slashArc(st, x, y, a, R, arc, c, max = 0.18) {
+  if (st.arcs.length >= 16) st.arcs.shift();
+  st.arcs.push({ x, y, a, R, arc, t: 0, max, c });
 }
 function sparks(fx, x, y, n, c, v, z = 18) {
   for (let i = 0; i < n && fx.sparks.length < 200; i++) { const a = Math.random() * TAU, s = rand(0.4, 1) * v; fx.sparks.push({ x, y, z, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, vz: rand(40, 200), life: 0.25, max: 0.25, c, w: 2.4 }); }
@@ -78,14 +85,14 @@ export function eventMonk(fx, ev) {
         // tout autour : coup de pied tournoyant et anneau complet
         gesture(fx, ev.all ? 'spin' : ev.fin ? 'big' : 'punch', a);
         const R = ev.R, ix = x + Math.cos(a) * R * 0.8, iy = y + Math.sin(a) * R * 0.8, c = ev.evo ? GOLD : KI;
-        ghostFist(st, x, y, a, R * 0.8, ev.fin ? 0.2 : 0.14, ev.fin ? 1.45 : 1, ev.evo ? '#fff0b0' : '#ffe0a0');
+        ghostFist(st, x, y, a, R * 0.85, ev.fin ? 0.22 : 0.16, ev.fin ? 2.2 : 1.6, ev.evo ? '#ffe070' : ev.fin ? '#ffc860' : '#ffb43a');
+        if (!ev.all) slashArc(st, x, y, a, R, ev.fin ? 1.0 : 0.55, ev.fin ? KI_L : KI, ev.fin ? 0.24 : 0.16);
         fx.glowPulse(ix, iy, 26, ev.fin ? 40 : 24, ev.fin ? KI_L : '#ffe8c0');
         if (ev.all) {
           fx.ring(x, y, 20, R, c, 10, 0.32); fx.ring(x, y, 10, R * 0.75, W, 6, 0.28, -0.04);
-          for (let i = 0; i < 6; i++) ghostFist(st, x, y, a + i / 6 * TAU, R * 0.85, 0.22, 1.2, '#ffe0a0');
+          for (let i = 0; i < 6; i++) ghostFist(st, x, y, a + i / 6 * TAU, R * 0.85, 0.22, 1.7, '#ffc860');
           fx.puff(x, y, 6, R * 0.4, 0.5, '#e8d8b8');
         } else if (ev.fin) {
-          fx.ra.ring(x * S, 0.9, y * S, R * 0.95 * S, col(c), 0.9, 0, 0.35, 2.0 / TAU, a - 1.0, 0, 0, 0.9);
           fx.ring(ix, iy, 6, 46, KI_L, 6, 0.25);
           sparks(fx, ix, iy, 6, c, 260);
           fx.gfx.kick = Math.max(fx.gfx.kick || 0, 2);
@@ -123,18 +130,18 @@ export function eventMonk(fx, ev) {
       if (ev.kind !== 'thousand') return false;
       // Mille poings : éclair de ki, colonne dorée, bord de l'écran safran
       fx.bursts.push({ x: p.x, y: p.y, h: 24, r: 160, t: 0, max: 0.4, c: KI });
-      fx.pillars.push({ x: p.x, y: p.y, w: 120, h: 640, t: 0, max: 0.7, c: GOLD });
+      fx.pillars.push({ x: p.x, y: p.y, w: 90, h: 520, t: 0, max: 0.45, c: GOLD });
       fx.ring(p.x, p.y, 20, 200, KI_L, 10, 0.4);
       fx.halo(KI, 3);
-      if (ov) { ov.flashA = 0.3; ov.flashC = '255,190,80'; ov.edgeA = 0.6; ov.edgeC = '255,160,40'; }
+      if (ov) { ov.flashA = 0.15; ov.flashC = '255,190,80'; ov.edgeA = 0.6; ov.edgeC = '255,160,40'; }
       return true;
     }
     case 'mkfist': {
       // un coup de la rafale : 3 poings fantômes vers des points au hasard du cône, le héros enchaîne les directs
       gesture(fx, 'punch', ev.a);
-      for (let i = 0; i < 3; i++) {
-        const a = ev.a + rand(-ev.arc, ev.arc) * 0.85, d = ev.R * rand(0.35, 0.95), sx = ev.x + Math.cos(ev.a + (i - 1) * 1.2) * 18, sy = ev.y + Math.sin(ev.a + (i - 1) * 1.2) * 18;
-        ghostFist(st, sx, sy, a, d, rand(0.14, 0.2), rand(1.1, 1.6), Math.random() < 0.3 ? W : '#ffd890');
+      for (let i = 0; i < 4; i++) {
+        const a = ev.a + rand(-ev.arc, ev.arc) * 0.85, d = ev.R * rand(0.35, 0.95), sx = ev.x + Math.cos(ev.a + (i - 1.5) * 1.0) * 18, sy = ev.y + Math.sin(ev.a + (i - 1.5) * 1.0) * 18;
+        ghostFist(st, sx, sy, a, d, rand(0.16, 0.22), rand(1.6, 2.4), Math.random() < 0.3 ? '#ffe070' : '#ffb43a');
         if (Math.random() < 0.5) fx.glowPulse(ev.x + Math.cos(a) * d, ev.y + Math.sin(a) * d, 24, 30, KI_L);
       }
       if (ev.i % 3 === 0) fx.ra.ring(ev.x * S, 0.9, ev.y * S, ev.R * S, col(KI), 0.45, 0, 0.06, 2 * ev.arc / TAU, ev.a - ev.arc, 0, 0, 0.7);
@@ -180,10 +187,21 @@ export function frameMonk(fx, dt) {
     st.fists[n++] = f;
     const k = f.t / f.max, e = 1 - (1 - k) ** 3, d = f.d * e, x = f.x + Math.cos(f.a) * d, y = f.y + Math.sin(f.a) * d, sc = f.s * (0.7 + 0.5 * k);
     const i = st.fist.put(x * S, 1.3, y * S, -f.a, sc, sc, sc);
-    st.fist.tint(i, col(f.c)); st.fist.alpha(i, 0.85 * (1 - k * k));
-    fx.line((x - Math.cos(f.a) * 30) * S, 1.3, (y - Math.sin(f.a) * 30) * S, x * S, 1.3, y * S, 0.5 * sc, KI, 0.35 * (1 - k));
+    st.fist.tint(i, col(f.c)); st.fist.alpha(i, 0.95 * (1 - k * k));
+    fx.glow(x, y, 26, 18 * sc, KI, 0.5 * (1 - k));
+    fx.line((x - Math.cos(f.a) * 40 * sc) * S, 1.3, (y - Math.sin(f.a) * 40 * sc) * S, x * S, 1.3, y * S, 0.45 * sc, KI_L, 0.45 * (1 - k));
   }
   st.fists.length = n;
+  n = 0;
+  for (const c of st.arcs) {
+    c.t += dt;
+    if (c.t >= c.max) continue;
+    st.arcs[n++] = c;
+    const k = c.t / c.max, r = c.R * (0.7 + 0.35 * (1 - (1 - k) ** 2));
+    fx.ra.ring(c.x * S, 0.9, c.y * S, r * S, col(c.c), 0.95 * (1 - k), 0, 0.3 * (1 - k * 0.5), 2 * c.arc / TAU, c.a - c.arc, 0, 0, 0.9);
+    fx.rg.ring(c.x * S, 0.07, c.y * S, r * S, col(KI), 0.35 * (1 - k), 0, 0.3, 2 * c.arc / TAU, c.a - c.arc, 0, 0, 0);
+  }
+  st.arcs.length = n;
   for (const w of p.weapons) {
     if (!w.q) continue;
     if (w.id === 'fists') for (const o of w.q) { // poings de ki projetés (Rafale du tigre)
