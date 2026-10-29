@@ -62,6 +62,7 @@ function pierce(run, o, dt, opt) {
 const KI = { knock: 120, kx: 0, ky: 0, color: '#ffd27a' }, PALM = { knock: 90, kx: 0, ky: 0, color: '#ffe48a' };
 const BOOM = { knock: 260, kx: 0, ky: 0, color: '#fff0a0' }, BITE = { knock: 60, kx: 0, ky: 0, color: '#ffc23a', quiet: false };
 const NS = 16; // points de la traînée d'un dragon (corps)
+const MAREE_LS = 0.1; // Marée de sérénité : vol de vie compté en plus pour le plafond de soin par seconde
 
 addWeapons({
   // ---------- Poings de fer (arme de départ) ----------
@@ -170,10 +171,12 @@ addWeapons({
           if (o.h.length < 64) o.h.push(e);
           run.hitEnemy(e, o.dmg, { knock: 420, kx: dx / (d || 1), ky: dy / (d || 1), color: '#ffe0a0' });
           if (S.stun && !e.dead) hold(e, S.stun);
-          if (S.heal && o.hl < 8 && !run.dying) { o.hl++; run.lsPool += p.maxHp * S.heal * run.diff.heal; }
+          if (S.heal && o.hl < 8 && !run.dying) { o.hl++; run.lsPool += p.maxHp * S.heal; }
         }
         if (o.r >= o.R) o.on = false;
       }
+      // évoluée : relève le plafond de soin par seconde (run.updateHeal), comme la Moisson écarlate ou le Cœur de soleil
+      if (E && !w.lsx) { w.lsx = 1; run.lsX += MAREE_LS; }
       if (w.t > 0) return;
       if (!run.nearest(S.R * 0.9, p)) { w.t = 0.25; return; } // personne à portée : on attend
       w.t = S.cd;

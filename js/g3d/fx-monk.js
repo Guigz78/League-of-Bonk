@@ -241,9 +241,10 @@ export function frameMonk(fx, dt) {
         st.seg.tint(i, bc);
         if (j % 3 === 0) fx.glow(x, y, zz, 22 * sc, E ? GOLD : KI, 0.45);
       }
-      const i = st.head.put(o.x * S, z * S, o.y * S, -o.a, kz * 1.7 * life);
+      const i = st.head.put(o.x * S, z * S, o.y * S, -o.a, kz * 2.3 * life);
       st.head.tint(i, hc);
-      fx.glow(o.x, o.y, z, 40 * kz, E ? GOLD : KI, 0.7);
+      fx.glow(o.x, o.y, z, 46 * kz, E ? GOLD : KI, 0.7);
+      fx.glow(o.x + Math.cos(o.a) * 14 * kz, o.y + Math.sin(o.a) * 14 * kz, z + 8 * kz, 10 * kz, '#ff3a1a', 0.9 * life); // yeux
       fx.shadow(o.x, o.y, 30 * kz, 0.22);
       if (Math.random() < 0.5 && fx.sparks.length < 190) fx.sparks.push({ x: o.x - Math.cos(o.a) * 14, y: o.y - Math.sin(o.a) * 14, z, vx: rand(-40, 40), vy: rand(-40, 40), vz: rand(20, 80), life: 0.3, max: 0.3, c: E ? GOLD : SAFF, w: 2 });
     }
