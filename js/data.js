@@ -67,6 +67,17 @@ export const CLASSES = {
     passive: { name: 'Sève vivante', icon: 'leaf', desc: 'Régénère 0,8 % des PV par seconde ; ramassage +20 %.' },
     colors: { 1: '#5a8a3a', 2: '#3a6228', 3: '#9ad06a', a: '#ff7ab8', h: '#a0582a', s: '#ffd8b8', d: '#e8b090', c: '#6a4426' },
   },
+  // ---- Morgane la capitaine pirate (à débloquer : défi, clé 'cls:pirate'). Talents du passif « Butin » : goldPct = or en
+  // plus (save.playerStats ; ne compte pas dans la chance des cartes), lootUp = chance qu'un coffre de butin monte d'un rang
+  // (run.lootTier). Ultime et armes : js/champion-pirate.js, js/arsenal-pirate.js
+  pirate: {
+    id: 'pirate', name: 'Morgane', role: 'Capitaine pirate', locked: true,
+    desc: 'Ses pistolets crépitent, son sabre tranche les abordages… et tout l\'or finit dans ses coffres.',
+    hp: 120, atk: 14, crit: 0.1, speed: 1.03, goldPct: 0.2, lootUp: 0.15,
+    weapon: 'pistols', ult: 'broadside',
+    passive: { name: 'Butin', icon: 'plunder', desc: '+20 % d\'or ; coffres de butin un peu meilleurs (15 % de chance de monter d\'un rang).' },
+    colors: { 1: '#c8202e', 2: '#8a1220', 3: '#f4ece0', a: '#ffc23a', h: '#8a3418', s: '#ffd8b8', d: '#e8b090', c: '#3a2822' },
+  },
 };
 
 // Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
@@ -128,6 +139,14 @@ export const EVOLUTIONS = {
     { name: 'Gaïa Écorce', lvl: 11, colors: { 1: '#3a6a3a', 2: '#28482a', 3: '#7ab85a', c: '#5a3a1e', a: '#ffc23a' } },
     { name: 'Gaïa Cerf Doré', lvl: 19, colors: { 1: '#2a5a4a', 2: '#1a3a30', 3: '#5ae0a0', c: '#4a2e18', a: '#ff8ad8', h: '#e0a050' } },
     { name: 'Gaïa Mère Nature', lvl: 28, aura: '#7aff5a', colors: { 1: '#8ae05a', 2: '#4a9a3a', 3: '#e0ffb0', c: '#8a5a2a', a: '#ff9ad8', h: '#d8ff8a' } },
+  ],
+  // ---- Morgane (capitaine pirate) ----
+  pirate: [
+    { name: 'Morgane' },
+    { name: 'Morgane Corsaire', lvl: 5, colors: { 1: '#d8283a', 2: '#961628', a: '#ffd04a', c: '#2e2238' } },
+    { name: 'Morgane Amirale', lvl: 11, colors: { 1: '#1e3a7a', 2: '#122658', 3: '#ffffff', a: '#ffd04a', c: '#18244a' } },
+    { name: 'Morgane Fantôme', lvl: 19, colors: { 1: '#1c4a4c', 2: '#0e2e32', 3: '#c8fff0', a: '#5affc0', h: '#3a2a3a', c: '#12282c', s: '#d8f0e8', d: '#b0d0c8' } },
+    { name: 'Morgane Reine des Mers', lvl: 28, aura: '#22e8c8', colors: { 1: '#f4f0e6', 2: '#c8b48a', 3: '#ffffff', a: '#ffd23a', h: '#c8501e', c: '#1a4a7a' } },
   ],
 };
 
@@ -977,3 +996,26 @@ export const ARSENAL = {
   druid:     ['shrooms', 'thorns', 'wisps', 'petals'],         // forêt : champignons, ronces, esprits, pluie de pétales
 };
 for (const [id, a] of Object.entries(ARSENAL)) if (CLASSES[id]) CLASSES[id].arsenal = a;
+
+// ===== Morgane la capitaine pirate (pirate) : ultime, arsenal, défi =====
+// Ultime : js/champion-pirate.js ; armes (statistiques, comportement) : js/arsenal-pirate.js ; rendu : js/g3d/fx-pirate.js et
+// js/g3d/models-hero-pirate.js. Ses 4 armes lui sont propres (own) ; évolutions : niveau 5 + tome.
+ULTS.broadside = { name: 'Bordée', icon: 'broadside', desc: 'Son navire tire une bordée : trois salves de boulets de canon pilonnent tout l\'écran.' };
+Object.assign(WEAPONS, {
+  pistols: { name: 'Pistolets', icon: 'pistols', own: 'pirate', desc: 'Tirs rapides, une main puis l\'autre, sur l\'ennemi le plus proche.', lv: ['', '+30 % dégâts', 'Les balles transpercent', 'Tirs plus rapides', '2 balles par tir, +25 % dégâts'] },
+  cutlass: { name: 'Sabre d\'abordage', icon: 'cutlass', own: 'pirate', desc: 'Deux coups de sabre en arc devant elle : l\'aller, puis le retour.', lv: ['', '+30 % dégâts', 'Arc plus large et plus long', '3e coup : une estocade', '+40 % dégâts, plus rapide'] },
+  cannon:  { name: 'Canon', icon: 'cannon', own: 'pirate', desc: 'Un lourd boulet roule vers les ennemis, les écrase puis explose.', lv: ['', '+30 % dégâts', 'Explosion plus large', '+1 boulet', '+30 % dégâts, plus fréquent'] },
+  parrot:  { name: 'Perroquet', icon: 'parrot', own: 'pirate', desc: 'Un perroquet vole autour d\'elle et fond sur les ennemis proches.', lv: ['', '+30 % dégâts', 'Pique plus souvent', '+1 perroquet', '+30 % dégâts, chasse plus loin'] },
+});
+Object.assign(WEAPON_EVOS, {
+  pistols: { tome: 'crit',   name: 'Pistolets d\'or', icon: 'pistols', desc: 'Pistolets dorés : chaque tir est une gerbe de 3 balles perçantes, bien plus rapide.' },
+  cutlass: { tome: 'power',  name: 'Lame des marées', icon: 'cutlass', desc: 'Sabre d\'écume : chaque coup lance une vague tranchante qui traverse les rangs.' },
+  cannon:  { tome: 'area',   name: 'Boulets ramés',   icon: 'cannon',  desc: 'Paires de boulets enchaînés qui tournoient, fauchent une large bande et explosent.' },
+  parrot:  { tome: 'magnet', name: 'Aras pillards',   icon: 'parrot',  desc: '3 aras qui piquent en chaîne et rapportent de l\'or à chaque victime.' },
+});
+ARSENAL.pirate = ['pistols', 'cutlass', 'cannon', 'parrot']; // abordage : pistolets, sabre, canon, perroquet
+CLASSES.pirate.arsenal = ARSENAL.pirate;
+// défi de déblocage (rangé après ceux des autres champions) ; aura de maîtrise
+UNLOCK_CHALLENGES.splice(UNLOCK_CHALLENGES.findIndex(c => c.id === 'mastery10'), 0,
+  { id: 'pirate', cat: 'champions', need: 'pirate', icon: 'plunder', name: 'Coffre au trésor', txt: 'Possédez 5 000 or', n: 5000, prog: s => +s.gold || 0, rw: { key: 'cls:pirate', gold: 200 } });
+MASTERY.aura.pirate = '#ffb81a';

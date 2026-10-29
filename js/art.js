@@ -527,6 +527,15 @@ Object.assign(ICON, {
   leaf: [IC.green, IC.green, '<path d="M4.5 19.5C4.5 10.5 10 4.5 19.5 4.5c0 9.5-5.5 15-15 15z" fill="T"/><path d="M4.5 19.5L14 10M8.8 15.2h4M11.3 12.7V9.2"/>'],
   forest: [IC.green, IC.green, '<path d="M12 2.5l6 7.5h-3.2l4.2 6H5l4.2-6H6z" fill="T"/><path d="M12 16v3M7.5 21.5c1.4-1.8 2.9-2.6 4.5-2.6s3.1.8 4.5 2.6"/><path d="M2.8 14.2l2.4 1.3M21.2 14.2l-2.4 1.3M3.2 19.2l2.2-.5M20.8 19.2l-2.2-.5" stroke="#ff7ab8"/>'],
 });
+// Morgane la capitaine pirate : butin (coffre au trésor), bordée (navire), pistolets, sabre d'abordage, canon, perroquet
+Object.assign(ICON, {
+  plunder: [IC.gold, IC.gold, '<path d="M3.5 11.5h17v8h-17z" fill="T"/><path d="M3.5 11.5c0-3.4 2.8-5 8.5-5s8.5 1.6 8.5 5M3.5 14.5h17"/><rect x="10.8" y="13" width="2.4" height="3.2" fill="S" stroke="none"/><circle cx="18.5" cy="4" r="1.8" stroke="#ffe48a"/><circle cx="14.5" cy="3.2" r="1.3" stroke="#ffe48a"/>'],
+  broadside: [IC.orange, IC.orange, '<path d="M2.5 13.5h19l-3 6.5h-13z" fill="T"/><path d="M12 13.5V3"/><path d="M12 4l6.5 5.5H12" fill="T"/><circle cx="7.5" cy="16.5" r="1.1" fill="S" stroke="none"/><circle cx="12" cy="16.5" r="1.1" fill="S" stroke="none"/><circle cx="16.5" cy="16.5" r="1.1" fill="S" stroke="none"/><path d="M3.5 9.5c-1-1.6-.3-3.4 1.6-3.6M6 6.5c.2-1.8 1.8-2.6 3.4-1.8" stroke="#e9edf3"/>'],
+  pistols: [IC.w, IC.gold, '<path d="M3.5 8.5h16v3.5H10l-2.2 8H3.8l2-8H3.5z" fill="T"/><path d="M19.5 10.2h2.2M10.5 12v2.8h2.8M7.5 8.5l-1.5-3"/><circle cx="16.5" cy="10.2" r=".9" fill="S" stroke="none"/>'],
+  cutlass: [IC.w, IC.cyan, '<path d="M8 15.5C12.5 12.5 17 8.2 20.5 3c.4 5-3.6 10-10.2 14.5z" fill="T"/><path d="M4.5 12.5c1.4 3.8 3.6 6 7.2 7.4" stroke="#ffc23a"/><path d="M7.2 17.2L3 21.4"/>'],
+  cannon: [IC.w, IC.orange, '<path d="M3.5 14.5L17 8.2l2.2 4.6-13 6z" fill="T"/><path d="M19.2 7.2l1.6 3.6"/><circle cx="9" cy="17.5" r="3.5"/><circle cx="9" cy="17.5" r=".9" fill="S" stroke="none"/><path d="M3.5 14.5L2 12M2.5 9.5l-1 -1" stroke="#ffd23a"/>'],
+  parrot: [IC.red, IC.red, '<path d="M7.5 21.5c-1.4-4-.8-9.4 2.2-12.4 1.2-3.6 4-5.6 7-5.1 2.6.4 4.1 2.6 4.1 5-1.6-1-3.2-1-4.2 0-1 1.6-.4 3.6-2 6.5-1.4 2.5-3.8 4.6-7.1 6z" fill="T"/><path d="M19.5 8.4c1.1.9 1.4 2.2.8 3.6" stroke="#ffd23a"/><path d="M9.5 16.5c1.5-.3 3-1.3 3.8-3" stroke="#3fd0ff"/><circle cx="15.8" cy="6.6" r="1" fill="S" stroke="none"/>'],
+});
 
 function svgIcon(name) {
   const [c, t, body] = ICON[name];

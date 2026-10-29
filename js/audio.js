@@ -361,3 +361,26 @@ Object.assign(SFX, {
   thorns: () => { noise({ d: 0.07, v: 0.1, filter: ['bandpass', 1800], q: 3, sweepTo: 900 }); wood(r(500, 700), 0, 0.06); },
 });
 Object.assign(MIN_GAP, { thorns: 0.12, shatter: 0.2 });
+
+// ---------- Morgane la capitaine pirate : pistolets, sabre, canon, perroquet, bordée ----------
+Object.assign(SFX, {
+  // pistolet à silex : claquement sec et petit coup sourd
+  pirShot: () => { noise({ d: 0.09, v: 0.15, filter: ['bandpass', r(1600, 2000)], q: 0.8, sweepTo: 500 }); osc({ type: 'sine', f: 190, to: 60, d: 0.08, v: 0.1 }); },
+  // sabre : souffle métallique puis « shing »
+  pirSlash: () => { noise({ d: 0.14, v: 0.1, filter: ['bandpass', 3200], q: 2, sweepTo: 1300 }); osc({ type: 'triangle', f: r(2600, 3000), to: 1800, d: 0.1, v: 0.025, at: 0.03 }); },
+  pirThrust: () => { noise({ d: 0.1, v: 0.1, filter: ['highpass', 2500], sweepTo: 5000 }); osc({ type: 'triangle', f: 3400, d: 0.14, v: 0.03, at: 0.05 }); },
+  // canon : grosse détonation grave et cliquetis des roues
+  pirCannon: () => { osc({ type: 'sine', f: 120, to: 38, d: 0.42, v: 0.26 }); noise({ d: 0.38, v: 0.2, filter: ['lowpass', 1000], sweepTo: 120 }); wood(240, 0.05, 0.08); },
+  // boulet qui explose : souffle sourd et grondement
+  pirBoom: () => { noise({ d: 0.45, v: 0.2, filter: ['lowpass', 1500], sweepTo: 100 }); osc({ type: 'sine', f: 85, to: 30, d: 0.4, v: 0.2 }); },
+  // perroquet : coup de bec (« tok ») et cri rauque
+  pirPeck: () => wood(r(1100, 1400), 0, 0.07),
+  pirSquawk: () => { for (const at of [0, 0.13]) osc({ type: 'sawtooth', f: r(1300, 1500), to: r(850, 1000), d: 0.11, v: 0.045, at, filter: ['bandpass', 2000], q: 3, vib: 120, vibRate: 40 }); },
+  // bordée : cloche du navire, roulement de tambour qui monte
+  pirBroad: () => {
+    [880, 1320].forEach((f, i) => osc({ type: 'sine', f, d: 0.7, v: 0.07 - i * 0.03 })); osc({ type: 'sine', f: 880, d: 0.5, v: 0.05, at: 0.2 });
+    for (let i = 0; i < 6; i++) noise({ d: 0.08, v: 0.05 + i * 0.012, filter: ['lowpass', 600], at: 0.1 + i * 0.06 });
+    kazoo(196, 0.3, 0.05, 0.06, 262);
+  },
+});
+Object.assign(MIN_GAP, { pirShot: 0.06, pirSlash: 0.07, pirThrust: 0.1, pirCannon: 0.12, pirBoom: 0.09, pirPeck: 0.05, pirSquawk: 0.5 });
