@@ -70,9 +70,9 @@ addWeapons({
   // projette un poing de ki qui transperce (w.q).
   fists: {
     stats: ({ A, ar, h, L, E }) => {
-      const d = A * 0.62 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
-      return E ? { dmg: d * 1.3, cd: 0.22 * h, R: 106 * ar, fin: d * 1.3 * 2.4, arc: 0.6, all: 1, ki: d * 0.9, kR: 210 * ar }
-        : { dmg: d, cd: (L(5) ? 0.3 : 0.36) * h, R: (L(3) ? 98 : 82) * ar, fin: d * 2.2, arc: 0.55, all: L(4) };
+      const d = A * 0.85 * (L(2) ? 1.3 : 1) * (L(5) ? 1.4 : 1);
+      return E ? { dmg: d * 1.3, cd: 0.2 * h, R: 112 * ar, fin: d * 1.3 * 2.3, arc: 0.8, all: 1, ki: d * 0.8, kR: 220 * ar }
+        : { dmg: d, cd: (L(5) ? 0.28 : 0.33) * h, R: (L(3) ? 104 : 90) * ar, fin: d * 2.3, arc: 0.75, all: L(4) };
     },
     lines: [D_('Dégâts par coup'), ['fin', 'Coup final (1 sur 3)', fI], CD('Frappe toutes les'), ['R', 'Portée', fI], ['all', 'Coup final tout autour', v => (v ? 'oui' : 'non')], ['ki', 'Poing de ki', fI]],
     size: 'R',
@@ -84,8 +84,8 @@ addWeapons({
       if (!tg) { w.t = 0.12; return; }
       w.t = S.cd;
       w.c = ((w.c || 0) + 1) % 3;
-      const fin = w.c === 0, base = Math.atan2(tg.y - p.y, tg.x - p.x), R = fin ? S.R * 1.25 : S.R, all = fin && !!S.all;
-      const arc = fin ? (all ? 4 : 1.0) : S.arc, dmg = fin ? S.fin : S.dmg;
+      const fin = w.c === 0, base = Math.atan2(tg.y - p.y, tg.x - p.x), R = fin ? S.R * 1.3 : S.R, all = fin && !!S.all;
+      const arc = fin ? (all ? 4 : 1.25) : S.arc, dmg = fin ? S.fin : S.dmg;
       for (const e of run.grid.query(p.x, p.y, R + 40, NEAR)) {
         if (e.dead || e.burrowed) continue;
         const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
@@ -99,7 +99,7 @@ addWeapons({
       }
       w.fin = fin;
       fired(w, base);
-      run.emit('mk', { kind: 'punch', x: p.x, y: p.y, a: base, R, fin, all, evo: E });
+      run.emit('mk', { kind: 'punch', x: p.x, y: p.y, a: base, R, arc, fin, all, evo: E });
       sfx(fin ? 'punchbig' : 'punch');
     },
   },

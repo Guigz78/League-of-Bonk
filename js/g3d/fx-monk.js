@@ -86,7 +86,7 @@ export function eventMonk(fx, ev) {
         gesture(fx, ev.all ? 'spin' : ev.fin ? 'big' : 'punch', a);
         const R = ev.R, ix = x + Math.cos(a) * R * 0.8, iy = y + Math.sin(a) * R * 0.8, c = ev.evo ? GOLD : KI;
         ghostFist(st, x, y, a, R * 0.85, ev.fin ? 0.22 : 0.16, ev.fin ? 2.2 : 1.6, ev.evo ? '#ffe070' : ev.fin ? '#ffc860' : '#ffb43a');
-        if (!ev.all) slashArc(st, x, y, a, R, ev.fin ? 1.0 : 0.55, ev.fin ? KI_L : KI, ev.fin ? 0.24 : 0.16);
+        if (!ev.all) slashArc(st, x, y, a, R, ev.arc, ev.fin ? KI_L : KI, ev.fin ? 0.24 : 0.16);
         fx.glowPulse(ix, iy, 26, ev.fin ? 40 : 24, ev.fin ? KI_L : '#ffe8c0');
         if (ev.all) {
           fx.ring(x, y, 20, R, c, 10, 0.32); fx.ring(x, y, 10, R * 0.75, W, 6, 0.28, -0.04);
