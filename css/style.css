@@ -2090,3 +2090,11 @@ button.itile:active { transform: translateY(1px); }
 /* pendant une scène de dialogue en jeu ou une réplique de boss : HUD et guide masqués */
 .run.story-on .hud, .run.story-on .coach { opacity: 0; transition: opacity .2s; pointer-events: none; }
 .run.taunting .coach { opacity: 0 !important; }
+
+/* ---------- Écran des champions sur petit écran (iPhone SE) : jusqu'à 4 rangées de 3 onglets visibles au-dessus du bouton ---------- */
+@media (max-height: 600px) {
+  .cs-stage { height: 170px; }
+  .cs-stage canvas { width: 152px; height: 170px; }
+  .cs-tab { height: 54px; }
+  .cs-tab > img { width: 30px; height: 30px; }
+}
