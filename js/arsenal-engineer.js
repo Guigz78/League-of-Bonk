@@ -6,6 +6,12 @@
 // (run.stage) : état remis à zéro. Les tirs sont des objets réutilisés (réserve free) : aucune allocation en régime établi.
 // Dégâts en multiples de A (attaque × dégâts × rareté), recharges × h (hâte), tailles × ar (tome de taille), comme
 // run.wstats. Effets ponctuels pour le rendu : run.fx { type: 'eng…' } (geste d'attaque, tourelle posée, décharges…).
+// Équilibrage (simulateur l2/sim.mjs, bot qui prend la 1re carte, Normal, monde 1 → 2, une résurrection ; mêmes réglages que
+// les arsenaux W1 / W2) : boss du monde 1 / du monde 2 tués. Références (base + arsenaux W1, W2) : Lumi 12/12, 12/12 ; Kira
+// 10/12, 7/12 ; Brok 11/12, 11/12 ; Frida 10/12, 7/12 ; Nyx 13/16, 10/16 ; Sora 12/16, 11/16. Tess : premiers chiffres
+// 11/16, 2/16 (niveau 22, ~2 200 victimes, tourelle 59 % des victimes) ; dégâts ×1,7 partout : 16/16, 12/16 ; réglage
+// final (tourelle ×1,6, drone ×1,75, flammes ×1,8, mines ×1,9, 130 PV, flammes qui repoussent) : 32/32, 26/32 (niveau 35,
+// ~5 250 victimes : tourelle 41 %, mines 21 %, drone 20 %, flammes 17 %). Difficile, monde 1 : 5/12 (Sora 4/12).
 import { addWeapons } from './weapons-reg.js';
 import { sfx } from './audio.js';
 import { fmt } from './ui.js';
