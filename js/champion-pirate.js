@@ -13,9 +13,10 @@ import { sfx, buzz } from './audio.js';
 // volleys = salves, gap = écart entre deux salves (s), per = boulets par salve, fly = durée du vol (s, + jusqu'à spread au
 // hasard), R = rayon d'explosion, dmg = dégâts d'un boulet (un monstre dans la foule en prend 1 à 3), onFoe = part des
 // boulets tirés sur un monstre (sinon au hasard dans l'écran), reach = rayon de l'écran visé, boss = part des dégâts sur un
-// boss, bossMax = boulets au plus qui touchent un même boss, side = distance du navire (hors de l'écran, à gauche ou à droite)
+// boss, bossMax = boulets au plus qui touchent un même boss, side = distance du navire (au bord de l'écran, à gauche ou à
+// droite ; il vole à alt px du sol : rendu), hull = demi-longueur de sa coque (les boulets partent de ses sabords)
 export const PIRB = {
-  broadside: { volleys: 3, gap: 0.45, per: 8, fly: 0.75, spread: 0.25, R: 95, dmg: 3.4, onFoe: 0.75, reach: 430, boss: 0.8, bossMax: 5, side: 640 },
+  broadside: { volleys: 3, gap: 0.45, per: 8, fly: 0.75, spread: 0.25, R: 95, dmg: 3.4, onFoe: 0.75, reach: 430, boss: 0.8, bossMax: 4, side: 250, alt: 50, hull: 70 },
 };
 const ULTS_PIR = new Set(['broadside']);
 export const isUltPir = id => ULTS_PIR.has(id);
@@ -34,7 +35,7 @@ export const PIR = {
     for (const e of this.onScreen()) if (e.x < p.x) l++; else r++;
     const side = l === r ? (Math.random() < 0.5 ? -1 : 1) : l > r ? -1 : 1;
     for (const b of BALLS) b.on = false;
-    this.pirU = { t: 0, v: 0, A, side, sy: p.y - 120, balls: BALLS, n: 0, boss: 0 };
+    this.pirU = { t: 0, v: 0, A, side, sy: p.y + 20, balls: BALLS, n: 0, boss: 0 };
     this.shake = Math.max(this.shake, 6);
     sfx('pirBroad'); buzz(70);
   },
@@ -42,7 +43,7 @@ export const PIR = {
   // une salve : per boulets, chacun vers un monstre de l'écran (au hasard) ou un point de l'écran
   pirVolley() {
     const p = this.p, U = this.pirU, B = PIRB.broadside, T = this.onScreen();
-    const sx = p.x - U.side * B.side;
+    const sx = p.x - U.side * B.side; U.sy = p.y + 20; // le navire suit Morgane, au bord de l'écran
     for (let i = 0, k = 0; i < B.per && k < BALLS.length; k++) {
       const b = BALLS[k];
       if (b.on) continue;
@@ -53,7 +54,7 @@ export const PIR = {
       const A = this.arena;
       if (A) { const ax = x - A.x, ay = y - A.y, d = Math.hypot(ax, ay); if (d > A.R - 20) { x = A.x + ax / d * (A.R - 20); y = A.y + ay / d * (A.R - 20); } }
       b.on = true; b.x = clamp(x, -HALF + 40, HALF - 40); b.y = clamp(y, -HALF + 40, HALF - 40);
-      b.sx = sx; b.sy = U.sy + rand(-140, 140); b.t = -i * 0.05; b.dur = B.fly + rand(0, B.spread);
+      b.sx = sx + U.side * 30; b.sy = U.sy + rand(-B.hull, B.hull); b.t = -i * 0.05; b.dur = B.fly + rand(0, B.spread);
       i++;
     }
     this.emit('pirVolley', { x: sx, y: U.sy, side: U.side, v: U.v });

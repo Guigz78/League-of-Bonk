@@ -146,7 +146,7 @@ export const EVOLUTIONS = {
     { name: 'Morgane Corsaire', lvl: 5, colors: { 1: '#d8283a', 2: '#961628', a: '#ffd04a', c: '#2e2238' } },
     { name: 'Morgane Amirale', lvl: 11, colors: { 1: '#1e3a7a', 2: '#122658', 3: '#ffffff', a: '#ffd04a', c: '#18244a' } },
     { name: 'Morgane Fantôme', lvl: 19, colors: { 1: '#1c4a4c', 2: '#0e2e32', 3: '#c8fff0', a: '#5affc0', h: '#3a2a3a', c: '#12282c', s: '#d8f0e8', d: '#b0d0c8' } },
-    { name: 'Morgane Reine des Mers', lvl: 28, aura: '#22e8c8', colors: { 1: '#f4f0e6', 2: '#c8b48a', 3: '#ffffff', a: '#ffd23a', h: '#c8501e', c: '#1a4a7a' } },
+    { name: 'Morgane Tempête', lvl: 28, aura: '#22e8c8', colors: { 1: '#f4f0e6', 2: '#c8b48a', 3: '#ffffff', a: '#ffd23a', h: '#c8501e', c: '#1a4a7a' } },
   ],
 };
 

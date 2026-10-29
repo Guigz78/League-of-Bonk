@@ -242,7 +242,7 @@ addWeapons({
         q.peck = Math.max(0, q.peck - dt * 4);
         if (q.m === 1) { // piqué vers la cible
           q.ft += dt;
-          if (!alive(q.tg)) q.tg = q.c < S.chain ? nearTo(run, q.x, q.y, PIRW.hop, q.hit) : null;
+          if (!alive(q.tg)) q.tg = nearTo(run, q.x, q.y, PIRW.hop, q.hit); // la proie est tombée : une autre, tout près
           if (!q.tg || q.ft > 1.6) { q.m = 2; continue; }
           const e = q.tg, dx = e.x - q.x, dy = e.y - q.y, d = Math.hypot(dx, dy) || 1, step = PIRW.dive * dt;
           q.a = Math.atan2(dy, dx); q.z += (20 + e.fly * 0.5 - q.z) * Math.min(1, dt * 8);

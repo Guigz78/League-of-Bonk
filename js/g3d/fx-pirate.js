@@ -60,6 +60,25 @@ const MK = {
   ara: fx => addPool(fx, b => birdGeo(b, '#ffc81a', '#fff0a0', '#22d8c0', '#2a2a34'), 4),
   araL: fx => addPool(fx, b => wingGeo(b, 1, ['#ffc81a', '#22e8c8', '#1a9ad8', '#ffffff']), 4),
   araR: fx => addPool(fx, b => wingGeo(b, -1, ['#ffc81a', '#22e8c8', '#1a9ad8', '#ffffff']), 4),
+  // navire de la Bordée (coque le long de Z, proue vers −Z) : coque, château arrière, sabords, deux mâts, voiles, pavillon noir
+  galleon: fx => addPool(fx, b => {
+    const H0 = '#5a3218', H1 = '#7a4a26';
+    b.add(G.box(2.4, 1.1, 7.2), H0, T(0, 0.55, 0));
+    b.add(G.box(1.6, 0.6, 6.4), '#3a2010', T(0, -0.2, 0.1));
+    b.add(G.cone(1.25, 2.2, 4), H0, T(0, 0.6, -4.6, 1, 0.9, 1, -PI / 2, PI / 4, 0));
+    b.add(G.box(2.5, 0.16, 7.3), GOLD, T(0, 0.9, 0));
+    b.add(G.box(2.2, 0.12, 7.0), '#c8a070', T(0, 1.12, 0));
+    b.add(G.box(2.5, 1.0, 1.8), H1, T(0, 1.6, 2.7));
+    b.add(G.box(2.6, 0.12, 1.9), GOLD, T(0, 2.12, 2.7));
+    for (const x of [1.22, -1.22]) for (let i = 0; i < 4; i++) b.add(G.box(0.08, 0.3, 0.36), '#141014', T(x, 0.5, -2.2 + i * 1.3));
+    for (const [z, h] of [[-1.4, 6.2], [1.2, 5.2]]) {
+      b.add(G.cyl(0.12, 0.16, h, 6), H1, T(0, 1.1 + h / 2, z));
+      for (const [y, w] of [[0.5, 2.6], [0.78, 2.0]]) b.add(G.box(w, h * 0.24, 0.12), '#f4f0e6', T(0, 1.1 + h * y, z, 1, 1, 1, 0.12, 0, 0));
+      b.add(G.box(0.08, 0.5, 0.9), '#141014', T(0, 1.4 + h, z - 0.45));
+      b.add(G.sph(0.16, 5, 4), '#f4f0e6', T(0.06, 1.42 + h, z - 0.45));
+    }
+    b.add(G.cyl(0.07, 0.1, 2.4, 5), H1, T(0, 1.2, -5.4, 1, 1, 1, -1.1, 0, 0));
+  }, 1),
 };
 const get = (st, fx, k) => st[k] || (st[k] = MK[k](fx));
 // aile qui bat : base (avant, haut, côté) tournée de roll autour de l'axe du corps (cap a), échelle k
@@ -198,20 +217,36 @@ function sabreSlash(fx, f, k, st) {
   P.put((f.x + Math.cos(a) * r) * S, 1.25, (f.y + Math.sin(a) * r) * S, -a, (f.r / 98) * 1.25);
 }
 
-// ---------- Bordée (run.pirU) : boulets en vol, cibles au sol ----------
+// ---------- Bordée (run.pirU) : navire au bord de l'écran, boulets en vol, cibles au sol ----------
+// le navire vole à PIRB.alt du sol, à PIRB.side de Morgane (côté sh.side) : il arrive, tire ses salves (il roule), repart
+function ship(fx, st, dt, t) {
+  const sh = st.ship, p = fx.run.p, B = PIRB.broadside;
+  sh.t += dt; sh.roll = Math.max(0, sh.roll - dt * 2.5);
+  if (sh.out) sh.out += dt;
+  const inK = clamp(sh.t / 0.45, 0, 1), outK = clamp(sh.out / 0.7, 0, 1);
+  if (outK >= 1 || sh.t > 6) { st.ship = null; return; }
+  const off = (1 - inK * inK * (3 - 2 * inK)) * 260 + outK * outK * 300, x = p.x - sh.side * (B.side + off), y = p.y + 20, h = B.alt + Math.sin(t * 2) * 6;
+  const P = get(st, fx, 'galleon'), r = Math.sin(sh.t * 18) * sh.roll * 0.12 * sh.side, k = 1.05;
+  // coque penchée (roulis) : base X = côté, Y = haut, Z = longueur
+  P.putB(x * S, h * S, y * S, Math.cos(r) * k, Math.sin(r) * k, 0, -Math.sin(r) * k, Math.cos(r) * k, 0, 0, 0, k);
+  fx.shadow(x, y, 100, 0.3);
+  for (let i = 0; i < 3; i++) fx.glow(x + rand(-50, 50), y + rand(-80, 80), h - 10, 40, '#e8f4ff', 0.12); // nuées sous la coque
+  sh.x = x; sh.y = y; sh.h = h;
+}
 function broadside(fx, st, U, t) {
   const B = get(st, fx, 'ball');
   for (const b of U.balls) {
     if (!b.on || b.t < 0) continue;
-    const k = clamp(b.t / b.dur, 0, 1), x = b.sx + (b.x - b.sx) * k, y = b.sy + (b.y - b.sy) * k, h = 50 * (1 - k) + Math.sin(k * PI) * 360;
-    B.put(x * S, h * S, y * S, t * 6 + b.x, 1.25);
-    fx.glow(x, y, h, 20, FIRE, 0.8);
-    const k0 = Math.max(0, k - 0.06), x0 = b.sx + (b.x - b.sx) * k0, y0 = b.sy + (b.y - b.sy) * k0, h0 = 50 * (1 - k0) + Math.sin(k0 * PI) * 360; // traînée de feu
-    fx.line(x * S, h * S, y * S, x0 * S, h0 * S, y0 * S, 0.7, '#ff7a2a', 0.6);
+    const h0 = PIRB.broadside.alt + 30, k = clamp(b.t / b.dur, 0, 1), x = b.sx + (b.x - b.sx) * k, y = b.sy + (b.y - b.sy) * k, h = h0 * (1 - k) + Math.sin(k * PI) * 210;
+    B.put(x * S, h * S, y * S, t * 6 + b.x, 0.85);
+    fx.glow(x, y, h, 16, FIRE, 0.8);
+    const k0 = Math.max(0, k - 0.06), x0 = b.sx + (b.x - b.sx) * k0, y0 = b.sy + (b.y - b.sy) * k0, hp = h0 * (1 - k0) + Math.sin(k0 * PI) * 210; // traînée de feu
+    fx.line(x * S, h * S, y * S, x0 * S, hp * S, y0 * S, 0.7, '#ff7a2a', 0.6);
     if (Math.random() < 0.4 && fx.puffs.length < 200) fx.puffs.push({ x, y, z: h, vx: 0, vy: 0, vz: 10, s: rand(6, 9), life: 0.5, max: 0.5, a: 0.4, c: '#a8a098' });
     // cible au sol : anneau rouge qui se resserre, ombre qui grandit
     const R = PIRB.broadside.R * fx.run.p.area, w = clamp((k - 0.2) / 0.8, 0, 1);
-    fx.ringAt(b.x, b.y, R * (1.25 - 0.25 * w), '#ff3a3a', 0.25 + 0.6 * w, 0.08, 0.06 * w, 1, t * 3 + b.x, 6, 0, 0.4, true, 0.08);
+    fx.ringAt(b.x, b.y, R, '#ff3a3a', 0.15 + 0.55 * w, 0.06, 0.1 + 0.25 * w * w, 1, 0, 0, 0, 0.3, false, 0.08);
+    fx.ringAt(b.x, b.y, R * 0.18, '#ff5a3a', 0.4 + 0.5 * w, 0.4, 0.6, 1, 0, 0, 0, 0.5, false, 0.09);
     fx.shadow(b.x, b.y, 14 + 30 * k, 0.15 + 0.3 * k);
   }
 }
@@ -226,10 +261,16 @@ export function eventPir(fx, ev) {
       fx.ring(p.x, p.y, 20, 180, GOLD, 8, 0.5); fx.ring(p.x, p.y, 20, 240, W, 6, 0.55, -0.1);
       fx.halo('#ffb04a', 2);
       { const hs = fx.gfx.hs; if (hs) { hs.atk = 1; POSE.k = 4; POSE.set = true; } }
+      (fx.pir ||= {}).ship = { side: fx.run.pirU?.side || 1, t: 0, out: 0, roll: 0 };
       return true;
-    case 'pirVolley': { // salve : éclairs et fumée au bord de l'écran, du côté du navire
-      const ex = p.x - ev.side * 230;
-      for (let i = 0; i < 3; i++) { const y = ev.y + (i - 1) * 110; fx.glow(ex, y, 30, 60, '#ffb04a', 0.9); fx.puff(ex, y, 4, 30, 0.7, '#d8d0c8'); }
+    case 'pirVolley': { // salve : le navire roule, éclairs et fumée à ses sabords
+      const sh = fx.pir?.ship, ex = sh?.x ?? ev.x, ey = sh?.y ?? ev.y, h = (sh?.h ?? 140) + 12, B = PIRB.broadside;
+      if (sh) sh.roll = 1;
+      for (let i = 0; i < 4; i++) {
+        const y = ey + (i - 1.5) * B.hull * 0.6, x = ex + ev.side * 34;
+        fx.glow(x, y, h, 50, '#ffb04a', 0.95); fx.star(x, y, h, 22, W, 1);
+        for (let j = 0; j < 2 && fx.puffs.length < 200; j++) fx.puffs.push({ x: x + ev.side * rand(10, 40), y: y + rand(-10, 10), z: h, vx: ev.side * rand(40, 90), vy: rand(-15, 15), vz: rand(5, 25), s: rand(12, 18), life: 0.9, max: 0.9, a: 0.6, c: '#e0d8d0' });
+      }
       fx.gfx.kick = Math.max(fx.gfx.kick || 0, 4);
       if (ov) { ov.flashA = Math.max(ov.flashA || 0, 0.18); ov.flashC = '255,200,120'; }
       return true;
@@ -243,7 +284,7 @@ export function eventPir(fx, ev) {
       fx.burstStars(ev.x, ev.y, 14, 8, '#ffb04a', 300);
       return true;
     }
-    case 'pirEnd': return true;
+    case 'pirEnd': { const sh = fx.pir?.ship; if (sh && !sh.out) sh.out = 0.001; return true; }
   }
   return false;
 }
@@ -259,6 +300,7 @@ export function framePir(fx, dt) {
     DRAW[w.id](fx, st, w, s, t, dt);
   }
   if (run.pirU) { st = st || (fx.pir = {}); broadside(fx, st, run.pirU, t); }
+  if (st?.ship) ship(fx, st, dt, t);
   if (!st) return;
   for (const f of run.fx) {
     if (f.type === 'slash') { if (f.pir) sabreSlash(fx, f, clamp(1 - f.life / f.max, 0, 1), st); continue; }

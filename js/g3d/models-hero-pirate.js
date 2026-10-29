@@ -3,7 +3,7 @@
 // galons d'or (pans longs, revers, jabot), cache-œil, longue tresse, hautes bottes à revers, deux pistolets à silex en
 // main et un sabre d'abordage au fourreau. 5 stades visibles chacun : Corsaire (épaulettes, ceinture d'étoffe, baudrier,
 // boucle d'oreille), Amirale (manteau bleu nuit, cape, médailles, longue-vue), Fantôme (manteau spectral en lambeaux,
-// galons et œil verts lumineux, feux follets), Reine des Mers (manteau blanc et or, voiles en guise d'ailes, gouvernail
+// galons et œil verts lumineux, feux follets), Tempête (manteau blanc et or, voiles en guise d'ailes, gouvernail
 // doré dans le dos, doublons en orbite, aura de super guerrière). atk = geste d'attaque : POSE.k (posé par fx-pirate.js)
 // dit lequel : tir main droite / gauche, coup de sabre aller / retour (le sabre est dessiné par fx-pirate.js), ordre, estocade.
 import { THREE, PI, TAU, lerp, smooth, shade } from './models-kit.js';
