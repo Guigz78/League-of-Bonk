@@ -5,6 +5,13 @@
 // allocation en régime établi. Dégâts en multiples de A (attaque × dégâts × rareté), recharges × h (hâte), tailles × ar
 // (tome de taille), comme run.wstats. Effets ponctuels pour le rendu : run.fx { type: 'pir…' } (tir, estocade, canon posé,
 // explosion, coup de bec, pièce d'or) et 'slash' recoloré (sabre).
+// Équilibrage (simulateur l2/sim.mjs, bot qui prend la 1re carte, Normal, monde 1 → 2, une résurrection ; mêmes réglages que
+// les arsenaux W1 / W2 et Tess) : boss du monde 1 / du monde 2 tués. Références (arsenaux complets) : Lumi 12/12, 12/12 ;
+// Brok 11/12, 11/12 ; Kira et Frida 10/12, 7/12 ; Nyx 13/16, 10/16 ; Sora 12/16, 11/16 ; Tess 32/32, 26/32. Morgane : 32/32,
+// 30/32 (niveau ~37, ~5 200 victimes : canon 31 à 34 %, pistolets 28 à 33 %, sabre ~25 %, perroquet 11 à 14 % ; ~2
+// évolutions par partie). Difficile, monde 1 : 3/16 (Tess 5/12, Sora 4/12, champions C1 2 à 3 sur 6 à 10). Banc d'essai
+// (anneau de 40 monstres, dégâts par seconde en A) : pistolets 2,1 / 17,6 / 39,6 (niv. 1 / 5 / évolués ; flèches 1,6 / 22 /
+// 102), sabre 22 / 53 / 83 (épée de Brok 22 / 56 / 73), canon 2,2 / 7,5 / 36, perroquet 1,4 / 6,3 / 44 (cible unique).
 import { addWeapons } from './weapons-reg.js';
 import { sfx } from './audio.js';
 import { fmt } from './ui.js';
