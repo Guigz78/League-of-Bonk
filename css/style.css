@@ -2240,3 +2240,13 @@ button.itile:active { transform: translateY(1px); }
 .pz-help + .pz-help { margin-top: 6px; }
 .hc-change { align-self: flex-start; margin-top: 8px; min-height: 38px; }
 .hc-change img { width: 14px; height: 14px; }
+/* ===== Corrections (r18) ===== */
+/* quêtes : chaque récompense reste d'un seul tenant (plus de « · » orphelins sur iPhone SE) */
+.q-rw { display: flex !important; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.q-rw > span, .q-rw > i { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+/* fiche du monde : les 3 niveaux de difficulté tiennent dans la fenêtre, la coche ne chevauche plus le nom */
+.diff-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.diff-btn { min-width: 0; padding-right: 8px; }
+.diff-btn.beaten { padding-right: 22px; }
+.diff-btn b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 360px) { .diff-btn { padding: 9px 6px 8px 8px; } .diff-btn.beaten { padding-right: 18px; } .diff-btn b { font-size: 12.5px; letter-spacing: .02em; } .diff-btn small { font-size: 10px; } }

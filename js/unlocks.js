@@ -258,7 +258,7 @@ export function defisScreen(back) {
     };
     mount(`<div class="defis scroll">
       <div class="cs-bar"><button class="icon-btn" data-act="back" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Défis</h2><span class="df-count"><b>${done}</b>/${L.length}</span></div>
-      <p class="df-intro muted">Réussissez des défis pour débloquer armes, tomes, bonus, champions, auras et l'Abysse. Les armes et tomes verrouillés n'apparaissent pas pendant les parties.</p>
+      <p class="df-intro muted">Réussissez des défis pour débloquer des champions, des tomes, des bonus, des auras et l'Abysse. Chaque champion a déjà ses 4 armes ; un tome verrouillé n'apparaît pas pendant les parties.</p>
       <div class="df-sum"><span class="pbar"><i style="width:${(done / L.length * 100).toFixed(1)}%"></i></span>
         <div class="df-kinds">${kinds.map(([ic, n, v]) => `<span>${iconImg(ic, 16)}<small>${n}</small><b>${v}</b></span>`).join('')}</div></div>
       <div class="df-cats" role="tablist">${cats.map(C => `<button class="df-cat ${C.id === dfCat ? 'on' : ''}" data-act="cat" data-c="${C.id}" role="tab" aria-selected="${C.id === dfCat}">${esc(C.name)}</button>`).join('')}</div>

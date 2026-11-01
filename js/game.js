@@ -651,7 +651,7 @@ const COACH = [
   { ic: 'arrow', t: 'Glissez le doigt pour bouger', done: (r, S) => S.moved > 160 },
   { ic: 'fist', t: 'Votre champion attaque tout seul' },
   { ic: 'upg', t: 'Ramassez les gemmes bleues', done: r => r.p.level > 1 || r.p.xp > 0 },
-  { ic: 'star', t: 'Choisissez une amélioration à chaque niveau', when: r => r.p.level > 1 },
+  { ic: 'star', t: 'Choisissez une amélioration à chaque niveau', when: r => r.p.level > 1, skip: () => !!save.settings.autoPick },
   { emo: '👹', t: `Niveau ${BOSS_LV} : suivez le 👹 jusqu'au boss`, when: r => r.bossCall?.(), skip: r => r.bossSpawned || !!r.portal, done: r => r.bossSpawned },
   { ic: 'skull', t: 'Battez le boss : écartez-vous des zones rouges', when: r => r.bossSpawned && !!r.boss, skip: r => !!r.portal, done: r => !!r.portal },
   { ic: 'portal', t: 'Entrez dans le portail', when: r => !!r.portal },
@@ -1017,12 +1017,13 @@ async function pauseMenu(resume) {
   if (v === 'quit') {
     const nLoot = run.loot?.length || 0;
     const ok = await modal({ title: 'Abandonner ?', body: `<p>La partie s'arrête ici. Vous gardez <b>${fmt(run.gold)} or</b>${nLoot ? ` et <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b>` : ''} ramassés.</p>`, buttons: [{ label: 'Continuer', cls: 'ghost', value: false }, { label: 'Abandonner', cls: 'danger', value: true }] });
-    if (ok) { run.finish(false); return; }
+    if (ok) { if (run && !run.over) run.finish(false); return; }
   }
-  resume();
+  if (run && !run.over) resume();
 }
 
 async function defeatMenu(canRevive) {
+  const r = run;
   const t = fmtTime(run.runTime ?? run.time), nLoot = run.loot?.length || 0, z = run.zone;
   const kept = nLoot || run.cleared?.length ? `<p class="ko-kept">${iconImg('chest', 18)}<span>${nLoot ? `Vos <b>${nLoot} coffre${nLoot > 1 ? 's' : ''} de butin</b>` : 'Vos mondes vaincus'}${nLoot && run.cleared?.length ? ' et les mondes vaincus sont conservés' : ' sont conservés'}.</span></p>` : '';
   const v = await modal({
@@ -1040,9 +1041,9 @@ async function defeatMenu(canRevive) {
   });
   if (v === 'ad') {
     const ok = await showRewardedAd();
-    if (ok) { run.revive(); return; }
+    if (ok) { if (r === run && !r.over) r.revive(); return; }
   }
-  run.finish(false);
+  if (r === run && !r.over) r.finish(false); // la partie a pu se terminer pendant que la fenêtre était ouverte
 }
 
 const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
