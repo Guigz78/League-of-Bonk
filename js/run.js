@@ -345,7 +345,7 @@ export class Run {
     window.addEventListener('resize', this.resize);
     this.bindInput();
     $('.run .hud')?.classList.toggle('lefty', !!save.settings?.lefty); // gaucher : ultime à gauche
-    this.onVis = () => { if (document.hidden && !this.paused && !this.over) this.pause(); };
+    this.onVis = () => { if (document.hidden) this.ptr = this.joy = null; if (document.hidden && !this.paused && !this.over) this.pause(); }; // doigt oublié en arrière-plan
     document.addEventListener('visibilitychange', this.onVis);
     this.renderLoadout();
     this.renderEvo();
@@ -395,24 +395,35 @@ export class Run {
     window.removeEventListener('resize', this.resize);
     document.removeEventListener('visibilitychange', this.onVis);
     window.removeEventListener('keydown', this.kd); window.removeEventListener('keyup', this.ku);
+    if (this.pu) { window.removeEventListener('pointerup', this.pu); window.removeEventListener('pointercancel', this.pu); }
     this.gfx?.dispose();
   }
 
   bindInput() {
     const cv = this.cv;
+    // Joystick : this.ptr = le doigt posé sur l'écran (même objet que this.joy tant qu'il guide le héros). La partie remet
+    // this.joy à zéro quand elle s'interrompt (montée de niveau, coffre, autel, pause…) ; si le doigt est resté posé, le
+    // joystick reprend tout seul à la reprise (update), avec la même origine : le héros ne s'arrête plus en pleine course.
     cv.addEventListener('pointerdown', e => {
       e.preventDefault();
       cv.setPointerCapture?.(e.pointerId);
-      // un seul doigt : on glisse pour courir
-      if (!this.joy) this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: 0, yaw: this.yaw };
+      // un seul doigt : on glisse pour courir ; un doigt « oublié » (relâché sans que l'appareil le signale, immobile depuis
+      // 300 ms) est remplacé par le nouveau
+      const now = performance.now(), j = this.ptr;
+      if (!j || (j.id !== e.pointerId && now - j.tm > 300)) {
+        this.ptr = this.joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY, t0: now, tm: now, moved: 0, yaw: this.yaw };
+      }
       $('#hintBubble')?.classList.add('out');
     });
     cv.addEventListener('pointermove', e => {
-      const j = this.joy;
-      if (j && e.pointerId === j.id) { j.moved = Math.max(j.moved, Math.hypot(e.clientX - j.ox, e.clientY - j.oy)); j.x = e.clientX; j.y = e.clientY; }
+      const j = this.ptr;
+      if (j && e.pointerId === j.id) { j.moved = Math.max(j.moved, Math.hypot(e.clientX - j.ox, e.clientY - j.oy)); j.x = e.clientX; j.y = e.clientY; j.tm = performance.now(); }
     });
-    const up = e => { if (this.joy && e.pointerId === this.joy.id) this.joy = null; };
-    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    // doigt levé (où qu'il soit : sur le canevas capturé ou ailleurs si la capture a été perdue) : le héros s'arrête
+    const up = e => { if (this.ptr && e.pointerId === this.ptr.id) { this.ptr = null; this.joy = null; } };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', up);
+    this.pu = up;
+    window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
     // boutons (ultime, pause) : réagissent dès qu'on les touche (pas au relâchement), avec un autre doigt
     // pendant que le premier tient le joystick (le joystick ne suit que son propre doigt)
     const press = (sel, fn) => {
@@ -857,6 +868,7 @@ export class Run {
     // déplacement dans le sens du doigt (caméra fixe, le haut de l'écran est toujours le nord) :
     // zone morte de 8 px, vitesse analogique jusqu'à ~42 px (× taille du joystick), la base suit le doigt au-delà
     let jx = 0, jy = 0;
+    if (!this.joy && this.ptr && !this.entering) this.joy = this.ptr; // reprise après une interruption, doigt toujours posé
     if (this.joy) {
       const js = clamp(+save.settings?.joySize || 1, 0.7, 1.4), full = 42 * js, anchor = 54 * js;
       const dx = this.joy.x - this.joy.ox, dy = this.joy.y - this.joy.oy, d = Math.hypot(dx, dy);
