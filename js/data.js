@@ -410,6 +410,7 @@ export const RARITY = {
   rare:      { name: 'Rare',       color: '#3b8cff', mult: 1.6 },
   epic:      { name: 'Épique',     color: '#a855f7', mult: 2.4 },
   legendary: { name: 'Légendaire', color: '#f59e0b', mult: 3.4 },
+  mythic:    { name: 'Mythique',   color: '#ff3b6b', mult: 4.6 }, // hors RARITIES : objets uniques (MYTHIC_ITEMS)
 };
 
 // Modèles d'objets : main = caractéristique principale (arme : ATQ, armure : PV, bijou : au choix),
@@ -445,6 +446,33 @@ export const BOSS_ITEMS = [
   { slot: 'weapon', name: 'Faux du Geôlier', icon: 'staff', main: 'atk', affs: ['lifesteal', 'haste', 'critDmg', 'area'], effect: 'blood' },
   { slot: 'armor', name: 'Écailles du Ver-Roi', icon: 'armor', main: 'hp', affs: ['armor', 'thorns', 'regen', 'dodge'], effect: 'fury' },
 ];
+
+// ---------- Objets mythiques ----------
+// 6 objets uniques (un exemplaire de chaque) : 5 bonus fixés, valeurs de légendaire du dernier monde × MYTHIC.mult, et un
+// pouvoir mythique bien plus fort qu'un effet légendaire (run.js, « Pouvoirs mythiques »). Ils ne se vendent ni ne se
+// recyclent ; ils s'améliorent à la forge avec des pièces légendaires.
+// Obtention (archi dur) : seulement en battant Gorgoth au bout d'une expédition. Le Giga coffre a une petite chance d'en
+// contenir un (giga, selon la difficulté) et donne toujours des éclats mythiques (shardGiga) ; un coffre mythique en donne
+// un parfois (shardChest) ; les 36 étoiles de l'histoire en donnent 5. À la forge, shards éclats = un objet mythique
+// pas encore obtenu.
+export const MYTHIC = { shards: 10, giga: [0.03, 0.05, 0.08], shardGiga: [1, 2, 3], shardChest: 0.1, mult: 1.35, zone: 5 };
+export const MYTHIC_ITEMS = [
+  { id: 'faux', slot: 'weapon', name: 'Faux du Roi des Bonks', icon: 'staff', main: 'atk', affs: ['critDmg', 'crit', 'lifesteal', 'haste', 'area'], power: 'reaper' },
+  { id: 'sceptre', slot: 'weapon', name: 'Sceptre des Étoiles filantes', icon: 'staff', main: 'atk', affs: ['area', 'crit', 'critDmg', 'haste', 'atk'], power: 'meteor' },
+  { id: 'phenix', slot: 'armor', name: 'Armure du Phénix éternel', icon: 'armor', main: 'hp', affs: ['regen', 'armor', 'hp', 'speed', 'dodge'], power: 'rebirth' },
+  { id: 'titan', slot: 'armor', name: 'Égide du Titan', icon: 'armor', main: 'hp', affs: ['armor', 'thorns', 'hp', 'regen', 'dodge'], power: 'titan' },
+  { id: 'oeil', slot: 'trinket', name: 'Œil du Néant', icon: 'gem', main: 'crit', affs: ['haste', 'critDmg', 'ult', 'lifesteal', 'xp'], power: 'echo' },
+  { id: 'couronne', slot: 'trinket', name: 'Couronne de Gorgoth', icon: 'crown', main: 'atk', affs: ['gold', 'xp', 'lifesteal', 'crit', 'magnet'], power: 'king' },
+];
+// réglages des pouvoirs (lus par run.js) et textes (fiches d'objet, fiche du champion)
+export const MYTHIC_POWERS = {
+  reaper:  { name: 'Faucheuse', icon: '☠️', desc: 'Les ennemis (sauf boss et champions) sous 20 % de PV meurent net. Chaque exécution : +0,2 % de dégâts jusqu\'à la fin du monde (+40 % au plus).', below: 0.2, step: 0.002, max: 0.4 },
+  meteor:  { name: 'Pluie d\'étoiles', icon: '☄️', desc: 'Toutes les 2,5 s, une étoile filante s\'écrase sur le plus gros groupe d\'ennemis proche : 8 × votre ATQ autour de l\'impact.', every: 2.5, R: 135, k: 8 },
+  rebirth: { name: 'Renaissance', icon: '🔥', desc: 'Une fois par monde, un coup fatal vous fait renaître avec 60 % de PV dans une explosion de flammes (12 × votre ATQ).', hp: 0.6, R: 300, k: 12 },
+  titan:   { name: 'Titan', icon: '🛡️', desc: 'Aucun coup ne vous retire plus de 8 % de vos PV max, et l\'attaquant reçoit 4 × votre ATQ.', cap: 0.08, k: 4 },
+  echo:    { name: 'Écho du Néant', icon: '👁️', desc: '25 % de vos coups frappent une seconde fois.', chance: 0.25 },
+  king:    { name: 'Roi des Bonks', icon: '👑', desc: '+1 % de dégâts par tranche de 10 de combo (+60 % au plus). Tous les 100 de combo : une onde royale (6 × votre ATQ).', per: 0.01, max: 0.6, R: 280, k: 6 },
+};
 
 // Améliorations permanentes (boutique, payées en or). inf : à l'infini — au-delà de max, chaque niveau coûte 12 % du coût
 // du niveau max de plus (les caractéristiques plafonnées, critique, vitesse et vol de vie, gardent leur maximum).
@@ -941,6 +969,7 @@ export const TITLES = {
   maitre:      { name: 'Maître des mondes', how: 'Succès « Triple couronne »' },
   vampire:     { name: 'Seigneur vampire', how: 'Succès « Seigneur vampire »' },
   archiviste:  { name: 'Archiviste', how: 'Succès « Archiviste »' },
+  pantheon:    { name: 'Dieu du Bonk', how: 'Succès « Panthéon » (les 6 objets mythiques)' },
   pilier:      { name: 'Pilier de la guilde', how: 'Succès « Pilier de la guilde »' },
   roi:         { name: 'Tombeur de rois', how: 'Succès « Briseur de rois »' },
   soupe:       { name: 'Héros de la Soupe', how: 'Mode histoire : chapitre 12' },
@@ -1009,6 +1038,8 @@ export const ACH_MORE = [
   ach('heal3', 'blood', 'Seigneur vampire', 'Rendre 150 000 PV grâce au vol de vie.', 'lsHeal', 150000, 500, 'vampire'),
   ach('legend1', 'coll', 'Trésor légendaire', 'Posséder un objet légendaire.', 'legendary', 1, 100),
   ach('legfx', 'coll', 'Archiviste', 'Obtenir les 7 effets d\'objets légendaires.', 'legFx', 7, 600, 'archiviste'),
+  ach('myth1', 'coll', 'Légende vivante', 'Obtenir un objet mythique.', 'myth', 1, 500),
+  ach('myth6', 'coll', 'Panthéon', 'Obtenir les 6 objets mythiques.', 'myth', 6, 5000, 'pantheon'),
   ach('pets6', 'coll', 'Ménagerie complète', 'Posséder les 6 familiers.', 'pets', 6, 400),
   ach('bestiary', 'coll', 'Bestiaire complet', `Rencontrer les ${MONSTER_COUNT + BOSS_COUNT} créatures du bestiaire.`, 'seen', MONSTER_COUNT + BOSS_COUNT, 400),
   ach('forge2', 'coll', 'Maître forgeron', 'Fabriquer 15 objets à la forge.', 'crafted', 15, 200),

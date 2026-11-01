@@ -231,8 +231,9 @@ export function achValue(stat) {
     case 'stage': return st.runs ? (st.bestStage || 0) + 1 : 0;
     case 'clean': return st.cleanZone ? 1 : 0;
     case 'gold': return s.gold;
-    case 'epic': return s.inventory.some(i => i.rarity === 'epic' || i.rarity === 'legendary') ? 1 : 0;
-    case 'legendary': return s.inventory.some(i => i.rarity === 'legendary') ? 1 : 0;
+    case 'epic': return s.inventory.some(i => i.rarity === 'epic' || i.rarity === 'legendary' || i.rarity === 'mythic') ? 1 : 0;
+    case 'legendary': return s.inventory.some(i => i.rarity === 'legendary' || i.rarity === 'mythic') ? 1 : 0;
+    case 'myth': return (s.mythGot || []).length;
     case 'itemLv': return Math.max(0, ...s.inventory.map(i => i.lv || 0));
     case 'pets': return s.pets.length;
     case 'legFx': return (F.leg || []).length;

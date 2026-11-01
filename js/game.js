@@ -1,10 +1,10 @@
 // Écrans du jeu et déroulé d'une expédition.
 import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, BOSS_COUNT, DIFFICULTIES, ELITE_MODS,
-  LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES, LEGEND_EFFECTS } from './data.js';
+  LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES, LEGEND_EFFECTS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS } from './data.js';
 import * as DATA from './data.js';
 import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, resetSave, maxDiff,
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
-  buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
+  buyBoost, cleanBoostSel, consumeBoosts, rarityIdx, canForgeMythic, forgeMythic, mythLeft } from './save.js';
 import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
 import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported, itemURL } from './visuals.js';
 import { rng } from './pixel.js';
@@ -98,7 +98,7 @@ function nav() {
 
 // pastille de la forge : une fabrication est possible
 function canForgeSomething() {
-  return Object.keys(PARTS).some(k => RARITIES.some((_, r) => canCraft(k, r)));
+  return canForgeMythic() || Object.keys(PARTS).some(k => RARITIES.some((_, r) => canCraft(k, r)));
 }
 
 function canAffordUpgrade() {
@@ -154,6 +154,8 @@ const handlers = {
     : `${iconImg('part', 16)} <b>Pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
   forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
   craft: () => doCraft(),
+  forgeMyth: () => doForgeMyth(),
+  mythInfo: el => mythInfo(el.dataset.id),
   fuse: el => doFuse(el.dataset.all === '1'),
   buyBoost: el => doBuyBoost(el.dataset.id),
 };
@@ -180,7 +182,7 @@ const affLine = (k, v) => `${AFFIXES[k]?.name || k} ${affVal(k, v)}${k === 'thor
 // version courte : « +12 ATQ », « +2 % vol de vie »
 // image 3D d'un objet (js/g3d/items3d.js), éclats pour les légendaires ; sans WebGL : l'icône
 const itemArt = (it, size = 64, cls = '') => {
-  const url = itemURL(it.name, it.rarity === 'legendary');
+  const url = itemURL(it.name, it.rarity === 'mythic' ? 'M' : it.rarity === 'legendary');
   return url ? `<img class="it-art ${cls}" src="${url}" width="${size}" height="${size}" alt="">` : iconImg(it.icon, size);
 };
 const affShort = (k, v) => (AFFIXES[k]?.fmt === 'regen' ? affVal(k, v) : `${affVal(k, v)} ${AFX[k]?.[1] || k}`);
@@ -205,6 +207,10 @@ function statRows(it, { cmp = null, next = null } = {}) {
 }
 // encadré de l'effet unique d'un objet légendaire
 const effectBox = id => (LEGEND_EFFECTS[id] ? `<div class="fx-box"><b>${iconImg('star', 16)} ${esc(LEGEND_EFFECTS[id].name)}</b><small>${esc(LEGEND_EFFECTS[id].desc)}</small></div>` : '');
+// pouvoir d'un objet mythique (js/mythic.js)
+const mythBox = id => (MYTHIC_POWERS[id] ? `<div class="fx-box myth"><b><i class="mb-ic">${MYTHIC_POWERS[id].icon}</i><span><small>Pouvoir mythique</small>${esc(MYTHIC_POWERS[id].name)}</span></b><small>${esc(MYTHIC_POWERS[id].desc)}</small></div>` : '');
+// effet légendaire ou pouvoir mythique d'un objet
+const itemFx = it => (it.myth ? mythBox(it.myth) : it.effect ? effectBox(it.effect) : '');
 
 // valeur d'une caractéristique du champion (fiche complète)
 function heroStat(k, st) {
@@ -227,6 +233,7 @@ async function statsSheet() {
     title: `Statistiques de ${esc(c.name)}`,
     cls: 'stats-modal',
     body: `<div class="hstats">${shown.map(k => `<div class="hs ${capped(k) ? 'cap' : ''}">${iconImg(AFX[k][0], 22)}<span>${esc(k === 'critDmg' ? 'Dégâts des critiques' : k === 'speed' ? 'Vitesse de course' : AFFIXES[k]?.name || k)}</span><b>${heroStat(k, st)}</b>${capped(k) ? '<em>max</em>' : ''}</div>`).join('')}</div>
+      ${st.myth?.length ? `<h4>Pouvoirs mythiques</h4>${st.myth.map(mythBox).join('')}` : ''}
       ${st.effects.length ? `<h4>Effets légendaires</h4>${st.effects.map(effectBox).join('')}` : ''}
       <p class="muted hs-note">Champion, améliorations de la Boutique et équipement réunis.</p>`,
     buttons: [{ label: 'Fermer', cls: 'primary', value: true }],
@@ -1078,7 +1085,7 @@ function endRun(z, sum) {
   const loot = (Array.isArray(sum.loot) ? sum.loot : []).filter(c => c && LOOT_TIERS[c.tier]);
   const heat = Math.max(0, sum.heat | 0), stage = Math.max(0, sum.stage | 0);
   // 1. les coffres d'abord : ils ne doivent jamais être perdus, même si l'appli se ferme
-  for (const c of loot) save.pendingChests.push({ tier: c.tier | 0, zone: Math.max(0, Math.min(ZONES.length - 1, (c.zone ?? start.id) | 0)), ...(c.giga ? { giga: 1 } : {}) });
+  for (const c of loot) save.pendingChests.push({ tier: c.tier | 0, zone: Math.max(0, Math.min(ZONES.length - 1, (c.zone ?? start.id) | 0)), ...(c.giga ? { giga: 1, diff: k } : {}) }); // diff : objets mythiques
   persist();
   st.kills += sum.kills;
   const record = st.bestLevel > 0 && sum.level > st.bestLevel; // nouveau meilleur niveau atteint
@@ -1176,17 +1183,17 @@ function partIcon(slot, r, size = 28) {
 // regroupe le contenu de plusieurs coffres
 function lootAgg(results) {
   const parts = {}, boosts = {}, items = [], upgs = [];
-  let gold = 0;
+  let gold = 0, shards = 0;
   for (const res of results) {
     for (const p of res.parts) parts[p.slot + ':' + p.r] = (parts[p.slot + ':' + p.r] || 0) + p.n;
     if (res.boost) boosts[res.boost] = (boosts[res.boost] || 0) + 1;
     for (const it of res.items || []) items.push(it);
     if (res.upg) upgs.push({ key: res.upg, lv: res.upgLv });
-    gold += res.gold;
+    gold += res.gold; shards += res.shards | 0;
   }
   return {
     parts: Object.entries(parts).map(([key, n]) => { const [slot, r] = key.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n),
-    boosts, items, upgs, gold,
+    boosts, items, upgs, gold, shards,
   };
 }
 
@@ -1198,6 +1205,7 @@ function lootSeq(results) {
   for (const [id, n] of Object.entries(A.boosts)) out.push({ k: 'boost', id, n });
   for (const it of [...A.items].sort((a, b) => rarityIdx(a) - rarityIdx(b) || itemPower(a) - itemPower(b))) out.push({ k: 'item', it });
   for (const u of A.upgs) out.push({ k: 'upg', ...u });
+  if (A.shards) { const i = out.findIndex(x => x.k === 'item' && x.it.rarity === 'mythic'); out.splice(i < 0 ? out.length : i, 0, { k: 'shard', n: A.shards }); } // avant l'objet mythique
   return out;
 }
 const isEq = it => save.equipped[it.slot] === it.id;
@@ -1212,13 +1220,15 @@ function itemCard(it, { ribbon = '' } = {}) {
     <b class="rc-name">${esc(it.name)}</b>
     <span class="rc-sub">${SLOTS[it.slot]}${it.crafted ? ' · forgé' : ''}</span>
     <span class="rc-stats">${statRows(it)}</span>
-    ${it.effect ? effectBox(it.effect) : ''}
+    ${itemFx(it)}
     ${isEq(it) ? '<span class="rc-eq">Équipé !</span>' : ''}
   </div>`;
 }
 
 function bigCard(x) {
-  if (x.k === 'item') return itemCard(x.it, { ribbon: 'Nouvel objet' });
+  if (x.k === 'item') return itemCard(x.it, { ribbon: x.it.rarity === 'mythic' ? 'Objet mythique !' : 'Nouvel objet' });
+  if (x.k === 'shard') return `<div class="rcard r-mythic rc-shard"><span class="rc-rar">Mythique</span><span class="rc-ic"><i class="shard-ic big">✦</i></span>
+      <b class="rc-n">×${x.n}</b><span class="rc-name">Éclat${x.n > 1 ? 's' : ''} mythique${x.n > 1 ? 's' : ''}</span><small class="rc-desc">${fmt(save.mythShards | 0)}/${MYTHIC.shards} : à ${MYTHIC.shards}, la Forge fabrique un objet mythique</small></div>`;
   if (x.k === 'gold') return `<div class="rcard rc-gold"><span class="rc-ic">${iconImg('gold', 76)}</span><b class="rc-n">+${fmt(x.n)}</b><span class="rc-name">Pièces d'or</span></div>`;
   if (x.k === 'part') {
     const rk = RARITIES[x.r], P = PARTS[x.slot];
@@ -1246,6 +1256,7 @@ function miniCard(x, i) {
   if (x.k === 'part') return `<div class="mcard r-${RARITIES[x.r]}" ${d}>${partIcon(x.slot, x.r, 30)}<i class="mc-n">×${x.n}</i><small>${esc(PARTS[x.slot].name)}</small></div>`;
   if (x.k === 'boost') return `<div class="mcard rc-boost" ${d}>${iconImg(BOOSTS[x.id].icon, 36)}<i class="mc-n">×${x.n}</i><small>${esc(BOOSTS[x.id].name)}</small></div>`;
   if (x.k === 'item') return `<div class="mcard r-${x.it.rarity}" ${d}>${itemArt(x.it, 44)}${isEq(x.it) ? '<i class="mc-eq">Équipé</i>' : ''}<small>${esc(x.it.name)}</small></div>`;
+  if (x.k === 'shard') return `<div class="mcard r-mythic" ${d}><i class="shard-ic">✦</i><i class="mc-n">×${x.n}</i><small>Éclat mythique</small></div>`;
   return `<div class="mcard rc-upg" ${d}>${iconImg(UPGRADES[x.key].icon, 36)}<i class="mc-n">niv. ${x.lv}</i><small>${esc(UPGRADES[x.key].name)}</small></div>`;
 }
 
@@ -1302,17 +1313,18 @@ function revealStage(results, tier, title, { quick = false } = {}) {
       const n = seq.length - idx - 1;
       left.innerHTML = `<b>${n}</b><small>restant${n > 1 ? "s" : ""}</small>`; left.classList.toggle("none", !n);
       left.classList.remove('bump'); void left.offsetWidth; left.classList.add('bump');
-      const legend = x.k === 'item' && x.it.rarity === 'legendary', epic = x.k === 'item' && x.it.rarity === 'epic';
-      w.classList.toggle('legend', legend); w.classList.toggle('epic', epic);
-      sfx(x.k === 'gold' ? 'coin' : x.k === 'part' ? (x.r >= 2 ? 'loot' : 'gem') : x.k === 'boost' ? 'pick' : x.k === 'upg' ? 'levelup' : legend || epic ? 'chest' : 'loot');
-      buzz(legend ? 60 : 15);
+      const myth = x.k === 'item' && x.it.rarity === 'mythic', legend = myth || (x.k === 'item' && x.it.rarity === 'legendary'), epic = x.k === 'item' && x.it.rarity === 'epic';
+      w.classList.toggle('legend', legend); w.classList.toggle('epic', epic); w.classList.toggle('mythic', myth);
+      sfx(x.k === 'gold' ? 'coin' : x.k === 'part' ? (x.r >= 2 ? 'loot' : 'gem') : x.k === 'boost' ? 'pick' : x.k === 'upg' ? 'levelup' : x.k === 'shard' ? 'shrine' : legend || epic ? 'chest' : 'loot');
+      if (myth) { sfx('evolve'); setTimeout(() => sfx('win'), 350); }
+      buzz(myth ? [80, 60, 160] : legend ? 60 : 15);
       hint.textContent = n ? 'Touchez pour la carte suivante' : 'Touchez pour le récapitulatif';
       w.classList.add('cards');
       state = 'card'; readyAt = performance.now() + 380;
     }
     function recap() {
       state = 'recap';
-      w.classList.remove('cards', 'legend', 'epic'); w.classList.add('recapping');
+      w.classList.remove('cards', 'legend', 'epic', 'mythic'); w.classList.add('recapping');
       cardBox.innerHTML = '';
       $w('.cst-recap').innerHTML = `<h3 class="cst-rt">Butin obtenu</h3><div class="cst-grid ${seq.length > 9 ? 'dense' : ''}">${seq.map(miniCard).join('')}</div>`;
       hint.textContent = '';
@@ -1546,7 +1558,7 @@ function itemTile(it, { act = true, cur, isNew = false } = {}) {
     <span class="it-ic">${itemArt(it, 64)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}${it.crafted ? `<i class="it-forged">${iconImg('hammer', 12)}</i>` : ''}</span>
     <b class="it-name">${esc(it.name)}</b>
     ${m ? `<span class="it-main">${affShort(m, it.stat[m])}</span>` : ''}
-    <span class="it-aff">${ks.slice(1).map(k => iconImg(AFX[k]?.[0] || 'star', 14)).join('')}${it.effect ? '<i class="it-fx">★</i>' : ''}</span>
+    <span class="it-aff">${ks.slice(1).map(k => iconImg(AFX[k]?.[0] || 'star', 14)).join('')}${it.myth ? '<i class="it-fx myth">✦</i>' : it.effect ? '<i class="it-fx">★</i>' : ''}</span>
   </${tag}>`;
 }
 
@@ -1618,9 +1630,10 @@ function itemBody(it, equipped, cur) {
     </div>
     ${cmp ? (() => { const d = Math.round(itemPower(it) - itemPower(cmp)); return `<p class="is-verdict ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '▲ Meilleur' : d < 0 ? '▼ Moins bon' : '= Équivalent'} que <b>${itemName(cmp)}</b> (équipé)</p>`; })() : ''}
     <div class="is-stats">${statRows(it, { cmp })}</div>
-    ${it.effect ? effectBox(it.effect) : ''}
+    ${itemFx(it)}
     ${up}
-    ${equipped ? '' : `<button class="btn small ghost it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
+    ${it.myth ? '<p class="muted myth-note">✦ Objet mythique unique : il ne se vend pas et ne se recycle pas.</p>'
+    : equipped ? '' : `<button class="btn small ghost it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
 }
 
 async function itemSheet(id) {
@@ -1636,6 +1649,7 @@ async function itemSheet(id) {
     body: `<div id="${wid}" class="it-sheet">${itemBody(it, equipped, cur)}</div>`,
     buttons: equipped
       ? [{ label: 'Fermer', cls: 'primary', value: null }]
+      : it.myth ? [{ label: 'Fermer', cls: 'ghost', value: null }, { label: 'Équiper', cls: 'primary', value: 'equip' }]
       : [{ label: `Vendre ${iconImg('gold', 16)} ${sellValue(it)}`, cls: 'ghost', value: 'sell' }, { label: 'Équiper', cls: 'primary', value: 'equip' }],
     dismissable: true,
   });
@@ -1752,7 +1766,48 @@ function forgeBody() {
         </div>`}
       </div>
     </div>
-    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1, +2… à l'infini) ou recyclez vos objets depuis l'onglet <b>Héros</b>.</span></p>`;
+    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1, +2… à l'infini) ou recyclez vos objets depuis l'onglet <b>Héros</b>.</span></p>
+    ${mythForge()}`;
+}
+
+// objets mythiques : éclats, collection (silhouettes des objets pas encore obtenus), fabrication
+function mythForge() {
+  const n = save.mythShards | 0, got = save.mythGot || [], all = got.length >= MYTHIC_ITEMS.length;
+  const cells = MYTHIC_ITEMS.map(M => {
+    const it = got.includes(M.id) && save.inventory.find(i => i.mid === M.id), url = itemURL(M.name);
+    return `<button class="mf-cell ${it ? 'got' : ''}" data-act="mythInfo" data-id="${M.id}">
+      ${it ? itemArt(it, 54) : url ? `<img class="it-art sil" src="${url}" width="54" height="54" alt="">` : `<i class="mf-q">?</i>`}
+      <small>${it ? esc(M.name) : '???'}</small><em>${MYTHIC_POWERS[M.power].icon}</em></button>`;
+  }).join('');
+  return `<section class="myth-forge">
+    <div class="mf-head"><i class="shard-ic">✦</i><div><b>Objets mythiques <small>${got.length}/${MYTHIC_ITEMS.length}</small></b>
+      <small>Uniques et surpuissants. Seul Gorgoth en laisse : battez-le au bout d'une expédition. Son Giga coffre donne des éclats (plus en Difficile et en Cauchemar) et parfois un objet mythique.</small></div></div>
+    <div class="mf-col">${cells}</div>
+    ${all ? '<p class="mf-done">✦ Collection complète : vous êtes une légende.</p>' : `<div class="mf-bar"><span class="pbar"><i style="width:${Math.min(100, n / MYTHIC.shards * 100).toFixed(1)}%"></i></span><b>${n}/${MYTHIC.shards}</b><small>éclats</small></div>
+    <button class="btn myth-btn" data-act="forgeMyth" ${canForgeMythic() ? '' : 'disabled'}><i class="shard-ic">✦</i> Forger un objet mythique</button>`}
+  </section>`;
+}
+
+// fiche d'un objet mythique de la collection : l'objet s'il est obtenu, sinon son pouvoir et comment l'avoir
+function mythInfo(id) {
+  const M = MYTHIC_ITEMS.find(m => m.id === id); if (!M) return;
+  const it = (save.mythGot || []).includes(id) && save.inventory.find(i => i.mid === id);
+  if (it) return itemSheet(it.id);
+  sfx('tap');
+  modal({ title: `<span class="it-title r-mythic">???</span>`, cls: 'item-modal',
+    body: `<div class="mi-sil">${itemURL(M.name) ? `<img class="it-art sil" src="${itemURL(M.name)}" width="110" height="110" alt="">` : ''}<span>${SLOTS[M.slot]} mythique</span></div>
+      ${mythBox(M.power)}
+      <p class="muted myth-note">Pas encore obtenu. Battez Gorgoth au bout d'une expédition : le Giga coffre donne des éclats mythiques (${MYTHIC.shards} = un objet mythique à la Forge) et parfois l'objet lui-même.</p>`,
+    buttons: [{ label: 'Fermer', cls: 'primary', value: true }], dismissable: true });
+}
+
+async function doForgeMyth() {
+  const it = forgeMythic();
+  if (!it) return;
+  renderForge();
+  await forgeAnim({ color: RARITY.mythic.color, big: true, bare: true, html: itemCard(it, { ribbon: 'Objet mythique !' }) }, { title: 'Objet mythique forgé' });
+  announceAchievements();
+  renderForge();
 }
 
 // met à jour la forge sur place (garde le défilement), l'or et les pastilles

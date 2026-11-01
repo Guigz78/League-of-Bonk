@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -32,6 +32,8 @@ export function freshSave() {
     boosts: {},
     boostSel: [null, null],
     pendingChests: [],
+    mythShards: 0,      // éclats mythiques (MYTHIC.shards = un objet mythique à la forge)
+    mythGot: [],        // objets mythiques déjà obtenus (ids de MYTHIC_ITEMS) : la forge ne redonne pas le même
     achievements: {},
     // options : tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
     // taille du joystick (0,8 à 1,3), gaucher (ultime à gauche)
@@ -176,7 +178,10 @@ function migrateLoot(out, s) {
   const sel = Array.isArray(out.boostSel) ? out.boostSel : [];
   out.boostSel = Array.from({ length: BOOST_SLOTS }, (_, i) => (BOOSTS[sel[i]] && sel.indexOf(sel[i]) === i ? sel[i] : null));
   out.pendingChests = (Array.isArray(out.pendingChests) ? out.pendingChests : [])
-    .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5), ...(c.giga ? { giga: 1 } : {}) })); // giga = Giga coffre
+    .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5), ...(c.giga ? { giga: 1, diff: int(c.diff, MYTHIC.giga.length - 1) } : {}) })); // giga = Giga coffre (diff : difficulté)
+  out.mythShards = int(out.mythShards, 999);
+  const myth = new Set(MYTHIC_ITEMS.map(m => m.id));
+  out.mythGot = [...new Set([...(Array.isArray(out.mythGot) ? out.mythGot : []), ...(out.inventory || []).map(i => i?.mid)])].filter(id => myth.has(id));
   const st = out.stats;
   if ((s.v || 1) < 3) st.worlds = Math.max(st.worlds || 0, st.wins || 0);
   for (const k of ['worlds', 'bestStage', 'chests', 'crafted', 'totems', 'portals', 'mythic', 'quests', 'logins', 'gigaKills', 'gigaDance', 'gigaBest']) st[k] = int(st[k], 1e9);
@@ -232,7 +237,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
 export function playerStats(clsId = save.cls) {
   const c = CLASSES[clsId];
   const st = { hp: c.hp, atk: c.atk, crit: c.crit, regen: 0, speed: c.speed, magnet: 1 + (c.pickup || 0), gold: 1 + (c.goldPct || 0), // pickup : talent de Gaïa, goldPct : Butin de Morgane
-    critDmg: 0, lifesteal: 0, haste: 0, area: 0, armor: 0, thorns: 0, dodge: 0, xp: 0, ult: 0, effects: [] };
+    critDmg: 0, lifesteal: 0, haste: 0, area: 0, armor: 0, thorns: 0, dodge: 0, xp: 0, ult: 0, effects: [], myth: [] };
   for (const [k, lvl] of Object.entries(save.upgrades)) {
     const per = UPGRADES[k]?.per;
     if (!per) continue;
@@ -243,6 +248,7 @@ export function playerStats(clsId = save.cls) {
     if (!it) continue;
     for (const [sk, v] of Object.entries(it.stat || {})) if (typeof st[sk] === 'number') st[sk] += +v || 0;
     if (LEGEND_EFFECTS[it.effect] && !st.effects.includes(it.effect)) st.effects.push(it.effect);
+    if (MYTHIC_POWERS[it.myth] && !st.myth.includes(it.myth)) st.myth.push(it.myth);
   }
   // plafonds : la vitesse plafonne le bonus au-dessus de celle du champion
   for (const [k, A] of Object.entries(AFFIXES)) if (A.max != null) st[k] = k === 'speed' ? Math.min(st.speed, c.speed + A.max) : Math.min(st[k], A.max);
@@ -250,7 +256,7 @@ export function playerStats(clsId = save.cls) {
   st.hp *= 1 + mb.hp; st.atk *= 1 + mb.dmg;
   const pk = masteryPerks(ml.lv, ml.stars); // bonus spéciaux des niveaux et des étoiles (après les plafonds)
   st.speed *= 1 + pk.speed; st.magnet *= 1 + pk.magnet; st.gold *= 1 + pk.gold; st.xp += pk.xp;
-  for (const k of Object.keys(st)) if (k !== 'effects') st[k] = r3(st[k]);
+  for (const k of Object.keys(st)) if (k !== 'effects' && k !== 'myth') st[k] = r3(st[k]);
   st.hp = Math.round(st.hp); st.atk = Math.round(st.atk);
   return st;
 }
@@ -310,12 +316,44 @@ export function makeBossItem(zone) {
   return B ? makeItem(Math.random, zone, { slot: B.slot, rarity: 'legendary', base: B, mult: 1.15 }) : null;
 }
 
+// ---------- Objets mythiques ----------
+// objet mythique id : 5 bonus fixés aux valeurs d'un légendaire du dernier monde × MYTHIC.mult, pouvoir mythique
+export function makeMythic(id) {
+  const M = MYTHIC_ITEMS.find(m => m.id === id);
+  if (!M) return null;
+  // makeItem (légendaire) prend les 4 premiers bonus du modèle ; le 5e s'ajoute ensuite (cumulé s'il existe déjà)
+  const it = makeItem(Math.random, MYTHIC.zone, { slot: M.slot, rarity: 'legendary', base: M, mult: MYTHIC.mult });
+  for (const k of M.affs.slice(4)) { const v = affixValue(k, 3, MYTHIC.zone, MYTHIC.mult, Math.random); it.stat[k] = AFFIXES[k].fmt === 'pct' ? r3((it.stat[k] || 0) + v) : (it.stat[k] || 0) + v; }
+  delete it.effect;
+  Object.assign(it, { rarity: 'mythic', mid: M.id, myth: M.power, base: { ...it.stat } });
+  return it;
+}
+// mythiques pas encore obtenus
+export const mythLeft = () => MYTHIC_ITEMS.filter(m => !(save.mythGot || []).includes(m.id));
+// ajoute un objet mythique au sac (collection, équipé s'il est meilleur)
+function gainMythic(it) {
+  if (!it) return null;
+  save.mythGot = [...new Set([...(save.mythGot || []), it.mid])];
+  it.isNew = true; addItem(it);
+  return it;
+}
+// forge : MYTHIC.shards éclats = un objet mythique pas encore obtenu (au hasard)
+export const canForgeMythic = () => (save.mythShards | 0) >= MYTHIC.shards && mythLeft().length > 0;
+export function forgeMythic() {
+  if (!canForgeMythic()) return null;
+  const left = mythLeft(), M = left[Math.floor(Math.random() * left.length)];
+  save.mythShards -= MYTHIC.shards;
+  const it = gainMythic(makeMythic(M.id));
+  persist();
+  return it;
+}
+
 // puissance d'un objet (tri, comparaison, équipement automatique) : chaque bonus converti en « points »
 const POWER = { atk: 9, hp: 0.8, crit: 300, critDmg: 50, lifesteal: 500, haste: 170, speed: 150, area: 90, armor: 350,
   regen: 2.5, thorns: 20, dodge: 350, xp: 50, magnet: 25, gold: 50, ult: 45 };
 export function itemPower(it) {
   if (!it) return 0;
-  let p = it.effect ? 30 : 0;
+  let p = it.effect ? 30 : it.myth ? 150 : 0;
   for (const [k, v] of Object.entries(it.stat || {})) p += (POWER[k] || 0) * (+v || 0);
   return p;
 }
@@ -335,13 +373,15 @@ export function addItem(it) {
 // ---------- Butin de l'expédition ----------
 const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pickW = w => { let x = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < w.length; i++) if ((x -= w[i]) < 0) return i; return w.length - 1; };
-export const rarityIdx = it => Math.max(0, RARITIES.indexOf(it.rarity));
+// rang de rareté (pièces de forge, tri) : un mythique compte comme un légendaire pour ses pièces
+export const rarityIdx = it => (it.rarity === 'mythic' ? RARITIES.length - 1 : Math.max(0, RARITIES.indexOf(it.rarity)));
 
 // tire le contenu d'un coffre sans l'appliquer : pièces, bonus, objets avec leurs caractéristiques,
 // parfois un niveau gratuit d'amélioration permanente, et un peu d'or.
 // Giga coffre (giga : giga boss vaincu) : coffre mythique + 2 pièces, un objet légendaire garanti, un objet de plus,
-// amélioration permanente presque sûre, or × 2
-export function rollChest({ tier = 0, zone = 0, giga = 0 }) {
+// amélioration permanente presque sûre, or × 2 ; éclats mythiques et petite chance d'un objet mythique (selon diff).
+// Coffre mythique : parfois un éclat. myth : objet mythique pas encore obtenu, shards : éclats gagnés.
+export function rollChest({ tier = 0, zone = 0, giga = 0, diff = 0 }) {
   const T = LOOT_TIERS[tier] || LOOT_TIERS[0], L = CHEST_LOOT[tier] || CHEST_LOOT[0], slots = Object.keys(PARTS), got = {};
   for (let n = rint(T.parts[0], T.parts[1]) + (giga ? 2 : 0); n > 0; n--) { const k = slots[rint(0, slots.length - 1)] + ':' + pickW(T.rar); got[k] = (got[k] || 0) + 1; }
   const parts = Object.entries(got).map(([k, n]) => { const [slot, r] = k.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n);
@@ -353,7 +393,10 @@ export function rollChest({ tier = 0, zone = 0, giga = 0 }) {
   const ups = Object.keys(UPGRADES).filter(k => save.upgrades[k] < upgMax(k));
   const upg = ups.length && Math.random() < (giga ? 0.85 : L.upg) ? ups[rint(0, ups.length - 1)] : null;
   const gold = Math.round(rint(T.gold[0], T.gold[1]) * (1 + 0.4 * zone) * (giga ? 2 : 1));
-  return { tier, zone, parts, boost, items, upg, gold, ...(giga ? { giga: 1 } : {}) };
+  const d = Math.max(0, Math.min(MYTHIC.giga.length - 1, diff | 0)), left = mythLeft();
+  const shards = giga ? MYTHIC.shardGiga[d] : tier >= 3 && Math.random() < MYTHIC.shardChest ? 1 : 0;
+  const myth = giga && left.length && Math.random() < MYTHIC.giga[d] ? makeMythic(left[rint(0, left.length - 1)].id) : null;
+  return { tier, zone, parts, boost, items, upg, gold, shards, myth, ...(giga ? { giga: 1 } : {}) };
 }
 
 // ouvre le coffre en attente n° i : contenu ajouté à la sauvegarde et coffre retiré en même temps
@@ -367,6 +410,8 @@ export function openChest(i = 0) {
   for (const it of res.items) { it.isNew = true; addItem(it); }
   res.eq = res.items.map(it => save.equipped[it.slot] === it.id); // équipés automatiquement (meilleurs)
   if (res.upg) res.upgLv = ++save.upgrades[res.upg];
+  if (res.myth) { gainMythic(res.myth); res.items.push(res.myth); res.eq.push(save.equipped[res.myth.slot] === res.myth.id); }
+  save.mythShards = (save.mythShards | 0) + (res.shards | 0);
   save.gold += res.gold;
   save.stats.chests++;
   if (res.tier >= 3) save.stats.mythic++;
@@ -437,7 +482,7 @@ export function upgradeItem(id) {
 export function salvageValue(it) { return FORGE.salvage[rarityIdx(it)] + (it.lv || 0); }
 export function salvageItem(id) {
   const it = save.inventory.find(i => i.id === id);
-  if (!it || Object.values(save.equipped).includes(id)) return 0;
+  if (!it || it.myth || Object.values(save.equipped).includes(id)) return 0; // un objet mythique ne se recycle pas
   const n = salvageValue(it);
   save.parts[it.slot][rarityIdx(it)] += n;
   save.inventory = save.inventory.filter(i => i !== it);
@@ -481,7 +526,7 @@ export function checkAchievements() {
     boss1: s.zoneCleared.some(Boolean),
     allclass: ['mage', 'archer', 'knight'].every(c => st.classWins[c]),
     rich: s.gold >= 1000,
-    epic: s.inventory.some(i => i.rarity === 'epic' || i.rarity === 'legendary'),
+    epic: s.inventory.some(i => i.rarity === 'epic' || i.rarity === 'legendary' || i.rarity === 'mythic'),
     pets3: s.pets.length >= 3,
     ult20: st.ults >= 20,
     lvl20: st.bestLevel >= 20,

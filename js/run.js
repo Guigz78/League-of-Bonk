@@ -31,6 +31,7 @@ import { GIGA_METHODS } from './giga.js';
 import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
 import { C2, isUltC2 } from './champions-c2.js'; // champions C2 (Frida, Gaïa) : ultimes, passifs, effets en cours
 import { MISSION } from './story-mission.js'; // missions des chapitres de l'histoire (ramasser, tenir, gardes)
+import { MYTH_METHODS } from './mythic.js'; // pouvoirs des objets mythiques
 import { ENG, isUltEng } from './champion-engineer.js'; // Tess l'ingénieure : frappe orbitale
 import { MONK, isUltMonk } from './champion-monk.js'; // Kenji le moine : flux du combo, mille poings
 import { PIR, isUltPir } from './champion-pirate.js'; // Morgane la capitaine pirate : bordée
@@ -202,6 +203,7 @@ export class Run {
     // effets uniques des objets légendaires (un même effet sur deux objets compte double)
     this.leg = {};
     for (const id of Array.isArray(st.effects) ? st.effects : []) if (LEGEND_EFFECTS[id]) this.leg[id] = (this.leg[id] || 0) + 1;
+    this.initMyth(st); // pouvoirs des objets mythiques équipés (js/mythic.js)
     this.bDmg = has('rage') ? 1.2 : 1; this.bXp = has('sagesse') ? 1.3 : 1; this.bLs = has('sang') ? 0.08 : 0;
     this.phoenix = has('phenix');
     this.p = {
@@ -309,6 +311,7 @@ export class Run {
     if (this.easy) { this.sk.hp *= EASY.hp; this.sk.dmg *= EASY.dmg; this.sk.boss *= EASY.boss; this.wm.spawn *= EASY.spawn; }
     this.placeInterest();
     this.initMission(); // chapitre « mission » de l'histoire : pas d'autel, objectif à remplir (story-mission.js)
+    if (this.myth) this.mythWorld(); // Faucheuse remise à zéro, Renaissance de nouveau prête
   }
 
   // faut-il montrer le chemin de l'autel du boss ? (héros au niveau BOSS_LV, autel pas encore utilisé)
@@ -919,6 +922,7 @@ export class Run {
     p.inv = Math.max(0, p.inv - dt);
     if (p.regen) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
     this.updateHeal(dt);
+    if (this.myth.meteor) this.updateMyth(dt); // Pluie d'étoiles (objet mythique)
     if (this.c1d || this.c1f) this.tickC1(dt); // champions C1 : danse des ombres, fureur en cours
     if (this.c2w || this.c2t || this.cls.regenPct) this.tickC2(dt); // champions C2 : sève de Gaïa, hiver éternel, épines
     if (this.engU) this.tickEng(dt); // Tess : frappe orbitale en cours
@@ -1799,7 +1803,7 @@ export class Run {
       return;
     }
     if (p.shieldHit) { p.shieldHit = 0; p.inv = 0.5; this.fx.push({ type: 'ring', x: p.x, y: p.y, r: 40, life: 0.4, max: 0.4, color: '#a8d8ff' }); sfx('block'); return; }
-    const d = Math.max(1, Math.round(dmg * (1 - p.armor)));
+    const d = this.mythTitan(Math.max(1, Math.round(dmg * (1 - p.armor))), src); // Titan : coup plafonné, attaquant puni
     p.hp -= d;
     this.track.hits++; this.track.dmgTaken += Math.min(d, p.hp + d);
     p.inv = 0.45;
@@ -1815,7 +1819,7 @@ export class Run {
     this.hurtFlash = 0.25;
     this.text(p.x, p.y, 60, '-' + d, '#ff6a6a', 1.1);
     sfx('hurt'); buzz(30);
-    if (p.hp <= 0) { p.hp = 0; this.die(); }
+    if (p.hp <= 0) { if (this.mythRebirth()) return; p.hp = 0; this.die(); } // Renaissance (objet mythique) avant la mort
     else if (p.hp < p.maxHp * 0.3) this.onStory?.('lowhp');
   }
 
@@ -2131,8 +2135,9 @@ export class Run {
   hitEnemy(e, dmg, o = {}) {
     if (e.dead || e.burrowed) return;
     if (e.invuln > 0) { if (e.flash <= 0) e.flash = 0.05; return; } // boss qui rugit : invulnérable
-    const p = this.p, L = this.leg, raw = dmg >= 1e6; // raw : balayages (mort du boss, résurrection), sans effets
+    const p = this.p, L = this.leg, raw = dmg >= 1e6, dmg0 = dmg; // raw : balayages (mort du boss, résurrection), sans effets
     if (!raw && L.fury && p.hp < p.maxHp * 0.4) dmg *= 1 + 0.3 * L.fury; // Furie : +30 % sous 40 % de PV
+    if (!raw && (this.myth.reaper || this.myth.king)) dmg *= this.mythDmg(); // Faucheuse, Roi des Bonks (objets mythiques)
     if (!raw && this.cls.rage) dmg *= this.rageMul(); // Rage de Ragnar : jusqu'à +40 % selon les PV manquants
     if (!raw && this.cls.chill) this.chillC2(e); // Morsure du givre de Frida : l'ennemi touché ralentit
     const crit = !o.noCrit && Math.random() < p.crit;
@@ -2160,7 +2165,9 @@ export class Run {
       // Foudre en chaîne : un coup sur 8 rebondit sur 3 ennemis
       if (L.chain && ++this.chainN >= Math.ceil(8 / L.chain)) { this.chainN = 0; this.chainBolt(e); }
     }
+    if (!raw) this.mythReap(e); // Faucheuse : exécution sous 20 % de PV
     if (e.hp <= 0) this.kill(e, raw ? { raw: true } : o);
+    else if (!raw) this.mythEcho(e, dmg0, o); // Écho du Néant : seconde frappe
   }
 
   // ---------- Effets des objets légendaires ----------
@@ -2245,6 +2252,7 @@ export class Run {
   // ---------- Combo ----------
   addCombo() {
     this.combo++; this.comboT = COMBO_WINDOW;
+    if (this.myth.king) this.mythCombo(); // Roi des Bonks : onde royale tous les 100
     if (this.combo > this.comboBest) this.comboBest = this.combo;
     const m = COMBO_STEPS[this.comboStep] ?? (Math.floor(this.combo / 1000) + 1) * 1000;
     if (this.combo < m) return;
@@ -2777,6 +2785,8 @@ export class Run {
 
 // missions des chapitres de l'histoire (js/story-mission.js)
 Object.assign(Run.prototype, MISSION);
+// pouvoirs des objets mythiques (js/mythic.js)
+Object.assign(Run.prototype, MYTH_METHODS);
 // giga boss du niveau 3 (js/giga.js) : invocation, phases, attaques, victoire de l'expédition
 Object.assign(Run.prototype, GIGA_METHODS);
 // champions C1 (Nyx, Sora, Ragnar) : ultimes et effets en cours (js/champions-c1.js)

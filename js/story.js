@@ -141,7 +141,7 @@ export const STORY = {
       reward: { gold: 1500, chest: 3, title: 'soupe' } },
   ],
   // paliers d'étoiles (36 au total) : récompenses données une fois
-  stars: [{ n: 12, gold: 500, chest: 2 }, { n: 24, gold: 1000, chest: 3 }, { n: 36, chest: 3, title: 'chef' }],
+  stars: [{ n: 12, gold: 500, chest: 2 }, { n: 24, gold: 1000, chest: 3 }, { n: 36, chest: 3, title: 'chef', shards: 5 }], // shards : éclats mythiques
 };
 const CH = STORY.chapters;
 export const storyLen = CH.length;
@@ -351,6 +351,7 @@ export function storyEnd(n, r) {
     if (M.gold) save.gold += M.gold;
     if (M.chest != null) save.pendingChests.push({ tier: M.chest, zone: 5 });
     if (M.title && TITLES[M.title]) earnTitle(M.title);
+    if (M.shards) save.mythShards = (save.mythShards | 0) + M.shards;
     out.mile.push(M);
   }
   persist();
@@ -359,7 +360,7 @@ export function storyEnd(n, r) {
 
 // récompense d'un palier d'étoiles (court sur la carte, détaillé dans le bilan)
 const mileTxt = (M, long = false) => [M.gold ? `${fmt(M.gold)} or` : '', M.chest != null ? esc(LOOT_TIERS[M.chest].name) : '',
-  M.title && TITLES[M.title] ? (long ? `titre « ${esc(TITLES[M.title].name)} »` : 'Titre') : ''].filter(Boolean).join(' + ');
+  M.title && TITLES[M.title] ? (long ? `titre « ${esc(TITLES[M.title].name)} »` : 'Titre') : '', M.shards ? `${M.shards} éclats mythiques` : ''].filter(Boolean).join(' + ');
 const starsHTML = (k, cls = '') => `<span class="st-stars ${cls}">${[0, 1, 2].map(i => `<i class="${i < k ? 'on' : ''}">★</i>`).join('')}</span>`;
 
 // bloc du bilan : étoiles du chapitre (nouvelles en évidence), récompenses

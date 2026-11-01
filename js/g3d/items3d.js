@@ -1,4 +1,4 @@
-// Images 3D de l'équipement : un petit modèle low-poly par objet (13 modèles d'objets + 6 objets de boss), dans le style
+// Images 3D de l'équipement : un petit modèle low-poly par objet (13 modèles d'objets + 6 objets de boss + 6 mythiques), dans le style
 // des champions (Shape + matériau à facettes de models-kit.js). Chaque image est rendue une seule fois dans le contexte
 // WebGL partagé des portraits puis gardée en cache (URL d'image). La rareté se lit au cadre de la tuile (CSS) ;
 // les objets légendaires ont en plus des éclats lumineux.
@@ -192,14 +192,87 @@ const MODELS = {
     s.put('oct', '#ff4ad8', 0, -0.5, 0.34, 0.24, 0.28, 0.12, 0, 0, 0, G(0.8));
     return [0, 0.45, 0];
   },
+  // ---------- objets mythiques (data.js MYTHIC_ITEMS) ----------
+  'Faux du Roi des Bonks': s => { // grande faux : manche violet cerclé d'or, lame cramoisie lumineuse, crâne couronné
+    s.put('cyl:6', '#2a1838', 0, 0, 0, 0.22, 2.9, 0.22);
+    for (const y of [-0.9, -0.2, 0.6]) s.put('tor:0.06:4:10', GOLD, 0, y, 0, 0.3, 0.3, 0.3, PI / 2, 0, 0);
+    s.put('arc:0.26:2.3:16', '#ff2a52', 0.86, 1.18, 0, 2.5, 1.8, 0.9, 0, 0, 0.32 * PI, G(0.9));
+    s.put('arc:0.1:2.2:16', '#ffd0dc', 0.86, 1.18, 0.08, 2.15, 1.52, 0.6, 0, 0, 0.34 * PI, G(1.3));
+    s.put('arc:0.14:2.0:12', '#b8183a', -0.42, 1.25, 0, 1.0, 0.8, 0.7, 0, 0, 1.3 * PI, G(0.6));
+    s.put('box', '#1a1020', 0, 1.3, 0, 0.42, 0.26, 0.28);
+    s.put('sph:8:6', '#efe8d8', 0, 1.56, 0.05, 0.34, 0.32, 0.32);
+    s.put('box', '#ff2a52', -0.07, 1.58, 0.21, 0.08, 0.08, 0.04, 0, 0, 0, G(1.2)); s.put('box', '#ff2a52', 0.07, 1.58, 0.21, 0.08, 0.08, 0.04, 0, 0, 0, G(1.2));
+    for (let i = 0; i < 5; i++) s.tip('cone:4', GOLD, -0.16 + i * 0.08, 1.7, 0, 0, 0, 0, 0.07, 0.16);
+    s.put('oct', '#ff2a52', 0, -1.45, 0, 0.22, 0.3, 0.22, 0, 0, 0, G(1));
+    return [0, 0.3, -0.35];
+  },
+  'Sceptre des Étoiles filantes': s => { // sceptre d'or, grande étoile lumineuse, petites étoiles en orbite
+    s.put('cyl:8', GOLD, 0, -0.1, 0, 0.14, 2.5, 0.14);
+    s.put('cyl:8', GOLD2, 0, -1.25, 0, 0.22, 0.24, 0.22);
+    s.put('tor:0.08:4:12', GOLD, 0, 1.1, 0, 0.5, 0.5, 0.5, PI / 2, 0, 0);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * PI * 2 + PI / 2; s.put('cone:4', '#fff2a0', Math.cos(a) * 0.46, 1.7 + Math.sin(a) * 0.46, 0, 0.44, 0.72, 0.18, 0, 0, a - PI / 2, G(1.3)); }
+    s.put('ico', '#ffe35a', 0, 1.7, 0, 0.52, 0.52, 0.3, 0, 0, 0, G(1.4));
+    s.put('tor:0.03:4:18', '#bfe8ff', 0, 1.7, 0, 1.3, 1.3, 1.3, 1.1, 0.3, 0, G(0.8));
+    for (const [x, y, k] of [[0.58, 2.1, 1], [-0.62, 1.3, 0.8], [0.4, 1.0, 0.6]]) s.put('oct', '#fff6c0', x, y, 0.1, 0.13 * k, 0.22 * k, 0.08, 0, 0, 0, G(1.4));
+    return [0, 0.3, -0.38];
+  },
+  'Armure du Phénix éternel': s => { // plastron de braise, ailes de flammes, cœur ardent
+    s.put('rbox:0.3', '#c8401a', 0, 0, 0, 1.36, 1.5, 0.66);
+    s.put('box', '#ffb04a', 0, 0.05, 0.33, 0.1, 1.3, 0.04, 0, 0, 0, G(0.6));
+    s.sym('sph:8:6', '#e8602a', 0.78, 0.56, 0, 0.66, 0.48, 0.66);
+    for (let i = 0; i < 4; i++) {
+      const y = 0.75 - i * 0.28, l = 0.9 - i * 0.14, c = i % 2 ? '#ffd54a' : '#ff7a2a';
+      s.tip('cone:5', c, 0.86, y, -0.1, 0, 0, -1.25 - i * 0.12, 0.2, l, 0.2, G(0.7));
+      s.tip('cone:5', c, -0.86, y, -0.1, 0, 0, 1.25 + i * 0.12, 0.2, l, 0.2, G(0.7));
+    }
+    s.put('box', GOLD, 0, -0.58, 0.02, 1.4, 0.16, 0.7);
+    s.put('oct', '#ffe35a', 0, 0.18, 0.37, 0.32, 0.4, 0.16, 0, 0, 0, G(1.4));
+    s.put('tor:0.05:4:12', GOLD, 0, 0.18, 0.36, 0.5, 0.5, 0.3);
+    return [0, 0.45, 0];
+  },
+  'Égide du Titan': s => { // bouclier massif : pierre et acier, bord d'or, rune bleue lumineuse
+    s.put('cyl:12', '#5a6070', 0, 0, 0, 1.9, 0.3, 1.9, PI / 2, 0, 0);
+    s.put('tor:0.12:6:24', GOLD, 0, 0, 0.12, 1.86, 1.86, 1.2);
+    s.put('cyl:12', STEEL, 0, 0, 0.14, 1.3, 0.12, 1.3, PI / 2, 0, 0);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * PI * 2; s.put('sph:6:4', GOLD2, Math.cos(a) * 0.82, Math.sin(a) * 0.82, 0.18, 0.12, 0.12, 0.08); }
+    s.put('hemi:10:5', '#8a93a6', 0, 0, 0.2, 0.62, 0.62, 0.4, PI / 2, 0, 0);
+    s.put('oct', '#6ae8ff', 0, 0, 0.42, 0.3, 0.42, 0.12, 0, 0, 0, G(1.3));
+    s.put('box', '#6ae8ff', 0, 0, 0.36, 0.06, 0.9, 0.04, 0, 0, 0, G(1)); s.put('box', '#6ae8ff', 0, 0, 0.36, 0.9, 0.06, 0.04, 0, 0, 0, G(1));
+    return [0.1, 0.45, 0];
+  },
+  'Œil du Néant': s => { // œil violet dans une griffe sombre, iris lumineux
+    s.put('sph:12:10', '#f4ecff', 0, 0, 0, 0.95, 0.95, 0.95);
+    s.put('sph:10:8', '#9a3ae8', 0, 0, 0.32, 0.6, 0.6, 0.4, 0, 0, 0, G(1.2));
+    s.put('sph:8:6', '#14081c', 0, 0, 0.5, 0.22, 0.36, 0.14);
+    s.put('sph:6:4', '#ffffff', -0.12, 0.14, 0.58, 0.1, 0.1, 0.06, 0, 0, 0, G(1));
+    for (let i = 0; i < 5; i++) { const a = -PI / 2 + (i - 2) * 0.55; s.tip('cone:5', '#2a1a38', Math.cos(a) * 0.42, Math.sin(a) * 0.42, -0.1, 0, 0, a + PI / 2, 0.16, 0.7); }
+    s.put('tor:0.06:4:16', '#5a2a8a', 0, 0, 0.05, 1.04, 1.04, 0.6, 0, 0, 0, G(0.5));
+    return [0, 0.25, 0];
+  },
+  'Couronne de Gorgoth': s => { // couronne royale massive : pointes hautes, gemmes de toutes les couleurs
+    s.put('cyl:14', GOLD, 0, 0, 0, 1.5, 0.5, 1.5);
+    s.put('cyl:14', '#4a1460', 0, 0.03, 0, 1.38, 0.44, 1.38);
+    s.put('tor:0.08:4:20', GOLD2, 0, -0.24, 0, 0.78, 0.78, 0.78, PI / 2, 0, 0);
+    const gems = ['#ff2a52', '#4cd26e', '#3a8aff', '#ffe35a', '#9a52e0', '#6ae8ff', '#ff7ab8', '#ff8a3a'];
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * PI * 2, big = i % 2 === 0;
+      s.tip('cone:4', GOLD, Math.cos(a) * 0.7, 0.22, Math.sin(a) * 0.7, 0, 0, 0, big ? 0.32 : 0.22, big ? 0.8 : 0.46);
+      if (big) s.put('sph:6:4', '#fff6c0', Math.cos(a) * 0.7, 1.04, Math.sin(a) * 0.7, 0.12, 0.12, 0.12, 0, 0, 0, G(1));
+      s.put('oct', gems[i], Math.cos(a) * 0.77, 0.02, Math.sin(a) * 0.77, 0.16, 0.2, 0.1, 0, -a + PI / 2, 0, G(0.8));
+    }
+    s.put('ico', '#ff2a52', 0, 0.75, 0, 0.3, 0.3, 0.3, 0, 0, 0, G(1.2));
+    return [0.35, 0.3, 0];
+  },
 };
 export const ITEM_MODELS = Object.keys(MODELS);
 
 // image d'un objet (nom du modèle) : '' si le modèle n'existe pas ou si le rendu échoue (l'interface garde l'icône)
+// legend : true (légendaire : éclats dorés) ou 'M' (mythique : éclats rouges, roses et dorés, plus nombreux)
 export function itemURL(name, legend = false) {
   const make = MODELS[name];
   if (!make) return '';
-  return cached('it:' + name + (legend ? ':L' : ''), () => {
+  const myth = legend === 'M';
+  return cached('it:' + name + (myth ? ':M' : legend ? ':L' : ''), () => {
     const scene = new THREE.Scene(); lights(scene, 1.1);
     const s = new Shape(), [rx, ry, rz] = make(s);
     const mat = charMaterial({ rim: 0.7 }), mesh = new THREE.Mesh(s.geometry(), mat);
@@ -209,7 +282,9 @@ export function itemURL(name, legend = false) {
     let fx = null;
     if (legend) { // éclats autour de l'objet légendaire, dans son cadre (ils ne comptent pas dans le cadrage)
       const e = new Shape(), a = box.min, b = box.max, z = b.z + 0.2, w = (b.x - a.x) * 0.07 + 0.08;
-      for (const [kx, ky, k] of [[0.92, 0.9, 1], [0.06, 0.62, 0.75], [0.86, 0.12, 0.6]]) e.put('oct', '#fff1b0', a.x + (b.x - a.x) * kx, a.y + (b.y - a.y) * ky, z, w * k, w * 1.9 * k, w * 0.4, 0, 0, 0, G(1.2));
+      const pts = myth ? [[0.94, 0.92, 1.15, '#ffd0dc'], [0.04, 0.7, 0.85, '#ffe35a'], [0.9, 0.1, 0.7, '#ff4a6e'], [0.12, 0.08, 0.6, '#fff1b0'], [0.5, 1.02, 0.55, '#ff7ab8']]
+        : [[0.92, 0.9, 1, '#fff1b0'], [0.06, 0.62, 0.75, '#fff1b0'], [0.86, 0.12, 0.6, '#fff1b0']];
+      for (const [kx, ky, k, c] of pts) e.put('oct', c, a.x + (b.x - a.x) * kx, a.y + (b.y - a.y) * ky, z, w * k, w * 1.9 * k, w * 0.4, 0, 0, 0, G(1.3));
       fx = new THREE.Mesh(e.geometry(), mat); scene.add(fx);
     }
     // cadrage carré centré (frame pose le bas de la boîte en bas de l'image : on recentre verticalement)

@@ -17,7 +17,7 @@
   --acc: #f5b400; --acc-hi: #ffc93a; --acc-lo: #b88600; --acc-ink: #161000;
   --cy: #3fd0ff; --red: #ff4d5e; --green: #3ddc84; --violet: #a855f7; --orange: #ff7a2f;
   /* raretés : commun, rare, épique, légendaire */
-  --r0: #9aa4b2; --r1: #3b8cff; --r2: #a855f7; --r3: #f59e0b;
+  --r0: #9aa4b2; --r1: #3b8cff; --r2: #a855f7; --r3: #f59e0b; --r4: #ff3b6b;
   --fd: 'Rajdhani', 'DIN Alternate', 'Barlow Semi Condensed', system-ui, sans-serif;
   --fb: -apple-system, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
   --rad: 3px; --ch: 10px;
@@ -33,6 +33,7 @@
 .r-rare { --rc: var(--r1); --rd: #121f38; }
 .r-epic { --rc: var(--r2); --rd: #1f1636; }
 .r-legendary { --rc: var(--r3); --rd: #2a1f0c; }
+.r-mythic { --rc: var(--r4); --rd: #2a0c18; }
 
 /* ---------- Base (verrouillage iOS : pas de zoom, de rebond, de sélection ni de menu contextuel) ---------- */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -2415,3 +2416,68 @@ button.itile:active { transform: translateY(1px); }
 .pz-goal small img { width: 13px; height: 13px; }
 .pz-goal span { font: 600 14px/1.3 var(--fb); }
 .pz-goal b { color: #ffe08a; }
+
+/* ===== Objets mythiques (r23) : rouge rubis, liseré arc-en-ciel qui glisse, lueur qui respire ===== */
+@keyframes myth-slide { to { background-position: 300% 0; } }
+@keyframes myth-glow { 50% { box-shadow: 0 0 22px rgba(255,59,107,.65), inset 0 0 10px rgba(255,214,120,.25); } }
+.itile.r-mythic, .mcard.r-mythic, .is-card.r-mythic { box-shadow: 0 0 12px rgba(255,59,107,.35); animation: myth-glow 2.6s ease-in-out infinite; }
+.itile.r-mythic::after, .mf-cell.got::after { height: 3px; background: linear-gradient(90deg, #ff3b6b, #ffd54a, #ff7ab8, #c08aff, #ff3b6b); background-size: 300% 100%; animation: myth-slide 3s linear infinite; }
+.rcard.r-mythic { box-shadow: inset 0 3px 0 var(--rc), 0 20px 50px rgba(0,0,0,.55), 0 0 90px rgba(255,59,107,.5); }
+.rcard.r-mythic::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; z-index: 2; background: linear-gradient(90deg, #ff3b6b, #ffd54a, #ff7ab8, #c08aff, #ff3b6b); background-size: 300% 100%; animation: myth-slide 2.4s linear infinite; }
+.rcard.r-mythic .rc-rar { background: linear-gradient(90deg, #ff6a8a, #ffd54a, #ff6a8a); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: myth-slide 2.4s linear infinite; }
+.it-fx.myth { color: var(--r4); text-shadow: 0 0 6px rgba(255,59,107,.8); }
+/* coffre : rayons rubis et or, plus rapides, éclair blanc à l'arrivée de la carte */
+.chest-stage.mythic .cst-rays { background: repeating-conic-gradient(from 0deg, var(--r4) 0deg 2deg, transparent 2deg 8deg, #ffd54a 8deg 9.5deg, transparent 9.5deg 14deg); opacity: .95; animation-duration: 5s; }
+.chest-stage.mythic::after { content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none; background: radial-gradient(circle at 50% 42%, #fff, rgba(255,90,130,.6) 30%, transparent 70%); animation: myth-flash .9s ease-out both; }
+@keyframes myth-flash { from { opacity: 1; } to { opacity: 0; } }
+/* pouvoir mythique */
+.fx-box.myth { gap: 5px; background: linear-gradient(90deg, rgba(255,59,107,.2), rgba(255,213,74,.06) 70%, transparent); border-left: 3px solid var(--r4); }
+.fx-box.myth b { align-items: center; gap: 10px; color: #ff8aa6; }
+.fx-box.myth b > span { display: flex; flex-direction: column; gap: 2px; }
+.fx-box.myth b small { font: 700 10px/1 var(--fd); letter-spacing: .16em; color: #ffd54a; }
+.fx-box.myth > small { color: var(--tx); }
+.mb-ic { flex: none; width: 34px; height: 34px; display: grid; place-items: center; font-size: 22px; font-style: normal; background: rgba(0,0,0,.3); box-shadow: inset 0 0 0 1px rgba(255,59,107,.6); }
+.myth-note { margin: 10px 0 0; font-size: 12.5px; }
+/* éclat mythique */
+.shard-ic { display: inline-block; font-style: normal; line-height: 1; background: linear-gradient(135deg, #ffd54a, #ff3b6b 55%, #c08aff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 6px rgba(255,59,107,.7)); }
+.shard-ic.big { font-size: 74px; animation: sb-steam 2s ease-in-out infinite; }
+.mcard .shard-ic { font-size: 34px; }
+/* forge : collection et éclats */
+.myth-forge { margin-top: 18px; padding: 14px 12px; background: linear-gradient(160deg, #2a0c18, #121826 60%); border: 1px solid rgba(255,59,107,.45); box-shadow: 0 0 30px rgba(255,59,107,.12); }
+.mf-head { display: flex; gap: 12px; align-items: flex-start; }
+.mf-head > .shard-ic { font-size: 34px; }
+.mf-head b { display: flex; align-items: baseline; gap: 8px; font: 700 18px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; color: #ff8aa6; }
+.mf-head b small { font: 700 13px var(--fd); color: #ffd54a; }
+.mf-head > div > small { display: block; margin-top: 4px; font: 500 12.5px/1.35 var(--fb); color: var(--tx2); }
+.mf-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.mf-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 104px; padding: 8px 4px 6px; background: rgba(0,0,0,.28); border: 1px solid rgba(255,59,107,.25); }
+.mf-cell.got { background: linear-gradient(180deg, rgba(255,59,107,.2), rgba(0,0,0,.25)); border-color: rgba(255,59,107,.7); }
+.mf-cell.got::after { content: ''; position: absolute; left: -1px; right: -1px; bottom: -1px; }
+.mf-cell small { font: 700 10.5px/1.15 var(--fd); letter-spacing: .04em; text-align: center; color: var(--tx2); }
+.mf-cell.got small { color: #ffd0dc; }
+.mf-cell em { position: absolute; top: 4px; right: 5px; font-size: 13px; font-style: normal; }
+.mf-cell:not(.got) em { filter: grayscale(1); opacity: .6; }
+.it-art.sil { filter: brightness(0) drop-shadow(0 0 2px rgba(255,59,107,.9)); opacity: .85; }
+.mf-q { display: grid; place-items: center; width: 54px; height: 54px; font: 700 28px var(--fd); color: rgba(255,59,107,.6); font-style: normal; }
+.mf-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.mf-bar .pbar { flex: 1; height: 8px; }
+.mf-bar .pbar > i { background: linear-gradient(90deg, #ff3b6b, #ffd54a); }
+.mf-bar b { font: 700 16px var(--fd); color: #ffd54a; }
+.mf-bar small { font: 600 12px var(--fb); color: var(--tx2); }
+.btn.myth-btn { width: 100%; --bt: #fff; border-radius: 0; background: linear-gradient(180deg, #ff5a82, #c8204a); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 18px rgba(255,59,107,.35); }
+.btn.myth-btn .shard-ic { background: none; color: #ffe08a; -webkit-background-clip: initial; background-clip: initial; }
+.btn.myth-btn:disabled { filter: grayscale(.6) brightness(.7); box-shadow: none; }
+.mf-done { margin: 0; text-align: center; font: 700 14px var(--fd); letter-spacing: .06em; color: #ffd54a; }
+.mi-sil { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 8px; }
+.mi-sil span { font: 700 12px var(--fd); letter-spacing: .14em; text-transform: uppercase; color: #ff8aa6; }
+/* petits écrans (iPhone SE) : grande carte d'objet (coffre, forge) plus compacte pour tenir avec un pouvoir mythique */
+@media (max-height: 640px) {
+  .rcard { padding: 14px 12px 12px; gap: 2px; }
+  .rcard .rc-ic { width: 74px; height: 74px; margin: 0 0 4px; }
+  .rcard .rc-ic img.it-art { width: 68px; height: 68px; }
+  .rcard .rc-stats { margin-top: 4px; padding: 2px 8px; }
+  .rcard .srow { min-height: 22px; font-size: 12.5px; }
+  .rcard .fx-box { margin-top: 5px; padding: 7px 9px; }
+  .rcard .fx-box > small { font-size: 11.5px; line-height: 1.3; }
+  .rcard .mb-ic { width: 28px; height: 28px; font-size: 18px; }
+}

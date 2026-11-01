@@ -460,6 +460,46 @@ export class Fx {
     } else if (ev.kind === 'frost') { this.burstStars(ev.x, ev.y, 16, 6, '#bfeaff', 120); this.ring(ev.x, ev.y, 6, 40, '#9ad8ff', 5, 0.35); }
     else if (ev.kind === 'boom') { this.puff(ev.x, ev.y, 6, ev.R * 0.4, 0.7, '#ffd0a0'); this.ring(ev.x, ev.y, 10, ev.R, '#ffb04a', 8, 0.3); }
     else if (ev.kind === 'bubble') this.ring(ev.x, ev.y, 10, 34, '#a8d8ff', 5, 0.4, 0, 20);
+    else this.mythFx(ev);
+  }
+  // pouvoirs des objets mythiques (js/mythic.js)
+  mythFx(ev) {
+    const { x, y } = ev;
+    switch (ev.kind) {
+      case 'meteorFall': { // étoile filante : traînée qui descend du ciel en diagonale, cible marquée au sol
+        this.bolts.push({ pts: zigzag((x + 260) * S, 16, (y - 200) * S, x * S, 0.4, y * S, 5, 0.25), t: 0, max: ev.t || 0.35, c: '#ffcf6a', w: 1.1 });
+        this.ring(x, y, 70, 20, '#ffd54a', 5, ev.t || 0.35);
+        break;
+      }
+      case 'meteor': // impact : colonne de lumière, souffle, étoiles et rochers, sol brûlé
+        this.pillars.push({ x, y, w: 110, h: 620, t: 0, max: 0.55, c: '#ffd54a' });
+        this.bursts.push({ x, y, h: 10, r: ev.R * 1.2, t: 0, max: 0.45, c: '#ffb04a' });
+        this.ring(x, y, 20, ev.R * 1.25, '#fff0a0', 10, 0.4);
+        this.burstStars(x, y, 20, 14, '#ffe48a', 340);
+        this.rockBurst(x, y, 8, '#6a4a3a', 240);
+        this.decal(x, y, ev.R * 0.55, '#2a1408', 0.45);
+        this.gfx.kick = Math.max(this.gfx.kick || 0, 4);
+        break;
+      case 'reap': // exécution : éclat violet et petite faux d'étoiles
+        this.burstStars(x, y, 18 + (ev.r || 10), 8, '#d08aff', 180);
+        this.ring(x, y, 6, 30 + (ev.r || 10) * 1.5, '#9a52e0', 6, 0.3);
+        break;
+      case 'echo': this.ring(x, y, 4, 18 + (ev.r || 10), '#c08aff', 4, 0.22, 0, 14); break;
+      case 'titan': this.ring(x, y, 10, 60, '#ffd54a', 8, 0.35, 0, 18); this.burstStars(x, y, 24, 6, '#ffe48a', 160); break;
+      case 'rebirth': // phénix : colonnes de feu, anneaux, gerbe d'étoiles
+        this.pillars.push({ x, y, w: 180, h: 900, t: 0, max: 1.2, c: '#ff8a3a' });
+        for (let i = 0; i < 3; i++) this.ring(x, y, 20, ev.R * (0.7 + i * 0.25), i % 2 ? '#ffd54a' : '#ff6a2a', 12, 0.7, -i * 0.08);
+        this.bursts.push({ x, y, h: 20, r: ev.R, t: 0, max: 0.8, c: '#ff8a3a' });
+        this.burstStars(x, y, 30, 30, '#ffb04a', 420);
+        this.gfx.kick = Math.max(this.gfx.kick || 0, 9);
+        break;
+      case 'king': // onde royale : deux anneaux dorés, couronne d'étoiles
+        this.ring(x, y, 20, ev.R, '#ffd54a', 12, 0.5); this.ring(x, y, 10, ev.R * 0.7, '#fff6c0', 8, 0.45, -0.06);
+        this.bursts.push({ x, y, h: 16, r: ev.R * 0.8, t: 0, max: 0.5, c: '#ffd54a' });
+        this.burstStars(x, y, 40, 20, '#ffd54a', 300);
+        this.gfx.kick = Math.max(this.gfx.kick || 0, 5);
+        break;
+    }
   }
 
   // ---------- Décor des monstres (appelé par le rendu des monstres) ----------
