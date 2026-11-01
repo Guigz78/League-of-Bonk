@@ -12,6 +12,8 @@
 // évolutions par partie). Difficile, monde 1 : 3/16 (Tess 5/12, Sora 4/12, champions C1 2 à 3 sur 6 à 10). Banc d'essai
 // (anneau de 40 monstres, dégâts par seconde en A) : pistolets 2,1 / 17,6 / 39,6 (niv. 1 / 5 / évolués ; flèches 1,6 / 22 /
 // 102), sabre 22 / 53 / 83 (épée de Brok 22 / 56 / 73), canon 2,2 / 7,5 / 36, perroquet 1,4 / 6,3 / 44 (cible unique).
+// Après fusion (difficulté relevée, jeu complet à 11 champions, monde 1, 10 parties) : Morgane 5/10 contre Brok 6/10 et
+// Lumi 8/10 ; pistolets non évolués +15 % (0,8 → 0,92 A) pour un début de partie moins faible : 11/14 (Brok 10/14).
 import { addWeapons } from './weapons-reg.js';
 import { sfx } from './audio.js';
 import { fmt } from './ui.js';
@@ -82,7 +84,7 @@ addWeapons({
   pistols: {
     stats: ({ A, h, L, E }) => E
       ? { dmg: A * 0.8 * 1.3 * 1.25 * 1.3, cd: 0.2 * h, n: 3, pierce: 2, R: 420, spread: 0.13 }
-      : { dmg: A * 0.8 * (L(2) ? 1.3 : 1) * (L(5) ? 1.25 : 1), cd: (L(4) ? 0.28 : 0.36) * h, n: 1 + L(5), pierce: L(3), R: 380, spread: 0.1 },
+      : { dmg: A * 0.92 * (L(2) ? 1.3 : 1) * (L(5) ? 1.25 : 1), cd: (L(4) ? 0.28 : 0.36) * h, n: 1 + L(5), pierce: L(3), R: 380, spread: 0.1 },
     lines: [D_('Dégâts par balle'), ['cd', 'Tir toutes les', secS], ['n', 'Balles par tir', fN], ['pierce', 'Transperce', fP], ['R', 'Portée', fI]],
     fire(run, w, S, E, dt) {
       const s = st(run, w), p = run.p;
