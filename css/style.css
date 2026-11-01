@@ -2138,3 +2138,6 @@ button.itile:active { transform: translateY(1px); }
   .lu-auto { margin-top: 6px; padding: 6px 10px; }
   .lu-auto small { display: none; }
 }
+
+/* ---------- Écran des champions, puces d'évolution sur petit écran (iPhone SE) : « Morgane », « Corsaire » tiennent sur une ligne ---------- */
+@media (max-width: 340px) { .evo-chain .evo b { letter-spacing: .015em; } }
