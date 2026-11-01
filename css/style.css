@@ -2250,3 +2250,32 @@ button.itile:active { transform: translateY(1px); }
 .diff-btn.beaten { padding-right: 22px; }
 .diff-btn b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 360px) { .diff-btn { padding: 9px 6px 8px 8px; } .diff-btn.beaten { padding-right: 18px; } .diff-btn b { font-size: 12.5px; letter-spacing: .02em; } .diff-btn small { font-size: 10px; } }
+
+/* ===== Équipement en images 3D (r20) ===== */
+.it-art { display: block; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(0,0,0,.55)); }
+/* tuile : image sur un halo de la couleur de la rareté, rareté écrite en haut */
+.itile { padding: 22px 6px 10px; background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--rc) 30%, transparent) 0, transparent 62%), linear-gradient(180deg, color-mix(in srgb, var(--rc) 14%, var(--s1)), var(--s1) 75%); }
+.it-ic { width: 72px; height: 72px; margin-bottom: 0; }
+.it-ic img.it-art { width: 72px; height: 72px; }
+.it-ic img.ic { width: 38px; height: 38px; }
+.it-rar { position: absolute; top: 5px; left: 0; right: 0; font: 700 9.5px/1 var(--fd); letter-spacing: .14em; text-transform: uppercase; color: var(--rc); }
+.it-better { left: auto; right: 4px; top: 4px; padding: 2px 5px; font: 700 9.5px/1.2 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: #06210f; background: var(--green); }
+.it-new { top: 4px; left: auto; right: 4px; }
+.itile .it-rar + .it-ic { margin-top: 2px; }
+.itile.is-eq { box-shadow: inset 0 0 0 1px var(--green); }
+.it-main { font-size: 14px; }
+.slots .itile { min-height: 150px; }
+/* coffres, récapitulatif, fiche : images plus grandes */
+.rc-ic { width: 104px; height: 104px; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc, #fff) 30%, transparent) 0, rgba(0,0,0,.25) 70%); }
+.rc-ic img.it-art { width: 96px; height: 96px; }
+.mcard img.it-art { width: 44px; height: 44px; }
+.is-card { align-items: center; }
+.is-ic { width: 104px; height: 104px; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--rc) 35%, transparent) 0, var(--bg0) 72%); }
+.is-ic img.it-art { width: 100px; height: 100px; }
+.toast img.it-art { width: 28px; height: 28px; }
+.rw img.it-art { width: 32px; height: 32px; }
+@media (max-width: 360px) { .it-ic, .it-ic img.it-art { width: 60px; height: 60px; } .is-ic { width: 84px; height: 84px; } .is-ic img.it-art { width: 80px; height: 80px; } }
+.is-verdict { margin: 8px 0 0; padding: 9px 12px; font: 600 14px/1.3 var(--fb); background: var(--s1); border-left: 3px solid var(--tx3); }
+.is-verdict.up { border-left-color: var(--green); color: #bff5d2; background: rgba(61,220,132,.08); }
+.is-verdict.down { border-left-color: var(--red); color: #ffd0d6; background: rgba(255,77,94,.07); }
+.is-verdict b { color: #fff; }
