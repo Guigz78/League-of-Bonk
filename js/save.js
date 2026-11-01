@@ -153,6 +153,7 @@ function cleanSettings(o) {
   if (o.numV !== 2) { if (o.numbers === 'all') o.numbers = 'crit'; o.numV = 2; } // moins de chiffres à l'écran : critiques seulement par défaut
   o.joySize = Math.max(0.8, Math.min(1.3, +o.joySize || 1));
   o.lefty = !!o.lefty;
+  o.autoPick = !!o.autoPick; // améliorations choisies automatiquement (la meilleure carte)
   return o;
 }
 
