@@ -304,11 +304,13 @@ function adventureTab() {
   const c = CLASSES[save.cls], first = firstSteps(), vet = save.stats.runs > 0;
   const pz = playZone(), Z = ZONES[pz], { D } = zoneDiff(pz);
   const sd = storyDone(), all = sd >= storyLen;
+  cleanBoostSel();
+  const boostsOn = save.boostSel.filter(Boolean); // bonus choisis : utilisés par la prochaine partie (JOUER)
   const cta = first
     ? `<button class="play-cta" data-act="play"><span class="pc-ic">${iconImg('play', 22)}</span>
         <span class="pc-txt"><b>Jouer</b><small>Chapitre 1 · ${esc(chapter(0).title)}</small></span><img class="px spr pc-boss" src="${bossOf(Z)}" alt=""></button>`
     : `<button class="play-cta" data-act="play"><span class="pc-ic">${iconImg('play', 22)}</span>
-        <span class="pc-txt"><b>Jouer</b><small>${esc(Z.name)}</small></span><img class="px spr pc-boss" src="${bossOf(Z)}" alt=""></button>`;
+        <span class="pc-txt"><b>Jouer</b><small>${esc(Z.name)}</small>${boostsOn.length ? `<em class="pc-boosts">${boostsOn.map(id => iconImg(BOOSTS[id].icon, 14)).join('')} ${boostsOn.length} bonus utilisé${boostsOn.length > 1 ? 's' : ''}</em>` : ''}</span><img class="px spr pc-boss" src="${bossOf(Z)}" alt=""></button>`;
   return `<section class="home">
     ${vet ? homeGoals(defisCount()) : ''}
     <button class="home-hero" data-act="changeClass" aria-label="Changer de champion">
@@ -1407,7 +1409,7 @@ function summaryScreen(R, opened = []) {
     ? `<div class="rw loot-sum">${iconImg('chest', 22)}<span><b>${opened.length} coffre${opened.length > 1 ? 's' : ''} ouvert${opened.length > 1 ? 's' : ''}</b>
         <span class="ls-chips">${nParts ? `<span>${iconImg('hammer', 14)} ${nParts} pièce${nParts > 1 ? 's' : ''}</span>` : ''}${nBoosts ? `<span>${iconImg('potion', 14)} ${nBoosts} bonus</span>` : ''}${A.items.length ? `<span>${iconImg('sword', 14)} ${A.items.length} objet${A.items.length > 1 ? 's' : ''}</span>` : ''}${A.upgs.length ? `<span>${iconImg('upg', 14)} ${A.upgs.length} amélioration${A.upgs.length > 1 ? 's' : ''} gratuite${A.upgs.length > 1 ? 's' : ''}</span>` : ''}<span class="gold-t">${iconImg('gold', 14)} +${fmt(A.gold)}</span></span></span></div>`
     : '';
-  const pendLine = pending ? `<div class="rw">${iconImg('chest', 22)}<span><b>${pending} coffre${pending > 1 ? 's' : ''}</b> à ouvrir plus tard, depuis l'onglet Aventure.</span></div>` : '';
+  const pendLine = pending ? `<div class="rw">${iconImg('chest', 22)}<span><b>${pending} coffre${pending > 1 ? 's' : ''}</b> à ouvrir plus tard depuis l'accueil (bouton <b>Coffres</b>).</span></div>` : '';
   const heatLine = R.heat ? `<div class="rw heat-line">${iconImg('i_burn', 22)}<span>Totems de défi ×${R.heat} : <b>+${fmt(R.heatGold)} or</b><small>+${Math.round(HEAT_GOLD * 100)} % d'or par totem activé</small></span></div>` : '';
   // progression : les 6 mondes (vaincus, vaincus pendant cette expédition, débloqué, verrouillés) et leurs niveaux battus
   const prog = `<div class="w-prog">${ZONES.map((z, i) => {
@@ -1572,7 +1574,7 @@ function gearTab() {
     <div class="pets">${pets}</div>
     <h3 class="section-t">Bonus <small>${nB} en stock</small></h3>
     ${boosts.length ? `<div class="boost-inv">${boosts.map(id => `<div class="bi-chip">${iconImg(BOOSTS[id].icon, 28)}<span><b>${esc(BOOSTS[id].name)}</b><small>${esc(BOOSTS[id].desc)}</small></span><em>×${save.boosts[id]}</em></div>`).join('')}</div>
-      <p class="muted bi-note">Choisissez-les dans la fiche d'une zone, juste avant de partir.</p>`
+      <p class="muted bi-note">Choisissez-les dans la fiche d'un monde (bouton <b>Monde</b> de l'accueil) : ils servent ensuite à chaque partie lancée avec <b>Jouer</b>, tant qu'il vous en reste.</p>`
     : `<p class="muted bi-note">Aucun bonus. Trouvez-en dans les <b>coffres de butin</b> ou achetez-en à la <b>Boutique</b>.</p>`}`;
 }
 
@@ -1737,7 +1739,7 @@ function forgeBody() {
         </div>`}
       </div>
     </div>
-    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1, +2… à l'infini) ou recyclez vos objets depuis l'onglet <b>Équipement</b>.</span></p>`;
+    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1, +2… à l'infini) ou recyclez vos objets depuis l'onglet <b>Héros</b>.</span></p>`;
 }
 
 // met à jour la forge sur place (garde le défilement), l'or et les pastilles
@@ -1829,7 +1831,7 @@ function shopTab() {
       </div>`;
     }).join('')}</div>
     <h3 class="section-t">Bonus <small>pour une seule partie</small></h3>
-    <p class="muted shop-intro">Choisissez-en jusqu'à ${BOOST_SLOTS} dans la fiche d'une zone avant de partir.</p>
+    <p class="muted shop-intro">Choisissez-en jusqu'à ${BOOST_SLOTS} dans la fiche d'un monde (bouton <b>Monde</b> de l'accueil) avant de partir.</p>
     <div class="upgrades boost-shop">${Object.entries(BOOSTS).map(([id, b]) => isFree('boost', id) ? `<div class="upgrade boost-card">
         <span class="bo-ic">${iconImg(b.icon, 32)}${save.boosts[id] ? `<i class="bo-n">×${save.boosts[id]}</i>` : ''}</span>
         <div class="u-txt"><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>

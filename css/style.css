@@ -2279,3 +2279,5 @@ button.itile:active { transform: translateY(1px); }
 .is-verdict.up { border-left-color: var(--green); color: #bff5d2; background: rgba(61,220,132,.08); }
 .is-verdict.down { border-left-color: var(--red); color: #ffd0d6; background: rgba(255,77,94,.07); }
 .is-verdict b { color: #fff; }
+.pc-boosts { display: inline-flex; align-items: center; gap: 3px; font: 700 11px/1 var(--fd); font-style: normal; letter-spacing: .06em; text-transform: uppercase; color: var(--acc-ink); opacity: .8; }
+.pc-boosts img { width: 14px; height: 14px; filter: brightness(0) opacity(.75); }
