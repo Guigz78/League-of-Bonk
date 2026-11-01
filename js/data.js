@@ -698,7 +698,7 @@ export const UNLOCK_CHALLENGES = [
   { id: 'lvl15', cat: 'start', icon: 'upg', name: 'Montée en puissance', txt: 'Atteignez le niveau 15 dans une partie', n: 15, prog: st_('bestLevel'), rw: { key: 'boost:depart', gold: 60 } },
   { id: 'evo1', cat: 'start', icon: 'star', name: 'Alchimiste', txt: 'Faites évoluer une arme (niveau 5 + son tome)', n: 1, prog: st_('weaponEvos'), rw: { key: 't:wisdom', gold: 100 } },
   { id: 'chests5', cat: 'start', icon: 'chest', name: 'Pilleur', txt: 'Ouvrez 5 coffres de butin', n: 5, prog: st_('chests'), rw: { key: 'boost:trefle', gold: 80 } },
-  { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le monde suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:sang', gold: 100 } },
+  { id: 'portal1', cat: 'start', icon: 'portal', name: 'Voyageur', txt: 'Franchissez un portail vers le niveau suivant', n: 1, prog: st_('portals'), rw: { key: 'boost:sang', gold: 100 } },
   { id: 'world2', cat: 'start', icon: 'map', name: 'Au cœur de la jungle', txt: 'Terminez la Jungle Grondante', n: 1, prog: s => (s.zoneCleared?.[1] ? 1 : 0), rw: { gold: 150, chest: 1 } },
   // ---- armes : victimes cumulées avec une arme, évolutions ----
   { id: 'wk_lightning', cat: 'weapons', icon: 'i_stun', name: 'Maître des orages', txt: 'Battez 6 000 monstres avec la Foudre', n: 6000, prog: wk_('lightning'), rw: { gold: 150, chest: 2 } },
