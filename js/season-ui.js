@@ -233,7 +233,7 @@ export async function questSheet() {
       ${iconImg(q.icon, 22)}
       <div class="q-txt"><b>${esc(q.text)}</b>
         <div class="q-row"><span class="pbar ${q.prog >= q.n ? 'green' : ''}"><i style="width:${q.prog / q.n * 100}%"></i></span><em>${fmt(q.prog)}/${fmt(q.n)}</em></div>
-        <span class="q-rw">${iconImg('chest', 14)} ${esc(chestShort(q.tier))} · ${iconImg('gold', 14)} ${q.gold} · <i class="q-xp">+${q.xp} XP</i></span></div>
+        <span class="q-rw"><span>${iconImg('chest', 14)} ${esc(chestShort(q.tier))}</span><span>${iconImg('gold', 14)} ${q.gold}</span><i class="q-xp">+${q.xp} XP</i></span></div>
       ${q.claimed ? `<span class="q-claimed">${iconImg('check', 14)} Reçu</span>` : q.ready ? `<button class="btn primary small" data-q="${q.i}" data-k="${k}">Réclamer</button>`
         : `<span class="q-chest" aria-hidden="true"><img src="${chestURL(q.tier)}" alt=""></span>`}
     </div>`;

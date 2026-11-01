@@ -334,7 +334,7 @@ export class Run {
         <div class="bossbar" id="bossbar" hidden><div class="bn" id="bossName"></div><div class="hpbar"><div class="fill"></div><i class="ph" style="left:60%"></i><i class="ph" style="left:30%"></i><span></span></div></div>
         <div class="minibar" id="minibar" hidden><div class="mb-n" id="miniName"></div><div class="mb-bar"><i id="miniFill"></i></div></div>
         <div class="banner" id="banner"></div>
-        ${!save.tutorialDone ? '' : '<div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu\'elles n\'explosent.</div>'}
+        ${!save.tutorialDone || save.stats.runs > 4 ? '' : '<div class="hint-bubble" id="hintBubble">Glissez le doigt pour courir : votre champion attaque tout seul !<br>Sortez des <em>zones rouges</em> avant qu\'elles n\'explosent.</div>'}
         <button class="ult-btn" id="ultBtn" aria-label="${esc(u.name)}">${iconImg(u.icon, 32)}<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/></svg><small>${esc(u.name)}</small></button>
       </div>
     </div>`);
