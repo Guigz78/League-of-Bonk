@@ -325,13 +325,8 @@ export class Overlay {
     const off = o => { const [x, y, ok] = this.gfx.ws(o.x, o.y, 20); return !ok || x < 0 || x > vw || y < top - 40 || y > vh; };
     const pts = [];
     // [cible, couleur, taille, pictogramme] : boss, coffres d'élite, élites, autels de bonus, totems, coffres, butin
+    // seulement le boss invoqué hors champ : coffres, autels, totems et élites sont sur la mini-carte (écran lisible)
     if (run.boss && !run.boss.dead) pts.push([run.boss, '#ff2a4a', 15, emoji(BOSS_EMO)]);
-    for (const c of run.dropChests) if (!c.open) pts.push([c, '#c06aff', 11, this.ico.chest]);
-    for (const e of run.enemies) if (e.elite && !e.dead && !e.boss) pts.push([e, '#c06aff', 10, this.ico.skull]);
-    for (const s of run.shrines) if (!s.used && Math.hypot(s.x - p.x, s.y - p.y) < 1000) pts.push([s, '#4fd0ff', 9, this.ico.star]);
-    for (const T0 of run.totems || []) if (!T0.used && Math.hypot(T0.x - p.x, T0.y - p.y) < 900) pts.push([T0, TOTEMS[T0.kind]?.color || '#ffffff', 9, this.icons[T0.kind]]);
-    for (const c of run.chests) if (!c.open && Math.hypot(c.x - p.x, c.y - p.y) < 800) pts.push([c, '#ffcf40', 8, this.ico.chest]);
-    for (const it of run.pickups) if (it.type === 'loot' && !it.hidden && Math.hypot(it.x - p.x, it.y - p.y) < 900) pts.push([it, LOOT_GLOW[it.tier] || '#ffffff', 9, this.ico.chest]);
     // au plus 4 flèches (2 pendant le guide de la première partie), les plus proches et le boss d'abord : l'écran reste lisible
     const d2p = o => (o.x - p.x) ** 2 + (o.y - p.y) ** 2;
     const shown = pts.filter(([o]) => off(o)).sort((a, b) => (b[0] === run.boss) - (a[0] === run.boss) || d2p(a[0]) - d2p(b[0])).slice(0, run.coachOn ? 2 : 4);
@@ -406,7 +401,7 @@ export class Overlay {
   }
 
   minimap(g) {
-    const run = this.run, p = run.p, R = 44, cx = this.vw - R - 12, cy = 158, range = 900, t = this.gfx.t;
+    const run = this.run, p = run.p, R = 36, cx = this.vw - R - 12, cy = 150, range = 900, t = this.gfx.t;
     const mp = (x, y) => [cx + (x - p.x) / range * R, cy + (y - p.y) / range * R];
     // mini-carte carrée : fond sombre, filet d'un pixel, coins en équerre
     g.save();
@@ -421,7 +416,7 @@ export class Overlay {
     g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1;
     g.strokeRect(cx + (-HALF - p.x) / range * R, cy + (-HALF - p.y) / range * R, HALF * 2 / range * R, HALF * 2 / range * R);
     if (run.arena) { const [mx, my] = mp(run.arena.x, run.arena.y); g.strokeStyle = 'rgba(255,70,50,.9)'; g.lineWidth = 2; g.beginPath(); g.arc(mx, my, run.arena.R / range * R, 0, TAU); g.stroke(); }
-    for (const e of run.enemies) if (!e.boss && !e.dead && Math.abs(e.x - p.x) < range && Math.abs(e.y - p.y) < range) dot(e.x, e.y, e.elite ? '#d08aff' : e.mad ? 'rgba(255,60,40,.85)' : 'rgba(255,90,90,.6)', e.elite ? 2.4 : 1.3);
+    for (const e of run.enemies) if (e.elite && !e.boss && !e.dead && Math.abs(e.x - p.x) < range && Math.abs(e.y - p.y) < range) dot(e.x, e.y, '#d08aff', 2.4);
     for (const ch of run.chests) if (!ch.open) dot(ch.x, ch.y, '#ffc83a', 3);
     for (const ch of run.dropChests) if (!ch.open) dot(ch.x, ch.y, '#d08aff', 3.2);
     for (const sh of run.shrines) if (!sh.used) dot(sh.x, sh.y, '#4fd0ff', 3.2);

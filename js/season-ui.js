@@ -84,7 +84,6 @@ export function hubStrip() {
         <span class="ps-top"><span class="eyebrow">Pass d'expédition</span><em>S${I.n} · ${I.left} j</em></span>
         <span class="pbar"><i style="width:${I.max ? 100 : (I.cur / I.need * 100).toFixed(1)}%"></i></span>
         <span class="ps-sub"><span>${I.max ? 'Palier maximum !' : `${fmt(I.cur)} / ${fmt(I.need)} XP`}</span>${x2}</span>
-        <small class="ps-help">Jouez pour gagner de l'XP de pass et débloquer des récompenses</small>
       </span>
       <span class="ps-next">${I.ready.length ? `<b class="ps-ready">${I.ready.length}</b><small>à réclamer</small>` : nx ? `<span class="ps-ic">${nx.html}</span><small>Palier ${I.tier + 1}</small>` : `<span class="ps-ic">${iconImg('crown', 26)}</span><small>Terminé</small>`}</span>
     </button>

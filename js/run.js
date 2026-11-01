@@ -2712,11 +2712,11 @@ export class Run {
     }
   }
 
-  // compteur de combo (visible à partir de 5 victimes enchaînées) et sa jauge de temps
+  // compteur de combo (visible à partir de 20 victimes enchaînées) et sa jauge de temps
   hudCombo() {
     const el = this._cb || (this._cb = $('#combo'));
     if (!el) return;
-    const show = this.combo >= 5;
+    const show = this.combo >= 20; // un petit combo n'encombre pas l'écran
     if (show !== !el.hidden) { el.hidden = !show; if (!show && this._comboBroken) { this._comboBroken = false; } }
     if (!show) return;
     if (this.combo !== this._cbN) {

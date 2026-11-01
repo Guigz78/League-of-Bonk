@@ -283,11 +283,8 @@ function adventureTab() {
         <span class="sc-role">${esc(c.role)}</span>
         <h2 class="sc-name">${esc(c.name)}</h2>${heroTitle()}
         <button class="sc-lvl" data-act="changeClass" aria-label="Niveau du champion">${iconImg('medal', 14)}Niveau ${masteryLv(save.cls)} du champion</button>
-        <button class="sc-stats" data-act="allStats" aria-label="Toutes les statistiques">
-          <span><small>PV</small><b>${fmt(st.hp)}</b></span><span><small>ATQ</small><b>${fmt(st.atk)}</b></span>
-          <span><small>Critique</small><b>${pct(st.crit)}</b></span><span><small>Vitesse</small><b>${pct(st.speed)}</b></span>
-        </button>
-        <div class="sc-links"><button class="link" data-act="changeClass">Changer</button><button class="link" data-act="allStats">Détails</button></div>
+        <button class="sc-mini" data-act="allStats" aria-label="Toutes les statistiques">${iconImg('heart', 14)}<b>${fmt(st.hp)}</b>${iconImg('fist', 14)}<b>${fmt(st.atk)}</b><i>›</i></button>
+        <button class="btn ghost small sc-change" data-act="changeClass">${iconImg('swap', 14)} Changer de champion</button>
       </div>
     </section>
     ${firstSteps() ? `<button class="play-cta" data-act="play">
@@ -691,6 +688,42 @@ function evoDef(c, info) {
   };
 }
 
+// ---------- Choix automatique des améliorations (option) ----------
+// Note de chaque carte : évolution d'arme d'abord, soin si les PV sont bas, puis améliorer ses armes (les plus avancées
+// d'abord, vers l'évolution), nouvelle arme tant qu'il y a de la place, tome qui fait évoluer une arme possédée, autres
+// tomes, bénédictions ; la rareté départage.
+function bestChoice(opts) {
+  const p = run?.p, W = p?.weapons || [], T = p?.tomes || {};
+  const evoTomes = new Set(W.filter(w => !w.evo).map(w => DATA.WEAPON_EVOS?.[w.id]?.tome).filter(Boolean));
+  const score = c => {
+    const r = (c.rarity ?? 0) * 6;
+    if (c.kind === 'evo') return 1000;
+    if (c.kind === 'heal') return p && p.hp < p.maxHp * 0.4 ? 500 : 1;
+    if (c.kind === 'weapon') { const own = W.find(w => w.id === c.id); return (own ? 120 + own.lv * 8 : W.length < 3 ? 130 : 105) + r; }
+    if (c.kind === 'tome') return (evoTomes.has(c.id) ? 115 : 80) + (T[c.id] ? 8 : 0) + r;
+    if (c.kind === 'boon') return 70 + r;
+    if (c.kind === 'gold') return 5;
+    return 20 + r;
+  };
+  return opts.reduce((a, b) => (score(b) > score(a) ? b : a));
+}
+// prend la meilleure carte sans ouvrir l'écran ; petite étiquette « Auto » en haut de l'écran (3 s)
+function autoPick(opts, done, gold = 0) {
+  const c = bestChoice(opts);
+  let f = null;
+  try { f = choiceMeta(c, run?.choiceInfo?.(c)); } catch (e) { f = null; }
+  const hud = $('.run .hud');
+  if (hud && f) {
+    let el = hud.querySelector('.auto-pick');
+    if (!el) { el = document.createElement('div'); el.className = 'auto-pick'; hud.appendChild(el); }
+    el.innerHTML = `${iconImg(f.icon, 20)}<span><small>Auto${f.lv && f.lv > 1 ? ` · niv. ${f.lv}` : ''}</small><b>${esc(f.name)}</b></span>${gold ? `<em>${iconImg('gold', 14)} +${fmt(gold)}</em>` : ''}`;
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('in'), 3000);
+  }
+  sfx(c.kind === 'evo' ? 'levelup' : 'pick');
+  setTimeout(() => done(c), 0);
+}
+
 // présentation d'un choix (montée de niveau, coffre, autel)
 function choiceMeta(c, info) {
   if (c.kind === 'evo') { const e = evoDef(c, info); return { ...e, tag: 'Évolution d\'arme', cls: 'evo' }; }
@@ -709,14 +742,14 @@ function choiceCard(c, i, tag = 'button') {
   const f = choiceMeta(c, info);
   const val = v => esc(typeof v === 'number' ? v.toLocaleString('fr-FR') : String(v));
   // lignes « avant → après » (sans celles qui ne changent rien)
-  const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null && (l.from == null || l.from === '' || val(l.from) !== val(l.to))).slice(0, 4);
-  const hint = typeof info?.hint === 'string' && info.hint && c.kind !== 'evo' ? info.hint : '';
+  const lines = (info?.lines || []).filter(l => l && l.label != null && l.to != null && (l.from == null || l.from === '' || val(l.from) !== val(l.to))).slice(0, 2);
+  const hint = typeof info?.hint === 'string' && info.hint && c.kind === 'weapon' ? info.hint : ''; // carte plus courte : l'évolution se lit sur l'arme
   const pips = f.lv && !(f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome')) ? `<span class="cu-pips" aria-label="Niveau ${f.lv}">${Array.from({ length: 5 }, (_, k) => `<i class="${k + 1 < f.lv ? 'on' : k + 1 === f.lv ? 'new' : ''}"></i>`).join('')}</span>` : '';
   const isNew = f.lv === 1 && (c.kind === 'weapon' || c.kind === 'tome');
   const ri = c.rarity ?? info?.rarity;
   const rar = ri != null && RARITIES[ri] ? RARITY[RARITIES[ri]] : null;
   return `<${tag} class="card-up ${f.cls} ${rar ? 'r' + ri : ''} ${isNew ? 'is-new' : ''}" data-i="${i}" style="--d:${(i * 0.06).toFixed(2)}s">
-    ${isNew ? '<i class="cu-ribbon">Nouveau</i>' : c.kind === 'evo' ? '<i class="cu-ribbon">Évolution</i>' : ''}
+    ${c.kind === 'evo' ? '<i class="cu-ribbon">Évolution</i>' : ''}
     <span class="cu-ic">${iconImg(f.icon, 44)}</span>
     <span class="cu-txt">
       <span class="cu-head"><em>${f.tag}${f.lv && !isNew ? ` · niv. ${f.lv}` : ''}${rar && c.kind !== 'evo' ? ` · <span class="cu-rar">${esc(rar.name)}</span>` : ''}</em>${pips}</span>
@@ -769,15 +802,17 @@ function luHead(title, sub, eyebrow) {
 
 // montée de niveau : 3 cartes ; « Relancer (N) » et « Passer » si la partie les propose (extra)
 function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration', extra = null) {
+  if (save.settings.autoPick && opts?.length) return autoPick(opts, done); // option : la meilleure carte, sans s'arrêter
   let cur = opts;
   // compteurs : valeur fournie par la partie (nombre, ou fonction / accesseur à jour), décomptés ici sinon
   const read = k => (extra ? Math.max(0, (typeof extra[k] === 'function' ? extra[k]() : extra[k]) | 0) : 0);
   let nR = read('rerolls'), nS = read('skips');
   const rr = () => nR, sk = () => nS;
-  const foot = () => (extra && (typeof extra.reroll === 'function' || typeof extra.skip === 'function') ? `<div class="lu-foot">
-      ${typeof extra.reroll === 'function' ? `<button class="btn ghost lu-act" data-x="reroll" ${rr() ? '' : 'disabled'}>${iconImg('reroll', 16)} Relancer <b>(${rr()})</b></button>` : ''}
-      ${typeof extra.skip === 'function' ? `<button class="btn ghost lu-act" data-x="skip" ${sk() ? '' : 'disabled'}>${iconImg('skip', 16)} Passer <b>(${sk()})</b></button>` : ''}
-    </div>` : '');
+  const foot = () => `<div class="lu-foot">
+      ${extra && typeof extra.reroll === 'function' ? `<button class="btn ghost lu-act" data-x="reroll" ${rr() ? '' : 'disabled'}>${iconImg('reroll', 16)} Relancer <b>(${rr()})</b></button>` : ''}
+      ${extra && typeof extra.skip === 'function' ? `<button class="btn ghost lu-act" data-x="skip" ${sk() ? '' : 'disabled'}>${iconImg('skip', 16)} Passer <b>(${sk()})</b></button>` : ''}
+    </div>
+    <label class="lu-auto"><span class="sw"><input type="checkbox" class="lu-auto-cb"><i></i></span><span><b>Choix automatique</b><small>La meilleure carte à chaque niveau</small></span></label>`;
   const w = overlay(`<div class="lvlup">
     ${luHead(title, subtitle)}
     <div class="cards">${cur.map((c, i) => choiceCard(c, i)).join('')}</div>
@@ -786,6 +821,12 @@ function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration
   w.classList.add('lvl-ov');
   if (cur.some(c => c.kind === 'evo')) sfx('levelup');
   let busy = false;
+  // case « Choix automatique » : cochée, la meilleure carte est prise tout de suite, et à chaque niveau ensuite
+  w.querySelector('.lu-auto-cb')?.addEventListener('change', e => {
+    if (!e.target.checked || busy) return;
+    busy = true; save.settings.autoPick = true; persist({ touch: false });
+    sfx('pick'); closeOv(w, () => autoPick(cur, done));
+  });
   guardCards(w, '.card-up', b => {
     if (busy) return;
     busy = true;
@@ -824,6 +865,7 @@ function levelUpMenu(title, opts, done, subtitle = 'Choisissez une amélioration
 }
 
 function chestMenu(c, gold, done) {
+  if (save.settings.autoPick) return autoPick([c], done, gold);
   const w = overlay(`<div class="lvlup chest">
     ${luHead(c.kind === 'evo' ? 'Évolution' : 'Coffre ouvert', c.kind === 'evo' ? 'Votre arme atteint sa forme ultime' : 'Amélioration gratuite', 'Coffre')}
     <div class="cards">${choiceCard(c, 0, 'div')}</div>
@@ -923,7 +965,7 @@ async function pauseMenu(resume) {
       <div class="cur-build">${tomes.map(tRow).join('')}${free(nT - tomes.length)}</div>
       ${runBoosts.length ? `<h4>Bonus</h4><div class="cur-build boosts-on">${runBoosts.map(id => `<span class="bl">${iconImg(BOOSTS[id].icon, 20)}<span class="bl-t"><b>${esc(BOOSTS[id].name)}</b></span></span>`).join('')}</div>` : ''}
       <h4>Options</h4>
-      <div class="set-list">${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
+      <div class="set-list">${sw('pAuto', 'upg', 'Choix automatique des améliorations', save.settings.autoPick)}${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
       <details class="pz-help"><summary>${iconImg('info', 16)} Comment jouer</summary>
       <div class="howto">
         <p>${iconImg('arrow', 20)}<span><b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</span></p>
@@ -945,6 +987,7 @@ async function pauseMenu(resume) {
   });
   save.settings.sound = $('#pSound')?.checked ?? save.settings.sound;
   save.settings.vibrate = $('#pVib')?.checked ?? save.settings.vibrate;
+  save.settings.autoPick = $('#pAuto')?.checked ?? save.settings.autoPick;
   const musOn = $('#pMus')?.checked ?? save.settings.music;
   if (musOn !== save.settings.music) { save.settings.music = musOn; if (!musOn) stopMusic(); else if (run) music('zone' + run.zone.id); }
   persist();
@@ -1824,6 +1867,7 @@ async function settings() {
         ${row('shake', 'Tremblements de l\'écran', '', seg('shake', [[0, 'Aucun'], [1, 'Faibles'], [2, 'Normaux']]), true)}
         ${row('numbers', 'Chiffres de dégâts', '', seg('numbers', [['all', 'Tous'], ['crit', 'Critiques'], ['none', 'Aucun']]), true)}
         ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
+        ${row('upg', 'Choix automatique', 'Prend la meilleure amélioration à chaque niveau', sw('sAuto', S.autoPick))}
         ${row('hand', 'Mode gaucher', 'Bouton d\'ultime à gauche', sw('sLefty', S.lefty))}
       </div>
       <h4>Son</h4>
@@ -1866,6 +1910,7 @@ async function settings() {
   S.sound = wrap.querySelector('#sSound').checked;
   S.vibrate = wrap.querySelector('#sVib').checked;
   S.lefty = wrap.querySelector('#sLefty').checked;
+  S.autoPick = !!wrap.querySelector('#sAuto')?.checked;
   S.joySize = Math.max(0.8, Math.min(1.3, +wrap.querySelector('#sJoy').value || 1));
   Object.assign(S, o);
   const mOn = wrap.querySelector('#sMus').checked;
