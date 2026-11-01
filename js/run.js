@@ -18,6 +18,7 @@ import './arsenal-w1.js'; // armes de Lumi, Kira, Brok, Frida (Arsenal W1)
 import './arsenal-w2.js'; // armes de Nyx et de Sora (chauves-souris, lance de sang, cercle maudit, shurikens, fumigènes, clone)
 import './arsenal-w3.js'; // armes de Ragnar et de Gaïa (haches de guerre, cri de guerre, séisme, tourbillon, ronces, esprits, pétales)
 import './arsenal-engineer.js'; // armes de Tess (tourelle, drone d'appui, lance-flammes, mines électriques)
+import './arsenal-monk.js'; // armes de Kenji (poings de fer, paume de ki, vague de chi, dragon de ki)
 import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -29,6 +30,7 @@ import { GIGA_METHODS } from './giga.js';
 import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
 import { C2, isUltC2 } from './champions-c2.js'; // champions C2 (Frida, Gaïa) : ultimes, passifs, effets en cours
 import { ENG, isUltEng } from './champion-engineer.js'; // Tess l'ingénieure : frappe orbitale
+import { MONK, isUltMonk } from './champion-monk.js'; // Kenji le moine : flux du combo, mille poings
 
 const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
@@ -587,6 +589,7 @@ export class Run {
     Object.assign(p, d);
     p.critMul = 2 + this.it.critDmg;
     if (this.c1h > 1) p.haste /= this.c1h; // Fureur de Ragnar : attaques plus rapides (champions-c1.js)
+    if (this.mkF) p.haste /= 1 + this.mkF; // Flux du combo de Kenji : attaques plus rapides (champion-monk.js)
     if (p.maxHp > old) p.hp += p.maxHp - old;
   }
 
@@ -892,6 +895,7 @@ export class Run {
     if (this.c1d || this.c1f) this.tickC1(dt); // champions C1 : danse des ombres, fureur en cours
     if (this.c2w || this.c2t || this.cls.regenPct) this.tickC2(dt); // champions C2 : sève de Gaïa, hiver éternel, épines
     if (this.engU) this.tickEng(dt); // Tess : frappe orbitale en cours
+    if (this.cls.flow || this.mku) this.tickMonk(dt); // Kenji : flux du combo, mille poings en cours
 
     this.spawn(dt);
     this.grid.clear();
@@ -2588,6 +2592,7 @@ export class Run {
     if (isUltC1(this.cls.ult)) this.ultC1(A); // champions C1 : festin de sang, danse des ombres, fureur
     else if (isUltC2(this.cls.ult)) this.ultC2(A); // champions C2 : hiver éternel, colère de la forêt
     else if (isUltEng(this.cls.ult)) this.ultEng(A); // Tess : frappe orbitale
+    else if (isUltMonk(this.cls.ult)) this.ultMonk(A); // Kenji : mille poings
     else if (this.cls.ult === 'nova') {
       const R = 300 * p.area;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.6, max: 0.6, color: '#ffd54a' });
@@ -2740,3 +2745,5 @@ Object.assign(Run.prototype, C1);
 Object.assign(Run.prototype, C2);
 // Tess l'ingénieure : frappe orbitale (js/champion-engineer.js)
 Object.assign(Run.prototype, ENG);
+// Kenji le moine : flux du combo, mille poings (js/champion-monk.js)
+Object.assign(Run.prototype, MONK);

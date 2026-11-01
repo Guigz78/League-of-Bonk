@@ -7,7 +7,7 @@ const FILES = [
   'js/art.js', 'js/pixel.js', 'js/ui.js', 'js/audio.js', 'js/ads.js', 'js/daily.js', 'js/native.js', 'js/weapons-reg.js', 'js/arsenal-w2.js', 'js/arsenal-w3.js', 'js/unlocks.js', 'js/mastery.js', 'js/abyss.js', 'js/season.js', 'js/season-ui.js', 'js/story.js', 'js/champions-c1.js', 'js/champions-c2.js', 'js/g3d/fx-engineer.js', 'js/g3d/models-hero-engineer.js', 'js/arsenal-engineer.js', 'js/champion-engineer.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'fonts/lilita-one-latin.woff2', 'fonts/lilita-one-latin-ext.woff2', 'fonts/rajdhani-500.woff2', 'fonts/rajdhani-600.woff2', 'fonts/rajdhani-700.woff2',
-  'js/arsenal-w1.js', 'js/g3d/fx-w1.js',
+  'js/arsenal-w1.js', 'js/g3d/fx-w1.js', 'js/champion-monk.js', 'js/arsenal-monk.js', 'js/g3d/models-hero-monk.js', 'js/g3d/fx-monk.js',
 ];
 
 self.addEventListener('install', e => {
