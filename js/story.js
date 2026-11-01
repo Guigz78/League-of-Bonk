@@ -194,8 +194,8 @@ export function taunt(n) {
   const run = $('.run'); run?.classList.add('taunting'); // le guide de la première partie s'efface le temps de la réplique
   sfx(s.voice);
   requestAnimationFrame(() => el.classList.add('in'));
-  setTimeout(() => el.classList.add('out'), 3600);
-  setTimeout(() => { el.remove(); run?.classList.remove('taunting'); }, 4100);
+  setTimeout(() => el.classList.add('out'), 5000); // 5 s, comme les consignes
+  setTimeout(() => { el.remove(); run?.classList.remove('taunting'); }, 5500);
 }
 
 // ---------- Fin d'un chapitre (bilan) ----------

@@ -97,6 +97,9 @@ export const LS = { cap: 0.06, rate: 0.2, max: 0.35, base: 0.01, dag: 0.06, sun:
 // STORY : mode histoire (un seul niveau par chapitre) ; gigaHp = PV de Gorgoth au chapitre final (relatifs au giga boss
 // d'un niveau 1 : sans cela, il serait à peine plus résistant que le boss du chapitre 6).
 export const EASY = { hp: 0.6, dmg: 0.5, boss: 0.45, spawn: 0.8 };
+// BOSS_LV : niveau du héros à partir duquel le jeu conseille d'aller voir le boss (message de 5 s, flèche 👹 vers l'autel) ;
+// avant, rien ne pousse vers l'autel (le boss vient de lui-même à la fin du chrono). MSG_T : durée des consignes (s).
+export const BOSS_LV = 15, MSG_T = 5;
 export const STORY_GB = { gigaHp: 1.6 };
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
@@ -278,6 +281,7 @@ export class Run {
     this.pack = 0; this.packX = 0; this.packY = 0;
     this.acts = 0;            // attaques spéciales en cours (limitées pour rester lisibles)
     this.boss = null; this.bossSpawned = false;
+    this.called = false; this.callT = 0; // conseil « allez voir le boss » (niveau BOSS_LV) déjà donné dans ce monde
     this.arena = null; this.portal = null; this.entering = 0;
     this.overtime = 0; this.otLevel = 0; this.doomT = 0;
     // modificateurs de ce monde (totems) : apparitions, or, dégâts, vitesse, intervalle des élites
@@ -289,6 +293,15 @@ export class Run {
     if (this.story?.giga) this.sk.boss *= STORY_GB.gigaHp;
     if (this.easy) { this.sk.hp *= EASY.hp; this.sk.dmg *= EASY.dmg; this.sk.boss *= EASY.boss; this.wm.spawn *= EASY.spawn; }
     this.placeInterest();
+  }
+
+  // faut-il montrer le chemin de l'autel du boss ? (héros au niveau BOSS_LV, autel pas encore utilisé)
+  bossCall() { return !!this.altar && !this.altar.used && !this.arena && !this.bossSpawned && this.p.level >= BOSS_LV; }
+  // première fois dans ce monde : message de 5 s (sauf pendant le guide de la première partie, qui le dit lui-même)
+  checkCall() {
+    if (this.called || this.pending || this.paused || !this.bossCall()) return; // après le choix de la carte de niveau
+    this.called = true; this.callT = this.time;
+    if (!this.coachOn && this.time > 3.5) this.banner(`<small>Niveau ${this.p.level} !</small>👹 Allez voir le boss`, MSG_T * 1000, 'small altar');
   }
 
   // signale un événement aux effets visuels (n'a aucun effet sur la partie)
@@ -338,7 +351,7 @@ export class Run {
     music('zone' + this.zone.id);
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
-    setTimeout(() => $('#hintBubble')?.classList.add('out'), save.stats.runs > 2 ? 3000 : 7000);
+    setTimeout(() => $('#hintBubble')?.classList.add('out'), MSG_T * 1000);
   }
 
   placeInterest() {
@@ -902,6 +915,7 @@ export class Run {
     this.parts = this.parts.filter(q => q.life > 0);
     this.shake = Math.max(0, this.shake - dt * 30);
     this.enemies = this.enemies.filter(e => !e.dead);
+    this.checkCall(); // niveau BOSS_LV : conseil d'aller voir le boss
     if (!this.over) this.hud();
   }
 
@@ -2657,7 +2671,8 @@ export class Run {
       : this.mini && !this.mini.dead ? 'Battez le champion !'
       : this.phase === 'build' && this.swarms.length && this.swarms[0] - this.time < 8 ? 'Une horde approche !'
       : this.phase === 'breather' ? 'Répit…'
-      : this.time < 25 ? 'Survivez et montez de niveau !' : 'Allez à l\'autel du boss';
+      : this.time < MSG_T ? 'Survivez et montez de niveau !'
+      : this.called && this.time - this.callT < MSG_T ? '👹 Allez voir le boss !' : '';
     lbl.classList.toggle('hot', ot || left < 30 || !!this.portal || (this.phase === 'build' && this.swarms.length > 0 && this.swarms[0] - this.time < 8));
     $('#killsN').textContent = cnum(this.kills);
     $('#goldRun').textContent = cnum(this.gold);

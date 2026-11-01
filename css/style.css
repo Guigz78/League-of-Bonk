@@ -2098,3 +2098,4 @@ button.itile:active { transform: translateY(1px); }
   .cs-tab { height: 54px; }
   .cs-tab > img { width: 30px; height: 30px; }
 }
+.co-emo { flex: none; font-size: 26px; line-height: 1; font-style: normal; }

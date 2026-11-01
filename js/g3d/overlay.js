@@ -26,6 +26,20 @@ try {
     }).catch(() => {});
   }
 } catch (e) { /* police du système */ }
+// émoji (👹 du boss) dessiné une fois dans une petite toile, en haute définition, puis réutilisé à chaque image
+const EMO = {};
+function emoji(ch) {
+  if (EMO[ch]) return EMO[ch];
+  const S = 96, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.font = `${S * 0.8}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, S / 2, S * 0.54);
+  return (EMO[ch] = c);
+}
+const BOSS_EMO = '👹';
+// l'autel du boss n'est montré (flèche, chevrons) qu'une fois le héros au niveau conseillé (run.bossCall, niveau 15)
+const altarOn = run => !!run.altar && !run.altar.used && !run.arena && (run.bossCall ? run.bossCall() : true);
+
 function hexRGB(hex) { const n = parseInt(hex.slice(1), 16); return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`; }
 
 export class Overlay {
@@ -250,9 +264,9 @@ export class Overlay {
     if (Po && Po.t > 0.6) {
       const [x, y] = this.gfx.ws(Po.x, Po.y, 175);
       if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 5) * 6, '#8a3aff', '#7ae8ff', 'PORTAIL', 1.1);
-    } else if (Al && !Al.used && !run.arena && Math.hypot(Al.x - p.x, Al.y - p.y) > 220) {
+    } else if (altarOn(run) && Math.hypot(Al.x - p.x, Al.y - p.y) > 220) {
       const [x, y] = this.gfx.ws(Al.x, Al.y, 120);
-      if (on(x, y) && y > 236) this.pin(g, x, y + Math.sin(t * 4) * 5, '#d81e2e', '#ff8a5a', 'AUTEL DU BOSS', 0.9);
+      if (on(x, y) && y > 236) { const S = 40, yy = y + Math.sin(t * 4) * 5; g.drawImage(emoji(BOSS_EMO), x - S / 2, yy - S - 14, S, S); this.pin(g, x, yy, '#d81e2e', '#ff8a5a', 'BOSS', 0.9); }
     }
   }
   // repère carré : étiquette sombre à angles coupés, liseré de couleur à gauche, flèche pleine vers le bas
@@ -274,13 +288,18 @@ export class Overlay {
     const run = this.run, p = run.p, t = this.gfx.t;
     let tg = null, c1, c2, al = 1;
     if (run.portal && run.portal.t > 0.5) { tg = run.portal; c1 = '#b06aff'; c2 = '#bff8ff'; }
-    else if (run.altar && !run.altar.used && !run.arena) { tg = run.altar; c1 = '#ff4a3a'; c2 = '#ffd0a0'; al = 0.8; }
+    else if (altarOn(run)) { tg = run.altar; c1 = '#ff4a3a'; c2 = '#ffd0a0'; al = 0.8; }
     if (!tg || run.dying) return;
     const dx = tg.x - p.x, dy = tg.y - p.y, d = Math.hypot(dx, dy);
     if (d < 120) return;
     // direction à l'écran (la perspective déforme un peu les angles)
     const [tx, ty] = this.gfx.ws(p.x + dx / d * 60, p.y + dy / d * 60, 0), [ox, oy] = this.gfx.ws(p.x, p.y, 0);
     const a = Math.atan2(ty - oy, tx - ox), R = 48 + Math.sin(t * 6) * 4, cx = hx, cy = hy - 18;
+    if (tg === run.altar) { // vers le boss : un 👹 qui flotte du côté de l'autel
+      const S = 30 + Math.sin(t * 6) * 2, ex = cx + Math.cos(a) * (R + 6), ey = cy + Math.sin(a) * (R + 6);
+      g.globalAlpha = 0.95; g.drawImage(emoji(BOSS_EMO), ex - S / 2, ey - S / 2, S, S); g.globalAlpha = 1;
+      return;
+    }
     g.save(); g.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); g.rotate(a); g.scale(1.25, 1.25);
     g.lineJoin = 'round'; g.lineCap = 'round';
     for (let i = 0; i < 2; i++) {
@@ -306,7 +325,7 @@ export class Overlay {
     const off = o => { const [x, y, ok] = this.gfx.ws(o.x, o.y, 20); return !ok || x < 0 || x > vw || y < top - 40 || y > vh; };
     const pts = [];
     // [cible, couleur, taille, pictogramme] : boss, coffres d'élite, élites, autels de bonus, totems, coffres, butin
-    if (run.boss && !run.boss.dead) pts.push([run.boss, '#ff2a4a', 15, this.ico.crown]);
+    if (run.boss && !run.boss.dead) pts.push([run.boss, '#ff2a4a', 15, emoji(BOSS_EMO)]);
     for (const c of run.dropChests) if (!c.open) pts.push([c, '#c06aff', 11, this.ico.chest]);
     for (const e of run.enemies) if (e.elite && !e.dead && !e.boss) pts.push([e, '#c06aff', 10, this.ico.skull]);
     for (const s of run.shrines) if (!s.used && Math.hypot(s.x - p.x, s.y - p.y) < 1000) pts.push([s, '#4fd0ff', 9, this.ico.star]);
@@ -324,7 +343,7 @@ export class Overlay {
       g.fillStyle = c; g.beginPath(); g.moveTo(size, 0); g.lineTo(-size * 0.7, -size * 0.8); g.lineTo(-size * 0.7, size * 0.8); g.closePath(); g.fill();
       g.restore();
       // pictogramme posé juste derrière la flèche (vers le centre de l'écran)
-      if (ic?.complete && ic.naturalWidth) {
+      if (ic && (ic instanceof HTMLCanvasElement || (ic.complete && ic.naturalWidth))) {
         const S = 18, ix = ax0 - Math.cos(a) * (size + 16), iy = ay0 - Math.sin(a) * (size + 16);
         g.fillStyle = 'rgba(6,8,13,.78)'; g.fillRect(ix - S / 2 - 3, iy - S / 2 - 3, S + 6, S + 6);
         g.drawImage(ic, ix - S / 2, iy - S / 2, S, S);
@@ -333,7 +352,7 @@ export class Overlay {
     // grande flèche vers le portail (ou l'autel du boss avant l'invocation)
     let tg = null, c1, c2, label;
     if (run.portal && run.portal.t > 0.5) { tg = run.portal; c1 = '#8a3aff'; c2 = '#7ae8ff'; label = 'PORTAIL'; }
-    else if (run.altar && !run.altar.used && !run.arena) { tg = run.altar; c1 = '#d81e2e'; c2 = '#ff9a5a'; label = 'AUTEL DU BOSS'; }
+    else if (altarOn(run)) { tg = run.altar; c1 = '#d81e2e'; c2 = '#ff9a5a'; label = 'BOSS'; }
     if (!tg) return;
     const [x, y, ok] = this.gfx.ws(tg.x, tg.y, 40);
     if (ok && x > 20 && x < vw - 20 && y > top - 60 && y < vh - 60) return;
@@ -353,6 +372,16 @@ export class Overlay {
     }
     // le portail : grosse flèche près du héros (jamais cachée par les boutons du bas)
     const [ax, ay] = big ? [clamp(hx + Math.cos(a) * 96, 40, vw - 40), clamp(hy - 20 + Math.sin(a) * 96, top, vh - 200)] : toEdge(a, 34);
+    if (!big) { // vers le boss : un gros 👹 au bord de l'écran, une petite pointe rouge vers lui
+      const ex = ax + Math.cos(a) * bb, ey = ay + Math.sin(a) * bb, S = 46 * s;
+      g.save(); g.translate(ex, ey);
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5 + Math.sin(t * 7) * 0.2; g.drawImage(glowTex(c1), -42, -42, 84, 84);
+      g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+      g.rotate(a); g.fillStyle = 'rgba(6,8,13,.9)'; g.beginPath(); g.moveTo(S * 0.5 + 15, 0); g.lineTo(S * 0.5 - 1, -10); g.lineTo(S * 0.5 - 1, 10); g.closePath(); g.fill();
+      g.fillStyle = c2; g.beginPath(); g.moveTo(S * 0.5 + 11, 0); g.lineTo(S * 0.5 + 1, -6.5); g.lineTo(S * 0.5 + 1, 6.5); g.closePath(); g.fill();
+      g.rotate(-a); g.drawImage(emoji(BOSS_EMO), -S / 2, -S / 2, S, S);
+      g.restore();
+    } else {
     g.save(); g.translate(ax + Math.cos(a) * bb, ay + Math.sin(a) * bb); g.rotate(a); g.scale(s, s);
     g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55 + Math.sin(t * 7) * 0.2; g.drawImage(glowTex(c1), -40, -40, 80, 80);
     g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
@@ -362,6 +391,7 @@ export class Overlay {
     g.fillStyle = c1; g.fill(ar);
     g.fillStyle = c2; g.beginPath(); g.moveTo(20, 0); g.lineTo(6, -13); g.lineTo(6, -4); g.lineTo(-14, -4); g.lineTo(-14, 4); g.lineTo(6, 4); g.lineTo(6, 13); g.closePath(); g.fill();
     g.restore();
+    }
     // étiquette avec la distance, côté intérieur : panneau sombre à angles coupés, liseré de couleur
     const d = Math.round(Math.hypot(tg.x - p.x, tg.y - p.y) / 10) + ' m';
     g.font = tf(big ? 15 : 13); const w1 = g.measureText(label).width;

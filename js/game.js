@@ -10,7 +10,7 @@ import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported } from './
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
 import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } from './ui.js';
-import { Run, LS } from './run.js';
+import { Run, LS, BOSS_LV, MSG_T } from './run.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 import { loginState, dailyBadge } from './daily.js';
@@ -627,44 +627,45 @@ function hpBar(r) {
 }
 
 // ---------- Guide de la première partie : une seule consigne courte à la fois, en jouant ----------
-// Pas de pause ni de texte à lire avant de jouer : chaque consigne disparaît dès qu'elle est accomplie.
+// Pas de pause ni de texte à lire avant de jouer. Chaque consigne apparaît quand elle devient utile (when), reste MSG_T s
+// (5 s de jeu) puis s'efface ; la suivante attend que celle-ci soit faite (done). skip : consigne devenue inutile, sautée.
 const COACH = [
   { ic: 'arrow', t: 'Glissez le doigt pour bouger', done: (r, S) => S.moved > 160 },
-  { ic: 'fist', t: 'Votre champion attaque tout seul', done: (r, S) => S.age > 2.6 },
+  { ic: 'fist', t: 'Votre champion attaque tout seul' },
   { ic: 'upg', t: 'Ramassez les gemmes bleues', done: r => r.p.level > 1 || r.p.xp > 0 },
-  { ic: 'star', t: 'Choisissez une amélioration à chaque niveau', done: (r, S) => r.p.level > 1 && S.age > 3 },
-  { ic: 'crown', t: 'Suivez la flèche rouge jusqu\'à l\'autel du boss', done: r => r.bossSpawned, wait: r => r.p.level >= 3 || r.time > 60 },
-  { ic: 'skull', t: 'Battez le boss : écartez-vous des zones rouges', done: r => !!r.portal },
-  { ic: 'portal', t: 'Entrez dans le portail', done: r => !!r.entering || r.over },
+  { ic: 'star', t: 'Choisissez une amélioration à chaque niveau', when: r => r.p.level > 1 },
+  { emo: '👹', t: `Niveau ${BOSS_LV} : suivez le 👹 jusqu'au boss`, when: r => r.bossCall?.(), skip: r => r.bossSpawned || !!r.portal, done: r => r.bossSpawned },
+  { ic: 'skull', t: 'Battez le boss : écartez-vous des zones rouges', when: r => r.bossSpawned && !!r.boss, skip: r => !!r.portal, done: r => !!r.portal },
+  { ic: 'portal', t: 'Entrez dans le portail', when: r => !!r.portal },
 ];
 function tutorial(r) {
   const w = document.createElement('div');
   w.className = 'coach';
   r.coachOn = true; // moins de flèches de bord pendant le guide (overlay.js)
   $('.run')?.appendChild(w);
-  const S = { k: -1, wait: false, age: 0, moved: 0, x: r.p.x, y: r.p.y, t: performance.now() };
-  const show = k => {
-    S.k = k; S.age = 0;
-    const c = COACH[k];
-    w.innerHTML = c ? `<div class="co-card">${iconImg(c.ic, 26)}<b>${c.t}</b></div>${k === 0 ? '<i class="co-finger"></i>' : ''}` : '';
-    w.classList.toggle('on', !!c);
-    if (c && k) sfx('tap');
-  };
+  const S = { k: 0, shown: false, age: 0, moved: 0, x: r.p.x, y: r.p.y, t: performance.now() };
   const end = () => { save.tutorialDone = true; r.coachOn = false; persist({ touch: false }); w.remove(); };
+  const show = c => {
+    w.innerHTML = c ? `<div class="co-card">${c.emo ? `<i class="co-emo">${c.emo}</i>` : iconImg(c.ic, 26)}<b>${c.t}</b></div>${S.k === 0 ? '<i class="co-finger"></i>' : ''}` : '';
+    w.classList.toggle('on', !!c);
+    if (c && S.k) sfx('tap');
+  };
   const tick = () => {
     // partie finie : guide réussi si le boss est tombé (mode histoire : le portail mène directement au bilan)
     if (r.over) { if (r.portal || r.gigaWon) end(); else w.remove(); return; }
     if (!w.isConnected) return;
-    const now = performance.now(), dt = Math.min(0.1, (now - S.t) / 1000); S.t = now;
+    const now = performance.now(), dt = Math.min(0.5, (now - S.t) / 1000); S.t = now; // temps réel (5 s même si l'image rame)
     if (!r.paused) {
-      S.age += dt;
       S.moved += Math.hypot(r.p.x - S.x, r.p.y - S.y); S.x = r.p.x; S.y = r.p.y;
-      if (S.k < 0) show(0);
-      else if (S.wait) { if (COACH[S.k].wait(r)) { S.wait = false; show(S.k); } } // consigne suivante quand elle devient utile
-      else if (COACH[S.k].done(r, S)) {
-        const k = S.k + 1;
-        if (k >= COACH.length) { end(); return; }
-        if (COACH[k].wait && !COACH[k].wait(r)) { S.k = k; S.wait = true; w.classList.remove('on'); } else show(k);
+      const c = COACH[S.k];
+      if (!c) { end(); return; }
+      if (!S.shown) { // en attente du bon moment
+        if (c.skip?.(r)) S.k++;
+        else if (!c.when || c.when(r)) { S.shown = true; S.age = 0; show(c); }
+      } else {
+        S.age += dt;
+        if (S.age >= MSG_T && w.classList.contains('on')) w.classList.remove('on'); // 5 s puis elle s'efface
+        if (S.age >= MSG_T && (!c.done || c.done(r, S))) { S.k++; S.shown = false; if (S.k >= COACH.length) { end(); return; } }
       }
     }
     w.classList.toggle('hide', r.paused);
@@ -928,7 +929,7 @@ async function pauseMenu(resume) {
         <p>${iconImg('arrow', 20)}<span><b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</span></p>
         <p>${iconImg('sword', 20)}<span><b>Attaquer</b> : c'est automatique ! Ramassez les gemmes pour monter de niveau et évoluer.</span></p>
         <p>${iconImg('i_heavy', 20)}<span><b>Esquiver</b> : un cercle rouge au sol ou un monstre qui clignote annonce une attaque. Écartez-vous ! Les ondes de choc et les rayons des boss ont une portée limitée : éloignez-vous du boss.</span></p>
-        <p>${iconImg('skull', 20)}<span><b>Boss</b> : suivez la flèche jusqu'à l'<b>autel au crâne rouge</b> et restez dessus pour invoquer le boss. Le combat a lieu dans une arène fermée.</span></p>
+        <p>${iconImg('skull', 20)}<span><b>Boss</b> : au <b>niveau ${BOSS_LV}</b>, suivez le 👹 jusqu'à l'<b>autel au crâne rouge</b> et restez dessus pour invoquer le boss (sinon il vient de lui-même à la fin du chrono). Le combat a lieu dans une arène fermée.</span></p>
         <p>${iconImg('portal', 20)}<span><b>Portail</b> : le boss vaincu ouvre un portail (suivez la flèche) vers le niveau suivant, plus dur mais plus riche. Vous pouvez aussi rentrer avec votre butin.</span></p>
         <p>${iconImg('crown', 20)}<span><b>Giga boss</b> : une expédition compte 3 niveaux. Au niveau 3, <b>${esc(DATA.GIGA.name)}</b> remplace le boss : 3 phases, bonds écrasants, ondes à brèche, double rayon. Battez-le pour le <b>Giga coffre</b> !</span></p>
         <p>${iconImg('i_enrage', 20)}<span><b>Chrono</b> : quand il est écoulé, le boss arrive de lui-même et les monstres deviennent <b>fous</b>, de plus en plus. Ne traînez pas !</span></p>
