@@ -23,7 +23,7 @@ export function lights(scene, k = 1) {
 
 const _b = new THREE.Box3(), _v = new THREE.Vector3();
 // cadre la boîte dans une caméra orthographique (vue de 3/4 face, légèrement d'en haut) : pieds en bas, centrée
-function frame(box, W, H, { el = 0.32, az = 0.42, pad = 0.08 } = {}) {
+export function frame(box, W, H, { el = 0.32, az = 0.42, pad = 0.08 } = {}) {
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
   const c = box.getCenter(new THREE.Vector3());
   const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
@@ -40,13 +40,13 @@ function frame(box, W, H, { el = 0.32, az = 0.42, pad = 0.08 } = {}) {
   cam.updateProjectionMatrix();
   return cam;
 }
-function shoot(scene, cam, W, H) {
+export function shoot(scene, cam, W, H) {
   const r = sharedRenderer();
   r.setPixelRatio(1); r.setSize(W, H, false);
   r.render(scene, cam);
   return r.domElement.toDataURL('image/png');
 }
-function boxOf(obj, skip) {
+export function boxOf(obj, skip) {
   _b.makeEmpty(); obj.updateMatrixWorld(true);
   obj.traverse(o => {
     if (!o.isMesh || (skip && skip(o))) return;
@@ -60,7 +60,7 @@ function boxOf(obj, skip) {
 }
 
 const cache = new Map();
-function cached(key, make) {
+export function cached(key, make) {
   if (!cache.has(key)) {
     let url = '';
     try { url = make(); } catch (e) { console.warn('portrait 3D', key, e); }

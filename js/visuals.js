@@ -9,5 +9,6 @@ const NONE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAAB
 export function createGfx(run, canvas) { return new V3.Gfx(run, canvas); }
 export function heroURL(...a) { return (supported() && V3.heroURL(...a)) || NONE; }
 export function creatureURL(...a) { return (supported() && V3.creatureURL(...a)) || NONE; }
+export function itemURL(...a) { return (supported() && V3.itemURL(...a)) || ''; } // '' : l'interface garde l'icône
 export function mountPreview(...a) { if (supported()) V3.mountPreview(...a); }
 export function zoneBannerURL(...a) { return (supported() && V3.zoneBannerURL(...a)) || NONE; }

@@ -6,7 +6,7 @@ import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addIte
   openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
   buyBoost, cleanBoostSel, consumeBoosts, rarityIdx } from './save.js';
 import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
-import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported } from './visuals.js';
+import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported, itemURL } from './visuals.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
 import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } from './ui.js';
@@ -178,6 +178,11 @@ function affVal(k, v) {
 // « Vol de vie +2 % » ; épines : en % de l'ATQ
 const affLine = (k, v) => `${AFFIXES[k]?.name || k} ${affVal(k, v)}${k === 'thorns' ? ' de l\'ATQ' : ''}`;
 // version courte : « +12 ATQ », « +2 % vol de vie »
+// image 3D d'un objet (js/g3d/items3d.js), éclats pour les légendaires ; sans WebGL : l'icône
+const itemArt = (it, size = 64, cls = '') => {
+  const url = itemURL(it.name, it.rarity === 'legendary');
+  return url ? `<img class="it-art ${cls}" src="${url}" width="${size}" height="${size}" alt="">` : iconImg(it.icon, size);
+};
 const affShort = (k, v) => (AFFIXES[k]?.fmt === 'regen' ? affVal(k, v) : `${affVal(k, v)} ${AFX[k]?.[1] || k}`);
 const statKeys = it => { const ks = Object.keys(it.stat || {}); const m = it.main && ks.includes(it.main) ? it.main : ks[0]; return m ? [m, ...ks.filter(k => k !== m)] : []; };
 
@@ -358,7 +363,7 @@ function zoneRewards(i, k) {
       <div class="rewards">
         <div class="rw">${iconImg('star', 18)} Zone suivante débloquée</div>
         <div class="rw"><img class="px spr" src="${creatureURL('pet-' + PET_BY_ZONE[i], pet.body, pet.pal)}" width="22" height="22" alt=""> Familier : <b>${esc(pet.name)}</b></div>
-        ${bi ? `<div class="rw">${iconImg(bi.icon, 18)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b></div>` : ''}
+        ${bi ? `<div class="rw">${itemArt({ ...bi, rarity: 'legendary' }, 32)} <b style="color:${RARITY.legendary.color}">${esc(bi.name)}</b></div>` : ''}
         ${unlock}
       </div>`;
   }
@@ -1188,7 +1193,7 @@ function itemCard(it, { ribbon = '' } = {}) {
   return `<div class="rcard icard r-${it.rarity}">
     ${ribbon ? `<i class="rc-ribbon">${ribbon}</i>` : ''}
     <span class="rc-rar">${R.name}</span>
-    <span class="rc-ic">${iconImg(it.icon, 64)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}</span>
+    <span class="rc-ic">${itemArt(it, 88)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}</span>
     <b class="rc-name">${esc(it.name)}</b>
     <span class="rc-sub">${SLOTS[it.slot]}${it.crafted ? ' · forgé' : ''}</span>
     <span class="rc-stats">${statRows(it)}</span>
@@ -1225,7 +1230,7 @@ function miniCard(x, i) {
   if (x.k === 'gold') return `<div class="mcard rc-gold" ${d}>${iconImg('gold', 36)}<b>+${fmt(x.n)}</b><small>Or</small></div>`;
   if (x.k === 'part') return `<div class="mcard r-${RARITIES[x.r]}" ${d}>${partIcon(x.slot, x.r, 30)}<i class="mc-n">×${x.n}</i><small>${esc(PARTS[x.slot].name)}</small></div>`;
   if (x.k === 'boost') return `<div class="mcard rc-boost" ${d}>${iconImg(BOOSTS[x.id].icon, 36)}<i class="mc-n">×${x.n}</i><small>${esc(BOOSTS[x.id].name)}</small></div>`;
-  if (x.k === 'item') return `<div class="mcard r-${x.it.rarity}" ${d}>${iconImg(x.it.icon, 36)}${isEq(x.it) ? '<i class="mc-eq">Équipé</i>' : ''}<small>${esc(x.it.name)}</small></div>`;
+  if (x.k === 'item') return `<div class="mcard r-${x.it.rarity}" ${d}>${itemArt(x.it, 44)}${isEq(x.it) ? '<i class="mc-eq">Équipé</i>' : ''}<small>${esc(x.it.name)}</small></div>`;
   return `<div class="mcard rc-upg" ${d}>${iconImg(UPGRADES[x.key].icon, 36)}<i class="mc-n">niv. ${x.lv}</i><small>${esc(UPGRADES[x.key].name)}</small></div>`;
 }
 
@@ -1519,9 +1524,11 @@ const SLOT_IC = { weapon: 'sword', armor: 'armor', trinket: 'gem' };
 function itemTile(it, { act = true, cur, isNew = false } = {}) {
   const ks = statKeys(it), m = ks[0], tag = act ? 'button' : 'div';
   const better = cur !== undefined && cur !== it && (!cur || itemPower(it) > itemPower(cur));
-  return `<${tag} class="itile r-${it.rarity}" ${act ? `data-act="item" data-id="${it.id}"` : ''}>
-    ${isNew ? '<i class="it-new">Nouveau</i>' : ''}
-    <span class="it-ic">${iconImg(it.icon, 40)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}${better ? '<i class="it-better" aria-label="Meilleur">▲</i>' : ''}${it.crafted ? `<i class="it-forged">${iconImg('hammer', 12)}</i>` : ''}</span>
+  const eq = save.equipped[it.slot] === it.id;
+  return `<${tag} class="itile r-${it.rarity} ${eq ? 'is-eq' : ''}" ${act ? `data-act="item" data-id="${it.id}"` : ''}>
+    ${isNew ? '<i class="it-new">Nouveau</i>' : better ? '<i class="it-better">Mieux</i>' : ''}
+    <span class="it-rar">${RARITY[it.rarity].name}</span>
+    <span class="it-ic">${itemArt(it, 64)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}${it.crafted ? `<i class="it-forged">${iconImg('hammer', 12)}</i>` : ''}</span>
     <b class="it-name">${esc(it.name)}</b>
     ${m ? `<span class="it-main">${affShort(m, it.stat[m])}</span>` : ''}
     <span class="it-aff">${ks.slice(1).map(k => iconImg(AFX[k]?.[0] || 'star', 14)).join('')}${it.effect ? '<i class="it-fx">★</i>' : ''}</span>
@@ -1589,14 +1596,14 @@ function itemBody(it, equipped, cur) {
     </div>`;
   } else up = `<div class="it-up max">${iconImg('crown', 20)} <b>Amélioration maximale atteinte</b></div>`;
   return `<div class="is-card r-${it.rarity}">
-      <span class="is-ic">${iconImg(it.icon, 56)}${lv ? `<em class="lv-badge">+${lv}</em>` : ''}</span>
+      <span class="is-ic">${itemArt(it, 96)}${lv ? `<em class="lv-badge">+${lv}</em>` : ''}</span>
       <div class="is-head"><span class="rc-rar">${r.name}</span><span class="is-slot">${SLOTS[it.slot]}${it.crafted ? ' · <span class="forged-t">Forgé +10 %</span>' : ''}${equipped ? ' · <span class="eq-t">Équipé</span>' : ''}</span>
         <div class="lv-pips" aria-label="Niveau ${lv}">${pips}</div></div>
       <span class="is-pow"><small>Puissance</small><b>${fmt(itemPower(it))}</b>${cmp ? (() => { const d = Math.round(itemPower(it) - itemPower(cmp)); return d ? `<i class="sr-d ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmt(Math.abs(d))}</i>` : ''; })() : ''}</span>
     </div>
+    ${cmp ? (() => { const d = Math.round(itemPower(it) - itemPower(cmp)); return `<p class="is-verdict ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '▲ Meilleur' : d < 0 ? '▼ Moins bon' : '= Équivalent'} que <b>${itemName(cmp)}</b> (équipé)</p>`; })() : ''}
     <div class="is-stats">${statRows(it, { cmp })}</div>
     ${it.effect ? effectBox(it.effect) : ''}
-    ${cmp ? `<p class="is-cmp"><i class="sr-d up">▲</i><i class="sr-d down">▼</i><span>par rapport à <b>${itemName(cmp)}</b>, équipé</span></p>` : ''}
     ${up}
     ${equipped ? '' : `<button class="btn small ghost it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
 }
@@ -1666,7 +1673,7 @@ function equipItem(id) {
   save.equipped[it.slot] = id;
   persist();
   sfx('loot');
-  toast(`${iconImg(it.icon, 16)} ${esc(it.name)} équipé`);
+  toast(`${itemArt(it, 28)} ${esc(it.name)} équipé`);
   home();
 }
 
