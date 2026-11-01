@@ -37,7 +37,8 @@ export function freshSave() {
     // taille du joystick (0,8 à 1,3), gaucher (ultime à gauche)
     settings: { sound: true, music: true, vibrate: true, shake: 2, numbers: 'crit', numV: 2, joySize: 1, lefty: false },
     tutorialDone: false,
-    story: 0,           // mode histoire : nombre de chapitres terminés (dans l'ordre, story.js)
+    story: 0,           // mode histoire (ancien compteur, gardé pour les vieilles sauvegardes : story.js le migre)
+    storyCh: null,      // mode histoire : étoiles par chapitre { c1: bits } (créé par story.js au premier accès)
     lastZone: null,     // dernier monde lancé (bouton JOUER de l'accueil)
     daily: null,        // quêtes du jour : { day, quests: [{ id, n, tier, gold, base, claimed }] }
     login: { day: 0, last: '' }, // calendrier de connexion : prochain jour (0 à 19, 20 jours), dernière date réclamée

@@ -30,6 +30,7 @@ import { EXPE_LEVELS, GIGA } from './data.js';
 import { GIGA_METHODS } from './giga.js';
 import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
 import { C2, isUltC2 } from './champions-c2.js'; // champions C2 (Frida, Gaïa) : ultimes, passifs, effets en cours
+import { MISSION } from './story-mission.js'; // missions des chapitres de l'histoire (ramasser, tenir, gardes)
 import { ENG, isUltEng } from './champion-engineer.js'; // Tess l'ingénieure : frappe orbitale
 import { MONK, isUltMonk } from './champion-monk.js'; // Kenji le moine : flux du combo, mille poings
 import { PIR, isUltPir } from './champion-pirate.js'; // Morgane la capitaine pirate : bordée
@@ -105,6 +106,9 @@ export const EASY = { hp: 0.6, dmg: 0.5, boss: 0.45, spawn: 0.8 };
 // avant, rien ne pousse vers l'autel (le boss vient de lui-même à la fin du chrono). MSG_T : durée des consignes (s).
 export const BOSS_LV = 15, MSG_T = 5;
 export const STORY_GB = { gigaHp: 1.6 };
+// mode histoire : chaque chapitre commence au niveau 1, alors que l'expédition arrive dans les mondes suivants avec un build.
+// Les monstres (PV, dégâts) et les boss y montent donc en pente douce d'un monde à l'autre (index = monde) ; giga : Gorgoth.
+export const STORY_EASE = { hp: [1, 0.69, 0.45, 0.35, 0.27, 0.21], dmg: [1, 0.7, 0.58, 0.5, 0.4, 0.3], boss: [1, 0.75, 0.52, 0.42, 0.34, 0.3], giga: 0.5 };
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 // nombres à la française pour les fiches de niveau (« 1,25 s », « +15 % »)
 const NB = ' ';
@@ -166,7 +170,7 @@ class Grid {
 }
 
 export class Run {
-  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal, onBoss, story = null, easy = false }) {
+  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal, onBoss, onStory, story = null, easy = false }) {
     this.zone = zone;
     this.startZone = zone.id;
     this.diffId = Math.max(0, Math.min(DIFFICULTIES.length - 1, diff | 0));
@@ -177,8 +181,9 @@ export class Run {
     this.curse = this.diff.curses || new Set();
     this.cls = CLASSES[save.cls];
     this.onEnd = onEnd; this.onPause = onPause; this.onLevelUp = onLevelUp; this.onChest = onChest; this.onDefeat = onDefeat; this.onPortal = onPortal;
-    // mode histoire : { n (chapitre, 0..6), giga (Gorgoth au lieu du boss du monde) } : un seul niveau ; tutoriel : partie facile
-    this.story = story; this.easy = !!easy; this.onBoss = onBoss;
+    // mode histoire : { n (chapitre, 0..11), giga (Gorgoth au lieu du boss du monde), mission (objectif sans boss, ou null) } :
+    // un seul niveau ; tutoriel : partie facile
+    this.story = story; this.easy = !!easy; this.onBoss = onBoss; this.onStory = onStory; // onStory(événement) : commentaires de Pompon
     // bonus choisis avant la partie (déjà consommés par l'interface)
     this.boosts = [...new Set(boosts || [])].filter(id => BOOSTS[id]);
     const has = id => this.boosts.includes(id);
@@ -294,9 +299,16 @@ export class Run {
     // chaque monde traversé dans la même partie renforce nettement les monstres (le héros arrive avec son build)
     const st = this.stage, carry = this.runTime;
     this.sk = { hp: (1 + BAL.stHp * st) * (1 + carry / BAL.carryHp) * LV.hp, dmg: (1 + BAL.stDmg * st) * (1 + carry / BAL.carryDmg) * LV.dmg, boss: 1 + BAL.stBoss * st };
+    this.bossDmgK = 1; // dégâts des boss par rapport aux monstres (histoire : les boss restent menaçants, Gorgoth intact)
+    if (this.story) {
+      const E = STORY_EASE, zi = z.id;
+      this.sk.hp *= E.hp[zi]; this.sk.dmg *= E.dmg[zi]; this.sk.boss *= this.story.giga ? E.giga : E.boss[zi];
+      this.bossDmgK = this.story.giga ? 1 / E.dmg[zi] : 1 / Math.sqrt(E.dmg[zi]);
+    }
     if (this.story?.giga) this.sk.boss *= STORY_GB.gigaHp;
     if (this.easy) { this.sk.hp *= EASY.hp; this.sk.dmg *= EASY.dmg; this.sk.boss *= EASY.boss; this.wm.spawn *= EASY.spawn; }
     this.placeInterest();
+    this.initMission(); // chapitre « mission » de l'histoire : pas d'autel, objectif à remplir (story-mission.js)
   }
 
   // faut-il montrer le chemin de l'autel du boss ? (héros au niveau BOSS_LV, autel pas encore utilisé)
@@ -350,8 +362,9 @@ export class Run {
     this.renderLoadout();
     this.renderEvo();
     this.renderWorld();
-    if (save.tutorialDone) this.banner(`<small>${this.story ? `Chapitre ${this.story.n + 1}` : `Niveau 1/${EXPE_LEVELS}`} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>Trouvez l'autel du boss !`, 2400, 'world');
+    if (save.tutorialDone) this.banner(`<small>${this.story ? `Chapitre ${this.story.n + 1}` : `Niveau 1/${EXPE_LEVELS}`} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>${this.mission ? `${this.mission.icon} ${esc(this.mission.what)}` : 'Trouvez l\'autel du boss !'}`, 2400, 'world');
     if (this.abyss) setTimeout(() => { if (!this.over) this.banner(`<small>${esc(abyssName(this.abyss))} · malédictions</small>${curseList(this.abyss, 'small')}`, 3200, 'small abyss'); }, 2500);
+    if (this.story) setTimeout(() => { if (!this.over) this.onStory?.('start'); }, 2600); // Pompon rappelle l'objectif
     music('zone' + this.zone.id);
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -934,6 +947,7 @@ export class Run {
     this.parts = this.parts.filter(q => q.life > 0);
     this.shake = Math.max(0, this.shake - dt * 30);
     this.enemies = this.enemies.filter(e => !e.dead);
+    if (this.mission && !this.mission.done) this.updateMission(dt);
     this.checkCall(); // niveau BOSS_LV : conseil d'aller voir le boss
     if (!this.over) this.hud();
   }
@@ -1042,7 +1056,7 @@ export class Run {
   updateOvertime(dt) {
     if (!this.otLevel) {
       // le boss n'a pas été invoqué : il surgit à côté du joueur, l'arène se referme sur lui
-      if (!this.bossSpawned) { if (this.altar) this.altar.used = true; this.summonBoss(this.p.x, this.p.y, true); }
+      if (!this.bossSpawned && !this.mission) { if (this.altar) this.altar.used = true; this.summonBoss(this.p.x, this.p.y, true); }
       this.otLevel = 1;
       for (const e of this.enemies) if (!e.boss && !e.dead) { e.mad = true; e.speed *= 1.12; e.dmg *= 1.15; }
       this.emit('overtime', {});
@@ -1087,11 +1101,11 @@ export class Run {
     if (o.mini) { hp *= 3.4; dmg *= 1.15; scale = 4.7; speed *= 0.95; }
     if (o.boss) {
       hp = Math.max(def.hp, 165) * BAL.bossHp * (1 + z.id * BAL.zBoss) * D.boss * S.boss * this.runHp;
-      dmg = def.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
+      dmg = def.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg * this.bossDmgK; scale = 8; speed = (SPEED[def.body] || 60) * (1 + z.id * 0.04) * D.speed;
       if (o.giga) { // giga boss : relatif au boss du monde (GB)
         const bd = z.boss || z.monsters[4];
         hp = Math.max(bd.hp, 165) * BAL.bossHp * (1 + z.id * BAL.zBoss) * D.boss * S.boss * this.runHp * GB.hp;
-        dmg = bd.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg * GB.dmg; scale = GB.scale; speed *= GB.speed;
+        dmg = bd.atk * BAL.bossDmg * (1 + z.id * (0.05 + BAL.zDmg)) * D.dmg * S.dmg * W.dmg * GB.dmg * this.bossDmgK; scale = GB.scale; speed *= GB.speed;
       }
     }
     if (o.gen) { hp *= 0.32; dmg *= 0.6; scale *= 0.62; speed *= 1.18; } // petit morceau d'un blob divisé
@@ -1678,6 +1692,7 @@ export class Run {
     e.act = null; e.jumpH = 0; e.burrowed = false;
     this.emit('bossPhase', { e, phase: 2 });
     this.banner(`<small>${esc(e.def.name)}</small>Phase 2 : il se déchaîne !`, 1800, 'boss');
+    this.onStory?.('bossHalf');
     this.fx.push({ type: 'ring', x: e.x, y: e.y, r: 300, life: 0.7, max: 0.7, color: '#ff7a3a' });
     this.burst(e.x, e.y, 40, 40, e.def.pal[2], 5);
     this.shake = 12; sfx('boss'); buzz(60);
@@ -1801,6 +1816,7 @@ export class Run {
     this.text(p.x, p.y, 60, '-' + d, '#ff6a6a', 1.1);
     sfx('hurt'); buzz(30);
     if (p.hp <= 0) { p.hp = 0; this.die(); }
+    else if (p.hp < p.maxHp * 0.3) this.onStory?.('lowhp');
   }
 
   // ---------- Armes ----------
@@ -2175,6 +2191,7 @@ export class Run {
 
   kill(e, o = {}) {
     e.dead = true;
+    if (e.storyMark) this.missionKill(e); // garde d'une mission de l'histoire
     this.emit('kill', { e, x: e.x, y: e.y });
     this.kills++;
     const T = this.track;
@@ -2668,6 +2685,7 @@ export class Run {
       loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone, ...(l.giga ? { giga: 1 } : {}) })), heat: this.heat, boosts: [...this.boosts],
       combo: this.comboBest, evos: this.p.weapons.filter(w => w.evo).map(w => w.id),
       abyss: this.abyss, track: { ...this.track, weaponKills: { ...this.track.weaponKills } },
+      mission: !!this.mission?.done, hp: this.p.maxHp ? Math.max(0, this.p.hp) / this.p.maxHp : 0, // mode histoire
     });
   }
 
@@ -2680,11 +2698,14 @@ export class Run {
     if (!tm) return;
     // chrono du monde, puis temps de folie en rouge (« +0:12 »)
     const left = this.duration - this.time, ot = left < 0, fight = this.boss && !this.boss.dead;
-    tm.textContent = ot ? '+' + mmss(-left) : mmss(Math.ceil(left));
-    tm.classList.toggle('ot', ot);
-    tm.classList.toggle('low', !ot && left < 20 && !fight);
+    // mission « tenez bon » de l'histoire : le grand chrono compte le temps qu'il reste à tenir
+    const MS = this.mission, hold = MS && !MS.done && MS.type === 'survive' ? Math.max(0, MS.t - MS.el) : null;
+    tm.textContent = hold != null ? mmss(Math.ceil(hold)) : ot ? '+' + mmss(-left) : mmss(Math.ceil(left));
+    tm.classList.toggle('ot', ot && hold == null);
+    tm.classList.toggle('low', hold != null ? hold < 15 : !ot && left < 20 && !fight);
     tm.classList.toggle('boss', fight && !ot);
     lbl.textContent = this.entering ? 'En route !'
+      : this.mission && !this.mission.done ? this.missionText() // mode histoire : progression de la mission
       : this.portal ? (this.gigaWon ? 'Victoire !' : 'Au portail !')
       : fight ? (this.boss.giga ? 'Battez le giga boss !' : 'Battez le boss !')
       : ot ? `Folie niv. ${this.otLevel}`
@@ -2695,6 +2716,7 @@ export class Run {
       : this.time < MSG_T ? 'Survivez et montez de niveau !'
       : this.called && this.time - this.callT < MSG_T ? '👹 Allez voir le boss !' : '';
     lbl.classList.toggle('hot', ot || left < 30 || !!this.portal || (this.phase === 'build' && this.swarms.length > 0 && this.swarms[0] - this.time < 8));
+    lbl.classList.toggle('mission', !!this.mission && !this.mission.done);
     $('#killsN').textContent = cnum(this.kills);
     $('#goldRun').textContent = cnum(this.gold);
     if (this.loot.length !== this._lootN) {
@@ -2753,6 +2775,8 @@ export class Run {
   render(dt) { this.gfx.render(dt); }
 }
 
+// missions des chapitres de l'histoire (js/story-mission.js)
+Object.assign(Run.prototype, MISSION);
 // giga boss du niveau 3 (js/giga.js) : invocation, phases, attaques, victoire de l'expédition
 Object.assign(Run.prototype, GIGA_METHODS);
 // champions C1 (Nyx, Sora, Ragnar) : ultimes et effets en cours (js/champions-c1.js)

@@ -181,6 +181,7 @@ export class Overlay {
     this.totemBadges(g);
     this.markers(g);
     this.guide(g, hx, hy);
+    this.missionMarks(g, hx, hy);
     this.arrows(g);
     this.minimap(g);
     this.flyLootUi(g);
@@ -281,6 +282,43 @@ export class Overlay {
     g.fillStyle = c1; g.fillRect(-w / 2, -26 + 6, 3, 16);
     g.fillStyle = '#ffffff'; g.fillText(label, 2, -14.5);
     g.restore();
+  }
+
+  // mission de l'histoire (js/story-mission.js) : objets à ramasser et garde en cours. À l'écran : l'émoji flotte sur un
+  // halo doré ; hors champ : les deux plus proches au bord de l'écran, avec une pointe vers eux
+  missionMarks(g, hx, hy) {
+    const run = this.run, M = run.mission;
+    if (!M || M.done) return;
+    const t = this.gfx.t, p = run.p, vw = this.vw, vh = this.vh, top = 228, bot = vh - 132;
+    const pts = M.type === 'collect' ? run.missionShown() : M.type === 'elites' && M.cur && !M.cur.dead ? [M.cur] : [];
+    if (!pts.length) return;
+    const ic = emoji(M.icon), off = [];
+    for (const o of pts) {
+      const lift = o === M.cur ? 115 : 26, [x, y, ok] = this.gfx.ws(o.x, o.y, lift);
+      if (ok && x > 16 && x < vw - 16 && y > top - 40 && y < vh - 30) {
+        const ph = o.ph || 0, S = (o === M.cur ? 34 : 40) + Math.sin(t * 5 + ph) * 3, yy = y - 10 + Math.sin(t * 3 + ph) * 5;
+        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55; g.drawImage(glowTex('#ffcf40'), x - 36, yy - 36, 72, 72);
+        g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+        g.drawImage(ic, x - S / 2, yy - S / 2, S, S);
+      } else off.push(o);
+    }
+    const d2 = o => (o.x - p.x) ** 2 + (o.y - p.y) ** 2;
+    off.sort((a, b) => d2(a) - d2(b));
+    for (const o of off.slice(0, 2)) {
+      const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy) || 1, [sx, sy] = this.gfx.ws(p.x + dx / d * 80, p.y + dy / d * 80, 0);
+      const a = Math.atan2(sy - hy, sx - hx), cx = vw / 2, cy = (top + bot) / 2, ux = Math.cos(a), uy = Math.sin(a);
+      const k = Math.min(Math.abs((vw / 2 - 40) / (ux || 1e-6)), Math.abs(((bot - top) / 2) / (uy || 1e-6)));
+      const ex = cx + ux * k, ey = cy + uy * k, S = 34 + Math.sin(t * 6) * 2;
+      g.save(); g.translate(ex, ey);
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.45; g.drawImage(glowTex('#ffcf40'), -30, -30, 60, 60);
+      g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+      g.rotate(a); g.fillStyle = 'rgba(6,8,13,.9)'; g.beginPath(); g.moveTo(S * 0.5 + 13, 0); g.lineTo(S * 0.5 - 1, -9); g.lineTo(S * 0.5 - 1, 9); g.closePath(); g.fill();
+      g.fillStyle = '#ffcf40'; g.beginPath(); g.moveTo(S * 0.5 + 9, 0); g.lineTo(S * 0.5 + 1, -5.5); g.lineTo(S * 0.5 + 1, 5.5); g.closePath(); g.fill();
+      g.rotate(-a); g.drawImage(ic, -S / 2, -S / 2, S, S);
+      g.restore();
+      g.font = tf(12); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffffff';
+      g.fillText(Math.round(d / 10) + ' m', ex - ux * 40, ey - uy * 40 + 2);
+    }
   }
 
   // chevrons qui tournent autour du héros et montrent le portail (ou l'autel du boss)
@@ -427,6 +465,7 @@ export class Overlay {
       g.fillStyle = T0.used ? '#6a6a7a' : TOTEMS[T0.kind]?.color || '#fff'; g.beginPath(); g.moveTo(mx, my - 3.5); g.lineTo(mx + 3, my); g.lineTo(mx, my + 3.5); g.lineTo(mx - 3, my); g.closePath(); g.fill();
     }
     if (run.boss && !run.boss.dead) dot(run.boss.x, run.boss.y, '#ff2a4a', 4.5);
+    if (run.mission && !run.mission.done) for (const o of run.missionShown()) dot(o.x, o.y, '#ffcf40', 3.5);
     g.restore();
     // autel et portail : toujours visibles, collés au bord quand ils sont loin
     const pinned = (x, y) => { let [mx, my] = mp(x, y); const dx = mx - cx, dy = my - cy, m = Math.max(Math.abs(dx), Math.abs(dy)); if (m > R - 6) { mx = cx + dx / m * (R - 6); my = cy + dy / m * (R - 6); } return [mx, my]; };

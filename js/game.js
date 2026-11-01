@@ -22,7 +22,7 @@ import { l2Home, endRunL2, l2Results, defisScreen, defisTile, defisCount, clsLoc
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
 import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
 // mode histoire « La Grande Marmite » (chapitres, dialogues, récompenses)
-import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, storyEnd, storyBlock, storyTile, storyScreenHTML } from './story.js';
+import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, chatter, storyEnd, storyBlock, storyScreenHTML, chapterSheet, unlocked, totalStars } from './story.js';
 
 const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
@@ -323,7 +323,7 @@ function adventureTab() {
       ${cta}
       ${vet ? `<div class="home-sub">
         <button class="hs-btn" data-act="worlds">${iconImg('map', 20)}<span><small>Monde ${pz + 1}</small><b style="--dc:${D.color}">${esc(D.name)}</b></span><i>›</i></button>
-        <button class="hs-btn story ${all ? '' : 'hot'}" data-act="story">${iconImg('book', 20)}<span><small>Histoire</small><b>${all ? 'Terminée' : `Chapitre ${storyNext() + 1}/${storyLen}`}</b></span><i>›</i></button>
+        <button class="hs-btn story ${all ? '' : 'hot'}" data-act="story">${iconImg('book', 20)}<span><small>Histoire · ★ ${totalStars()}</small><b>${all ? 'Terminée' : `Chapitre ${storyNext() + 1}/${storyLen}`}</b></span><i>›</i></button>
       </div>` : ''}
     </div>
   </section>`;
@@ -560,6 +560,14 @@ function classSelect(first) {
   render();
 }
 
+// pause d'un chapitre de l'histoire : titre et objectif (avec la progression de la mission)
+function pauseGoal(r) {
+  const c = chapter(r.story.n), M = r.mission;
+  const goal = M ? (M.done ? 'Mission accomplie : entrez dans le portail !' : `${M.icon} ${esc(M.what)} · <b>${M.type === 'survive' ? `${Math.max(0, Math.ceil(M.t - M.el))} s` : `${M.k}/${M.n}`}</b>`)
+    : r.portal ? 'Boss vaincu : entrez dans le portail !' : c.giga ? `👑 Battez ${esc(DATA.GIGA.name)} (autel du giga boss)` : `👹 Battez ${esc(r.zone.boss?.name || 'le boss')} (son autel est sur la carte)`;
+  return `<div class="pz-goal"><small>${iconImg('book', 13)} ${esc(c.title)}</small><span>${goal}</span></div>`;
+}
+
 // ---------- Partie ----------
 let run = null;
 let runBoosts = [];
@@ -581,7 +589,10 @@ function storyScreen() {
   mount(storyScreenHTML());
   bind($('.story-screen'), {
     back: () => home('adventure'),
-    chapter: el => { sfx('tap'); playChapter(+el.dataset.n); },
+    chapter: el => { // fiche du chapitre (objectif, étoiles, récompense) puis la partie
+      const n = +el.dataset.n; if (!unlocked(n)) return;
+      sfx('tap'); chapterSheet(n).then(go => { if (go) playChapter(n); });
+    },
   });
 }
 
@@ -599,7 +610,8 @@ function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
     diff,
     abyss,
     boosts,
-    story: ch ? { n: story, giga: !!ch.giga } : null,
+    story: ch ? { n: story, giga: !!ch.giga, mission: ch.mission || null } : null,
+    onStory: ch ? (ev, d) => chatter(story, ev, d) : null, // commentaires de Pompon pendant le chapitre
     easy: !save.tutorialDone, // toute première partie : monstres et boss plus faibles (le guide montre tout en jouant)
     onBoss: ch ? () => setTimeout(() => { if (run && !run.over) taunt(story); }, ch.giga ? 3600 : 700) : null,
     onPause: resume => pauseMenu(resume),
@@ -980,7 +992,7 @@ async function pauseMenu(resume) {
   const v = await modal({
     title: `<span class="eyebrow">${run.story ? `Chapitre ${run.story.n + 1}` : `Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS}`} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
-    body: `<div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
+    body: `${run.story ? pauseGoal(run) : ''}<div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
       <h4>Votre build <small>niveau ${p.level}</small></h4>
       <div class="pz-build">${p.weapons.map(w => `<span class="pzb r${w.r || 0} ${w.evo ? 'evo' : ''}" title="${esc(w.evo ? evoName(w.id) : WEAPONS[w.id].name)}">${iconImg(w.evo ? DATA.WEAPON_EVOS?.[w.id]?.icon || WEAPONS[w.id].icon : WEAPONS[w.id].icon, 24)}<b>${w.evo ? '★' : w.lv}</b></span>`).join('')}${Array.from({ length: Math.max(0, nW - p.weapons.length) }, () => '<span class="pzb empty"></span>').join('')}
       </div><div class="pz-build">${tomes.map(([id, lv]) => `<span class="pzb t r${p.tr?.[id] || 0}" title="${esc(TOMES[id].name)}">${iconImg(TOMES[id].icon, 22)}<b>${lv}</b></span>`).join('')}${Array.from({ length: Math.max(0, nT - tomes.length) }, () => '<span class="pzb t empty"></span>').join('')}</div>
@@ -1144,7 +1156,8 @@ function endRun(z, sum) {
   const pass = seasonRun({ ...sum, cleared, loot, heat, stage }); // L1 : XP de saison et compteurs des succès
   const got = checkAchievements();
   persist();
-  const story = storyCur == null ? null : storyEnd(storyCur, chapter(storyCur).giga ? !!sum.giga : cleared.includes(chapter(storyCur).zone));
+  const sc = storyCur == null ? null : chapter(storyCur); // chapitre réussi : giga boss, mission ou boss du monde vaincu
+  const story = sc ? storyEnd(storyCur, { ok: sc.giga ? !!sum.giga : sc.mission ? !!sum.mission : cleared.includes(sc.zone), revived: !!sum.revived, time: sum.time || 0, hp: sum.hp ?? 1 }) : null;
   storyCur = null;
   if (story?.ok) save.tutorialDone = true; // chapitre réussi : le guide de la première partie ne revient plus
   const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass, route, gigaRec,
