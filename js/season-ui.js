@@ -94,6 +94,22 @@ export function hubStrip() {
     </div>`;
 }
 
+// accueil : rangée de boutons ronds (pass, quêtes, coffres, cadeau du jour, défis, succès), une pastille quand il y a
+// quelque chose à prendre ; le coffre et le cadeau n'apparaissent que s'il y a à ouvrir / à réclamer
+export function homeGoals(defis) {
+  const I = seasonInfo(), qs = questList(), ws = weeklyList(), L = loginState(), pc = save.pendingChests.length;
+  const qReady = qs.filter(q => q.ready).length + ws.filter(q => q.ready).length;
+  const b = (act, ic, label, sub, n = 0, hot = false) => `<button class="goal ${hot || n ? 'hot' : ''}" data-act="${act}">${iconImg(ic, 24)}<b>${label}</b><small>${sub}</small>${n ? `<i class="badge count">${n}</i>` : ''}</button>`;
+  return `<nav class="goals" aria-label="Objectifs">
+    ${b('season', 'flag', 'Pass', `Palier ${I.tier}`, I.ready.length)}
+    ${b('quests', 'quest', 'Quêtes', `${qs.filter(q => q.prog >= q.n).length}/${qs.length}`, qReady)}
+    ${pc ? b('chests', 'chest', 'Coffres', 'À ouvrir', pc) : ''}
+    ${L.ready ? b('login', 'gift', 'Cadeau', `Jour ${L.day + 1}`, 1) : ''}
+    ${b('defis', 'key', 'Défis', `${defis.done}/${defis.total}`)}
+    ${b('trophies', 'trophy', 'Succès', 'Bestiaire')}
+  </nav>`;
+}
+
 // titre affiché sous le nom du champion (accueil) : touche = choix du titre
 export function heroTitle() {
   return `<button class="sc-title" data-act="title" aria-label="Choisir un titre">${iconImg('flag', 12)}<span>${esc(titleName() || TITLES.recrue.name)}</span></button>`;

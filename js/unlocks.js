@@ -183,6 +183,12 @@ export function clsLockPanel(id) {
 }
 
 // tuile de l'accueil : défis réussis et le plus proche à finir
+// accueil : défis réussis / total (pastille de la rangée d'objectifs)
+export function defisCount() {
+  const L = challengeList().map(challengeState);
+  return { done: L.filter(x => x.done).length, total: L.length };
+}
+
 export function defisTile() {
   const L = challengeList().map(challengeState), done = L.filter(x => x.done).length;
   // prochain défi : les « Premiers pas » d'abord, puis le plus avancé
