@@ -455,3 +455,44 @@ Object.assign(SFX, {
   laser: () => { osc({ type: 'sawtooth', f: r(95, 105), d: 0.22, v: 0.05, filter: ['lowpass', 700] }); noise({ d: 0.2, v: 0.06, filter: ['bandpass', 2500], q: 1 }); },
 });
 Object.assign(MIN_GAP, { turret: 0.15, tshot: 0.07, missile: 0.1, drone: 0.2, dshot: 0.06, flameon: 0.2, flame: 0.11, minethrow: 0.15, mineland: 0.06, shock: 0.08, arc: 0.3, laser: 0.2 });
+// ---------- Kenji le moine : poings, paume et vague de ki, dragon, mille poings ----------
+Object.assign(SFX, {
+  // coup de poing : souffle bref et choc sourd ; coup final : plus grave, avec un « kiai » (kazoo court qui monte)
+  punch: () => { noise({ d: 0.06, v: 0.1, filter: ['bandpass', 1400], q: 1.5, sweepTo: 600 }); osc({ type: 'sine', f: r(170, 210), to: 70, d: 0.08, v: 0.13 }); },
+  punchbig: () => { noise({ d: 0.12, v: 0.16, filter: ['bandpass', 900], q: 1.2, sweepTo: 300 }); osc({ type: 'sine', f: 140, to: 45, d: 0.16, v: 0.2 }); kazoo(330, 0.1, 0, 0.05, 440); },
+  // paume de ki : énergie qui se concentre (bourdonnement qui monte) puis souffle ; explosion de ki : grondement + carillon
+  kipalm: () => { osc({ type: 'sawtooth', f: 220, to: 660, d: 0.16, v: 0.04, filter: ['lowpass', 1800] }); noise({ d: 0.22, v: 0.1, filter: ['bandpass', 1200], q: 1, sweepTo: 3000, at: 0.08 }); },
+  kiboom: () => { noise({ d: 0.35, v: 0.2, filter: ['lowpass', 1400], sweepTo: 120 }); osc({ type: 'sine', f: 160, to: 50, d: 0.3, v: 0.2 }); [784, 1175].forEach((f, i) => osc({ type: 'triangle', f, d: 0.3, v: 0.03, at: 0.05 + i * 0.05 })); },
+  // vague de chi : « whoum » grave qui s'ouvre et gong léger
+  chiwave: () => { noise({ d: 0.32, v: 0.14, filter: ['lowpass', 500], sweepTo: 1800 }); osc({ type: 'sine', f: 90, to: 140, d: 0.3, v: 0.16 }); osc({ type: 'triangle', f: 392, d: 0.45, v: 0.035, vib: 3, vibRate: 5, at: 0.04 }); },
+  // dragon de ki : rugissement (dents de scie filtrées qui ondulent) et sifflement qui monte
+  dragon: () => { osc({ type: 'sawtooth', f: 110, to: 70, d: 0.4, v: 0.07, filter: ['lowpass', 900], vib: 18, vibRate: 14 }); whistle(600, 1600, 0.35, 0.05, 0.05); },
+  // mille poings : roulement de coups, cri de concentration ; onde finale : gros coup de gong et souffle
+  thousand: () => { kazoo(196, 0.35, 0, 0.1, 392); for (let i = 0; i < 6; i++) osc({ type: 'sine', f: r(150, 220), to: 60, d: 0.06, v: 0.12, at: 0.12 + i * 0.05 }); },
+  kiwave: () => { osc({ type: 'sine', f: 120, to: 35, d: 0.6, v: 0.28 }); noise({ d: 0.55, v: 0.22, filter: ['lowpass', 1200], sweepTo: 100 }); [262, 392, 523, 784].forEach((f, i) => osc({ type: 'triangle', f, d: 0.7, v: 0.04, at: 0.06 + i * 0.03, vib: 4, vibRate: 5 })); },
+  // flux maximal : petit carillon qui monte
+  flowmax: () => [880, 1109, 1319, 1760].forEach((f, i) => osc({ type: 'sine', f, d: 0.18, v: 0.04, at: i * 0.05 })),
+});
+Object.assign(MIN_GAP, { punch: 0.05, punchbig: 0.08, kipalm: 0.1, kiboom: 0.12, chiwave: 0.15, dragon: 0.2 });
+// ---------- Morgane la capitaine pirate : pistolets, sabre, canon, perroquet, bordée ----------
+Object.assign(SFX, {
+  // pistolet à silex : claquement sec et petit coup sourd
+  pirShot: () => { noise({ d: 0.09, v: 0.15, filter: ['bandpass', r(1600, 2000)], q: 0.8, sweepTo: 500 }); osc({ type: 'sine', f: 190, to: 60, d: 0.08, v: 0.1 }); },
+  // sabre : souffle métallique puis « shing »
+  pirSlash: () => { noise({ d: 0.14, v: 0.1, filter: ['bandpass', 3200], q: 2, sweepTo: 1300 }); osc({ type: 'triangle', f: r(2600, 3000), to: 1800, d: 0.1, v: 0.025, at: 0.03 }); },
+  pirThrust: () => { noise({ d: 0.1, v: 0.1, filter: ['highpass', 2500], sweepTo: 5000 }); osc({ type: 'triangle', f: 3400, d: 0.14, v: 0.03, at: 0.05 }); },
+  // canon : grosse détonation grave et cliquetis des roues
+  pirCannon: () => { osc({ type: 'sine', f: 120, to: 38, d: 0.42, v: 0.26 }); noise({ d: 0.38, v: 0.2, filter: ['lowpass', 1000], sweepTo: 120 }); wood(240, 0.05, 0.08); },
+  // boulet qui explose : souffle sourd et grondement
+  pirBoom: () => { noise({ d: 0.45, v: 0.2, filter: ['lowpass', 1500], sweepTo: 100 }); osc({ type: 'sine', f: 85, to: 30, d: 0.4, v: 0.2 }); },
+  // perroquet : coup de bec (« tok ») et cri rauque
+  pirPeck: () => wood(r(1100, 1400), 0, 0.07),
+  pirSquawk: () => { for (const at of [0, 0.13]) osc({ type: 'sawtooth', f: r(1300, 1500), to: r(850, 1000), d: 0.11, v: 0.045, at, filter: ['bandpass', 2000], q: 3, vib: 120, vibRate: 40 }); },
+  // bordée : cloche du navire, roulement de tambour qui monte
+  pirBroad: () => {
+    [880, 1320].forEach((f, i) => osc({ type: 'sine', f, d: 0.7, v: 0.07 - i * 0.03 })); osc({ type: 'sine', f: 880, d: 0.5, v: 0.05, at: 0.2 });
+    for (let i = 0; i < 6; i++) noise({ d: 0.08, v: 0.05 + i * 0.012, filter: ['lowpass', 600], at: 0.1 + i * 0.06 });
+    kazoo(196, 0.3, 0.05, 0.06, 262);
+  },
+});
+Object.assign(MIN_GAP, { pirShot: 0.06, pirSlash: 0.07, pirThrust: 0.1, pirCannon: 0.12, pirBoom: 0.09, pirPeck: 0.05, pirSquawk: 0.5 });

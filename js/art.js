@@ -557,6 +557,24 @@ Object.assign(ICON, {
   flamer: [IC.w, IC.orange, '<path d="M2.5 10.5h6v3h-6z" fill="T"/><path d="M8.5 11.2h2.5v1.6H8.5"/><path d="M11.5 12c2.8-3.6 6.3-5.8 10-6-1.5 1.7-1.5 3.1-.5 4.3-1.1.7-1.1 1.9 0 2.6-1 .9-.9 2.4.4 3.3-3.7.1-7.1-1.4-9.9-4.2z" fill="T" stroke="#ff7a2f"/>'],
   shockmine: [IC.cyan, IC.cyan, '<ellipse cx="12" cy="16.5" rx="8" ry="3.5" fill="T"/><path d="M8 16.5a4 4 0 0 1 8 0M12 12.5V10"/><path d="M5 6.5l2 2-1.5 1 2 2M19 6.5l-2 2 1.5 1-2 2M12.6 2.5L11 5.5h2l-1.6 3" stroke="#ffd23a"/>'],
 });
+// Kenji le moine : poings de fer, paume de ki, vague de chi, dragon de ki, mille poings, flux du combo
+Object.assign(ICON, {
+  fists: [IC.orange, IC.gold, '<path d="M5 9.5h11.5a3 3 0 0 1 3 3v2.5a5 5 0 0 1-5 5H8.5A3.5 3.5 0 0 1 5 16.5z" fill="T"/><path d="M8.6 9.5V5.6M12.2 9.5V5M15.8 9.5V6M5 13.5h5.5M9 20v2.5M14.5 20v2.5" /><path d="M2.5 9.5h2M2.5 13h2" stroke="#e9edf3"/>'],
+  kipalm: [IC.gold, IC.orange, '<circle cx="14.5" cy="9.5" r="5.5" fill="T"/><circle cx="14.5" cy="9.5" r="2" fill="S" stroke="none"/><path d="M3 21.5l5.5-5.5M3.5 15.5l4.2.3.3 4.2"/><path d="M14.5 1.5v1.6M22.5 9.5h-1.6M20.2 3.8l-1.2 1.2" stroke="#e9edf3"/>'],
+  chiwave: [IC.gold, IC.gold, '<circle cx="12" cy="12" r="3" fill="T"/><path d="M7.6 7.6a6.2 6.2 0 0 0 0 8.8M16.4 7.6a6.2 6.2 0 0 1 0 8.8M4.4 4.4a10.7 10.7 0 0 0 0 15.2M19.6 4.4a10.7 10.7 0 0 1 0 15.2"/>'],
+  kidragon: [IC.gold, IC.orange, '<path d="M2.5 20.5c3.2 0 4-3.5 6.8-3.5s3 3.5 5.7 3.5 3.8-3.8 2-6.8-4.8-3.4-4.8-6.4 2.3-4.8 5-4.8"/><path d="M17.2 2.5l4.3 1.4-2.6 3.4-2.8-1.3z" fill="T"/><path d="M19.6 1.8l1.2-1M8 14.6l-.8-2M13.2 15.4l.6-2.1" stroke="#e9edf3"/>'],
+  thousand: [IC.orange, IC.gold, '<path d="M12 1.8l1.9 5 5.1-1.8-2.9 4.6 4.8 2.6-5.3.9.6 5.3-4.2-3.4-4.2 3.4.6-5.3-5.3-.9 4.8-2.6-2.9-4.6 5.1 1.8z" fill="T"/><circle cx="12" cy="11" r="2.2" fill="S" stroke="none"/><path d="M5 21.5h14" stroke="#e9edf3"/>'],
+  flow: [IC.orange, IC.gold, '<circle cx="12" cy="12" r="9" fill="T"/><path d="M12 3a4.5 4.5 0 0 1 0 9 4.5 4.5 0 0 0 0 9"/><circle cx="12" cy="7.5" r="1.3" fill="S" stroke="none"/><circle cx="12" cy="16.5" r="1.3"/>'],
+});
+// Morgane la capitaine pirate : butin (coffre au trésor), bordée (navire), pistolets, sabre d'abordage, canon, perroquet
+Object.assign(ICON, {
+  plunder: [IC.gold, IC.gold, '<path d="M3.5 11.5h17v8h-17z" fill="T"/><path d="M3.5 11.5c0-3.4 2.8-5 8.5-5s8.5 1.6 8.5 5M3.5 14.5h17"/><rect x="10.8" y="13" width="2.4" height="3.2" fill="S" stroke="none"/><circle cx="18.5" cy="4" r="1.8" stroke="#ffe48a"/><circle cx="14.5" cy="3.2" r="1.3" stroke="#ffe48a"/>'],
+  broadside: [IC.orange, IC.orange, '<path d="M2.5 13.5h19l-3 6.5h-13z" fill="T"/><path d="M12 13.5V3"/><path d="M12 4l6.5 5.5H12" fill="T"/><circle cx="7.5" cy="16.5" r="1.1" fill="S" stroke="none"/><circle cx="12" cy="16.5" r="1.1" fill="S" stroke="none"/><circle cx="16.5" cy="16.5" r="1.1" fill="S" stroke="none"/><path d="M3.5 9.5c-1-1.6-.3-3.4 1.6-3.6M6 6.5c.2-1.8 1.8-2.6 3.4-1.8" stroke="#e9edf3"/>'],
+  pistols: [IC.w, IC.gold, '<path d="M3.5 8.5h16v3.5H10l-2.2 8H3.8l2-8H3.5z" fill="T"/><path d="M19.5 10.2h2.2M10.5 12v2.8h2.8M7.5 8.5l-1.5-3"/><circle cx="16.5" cy="10.2" r=".9" fill="S" stroke="none"/>'],
+  cutlass: [IC.w, IC.cyan, '<path d="M8 15.5C12.5 12.5 17 8.2 20.5 3c.4 5-3.6 10-10.2 14.5z" fill="T"/><path d="M4.5 12.5c1.4 3.8 3.6 6 7.2 7.4" stroke="#ffc23a"/><path d="M7.2 17.2L3 21.4"/>'],
+  cannon: [IC.w, IC.orange, '<path d="M3.5 14.5L17 8.2l2.2 4.6-13 6z" fill="T"/><path d="M19.2 7.2l1.6 3.6"/><circle cx="9" cy="17.5" r="3.5"/><circle cx="9" cy="17.5" r=".9" fill="S" stroke="none"/><path d="M3.5 14.5L2 12M2.5 9.5l-1 -1" stroke="#ffd23a"/>'],
+  parrot: [IC.red, IC.red, '<path d="M7.5 21.5c-1.4-4-.8-9.4 2.2-12.4 1.2-3.6 4-5.6 7-5.1 2.6.4 4.1 2.6 4.1 5-1.6-1-3.2-1-4.2 0-1 1.6-.4 3.6-2 6.5-1.4 2.5-3.8 4.6-7.1 6z" fill="T"/><path d="M19.5 8.4c1.1.9 1.4 2.2.8 3.6" stroke="#ffd23a"/><path d="M9.5 16.5c1.5-.3 3-1.3 3.8-3" stroke="#3fd0ff"/><circle cx="15.8" cy="6.6" r="1" fill="S" stroke="none"/>'],
+});
 
 function svgIcon(name) {
   const [c, t, body] = ICON[name];

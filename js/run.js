@@ -18,6 +18,8 @@ import './arsenal-w1.js'; // armes de Lumi, Kira, Brok, Frida (Arsenal W1)
 import './arsenal-w2.js'; // armes de Nyx et de Sora (chauves-souris, lance de sang, cercle maudit, shurikens, fumigènes, clone)
 import './arsenal-w3.js'; // armes de Ragnar et de Gaïa (haches de guerre, cri de guerre, séisme, tourbillon, ronces, esprits, pétales)
 import './arsenal-engineer.js'; // armes de Tess (tourelle, drone d'appui, lance-flammes, mines électriques)
+import './arsenal-monk.js'; // armes de Kenji (poings de fer, paume de ki, vague de chi, dragon de ki)
+import './arsenal-pirate.js'; // armes de Morgane (pistolets, sabre d'abordage, canon, perroquet)
 import { runDiff, curseList, abyssName } from './abyss.js';
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
@@ -29,6 +31,8 @@ import { GIGA_METHODS } from './giga.js';
 import { C1, isUltC1 } from './champions-c1.js'; // champions C1 (Nyx, Sora, Ragnar) : ultimes, effets en cours
 import { C2, isUltC2 } from './champions-c2.js'; // champions C2 (Frida, Gaïa) : ultimes, passifs, effets en cours
 import { ENG, isUltEng } from './champion-engineer.js'; // Tess l'ingénieure : frappe orbitale
+import { MONK, isUltMonk } from './champion-monk.js'; // Kenji le moine : flux du combo, mille poings
+import { PIR, isUltPir } from './champion-pirate.js'; // Morgane la capitaine pirate : bordée
 
 const TAU = Math.PI * 2;
 const SPEED = { blob: 52, humanoid: 64, golem: 40, beast: 78, bird: 80, crab: 70, ghost: 64, worm: 56 };
@@ -205,7 +209,7 @@ export class Run {
       tv: {}, bv: {}, tr: {}, // valeurs cumulées des tomes / bénédictions (selon la rareté des cartes), rareté max par tome
     };
     // rareté des cartes : chance (trèfle, fortune de l'équipement, totem maudit) ; relances et « passer »
-    this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1) * 0.5;
+    this.luck0 = (has('trefle') ? 0.35 : 0) + Math.max(0, st.gold - 1 - (this.cls.goldPct || 0)) * 0.5; // le Butin de Morgane n'en donne pas
     const cml = masteryOf(save.mastery?.[this.cls.id]); // niveau du champion (1 à 10) et étoiles : bonus spéciaux
     this.perk = masteryPerks(cml.lv, cml.stars);
     this.rerolls = REROLLS + this.perk.reroll; this.skips = SKIPS; // niveau 5 : une relance de plus
@@ -587,6 +591,7 @@ export class Run {
     Object.assign(p, d);
     p.critMul = 2 + this.it.critDmg;
     if (this.c1h > 1) p.haste /= this.c1h; // Fureur de Ragnar : attaques plus rapides (champions-c1.js)
+    if (this.mkF) p.haste /= 1 + this.mkF; // Flux du combo de Kenji : attaques plus rapides (champion-monk.js)
     if (p.maxHp > old) p.hp += p.maxHp - old;
   }
 
@@ -892,6 +897,8 @@ export class Run {
     if (this.c1d || this.c1f) this.tickC1(dt); // champions C1 : danse des ombres, fureur en cours
     if (this.c2w || this.c2t || this.cls.regenPct) this.tickC2(dt); // champions C2 : sève de Gaïa, hiver éternel, épines
     if (this.engU) this.tickEng(dt); // Tess : frappe orbitale en cours
+    if (this.cls.flow || this.mku) this.tickMonk(dt); // Kenji : flux du combo, mille poings en cours
+    if (this.pirU) this.tickPir(dt); // Morgane : bordée en cours
 
     this.spawn(dt);
     this.grid.clear();
@@ -2291,7 +2298,7 @@ export class Run {
   // ---------- Butin (coffres ouverts après la partie) ----------
   // le totem maudit et le trèfle peuvent faire monter le coffre d'un rang
   lootTier(t) {
-    const up = Math.min(0.9, this.lootLuck + (this.boosts.includes('trefle') ? 0.35 : 0));
+    const up = Math.min(0.9, this.lootLuck + (this.cls.lootUp || 0) + (this.boosts.includes('trefle') ? 0.35 : 0)); // lootUp : Butin de Morgane
     return Math.min(LOOT_TIERS.length - 1, t + (up > 0 && Math.random() < up ? 1 : 0));
   }
 
@@ -2588,6 +2595,8 @@ export class Run {
     if (isUltC1(this.cls.ult)) this.ultC1(A); // champions C1 : festin de sang, danse des ombres, fureur
     else if (isUltC2(this.cls.ult)) this.ultC2(A); // champions C2 : hiver éternel, colère de la forêt
     else if (isUltEng(this.cls.ult)) this.ultEng(A); // Tess : frappe orbitale
+    else if (isUltMonk(this.cls.ult)) this.ultMonk(A); // Kenji : mille poings
+    else if (isUltPir(this.cls.ult)) this.ultPir(A); // Morgane : bordée
     else if (this.cls.ult === 'nova') {
       const R = 300 * p.area;
       this.fx.push({ type: 'ring', x: p.x, y: p.y, r: R, life: 0.6, max: 0.6, color: '#ffd54a' });
@@ -2740,3 +2749,7 @@ Object.assign(Run.prototype, C1);
 Object.assign(Run.prototype, C2);
 // Tess l'ingénieure : frappe orbitale (js/champion-engineer.js)
 Object.assign(Run.prototype, ENG);
+// Kenji le moine : flux du combo, mille poings (js/champion-monk.js)
+Object.assign(Run.prototype, MONK);
+// Morgane la capitaine pirate : bordée (js/champion-pirate.js)
+Object.assign(Run.prototype, PIR);

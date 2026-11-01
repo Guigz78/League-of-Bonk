@@ -11,6 +11,8 @@ import { initW1, eventW1, frameW1 } from './fx-w1.js'; // Arsenal W1 (armes de L
 import { frameW2 } from './fx-w2.js'; // arsenal W2 (armes de Nyx et de Sora)
 import { frameW3 } from './fx-w3.js'; // arsenal W3 (armes de Ragnar et de Gaïa)
 import { eventEng, frameEng } from './fx-engineer.js'; // Tess l'ingénieure (armes, frappe orbitale)
+import { eventMonk, frameMonk } from './fx-monk.js'; // Kenji le moine (poings, ki, dragons, mille poings)
+import { eventPir, framePir } from './fx-pirate.js'; // Morgane la capitaine pirate (armes, bordée)
 
 const SWEEP_ARC = 3.5;
 const PRISM = ['#ff7ad8', '#7ae8ff', '#ffe45a', '#9aff8a']; // prisme solaire : une couleur par rayon
@@ -154,6 +156,8 @@ export class Fx {
     if (this.c2 && eventC2(this, ev)) return; // champions C2
     if (ev.type === 'w1') return void eventW1(this, ev); // Arsenal W1
     if (eventEng(this, ev)) return; // Tess : frappe orbitale
+    if (eventMonk(this, ev)) return; // Kenji : coups, ki, mille poings
+    if (eventPir(this, ev)) return; // Morgane : bordée
     switch (ev.type) {
       case 'hit': {
         const e = ev.e, h = e.r * 1.2 + e.fly;
@@ -526,6 +530,8 @@ export class Fx {
     frameW2(this, dt); // arsenal W2
     frameW3(this, dt); // arsenal W3
     frameEng(this, dt); // Tess : tourelles, drones, flammes, mines, frappe orbitale
+    frameMonk(this, dt); // Kenji : poings fantômes, boules de ki, ondes, dragons, flux
+    framePir(this, dt); // Morgane : balles, sabre, canon, perroquets, bordée
     this.bloodFx(dt);
     this.particles(dt);
     // particules du jeu (éclats colorés)

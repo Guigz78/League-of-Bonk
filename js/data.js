@@ -77,6 +77,27 @@ export const CLASSES = {
     passive: { name: 'Bricoleuse', icon: 'wrench', desc: 'Tourelles, drones et mines durent 30 % plus longtemps ; ramassage +10 %.' },
     colors: { 1: '#ff8a2a', 2: '#c85a1a', 3: '#f4ece0', a: '#3ae0ff', h: '#7a3a1c', s: '#ffd8b8', d: '#e8b090', c: '#4a5266' },
   },
+  // ---- Kenji le moine (à débloquer : défi, clé 'cls:monk'). Talents (js/champion-monk.js) : flow = vitesse d'attaque en plus
+  // par tranche de 25 de combo (plafond MKB.flow.max), dodge = esquive (ajoutée à l'équipement, comme Sora)
+  monk: {
+    id: 'monk', name: 'Kenji', role: 'Moine', locked: true,
+    desc: 'Ses poings frappent en rafale ; plus le combo monte, plus il frappe vite.',
+    hp: 115, atk: 14, crit: 0.1, speed: 1.04, flow: 0.02, dodge: 0.08,
+    weapon: 'fists', ult: 'thousand',
+    passive: { name: 'Flux du combo', icon: 'flow', desc: 'Vitesse d\'attaque +2 % par tranche de 25 de combo (+20 % au plus) ; 8 % d\'esquive.' },
+    colors: { 1: '#f4a024', 2: '#c8302a', 3: '#ffd27a', a: '#ffc23a', h: '#ffd2b0', s: '#ffd2b0', d: '#e8a888', c: '#7a3a1a' },
+  },
+  // ---- Morgane la capitaine pirate (à débloquer : défi, clé 'cls:pirate'). Talents du passif « Butin » : goldPct = or en
+  // plus (save.playerStats ; ne compte pas dans la chance des cartes), lootUp = chance qu'un coffre de butin monte d'un rang
+  // (run.lootTier). Ultime et armes : js/champion-pirate.js, js/arsenal-pirate.js
+  pirate: {
+    id: 'pirate', name: 'Morgane', role: 'Capitaine pirate', tab: 'Pirate', locked: true, // tab : nom court de l'onglet (écran des champions)
+    desc: 'Ses pistolets crépitent, son sabre tranche les abordages… et tout l\'or finit dans ses coffres.',
+    hp: 120, atk: 14, crit: 0.1, speed: 1.03, goldPct: 0.2, lootUp: 0.15,
+    weapon: 'pistols', ult: 'broadside',
+    passive: { name: 'Butin', icon: 'plunder', desc: '+20 % d\'or ; coffres de butin un peu meilleurs (15 % de chance de monter d\'un rang).' },
+    colors: { 1: '#c8202e', 2: '#8a1220', 3: '#f4ece0', a: '#ffc23a', h: '#8a3418', s: '#ffd8b8', d: '#e8b090', c: '#3a2822' },
+  },
 };
 
 // Évolutions : pendant la partie, au niveau indiqué (5 stades). La forme ultime a une aura de super guerrier (aura).
@@ -146,6 +167,22 @@ export const EVOLUTIONS = {
     { name: 'Tess Turbo', lvl: 11, colors: { 1: '#e8502a', 2: '#a8321a', c: '#3a4258', a: '#4af0ff' } },
     { name: 'Tess Cyber', lvl: 19, colors: { 1: '#2e3e62', 2: '#1c2842', 3: '#d8f4ff', c: '#ff8a2a', a: '#5affd8', h: '#5a2a14' } },
     { name: 'Tess Oméga', lvl: 28, aura: '#ffaa22', colors: { 1: '#eef2fa', 2: '#a8b4cc', 3: '#ffffff', c: '#ff8a1a', a: '#ffd23a', h: '#ff9a3a' } },
+  ],
+  // ---- Kenji (moine) : 1 robe safran, 2 écharpe, 3 liserés, a = ki, c = perles et bandeaux sombres ----
+  monk: [
+    { name: 'Kenji' },
+    { name: 'Kenji Tigre', lvl: 5, colors: { 1: '#ff9a1a', 2: '#2a1a14', 3: '#ffcf5a', a: '#ffb02a', c: '#5a2a10' } },
+    { name: 'Kenji Grue', lvl: 11, colors: { 1: '#f4f0e8', 2: '#d02a2a', 3: '#ffffff', a: '#7ae0ff', c: '#2a2a34' } },
+    { name: 'Kenji Dragon', lvl: 19, colors: { 1: '#b8202a', 2: '#e6b422', 3: '#ffe07a', a: '#5affa8', c: '#1a5a3a' } },
+    { name: 'Kenji Éveillé', lvl: 28, aura: '#ffb43a', colors: { 1: '#ffe9b0', 2: '#ff9a1a', 3: '#ffffff', a: '#fff0a0', c: '#e6b422' } },
+  ],
+  // ---- Morgane (capitaine pirate) ----
+  pirate: [
+    { name: 'Morgane' },
+    { name: 'Morgane Corsaire', lvl: 5, colors: { 1: '#d8283a', 2: '#961628', a: '#ffd04a', c: '#2e2238' } },
+    { name: 'Morgane Amirale', lvl: 11, colors: { 1: '#1e3a7a', 2: '#122658', 3: '#ffffff', a: '#ffd04a', c: '#18244a' } },
+    { name: 'Morgane Fantôme', lvl: 19, colors: { 1: '#1c4a4c', 2: '#0e2e32', 3: '#c8fff0', a: '#5affc0', h: '#3a2a3a', c: '#12282c', s: '#d8f0e8', d: '#b0d0c8' } },
+    { name: 'Morgane Tempête', lvl: 28, aura: '#22e8c8', colors: { 1: '#f4f0e6', 2: '#c8b48a', 3: '#ffffff', a: '#ffd23a', h: '#c8501e', c: '#1a4a7a' } },
   ],
 };
 
@@ -1085,3 +1122,48 @@ CLASSES.engineer.arsenal = ARSENAL.engineer;
 UNLOCK_CHALLENGES.splice(UNLOCK_CHALLENGES.findIndex(c => c.id === 'mastery10'), 0,
   { id: 'engineer', cat: 'champions', need: 'engineer', icon: 'wrench', name: 'Pièces détachées', txt: 'Ouvrez 30 coffres de butin', n: 30, prog: st_('chests'), rw: { key: 'cls:engineer', gold: 200 } });
 MASTERY.aura.engineer = '#2ae8c8';
+// ===== Kenji le moine (monk) : ultime, arsenal, défi =====
+// Ultime et passif : js/champion-monk.js ; armes (statistiques, comportement) : js/arsenal-monk.js ; rendu :
+// js/g3d/fx-monk.js et js/g3d/models-hero-monk.js. Ses 4 armes lui sont propres (own) ; évolutions : niveau 5 + tome.
+ULTS.thousand = { name: 'Mille poings', icon: 'thousand', desc: 'Une rafale de poings fantômes frappe tout devant vous (intouchable), puis une grande onde de ki.' };
+Object.assign(WEAPONS, {
+  fists:    { name: 'Poings de fer', icon: 'fists', own: 'monk', desc: 'Enchaînement rapide de coups de poing devant vous ; un coup sur trois frappe fort et repousse.', lv: ['', '+30 % dégâts', 'Plus grande portée', 'Le coup final frappe tout autour', '+40 % dégâts, plus rapide'] },
+  kipalm:   { name: 'Paume de ki', icon: 'kipalm', own: 'monk', desc: 'Boule d\'énergie qui traverse tous les ennemis sur sa route.', lv: ['', '+30 % dégâts', 'Boule plus grosse', '+1 boule', '+40 % dégâts, plus fréquente'] },
+  chiwave:  { name: 'Vague de chi', icon: 'chiwave', own: 'monk', desc: 'Onde circulaire qui part de vous et repousse fort les ennemis.', lv: ['', '+30 % dégâts', 'Onde plus large', 'Double onde', '+40 % dégâts, plus fréquente'] },
+  kidragon: { name: 'Dragon de ki', icon: 'kidragon', own: 'monk', desc: 'Un dragon d\'énergie serpente vers les ennemis et mord tout ce qu\'il traverse.', lv: ['', '+30 % dégâts', 'Plus grand, vit plus longtemps', '+1 dragon', '+40 % dégâts, plus fréquent'] },
+});
+// évolutions (niveau 5 + tome) : un tome différent par arme
+Object.assign(WEAPON_EVOS, {
+  fists:    { tome: 'haste', name: 'Rafale du tigre',   icon: 'fists',    desc: 'Coups bien plus rapides : chaque poing projette un poing de ki qui transperce ; coup final tout autour.' },
+  kipalm:   { tome: 'power', name: 'Paume céleste',     icon: 'kipalm',   desc: '2 énormes sphères de ki qui traversent tout et explosent en bout de course.' },
+  chiwave:  { tome: 'vital', name: 'Marée de sérénité', icon: 'chiwave',  desc: '3 grandes ondes qui étourdissent les monstres ; chaque ennemi touché vous soigne un peu.' },
+  kidragon: { tome: 'area',  name: 'Dragon céleste',    icon: 'kidragon', desc: '2 dragons dorés géants qui vivent plus longtemps et plongent en explosant.' },
+});
+ARSENAL.monk = ['fists', 'kipalm', 'chiwave', 'kidragon']; // temple : poings de fer, paume de ki, vague de chi, dragon de ki
+CLASSES.monk.arsenal = ARSENAL.monk;
+// défi de déblocage (rangé après ceux des autres champions) ; aura de maîtrise
+UNLOCK_CHALLENGES.splice(UNLOCK_CHALLENGES.findIndex(c => c.id === 'mastery10'), 0,
+  { id: 'monk', cat: 'champions', need: 'monk', icon: 'flow', name: 'Le flux intérieur', txt: 'Réussissez un combo de 500', n: 500, prog: rec_('combo'), rw: { key: 'cls:monk', gold: 200 } });
+MASTERY.aura.monk = '#ffb43a';
+// ===== Morgane la capitaine pirate (pirate) : ultime, arsenal, défi =====
+// Ultime : js/champion-pirate.js ; armes (statistiques, comportement) : js/arsenal-pirate.js ; rendu : js/g3d/fx-pirate.js et
+// js/g3d/models-hero-pirate.js. Ses 4 armes lui sont propres (own) ; évolutions : niveau 5 + tome.
+ULTS.broadside = { name: 'Bordée', icon: 'broadside', desc: 'Son navire tire une bordée : trois salves de boulets de canon pilonnent tout l\'écran.' };
+Object.assign(WEAPONS, {
+  pistols: { name: 'Pistolets', icon: 'pistols', own: 'pirate', desc: 'Tirs rapides, une main puis l\'autre, sur l\'ennemi le plus proche.', lv: ['', '+30 % dégâts', 'Les balles transpercent', 'Tirs plus rapides', '2 balles par tir, +25 % dégâts'] },
+  cutlass: { name: 'Sabre d\'abordage', icon: 'cutlass', own: 'pirate', desc: 'Deux coups de sabre en arc devant elle : l\'aller, puis le retour.', lv: ['', '+30 % dégâts', 'Arc plus large et plus long', '3e coup : une estocade', '+40 % dégâts, plus rapide'] },
+  cannon:  { name: 'Canon', icon: 'cannon', own: 'pirate', desc: 'Un lourd boulet roule vers les ennemis, les écrase puis explose.', lv: ['', '+30 % dégâts', 'Explosion plus large', '+1 boulet', '+30 % dégâts, plus fréquent'] },
+  parrot:  { name: 'Perroquet', icon: 'parrot', own: 'pirate', desc: 'Un perroquet vole autour d\'elle et fond sur les ennemis proches.', lv: ['', '+30 % dégâts', 'Pique plus souvent', '+1 perroquet', '+30 % dégâts, chasse plus loin'] },
+});
+Object.assign(WEAPON_EVOS, {
+  pistols: { tome: 'crit',   name: 'Pistolets d\'or', icon: 'pistols', desc: 'Pistolets dorés : chaque tir est une gerbe de 3 balles perçantes, bien plus rapide.' },
+  cutlass: { tome: 'power',  name: 'Lame des marées', icon: 'cutlass', desc: 'Sabre d\'écume : chaque coup lance une vague tranchante qui traverse les rangs.' },
+  cannon:  { tome: 'area',   name: 'Boulets ramés',   icon: 'cannon',  desc: 'Paires de boulets enchaînés qui tournoient, fauchent une large bande et explosent.' },
+  parrot:  { tome: 'magnet', name: 'Aras pillards',   icon: 'parrot',  desc: '3 aras qui piquent en chaîne et rapportent de l\'or à chaque victime.' },
+});
+ARSENAL.pirate = ['pistols', 'cutlass', 'cannon', 'parrot']; // abordage : pistolets, sabre, canon, perroquet
+CLASSES.pirate.arsenal = ARSENAL.pirate;
+// défi de déblocage (rangé après ceux des autres champions) ; aura de maîtrise
+UNLOCK_CHALLENGES.splice(UNLOCK_CHALLENGES.findIndex(c => c.id === 'mastery10'), 0,
+  { id: 'pirate', cat: 'champions', need: 'pirate', icon: 'plunder', name: 'Coffre au trésor', txt: 'Possédez 5 000 or', n: 5000, prog: s => +s.gold || 0, rw: { key: 'cls:pirate', gold: 200 } });
+MASTERY.aura.pirate = '#ffb81a';
