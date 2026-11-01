@@ -16,9 +16,9 @@ import { cloud } from './cloud.js';
 import { loginState, dailyBadge } from './daily.js';
 // L1 : saison, quêtes de la semaine, calendrier de 20 jours, succès, titres
 import { seasonRun, checkAchievements } from './season.js';
-import { hubStrip, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet, achBlock, titleSheet, seasonNotice } from './season-ui.js';
+import { hubStrip, homeGoals, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet, achBlock, titleSheet, seasonNotice } from './season-ui.js';
 // L2 : défis de déblocage, maîtrise des champions, Abysse
-import { l2Home, endRunL2, l2Results, defisScreen, defisTile, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
+import { l2Home, endRunL2, l2Results, defisScreen, defisTile, defisCount, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
 import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
 // mode histoire « La Grande Marmite » (chapitres, dialogues, récompenses)
@@ -83,16 +83,15 @@ function refreshTopbar() {
 
 function nav() {
   const items = [
-    ['adventure', 'Aventure', 'map'],
-    ['gear', 'Équipement', 'armor'],
+    ['adventure', 'Jouer', 'play'],
+    ['gear', 'Héros', 'user'],
     ['forge', 'Forge', 'hammer'],
     ['shop', 'Boutique', 'bag'],
-    ['trophies', 'Succès', 'trophy'],
   ];
   const nAdv = save.pendingChests.length + dailyBadge();
   const badge = { gear: save.inventory.some(i => i.isNew), trophies: false, shop: canAffordUpgrade(), forge: canForgeSomething() };
   return `<nav class="tabs">${items.map(([id, label, ic]) => `
-    <button class="tab ${tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}">
+    <button class="tab ${tab === id || (id === 'adventure' && tab === 'trophies') ? 'on' : ''}" data-act="tab" data-tab="${id}">
       ${iconImg(ic, 22)}<span>${label}</span>${id === 'adventure' && nAdv ? `<i class="badge count">${nAdv}</i>` : badge[id] ? '<i class="badge"></i>' : ''}
     </button>`).join('')}</nav>`;
 }
@@ -116,7 +115,7 @@ export function home(t) {
   const moved = t && t !== tab;
   if (t) tab = t;
   const body = { adventure: adventureTab, gear: gearTab, forge: forgeTab, shop: shopTab, trophies: trophiesTab }[tab]();
-  mount(`<div class="hub">${topbar()}<main class="hub-main" id="hubMain">${body}</main>${nav()}</div>`);
+  mount(`<div class="hub">${topbar()}<main class="hub-main ${tab === 'adventure' ? 'is-home' : ''}" id="hubMain">${body}</main>${nav()}</div>`);
   if (keep) $('#hubMain').scrollTop = keep;
   if (moved) $('#hubMain').classList.add('scr-in');
   bind($('.hub'), handlers);
@@ -130,8 +129,10 @@ const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
   // tant que le monde 1 n'est pas battu, JOUER lance le chapitre 1 de l'histoire (tutoriel, partie facile) ; sinon la fiche du monde
-  play: () => (firstSteps() ? playChapter(0) : zoneSheet(playZone())),
+  play: () => (firstSteps() ? playChapter(0) : quickPlay()),
+  worlds: () => worldPicker(),
   story: () => storyScreen(),
+  trophies: () => home('trophies'),
   quests: () => questSheet().then(afterSheet),
   login: () => loginSheet().then(afterSheet),
   season: () => openPass(),
@@ -245,6 +246,7 @@ function heroCard() {
         <span>${iconImg('arrow', 16)}<b>${pct(st.speed)}</b></span>
         <em class="hc-more">${more ? `+${more} bonus · ` : ''}Toutes les statistiques ›</em>
       </button>
+      <button class="btn ghost small hc-change" data-act="changeClass">${iconImg('swap', 14)} Changer de champion</button>
     </div>
   </section>`;
 }
@@ -259,46 +261,65 @@ function playZone() {
 const bossOf = z => (z.boss ? creatureURL(`${z.id}-${zoneSteps(z).length - 1}-${z.boss.name}`, z.boss.body, z.boss.pal, { boss: true })
   : creatureURL(`${z.id}-4-${z.monsters[4].name}`, z.monsters[4].body, z.monsters[4].pal));
 
-function adventureTab() {
-  const c = CLASSES[save.cls], st = playerStats();
-  const done = save.zoneCleared.filter(Boolean).length;
-  const pz = playZone(), Z = ZONES[pz], D = runDiff(Math.min(save.diffSel?.[pz] || 0, maxDiff(pz)), Math.min(save.abyssSel?.[pz] || 0, abyssTop(pz)));
-  // bandeau « objectifs » : pass d'expédition, quêtes du jour et de la semaine, connexion, coffres (season-ui.js)
-  const quick = hubStrip();
-  const zones = ZONES.map((z, i) => {
-    const locked = i > save.unlockedZone;
-    const cleared = save.zoneCleared[i];
-    const stars = save.diffCleared[i] || 0;
-    const first = i === 0 && !save.stats.runs && !cleared;
-    return `<button class="zone ${locked ? 'locked' : ''} ${cleared ? 'cleared' : ''} ${i === pz ? 'cur' : ''}" data-act="zone" data-z="${i}" style="background-image:url(${zoneBannerURL(z)})">
-      <div class="z-num">${String(i + 1).padStart(2, '0')}</div>
-      <div class="z-txt">${first ? '<em class="start">Commencez ici</em>' : ''}<b>${esc(z.name)}</b><small>${locked ? `Terminez « ${esc(ZONES[i - 1].name)} »` : esc(z.sub)}</small>${zoneStars(stars)}${abyssBadge(i)}</div>
-      <div class="z-art">${locked ? iconImg('lock', 22) : `<img class="px spr" src="${bossOf(z)}" alt="">`}</div>
-    </button>`;
+// difficulté (et palier d'Abysse) choisis pour un monde
+const zoneDiff = i => { const k = Math.min(save.diffSel?.[i] || 0, maxDiff(i)), ab = Math.min(save.abyssSel?.[i] || 0, abyssTop(i)); return { k: ab ? DIFFICULTIES.length - 1 : k, ab, D: runDiff(k, ab) }; };
+
+// JOUER : la partie part tout de suite dans le monde choisi (fiche du monde : « Monde » sous le bouton)
+function quickPlay() {
+  const i = playZone(), { k, ab } = zoneDiff(i);
+  cleanBoostSel();
+  save.lastZone = i;
+  startRun(i, k, ab);
+}
+
+// choix du monde : liste courte, puis la fiche du monde (difficulté, bonus, départ)
+function worldPicker() {
+  const cur = playZone();
+  const rows = ZONES.map((z, i) => {
+    const locked = i > save.unlockedZone, n = save.diffCleared[i] || 0;
+    return `<button class="wp-row ${locked ? 'locked' : ''} ${i === cur ? 'cur' : ''}" data-z="${i}" style="background-image:url(${zoneBannerURL(z)})">
+      <span class="wp-n">${i + 1}</span><span class="wp-t"><b>${esc(z.name)}</b>${locked ? `<small>${iconImg('lock', 12)} Terminez le monde ${i}</small>` : zoneStars(n)}</span>
+      <span class="wp-boss">${locked ? iconImg('lock', 20) : `<img class="px spr" src="${bossOf(z)}" alt="">`}</span></button>`;
   }).join('');
-  return `<section class="showcase">
-      <div class="sc-stage"><canvas class="hc-3d"></canvas>
-        ${save.pet ? `<img class="px spr hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}</div>
-      <div class="sc-info">
-        <span class="sc-role">${esc(c.role)}</span>
-        <h2 class="sc-name">${esc(c.name)}</h2>${heroTitle()}
-        <button class="sc-lvl" data-act="changeClass" aria-label="Niveau du champion">${iconImg('medal', 14)}Niveau ${masteryLv(save.cls)} du champion</button>
-        <button class="sc-mini" data-act="allStats" aria-label="Toutes les statistiques">${iconImg('heart', 14)}<b>${fmt(st.hp)}</b>${iconImg('fist', 14)}<b>${fmt(st.atk)}</b><i>›</i></button>
-        <button class="btn ghost small sc-change" data-act="changeClass">${iconImg('swap', 14)} Changer de champion</button>
-      </div>
-    </section>
-    ${firstSteps() ? `<button class="play-cta" data-act="play">
-      <span class="pc-ic">${iconImg('play', 22)}</span>
-      <span class="pc-txt"><b>Jouer</b><small>Chapitre 1 · ${esc(chapter(0).title)}</small></span>
-      <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
-    </button>` : `<button class="play-cta" data-act="play">
-      <span class="pc-ic">${iconImg('play', 22)}</span>
-      <span class="pc-txt"><b>Jouer <i class="pc-dtag" style="--dc:${D.color}">${esc(D.name)}</i></b><small>Monde ${pz + 1} · ${esc(Z.name)}</small></span>
-      <img class="px spr pc-boss" src="${bossOf(Z)}" alt="">
-    </button>`}
-    ${save.stats.runs ? `${storyTile()}${quick}${defisTile()}` : ''}
-    <h3 class="section-t">Mondes <small>${done}/${ZONES.length}</small></h3>
-    <div class="zones">${zones}</div>`;
+  const p = modal({ title: 'Choisir un monde', cls: 'world-modal', body: `<div class="wp-list">${rows}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: null }], dismissable: true });
+  const box = document.querySelector('.world-modal');
+  box?.addEventListener('click', e => {
+    const r = e.target.closest('.wp-row'); if (!r) return;
+    const i = +r.dataset.z;
+    if (i > save.unlockedZone) { sfx('tap'); toast(`${iconImg('lock', 16)} Terminez d'abord « ${esc(ZONES[i - 1].name)} »`); return; }
+    sfx('tap'); box.closest('.modal-wrap')?.querySelector('.modal-btns .btn')?.click();
+    setTimeout(() => zoneSheet(i).then(() => { if (!battle) home(); }), 200);
+  });
+  return p;
+}
+
+// Accueil : tout tient sur un écran. En haut, les objectifs (boutons ronds) ; au centre, le champion (touche = changer) ;
+// en bas (sous le pouce), JOUER et deux raccourcis : le monde et l'histoire.
+function adventureTab() {
+  const c = CLASSES[save.cls], first = firstSteps(), vet = save.stats.runs > 0;
+  const pz = playZone(), Z = ZONES[pz], { D } = zoneDiff(pz);
+  const sd = storyDone(), all = sd >= storyLen;
+  const cta = first
+    ? `<button class="play-cta" data-act="play"><span class="pc-ic">${iconImg('play', 22)}</span>
+        <span class="pc-txt"><b>Jouer</b><small>Chapitre 1 · ${esc(chapter(0).title)}</small></span><img class="px spr pc-boss" src="${bossOf(Z)}" alt=""></button>`
+    : `<button class="play-cta" data-act="play"><span class="pc-ic">${iconImg('play', 22)}</span>
+        <span class="pc-txt"><b>Jouer</b><small>${esc(Z.name)}</small></span><img class="px spr pc-boss" src="${bossOf(Z)}" alt=""></button>`;
+  return `<section class="home">
+    ${vet ? homeGoals(defisCount()) : ''}
+    <button class="home-hero" data-act="changeClass" aria-label="Changer de champion">
+      <canvas class="hc-3d"></canvas>
+      ${save.pet ? `<img class="px spr hc-pet" src="${creatureURL('pet-' + save.pet, PETS[save.pet].body, PETS[save.pet].pal)}" alt="">` : ''}
+      <span class="hh-id"><small>${esc(c.role)}</small><b>${esc(c.name)}</b><em>${iconImg('medal', 12)} Niveau ${masteryLv(save.cls)}</em></span>
+      ${vet ? `<span class="hh-swap">${iconImg('swap', 14)} Changer</span>` : ''}
+    </button>
+    <div class="home-cta">
+      ${cta}
+      ${vet ? `<div class="home-sub">
+        <button class="hs-btn" data-act="worlds">${iconImg('map', 20)}<span><small>Monde ${pz + 1}</small><b style="--dc:${D.color}">${esc(D.name)}</b></span><i>›</i></button>
+        <button class="hs-btn story ${all ? '' : 'hot'}" data-act="story">${iconImg('book', 20)}<span><small>Histoire</small><b>${all ? 'Terminée' : `Chapitre ${storyNext() + 1}/${storyLen}`}</b></span><i>›</i></button>
+      </div>` : ''}
+    </div>
+  </section>`;
 }
 
 // cases de difficulté battues sous le nom du monde
@@ -952,20 +973,22 @@ async function pauseMenu(resume) {
   const v = await modal({
     title: `<span class="eyebrow">${run.story ? `Chapitre ${run.story.n + 1}` : `Niveau ${(run.stage | 0) + 1}/${DATA.EXPE_LEVELS}`} · Monde ${(z?.id ?? 0) + 1} · ${esc(z?.name || '')}</span><span class="h2-row">Pause${run.diffId ? ` <span class="diff-tag d${run.diffId}${run.abyss ? ' ab' : ''}">${esc(run.diff.name)}</span>` : ''}</span>`,
     cls: 'pause-modal',
-    body: `<div class="pz-sum">
+    body: `<div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
+      <h4>Votre build <small>niveau ${p.level}</small></h4>
+      <div class="pz-build">${p.weapons.map(w => `<span class="pzb r${w.r || 0} ${w.evo ? 'evo' : ''}" title="${esc(w.evo ? evoName(w.id) : WEAPONS[w.id].name)}">${iconImg(w.evo ? DATA.WEAPON_EVOS?.[w.id]?.icon || WEAPONS[w.id].icon : WEAPONS[w.id].icon, 24)}<b>${w.evo ? '★' : w.lv}</b></span>`).join('')}${Array.from({ length: Math.max(0, nW - p.weapons.length) }, () => '<span class="pzb empty"></span>').join('')}
+      </div><div class="pz-build">${tomes.map(([id, lv]) => `<span class="pzb t r${p.tr?.[id] || 0}" title="${esc(TOMES[id].name)}">${iconImg(TOMES[id].icon, 22)}<b>${lv}</b></span>`).join('')}${Array.from({ length: Math.max(0, nT - tomes.length) }, () => '<span class="pzb t empty"></span>').join('')}</div>
+      <h4>Options</h4>
+      <div class="set-list">${sw('pAuto', 'upg', 'Choix automatique des améliorations', save.settings.autoPick)}${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
+      <details class="pz-help"><summary>${iconImg('fist', 16)} Statistiques de la partie</summary>
+      <div class="pz-sum">
         <div><small>Temps</small><b>${fmtTime(run.runTime ?? run.time ?? 0)}</b></div><div><small>Niveau</small><b>${p.level}</b></div>
         <div><small>Monstres</small><b>${fmt(run.kills || 0)}</b></div><div><small>Or</small><b class="gold-t">${fmt(run.gold)}</b></div>
       </div>
-      <div class="pz-hp ${hpK < 0.3 ? 'low' : ''}"><small>PV</small><span class="pbar"><i style="width:${(hpK * 100).toFixed(1)}%"></i></span><b>${fmt(Math.max(0, p.hp))} / ${fmt(p.maxHp)}</b></div>
       <div class="pz-sum pz-st">${pzStats(p)}</div>
       ${abyssPause(run.abyss)}
-      <h4>Armes <small>${p.weapons.length}/${nW}</small></h4>
-      <div class="cur-build">${p.weapons.map(wRow).join('')}${free(nW - p.weapons.length)}</div>
-      <h4>Tomes <small>${tomes.length}/${nT}</small></h4>
-      <div class="cur-build">${tomes.map(tRow).join('')}${free(nT - tomes.length)}</div>
-      ${runBoosts.length ? `<h4>Bonus</h4><div class="cur-build boosts-on">${runBoosts.map(id => `<span class="bl">${iconImg(BOOSTS[id].icon, 20)}<span class="bl-t"><b>${esc(BOOSTS[id].name)}</b></span></span>`).join('')}</div>` : ''}
-      <h4>Options</h4>
-      <div class="set-list">${sw('pAuto', 'upg', 'Choix automatique des améliorations', save.settings.autoPick)}${sw('pSound', 'sound', 'Son', save.settings.sound)}${sw('pMus', 'music', 'Musique', save.settings.music !== false)}${sw('pVib', 'vibrate', 'Vibrations', save.settings.vibrate)}</div>
+      ${p.weapons.length || tomes.length ? `<div class="cur-build">${p.weapons.map(wRow).join('')}${tomes.map(tRow).join('')}</div>` : ''}
+      ${runBoosts.length ? `<div class="cur-build boosts-on">${runBoosts.map(id => `<span class="bl">${iconImg(BOOSTS[id].icon, 20)}<span class="bl-t"><b>${esc(BOOSTS[id].name)}</b></span></span>`).join('')}</div>` : ''}
+      </details>
       <details class="pz-help"><summary>${iconImg('info', 16)} Comment jouer</summary>
       <div class="howto">
         <p>${iconImg('arrow', 20)}<span><b>Se déplacer</b> : glissez le doigt n'importe où sur l'écran. Tout se joue avec un seul doigt.</span></p>
@@ -1402,7 +1425,19 @@ function summaryScreen(R, opened = []) {
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
-  mount(`<div class="reward-screen ${won ? 'complete' : 'lost'}${R.final ? ' giga' : ''}">
+  // bilan court : l'essentiel d'abord (titre, 4 chiffres, récompenses en pastilles, boutons), le détail se déplie
+  const nItems = R.found.length, nAch = R.got?.length || 0, xpPass = R.pass?.xp || 0;
+  const chip = (ic, txt, cls = '') => `<span class="rs-chip ${cls}">${iconImg(ic, 16)}${txt}</span>`;
+  const chips = [
+    chip('gold', `<b>+${fmt(R.gold)}</b> or`, 'gold'),
+    opened.length ? chip('chest', `<b>${opened.length}</b> coffre${opened.length > 1 ? 's' : ''}`) : pending ? chip('chest', `<b>${pending}</b> à ouvrir`) : '',
+    nItems ? chip('sword', `<b>${nItems}</b> objet${nItems > 1 ? 's' : ''}`) : '',
+    xpPass ? chip('flag', `<b>+${fmt(xpPass)}</b> XP de pass`) : '',
+    R.newZone != null ? chip('star', `Nouveau monde : <b>${esc(ZONES[R.newZone].name)}</b>`, 'new') : '',
+    R.unlocked ? chip(DIFFICULTIES[R.unlocked].icon, `<b>${esc(DIFFICULTIES[R.unlocked].name)}</b> débloqué`, 'new') : '',
+    nAch ? chip('crown', `<b>${nAch}</b> succès`, 'new') : '',
+  ].filter(Boolean).join('');
+  mount(`<div class="reward-screen rs-short ${won ? 'complete' : 'lost'}${R.final ? ' giga' : ''}">
     <span class="eyebrow rs-eyebrow">${eyebrow}</span>
     <h2 class="rs-title">${title}</h2>
     <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
@@ -1414,6 +1449,13 @@ function summaryScreen(R, opened = []) {
       <div class="${R.record ? 'rec' : ''}"><b>${sum.level}</b><small>${R.record ? 'Record' : 'Niveau'}</small></div>
       <div><b class="gold-t cu" data-n="${R.gold}">${fmt(R.gold)}</b><small>Or gagné</small></div>
     </div>
+    <div class="rs-chips">${chips}</div>
+    ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
+    <div class="end-btns rs-btns">
+      <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
+      <button class="btn primary" data-act="${S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
+    </div>
+    <details class="rs-more"><summary>Voir le détail de la partie</summary>
     ${runPassBlock(R.pass)}
     ${worldCards ? `<h3 class="section-t">Mondes vaincus <small>${cleared.length}</small></h3><div class="worlds-res">${worldCards}</div>` : ''}
     ${heatLine || chestLine || pendLine ? `<div class="summary">${heatLine}${chestLine}${pendLine}</div>` : ''}
@@ -1425,12 +1467,7 @@ function summaryScreen(R, opened = []) {
       <div class="ach-got">${R.got.map((a, i) => `<span style="--d:${(0.3 + i * 0.08).toFixed(2)}s">${iconImg('crown', 22)}<b>${esc(a.name)}</b><em>${iconImg('gold', 14)} ${a.gold}</em></span>`).join('')}</div>` : ''}
     <h3 class="section-t">Build <small>${sum.evo ? esc(EVOLUTIONS[save.cls][sum.evo].name) : `niveau ${sum.level}`}</small></h3>
     <div class="build">${sum.weapons.map(w => `<span class="b-w r${w.r || 0} ${w.evo ? 'evo' : ''}">${iconImg(w.evo ? DATA.WEAPON_EVOS?.[w.id]?.icon || WEAPONS[w.id].icon : WEAPONS[w.id].icon, 22)}<b>${w.evo ? '★' : w.lv}</b></span>`).join('')}${Object.entries(sum.tomes).map(([id, lv]) => `<span class="b-t">${iconImg(TOMES[id].icon, 18)}<b>${lv}</b></span>`).join('')}</div>
-    ${sum.combo >= 10 || sum.evos?.length ? `<p class="build-sub">${sum.combo >= 10 ? `<span>Meilleur combo <b>${fmt(sum.combo)}</b></span>` : ''}${sum.evos?.length ? `<span>Évolution${sum.evos.length > 1 ? 's' : ''} <b>${sum.evos.map(id => esc(DATA.WEAPON_EVOS?.[id]?.name || WEAPONS[id]?.name || id)).join(', ')}</b></span>` : ''}</p>` : ''}
-    ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
-    <div class="end-btns">
-      <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
-      <button class="btn primary" data-act="${S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
-    </div>
+    </details>
   </div>`);
   $$('.reward-screen .cu').forEach(el => countUp(el, +el.dataset.n || 0, 900));
   for (const it of R.found) delete it._eq;
@@ -1818,7 +1855,8 @@ function buyUpgrade(k) {
 function trophiesTab() {
   const st = save.stats;
   const seen = Object.keys(st.seen).length;
-  return `<div class="stat-grid">
+  return `<div class="cs-bar tr-bar"><button class="icon-btn" data-act="tab" data-tab="adventure" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Succès</h2></div>
+    <div class="stat-grid">
       <div><b>${fmt(st.wins)}</b><small>Boss vaincus</small></div>
       <div><b>${seen}/${MONSTER_COUNT + BOSS_COUNT}</b><small>Bestiaire</small></div>
       <div><b>${fmt(st.kills || 0)}</b><small>Monstres vaincus</small></div>

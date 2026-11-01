@@ -133,7 +133,7 @@ b, strong { font-weight: 600; }
 .sync.error { background: var(--red); }
 .hub-main { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 16px 16px 32px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
 
-.tabs { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(5, 1fr); padding: 0 4px var(--safe-b); border-top: 1px solid var(--ln); background: rgba(8,10,16,.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.tabs { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 4px var(--safe-b); border-top: 1px solid var(--ln); background: rgba(8,10,16,.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; height: 60px; font: 700 10.5px/1 var(--fd); letter-spacing: .12em; text-transform: uppercase; color: var(--tx3); transition: color .15s; }
 .tab img { width: 22px; height: 22px; filter: brightness(0) invert(.48); transition: filter .15s, transform .15s; }
 .tab span { white-space: nowrap; }
@@ -2141,3 +2141,102 @@ button.itile:active { transform: translateY(1px); }
 
 /* ---------- Écran des champions, puces d'évolution sur petit écran (iPhone SE) : « Morgane », « Corsaire » tiennent sur une ligne ---------- */
 @media (max-width: 340px) { .evo-chain .evo b { letter-spacing: .015em; } }
+
+/* ===== Accueil sur un seul écran (r17) : objectifs en haut, champion au centre, JOUER sous le pouce ===== */
+.hub-main.is-home { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.home { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 14px; }
+/* objectifs : boutons carrés égaux, pastille rouge quand il y a quelque chose à prendre */
+.goals { display: flex; gap: 6px; }
+.goal { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 7px; background: var(--s1); border: 1px solid var(--ln); border-radius: var(--rad); transition: transform .12s, background .15s; }
+.goal:active { transform: translateY(1px); background: var(--s2); }
+.goal img { width: 24px; height: 24px; }
+.goal b { font: 700 11px/1 var(--fd); letter-spacing: .08em; text-transform: uppercase; }
+.goal small { font: 600 10px/1 var(--fd); letter-spacing: .04em; color: var(--tx3); white-space: nowrap; }
+.goal.hot { border-color: rgba(245,180,0,.6); background: linear-gradient(180deg, #2a2110, var(--s1)); }
+.goal .badge.count { position: absolute; top: -6px; right: -4px; left: auto; }
+/* champion : prend toute la place libre ; touche = changer */
+.home-hero { position: relative; flex: 1; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 6px; }
+.home-hero::before { content: ''; position: absolute; left: 14%; right: 14%; bottom: 74px; height: 60px; background: radial-gradient(closest-side, rgba(63,208,255,.22), transparent); }
+.home-hero canvas.hc-3d { position: absolute; left: 0; right: 0; top: 0; bottom: 80px; width: 100%; height: calc(100% - 80px); display: block; }
+.home-hero .hc-pet { position: absolute; z-index: 2; right: 14%; bottom: 58px; width: 46px; height: 46px; }
+.hh-id { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.hh-id small { font: 700 11px/1 var(--fd); letter-spacing: .2em; text-transform: uppercase; color: var(--cy); }
+.hh-id b { font: 700 30px/1 var(--fd); letter-spacing: .08em; text-transform: uppercase; }
+.hh-id em { display: inline-flex; align-items: center; gap: 4px; font: 700 11px/1 var(--fd); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
+.hh-id em img { width: 12px; height: 12px; }
+.hh-swap { position: absolute; top: 4px; right: 0; z-index: 2; display: inline-flex; align-items: center; gap: 5px; padding: 7px 10px; font: 700 11px/1 var(--fd); letter-spacing: .12em; text-transform: uppercase; color: var(--tx2); background: rgba(10,13,20,.7); border: 1px solid var(--ln2); border-radius: var(--rad); }
+.hh-swap img { width: 14px; height: 14px; }
+/* JOUER et ses deux raccourcis */
+.home-cta { display: flex; flex-direction: column; gap: 8px; }
+.home-cta .play-cta { margin-top: 0; min-height: 76px; }
+.home-sub { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hs-btn { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 8px 10px 8px 12px; text-align: left; background: var(--s1); border: 1px solid var(--ln2); border-radius: var(--rad); transition: transform .12s, background .15s; }
+.hs-btn:active { transform: translateY(1px); background: var(--s2); }
+.hs-btn img { width: 20px; height: 20px; flex: none; }
+.hs-btn span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hs-btn small { font: 700 10px/1 var(--fd); letter-spacing: .14em; text-transform: uppercase; color: var(--tx3); }
+.hs-btn b { font: 700 15px/1.05 var(--fd); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hs-btn b[style]::before { content: ''; display: inline-block; width: 7px; height: 7px; margin: 0 6px 2px 0; background: var(--dc); }
+.hs-btn i { font-style: normal; font-weight: 700; color: var(--tx3); }
+.hs-btn.story.hot { border-color: rgba(245,180,0,.55); background: linear-gradient(90deg, #22190a, var(--s1)); }
+.hs-btn.story.hot small { color: var(--acc); }
+/* choix du monde */
+.wp-list { display: grid; gap: 6px; }
+.wp-row { position: relative; display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 6px 8px 6px 12px; text-align: left; overflow: hidden; background-color: var(--s1); background-size: auto 100%; background-position: right center; background-repeat: no-repeat; border: 1px solid var(--ln); border-radius: var(--rad); }
+.wp-row::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--s1) 0%, var(--s1) 40%, rgba(18,24,38,.75) 70%, rgba(18,24,38,.35) 100%); }
+.wp-row > * { position: relative; }
+.wp-row.cur { border-color: rgba(245,180,0,.7); }
+.wp-row.locked { background-image: none !important; opacity: .65; }
+.wp-n { width: 22px; flex: none; font: 700 22px/1 var(--fd); color: var(--tx3); }
+.wp-row.cur .wp-n { color: var(--acc); }
+.wp-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wp-t b { font: 700 15px/1.05 var(--fd); letter-spacing: .05em; text-transform: uppercase; }
+.wp-t small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--tx2); }
+.wp-t .z-done { margin-top: 0; }
+.wp-boss { width: 44px; height: 44px; flex: none; display: grid; place-items: center; }
+.wp-boss img.spr { width: 44px; height: 44px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+.wp-boss img.ic { width: 18px; height: 18px; opacity: .6; }
+.world-modal .modal-body { max-height: 62vh; }
+/* succès (ouverts depuis l'accueil) */
+.tr-bar { margin-bottom: 12px; }
+.tr-bar .cs-title { flex: 1; }
+/* petits écrans : champion plus petit, tout reste visible */
+@media (max-height: 620px) {
+  .home { gap: 8px; padding: 8px 12px 10px; }
+  .goal { padding: 6px 1px 5px; }
+  .goal img { width: 20px; height: 20px; }
+  .goal small { display: none; }
+  .hh-id b { font-size: 24px; }
+  .home-cta .play-cta { min-height: 64px; }
+  .home-cta .pc-txt b { font-size: 26px; }
+  .hs-btn { min-height: 48px; }
+}
+/* ===== Bilan court (r17) ===== */
+.rs-short .run-stats { margin-top: 14px; }
+.rs-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.rs-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; font: 600 13px/1.1 var(--fb); background: var(--s1); border: 1px solid var(--ln2); border-radius: var(--rad); }
+.rs-chip img { width: 16px; height: 16px; }
+.rs-chip b { font: 700 15px/1 var(--fd); }
+.rs-chip.gold b { color: var(--acc); }
+.rs-chip.new { border-color: rgba(245,180,0,.6); background: linear-gradient(90deg, #2a2110, var(--s1)); }
+.rs-short .rs-btns { margin: 6px -16px 0; padding: 10px 16px calc(var(--safe-b) + 10px); } /* collés en bas de l'écran (end-btns), juste sous les récompenses */
+.rs-short .rs-more { order: 9; margin-bottom: 16px; }
+.rs-more { margin-top: 6px; }
+.rs-more > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; font: 700 12px/1 var(--fd); letter-spacing: .14em; text-transform: uppercase; color: var(--tx2); border: 1px dashed var(--ln2); border-radius: var(--rad); }
+.rs-more > summary::-webkit-details-marker { display: none; }
+.rs-more > summary::after { content: '▾'; font-size: 12px; }
+.rs-more[open] > summary::after { content: '▴'; }
+/* ===== Pause allégée (r17) : build en icônes ===== */
+.pz-build { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pzb { position: relative; width: 44px; height: 44px; display: grid; place-items: center; background: var(--s1); border: 1px solid var(--ln2); border-radius: var(--rad); }
+.pzb img { width: 24px; height: 24px; }
+.pzb.t img { width: 22px; height: 22px; }
+.pzb b { position: absolute; right: -4px; top: -6px; min-width: 16px; height: 16px; padding: 0 3px; font: 700 11px/16px var(--fd); text-align: center; color: #0a0d14; background: #fff; }
+.pzb.evo { border-color: var(--acc); background: linear-gradient(180deg, #2a2110, var(--s1)); }
+.pzb.evo b { background: var(--acc); }
+.pzb.r1 { border-color: var(--r1); } .pzb.r2 { border-color: var(--r2); } .pzb.r3 { border-color: var(--r3); }
+.pzb.empty { border-style: dashed; background: transparent; opacity: .5; }
+.pz-build + .pz-build { margin-top: 6px; }
+.pz-help + .pz-help { margin-top: 6px; }
+.hc-change { align-self: flex-start; margin-top: 8px; min-height: 38px; }
+.hc-change img { width: 14px; height: 14px; }
