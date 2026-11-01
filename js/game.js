@@ -481,7 +481,7 @@ function classSelect(first) {
       ${first ? `<div class="title-logo"><div class="l1">League of</div><div class="l3">B<em>o</em>nk</div></div><p class="cs-sub">Choisissez votre champion</p>`
         : `<div class="cs-bar"><button class="icon-btn" data-act="back" aria-label="Retour">${iconImg('back', 20)}</button><h2 class="cs-title">Champions</h2></div>`}
       <div class="cs-stage"><canvas class="cs-3d"></canvas><div class="cs-id"><span class="role">${esc(c.role)}</span><h3>${esc(c.name)}</h3></div></div>
-      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
+      <div class="cs-tabs">${Object.values(CLASSES).map(k => `<button class="cs-tab ${k.id === sel ? 'on' : ''} ${clsLocked(k.id) ? 'locked' : ''} ${masteryLv(k.id) >= DATA.MASTERY.max ? 'm-gold' : ''}" data-act="pick" data-c="${k.id}"><img class="px spr" src="${heroURL(k.id, k.colors)}" alt=""><span>${k.tab || k.role}</span>${clsLocked(k.id) ? `<i class="cs-lk">${iconImg('lock', 14)}</i>` : masteryChip(k.id)}</button>`).join('')}</div>
       <section class="cs-detail">
         <p class="cs-desc">${esc(c.desc)}</p>
         ${lk ? clsLockPanel(sel) : ''}

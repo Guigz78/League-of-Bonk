@@ -71,7 +71,7 @@ export const CLASSES = {
   // plus (save.playerStats ; ne compte pas dans la chance des cartes), lootUp = chance qu'un coffre de butin monte d'un rang
   // (run.lootTier). Ultime et armes : js/champion-pirate.js, js/arsenal-pirate.js
   pirate: {
-    id: 'pirate', name: 'Morgane', role: 'Capitaine pirate', locked: true,
+    id: 'pirate', name: 'Morgane', role: 'Capitaine pirate', tab: 'Pirate', locked: true, // tab : nom court de l'onglet (écran des champions)
     desc: 'Ses pistolets crépitent, son sabre tranche les abordages… et tout l\'or finit dans ses coffres.',
     hp: 120, atk: 14, crit: 0.1, speed: 1.03, goldPct: 0.2, lootUp: 0.15,
     weapon: 'pistols', ult: 'broadside',
