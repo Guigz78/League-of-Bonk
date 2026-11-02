@@ -34,15 +34,29 @@ export function countUp(el, to, ms = 700, pre = '') {
 }
 
 // verrouillage iOS : pas de zoom (double-tap, pincement), de menu contextuel, de sélection, de glisser d'image
-// ni de rebond de la page ; seules les zones prévues pour défiler défilent
+// ni de rebond de la page ; seules les zones qui défilent défilent. La zone sous le doigt est cherchée au début du geste :
+// une zone connue (SCROLLERS) ou tout élément qui déborde avec overflow auto/scroll (un nouvel écran défile sans être
+// déclaré ici ; avant, la carte de l'histoire, par exemple, ne défilait pas).
 const SCROLLERS = '.hub-main, .modal-body, .class-select, .chest-screen, .reward-screen, .cst-recap, .lvl-ov .lvlup, .scroll';
+const overflows = n => {
+  if (n.scrollHeight > n.clientHeight + 1) { const o = getComputedStyle(n).overflowY; if (o === 'auto' || o === 'scroll') return true; }
+  if (n.scrollWidth > n.clientWidth + 1) { const o = getComputedStyle(n).overflowX; if (o === 'auto' || o === 'scroll') return true; }
+  return false;
+};
+const scrollerUnder = el => {
+  if (el?.closest?.(SCROLLERS)) return true;
+  for (let n = el; n && n.nodeType === 1 && n !== document.body; n = n.parentElement) if (overflows(n)) return true;
+  return false;
+};
+let canPan = false;
 const stop = e => e.preventDefault();
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'dragstart']) document.addEventListener(ev, stop, { passive: false });
 document.addEventListener('contextmenu', stop);
 document.addEventListener('selectstart', e => { if (!e.target.closest?.('input, textarea')) e.preventDefault(); });
+// (cet écouteur sert aussi à iOS pour afficher l'état :active des boutons sous le doigt)
+document.addEventListener('touchstart', e => { canPan = e.touches.length === 1 && scrollerUnder(e.target); }, { passive: true, capture: true });
 document.addEventListener('touchmove', e => {
-  if (e.touches.length > 1) { e.preventDefault(); return; }
-  if (!e.target.closest?.(SCROLLERS)) e.preventDefault();
+  if (e.touches.length > 1 || !canPan) e.preventDefault();
 }, { passive: false });
 
 export function $(sel, root = document) { return root.querySelector(sel); }

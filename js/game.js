@@ -207,6 +207,8 @@ function statRows(it, { cmp = null, next = null } = {}) {
 }
 // encadré de l'effet unique d'un objet légendaire
 const effectBox = id => (LEGEND_EFFECTS[id] ? `<div class="fx-box"><b>${iconImg('star', 16)} ${esc(LEGEND_EFFECTS[id].name)}</b><small>${esc(LEGEND_EFFECTS[id].desc)}</small></div>` : '');
+// consigne « touchez… » au-dessus d'une liste d'éléments à toucher (tuiles en relief)
+const tapHint = t => `<p class="tap-hint"><i>👆</i>${t}</p>`;
 // pouvoir d'un objet mythique (js/mythic.js)
 const mythBox = id => (MYTHIC_POWERS[id] ? `<div class="fx-box myth"><b><i class="mb-ic">${MYTHIC_POWERS[id].icon}</i><span><small>Pouvoir mythique</small>${esc(MYTHIC_POWERS[id].name)}</span></b><small>${esc(MYTHIC_POWERS[id].desc)}</small></div>` : '');
 // effet légendaire ou pouvoir mythique d'un objet
@@ -1576,7 +1578,8 @@ function gearTab() {
     .sort((a, b) => itemPower(b) - itemPower(a));
   const pets = Object.entries(PETS).map(([id, p]) => {
     const owned = save.pets.includes(id);
-    return `<button class="pet-card ${owned ? '' : 'locked'} ${save.pet === id ? 'on' : ''}" ${owned ? `data-act="pet" data-id="${id}"` : ''}>
+    // verrouillé : panneau plat et inactif (rien à toucher)
+    return `<button class="pet-card ${owned ? '' : 'locked'} ${save.pet === id ? 'on' : ''}" ${owned ? `data-act="pet" data-id="${id}"` : 'disabled'}>
       ${owned ? `<img class="px spr" src="${creatureURL('pet-' + id, p.body, p.pal)}" alt="">` : iconImg('lock', 24)}
       <b>${owned ? esc(p.name) : '???'}</b>
       <small>${owned ? esc(p.desc) : `Terminez « ${esc(ZONES[p.zone].name)} »`}</small>
@@ -1589,6 +1592,7 @@ function gearTab() {
   persist({ touch: false });
   return `${heroCard()}
     <h3 class="section-t">Équipé</h3>
+    ${tapHint('Touchez un objet pour le voir, l\'améliorer ou en changer')}
     <div class="slots">${slots}</div>
     <h3 class="section-t">Sac <small>${list.length} objet${list.length > 1 ? 's' : ''}</small></h3>
     <div class="filters">${[['all', 'Tout'], ...Object.entries(SLOTS)].map(([k, l]) => `<button class="chip-btn ${gearFilter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${l}</button>`).join('')}
@@ -1596,6 +1600,7 @@ function gearTab() {
     ${list.length ? `<div class="inv-grid">${list.map(it => itemTile(it, { cur: save.inventory.find(i => i.id === save.equipped[it.slot]) || null, isNew: fresh.has(it.id) })).join('')}</div>`
     : '<p class="muted center empty-note">Ouvrez des coffres de butin et battez des boss pour trouver de l\'équipement.</p>'}
     <h3 class="section-t">Familier <small>${save.pets.length}/6</small></h3>
+    ${save.pets.length ? tapHint('Touchez un familier pour l\'emmener (ou le laisser)') : ''}
     <div class="pets">${pets}</div>
     <h3 class="section-t">Bonus <small>${nB} en stock</small></h3>
     ${boosts.length ? `<div class="boost-inv">${boosts.map(id => `<div class="bi-chip">${iconImg(BOOSTS[id].icon, 28)}<span><b>${esc(BOOSTS[id].name)}</b><small>${esc(BOOSTS[id].desc)}</small></span><em>×${save.boosts[id]}</em></div>`).join('')}</div>
@@ -1746,6 +1751,7 @@ function forgeBody() {
   </div>`;
   const nFuse = Math.floor(have / FORGE.fuse);
   return `<h3 class="section-t">Pièces <small>${total} au total</small></h3>
+    ${tapHint('Touchez une case pour choisir les pièces à utiliser')}
     ${grid}
     <div class="forge-panel card">
       <div class="fp-head">${partIcon(slot, r, 30)}<div><b>${esc(PARTS[slot].plural)}</b><small>${rTag(r)} ${have} en stock</small></div></div>
@@ -1782,6 +1788,7 @@ function mythForge() {
   return `<section class="myth-forge">
     <div class="mf-head"><i class="shard-ic">✦</i><div><b>Objets mythiques <small>${got.length}/${MYTHIC_ITEMS.length}</small></b>
       <small>Uniques et surpuissants. Seul Gorgoth en laisse : battez-le au bout d'une expédition. Son Giga coffre donne des éclats (plus en Difficile et en Cauchemar) et parfois un objet mythique.</small></div></div>
+    ${tapHint('Touchez un objet pour voir son pouvoir')}
     <div class="mf-col">${cells}</div>
     ${all ? '<p class="mf-done">✦ Collection complète : vous êtes une légende.</p>' : `<div class="mf-bar"><span class="pbar"><i style="width:${Math.min(100, n / MYTHIC.shards * 100).toFixed(1)}%"></i></span><b>${n}/${MYTHIC.shards}</b><small>éclats</small></div>
     <button class="btn myth-btn" data-act="forgeMyth" ${canForgeMythic() ? '' : 'disabled'}><i class="shard-ic">✦</i> Forger un objet mythique</button>`}
@@ -1907,7 +1914,7 @@ function shopTab() {
       </div>` : `<div class="upgrade boost-card locked" data-act="defis">
         <span class="bo-ic">${iconImg(b.icon, 32)}${save.boosts[id] ? `<i class="bo-n">×${save.boosts[id]}</i>` : ''}</span>
         <div class="u-txt"><b>${esc(b.name)}</b><small>${esc(b.desc)}</small><small class="lk-l">${iconImg('lock', 12)} ${esc(lockLine('boost:' + id))}</small></div>
-        <span class="lk-b">${iconImg('lock', 18)}</span>
+        <span class="lk-go">Défi<i>›</i></span>
       </div>`).join('')}</div>`;
 }
 

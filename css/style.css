@@ -2481,3 +2481,40 @@ button.itile:active { transform: translateY(1px); }
   .rcard .fx-box > small { font-size: 11.5px; line-height: 1.3; }
   .rcard .mb-ic { width: 28px; height: 28px; font-size: 18px; }
 }
+
+/* ===== Ce qui se touche se voit (r24) =====
+   Une seule règle partout : un élément qu'on peut toucher est une tuile en relief (fond un peu plus clair, filet net,
+   ombre portée sous la tuile) qui s'enfonce et s'éclaire sous le doigt ; une ligne qui ouvre une fiche a un chevron ›.
+   Les panneaux d'information (quêtes, défis, pass, statistiques, familiers verrouillés) restent plats, sans ombre. */
+:root { --lip: rgba(0,0,0,.62); --tap-ln: rgba(255,255,255,.17); }
+.wp-row:not(.locked), .sm-ch:not(:disabled), button.itile, button.pet-card:not(:disabled), .hs-btn, button.goal, .cg-card, .pg-cell, .title-card,
+.cs-tab, .bslot, .mf-cell, .boost-card[data-act], .chip-btn, .df-cat, .hc-stats, .cur {
+  box-shadow: 0 3px 0 var(--lip), inset 0 1px 0 rgba(255,255,255,.06);
+  transition: transform .08s, box-shadow .08s, filter .08s;
+}
+/* tuiles neutres : fond un cran plus clair et filet plus net que les panneaux d'information */
+.sm-ch:not(:disabled), button.pet-card:not(:disabled), .hs-btn, button.goal, .pg-cell, .title-card, .cs-tab, .chip-btn, .df-cat { background-color: var(--s2); }
+.sm-ch:not(:disabled), button.pet-card:not(.on):not(:disabled), .hs-btn, button.goal:not(.hot), .pg-cell:not(.on), .title-card, .cs-tab:not(.on), .chip-btn:not(.on), .df-cat:not(.on), .wp-row:not(.cur):not(.locked), .boost-card[data-act] { border-color: var(--tap-ln); }
+.boost-card[data-act] { border: 1px solid var(--tap-ln); background: var(--s1); }
+/* sous le doigt : la tuile s'enfonce (l'ombre se réduit) et s'éclaire */
+.wp-row:not(.locked):active, .sm-ch:not(:disabled):active, button.itile:active, button.pet-card:not(:disabled):active, .hs-btn:active, button.goal:active,
+.cg-card:active, .pg-cell:active, .title-card:active, .cs-tab:active, .bslot:active, .mf-cell:active, .boost-card[data-act]:active,
+.chip-btn:active, .df-cat:active, .hc-stats:active, .cur:active {
+  transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); filter: brightness(1.2);
+}
+/* tout autre élément touchable s'éclaire au moins sous le doigt */
+button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active { filter: brightness(1.2); }
+/* chevron des lignes qui ouvrent une fiche (mondes, chapitres) */
+.wp-row:not(.locked)::after, .sm-ch:not(:disabled)::after { content: '›'; position: relative; flex: none; margin: 0 0 2px 2px; font: 700 28px/1 var(--fd); color: var(--tx2); }
+.wp-row.cur::after, .sm-ch.cur::after { color: var(--acc); }
+/* éléments verrouillés ou d'information : plats */
+.wp-row.locked, .sm-ch:disabled, .pet-card:disabled { box-shadow: none; }
+.pet-card:disabled { border-style: dashed; cursor: default; }
+/* consigne « touchez… » au-dessus d'une liste à toucher */
+.tap-hint { display: flex; align-items: center; gap: 6px; margin: -4px 0 10px; font: 500 12.5px/1.3 var(--fb); color: var(--tx2); }
+.tap-hint i { flex: none; font-style: normal; font-size: 14px; }
+.myth-forge .tap-hint { margin: 10px 0 -2px; }
+/* bonus verrouillé : renvoi vers son défi */
+.lk-go { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 6px 8px 6px 10px; font: 700 12px/1 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: var(--acc); border: 1px solid rgba(245,180,0,.45); background: rgba(245,180,0,.06); }
+.lk-go i { font-style: normal; font-size: 18px; line-height: .8; }
+.boost-card.locked { opacity: 1; }
