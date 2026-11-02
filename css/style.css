@@ -2518,3 +2518,52 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
 .lk-go { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 6px 8px 6px 10px; font: 700 12px/1 var(--fd); letter-spacing: .1em; text-transform: uppercase; color: var(--acc); border: 1px solid rgba(245,180,0,.45); background: rgba(245,180,0,.06); }
 .lk-go i { font-style: normal; font-size: 18px; line-height: .8; }
 .boost-card.locked { opacity: 1; }
+
+/* ===== Barre du haut (r25) : pièces, or, compte et options à la même hauteur, même style ===== */
+.topbar { gap: 6px; }
+.topbar .cur, .topbar .icon-btn { height: 40px; box-sizing: border-box; background: var(--s2); border: 1px solid var(--ln2); border-radius: var(--rad); box-shadow: 0 3px 0 var(--lip), inset 0 1px 0 rgba(255,255,255,.06); }
+.topbar .icon-btn { width: 40px; flex: none; }
+.topbar .cur { padding: 0 9px 0 7px; }
+.topbar .icon-btn .avatar { width: 30px; height: 30px; }
+.topbar .icon-btn.account.in { border-color: rgba(61,220,132,.45); }
+.topbar .icon-btn:active, .topbar .cur:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); filter: brightness(1.2); }
+/* petits écrans : le nom du jeu se fait discret pour laisser la place aux 4 boutons */
+@media (max-width: 370px) {
+  .topbar { padding-left: 12px; padding-right: 12px; gap: 5px; }
+  .tb-brand { font-size: 14px; letter-spacing: .1em; }
+  .tb-brand span { font-size: 8px; letter-spacing: .26em; }
+  .topbar .cur { gap: 5px; padding: 0 7px 0 6px; }
+  .topbar .cur img { width: 16px; height: 16px; }
+}
+/* Options : ligne « Compte » qui ouvre la fiche */
+.set-link { width: 100%; text-align: left; }
+.set-link .avatar { width: 22px; height: 22px; }
+.set-go { margin-left: auto; font: 700 24px/1 var(--fd); font-style: normal; color: var(--tx2); }
+/* fiche Compte */
+.ac-head { display: flex; align-items: center; gap: 14px; padding: 12px; background: linear-gradient(90deg, rgba(63,208,255,.1), var(--s1)); border: 1px solid var(--ln2); }
+.ac-pic { flex: none; width: 64px; height: 64px; object-fit: contain; background: rgba(0,0,0,.3); box-shadow: inset 0 0 0 1px var(--ln2); }
+.ac-id { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.ac-id b { font: 700 19px/1.1 var(--fd); letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ac-id small { font-size: 12.5px; color: var(--tx2); overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ac-title { display: inline-flex; align-items: center; gap: 6px; margin-top: 3px; padding: 5px 8px; font: 700 12px/1 var(--fd); letter-spacing: .08em; text-transform: uppercase; color: var(--acc); background: rgba(245,180,0,.08); border: 1px solid rgba(245,180,0,.4); box-shadow: 0 2px 0 var(--lip); }
+.ac-title img { width: 14px; height: 14px; }
+.ac-title i { font-style: normal; font-size: 16px; line-height: .8; }
+.ac-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.ac-nums div { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 4px; text-align: center; background: var(--s1); border: 1px solid var(--ln); }
+.ac-nums img { width: 18px; height: 18px; opacity: .85; }
+.ac-nums b { font: 700 17px/1 var(--fd); }
+.ac-nums small { font: 600 10.5px/1.15 var(--fb); color: var(--tx2); }
+.ac-sync { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13.5px; color: var(--tx2); }
+.ac-sync i { flex: none; width: 9px; height: 9px; background: var(--tx3); }
+.ac-sync.synced i { background: var(--green); } .ac-sync.syncing i { background: var(--cy); } .ac-sync.pending i { background: var(--acc); } .ac-sync.error i { background: var(--red); }
+.account-modal .btn.google { width: 100%; }
+.set-link { margin-bottom: 4px; border: 1px solid var(--tap-ln); box-shadow: 0 3px 0 var(--lip); }
+.set-link:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); }
+.topbar .cur-v b { white-space: nowrap; }
+@media (max-width: 370px) { .topbar .cur-v b { font-size: 14px; } }
+@media (max-width: 370px) {
+  .topbar { gap: 4px; }
+  .topbar .cur { gap: 4px; padding: 0 6px 0 5px; }
+  .tb-brand { letter-spacing: .06em; }
+  .tb-brand span { letter-spacing: .2em; }
+}

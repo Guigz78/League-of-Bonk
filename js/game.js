@@ -15,7 +15,7 @@ import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 import { loginState, dailyBadge } from './daily.js';
 // L1 : saison, quêtes de la semaine, calendrier de 20 jours, succès, titres
-import { seasonRun, checkAchievements } from './season.js';
+import { seasonRun, checkAchievements, achList, titleName } from './season.js';
 import { hubStrip, homeGoals, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet, achBlock, titleSheet, seasonNotice } from './season-ui.js';
 // L2 : défis de déblocage, maîtrise des champions, Abysse
 import { l2Home, endRunL2, l2Results, defisScreen, defisTile, defisCount, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
@@ -61,24 +61,28 @@ function autoLogin() {
 
 // ---------- Barre du haut ----------
 const partsTotal = () => Object.values(save.parts).reduce((n, a) => n + a.reduce((x, y) => x + y, 0), 0);
+// montant court pour la barre du haut (la place est comptée sur iPhone SE) : 4 740, 11,1 k, 123 k, 1,23 M
+const short = n => (n < 1e4 ? fmt(n) : n < 1e5 ? `${(Math.floor(n / 100) / 10).toLocaleString('fr-FR')} k` : n < 1e6 ? `${Math.floor(n / 1000)} k`
+  : `${(Math.floor(n / 1e4) / 100).toLocaleString('fr-FR')} M`);
 function topbar() {
   const u = cloud.user;
   const st = cloud.status;
   const dot = !u ? '' : `<i class="sync ${st}"></i>`;
   return `<header class="topbar">
     <div class="tb-brand">League<span>of Bonk</span></div>
-    <button class="cur" data-act="cur" data-k="parts" aria-label="Pièces de forge">${iconImg('part', 18)}<span class="cur-v"><b id="partsN">${fmt(partsTotal())}</b><small>Pièces</small></span></button>
-    <button class="cur gold" data-act="cur" data-k="gold" aria-label="Or">${iconImg('gold', 18)}<span class="cur-v"><b id="goldN">${fmt(save.gold)}</b><small>Or</small></span></button>
-    <button class="icon-btn account" data-act="settings" aria-label="Compte et options">
-      ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('gear', 22)}${dot}
+    <button class="cur" data-act="cur" data-k="parts" aria-label="Pièces de forge">${iconImg('part', 18)}<span class="cur-v"><b id="partsN">${short(partsTotal())}</b><small>Pièces</small></span></button>
+    <button class="cur gold" data-act="cur" data-k="gold" aria-label="Or">${iconImg('gold', 18)}<span class="cur-v"><b id="goldN">${short(save.gold)}</b><small>Or</small></span></button>
+    <button class="icon-btn account ${u ? 'in' : ''}" data-act="account" aria-label="Compte">
+      ${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('user', 22)}${dot}
     </button>
+    <button class="icon-btn" data-act="settings" aria-label="Options">${iconImg('gear', 22)}</button>
   </header>`;
 }
 
 function refreshTopbar() {
   const t = $('.topbar');
   if (t) t.outerHTML = topbar();
-  const g = $('#goldN'); if (g) g.textContent = fmt(save.gold);
+  const g = $('#goldN'); if (g) g.textContent = short(save.gold);
 }
 
 function nav() {
@@ -128,6 +132,7 @@ const afterSheet = () => { announceAchievements(); if (!battle) home(); };
 const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
+  account: () => accountSheet(),
   // tant que le monde 1 n'est pas battu, JOUER lance le chapitre 1 de l'histoire (tutoriel, partie facile) ; sinon la fiche du monde
   play: () => (firstSteps() ? playChapter(0) : quickPlay()),
   worlds: () => worldPicker(),
@@ -150,8 +155,8 @@ const handlers = {
   defis: () => defisScreen(() => home()),
   // touche une monnaie : à quoi elle sert et où l'obtenir
   cur: el => toast(el.dataset.k === 'gold'
-    ? `${iconImg('gold', 16)} <b>Or</b> : améliorations de la Boutique, bonus et Forge. Gagné en partie et dans les coffres.`
-    : `${iconImg('part', 16)} <b>Pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
+    ? `${iconImg('gold', 16)} <b>${fmt(save.gold)} or</b> : améliorations de la Boutique, bonus et Forge. Gagné en partie et dans les coffres.`
+    : `${iconImg('part', 16)} <b>${fmt(partsTotal())} pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
   forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
   craft: () => doCraft(),
   forgeMyth: () => doForgeMyth(),
@@ -1969,12 +1974,6 @@ async function settings() {
     error: 'Erreur de synchronisation, nouvel essai bientôt',
     off: '',
   }[cloud.status] || '';
-  const acct = !cloud.available
-    ? `<p class="muted set-note">La connexion Google n'est pas encore configurée sur cette version. Votre progression est sauvegardée sur cet appareil.</p>`
-    : u
-      ? `<div class="acct">${u.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : ''}<div><b>${esc(u.name || u.email)}</b><small>${esc(u.email || '')}</small><small class="sync-t ${cloud.status}">${statusTxt}</small></div></div>`
-      : `<p class="set-note">Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
-         <button class="btn google" data-v="login"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg> Se connecter avec Google</button>`;
   const wrapId = 'set-' + Date.now();
   const S = save.settings;
   const seg = (k, opts) => `<div class="seg" data-k="${k}">${opts.map(([v, l]) => `<button data-sv="${v}" class="${String(S[k]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
@@ -1999,11 +1998,11 @@ async function settings() {
         ${row('music', 'Musique', '', sw('sMus', S.music !== false))}
         ${row('vibrate', 'Vibrations', '', sw('sVib', S.vibrate))}
       </div>
-      <h4>Compte</h4>${acct}
+      <h4>Compte</h4>
+      <button class="set-row set-link" data-v="account">${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('user', 20)}<span class="set-l">${u ? esc(u.name || u.email) : 'Non connecté'}<small>${u ? esc(statusTxt || 'Sauvegarde en ligne') : 'Sauvegarde en ligne, profil, statistiques'}</small></span><i class="set-go">›</i></button>
       <h4 class="web-only">Installer sur iPhone</h4>
       <p class="muted set-note web-only">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
       <div class="danger-zone">
-        ${u ? '<button class="btn ghost small" data-v="logout">Se déconnecter</button>' : ''}
         <button class="btn ghost small danger" data-v="reset">Effacer la progression</button>
       </div>
       <p class="ver">League of Bonk · ${APP_VERSION}</p>
@@ -2039,14 +2038,60 @@ async function settings() {
   const mOn = wrap.querySelector('#sMus').checked;
   if (mOn !== S.music) { S.music = mOn; if (!mOn) stopMusic(); }
   persist({ touch: false });
-  if (action === 'login') return cloud.signIn();
-  if (action === 'logout') {
-    const ok = await modal({ title: 'Se déconnecter ?', body: '<p>Votre progression reste sur cet appareil et dans votre compte.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Se déconnecter', cls: 'primary', value: true }] });
-    if (ok) { await cloud.signOut(); home(); }
-  }
+  if (action === 'account') return accountSheet();
   if (action === 'reset') {
     const ok = await modal({ title: 'Tout effacer ?', body: '<p>Votre or, vos objets, familiers et zones débloquées seront <b>définitivement</b> supprimés de cet appareil' + (u ? ' et de votre compte' : '') + '.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Tout effacer', cls: 'danger', value: true }] });
     if (ok) { resetSave(); boot(); }
+  }
+  if (!battle) home();
+}
+
+// ---------- Compte (bouton en haut à droite) ----------
+// profil (avatar Google ou champion, nom, titre), quelques chiffres de la progression, sauvegarde en ligne (connexion,
+// état de la synchronisation, déconnexion)
+async function accountSheet() {
+  const u = cloud.user, c = CLASSES[save.cls] || Object.values(CLASSES)[0], st = save.stats;
+  const syncTxt = { synced: 'Sauvegarde synchronisée', syncing: 'Synchronisation…', pending: 'Hors ligne : sera synchronisé au retour du réseau', error: 'Erreur de synchronisation, nouvel essai bientôt' }[cloud.status] || '';
+  const pic = u?.avatar ? `<img class="ac-pic" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : `<img class="ac-pic px" src="${heroURL(c.id, c.colors, 0)}" alt="">`;
+  const ach = achList(), nAch = ach.filter(a => a.got).length;
+  const nums = [
+    ['play', fmt(st.runs || 0), 'Parties'], ['skull', fmt(st.kills || 0), 'Monstres vaincus'],
+    ['map', `${save.zoneCleared.filter(Boolean).length}/${ZONES.length}`, 'Mondes vaincus'], ['book', `★ ${totalStars()}`, 'Étoiles d\'histoire'],
+    ['crown', `${nAch}/${ach.length}`, 'Succès'], ['star', `${(save.mythGot || []).length}/${DATA.MYTHIC_ITEMS.length}`, 'Objets mythiques'],
+  ];
+  const cloudBlock = !cloud.available
+    ? `<p class="muted set-note">La connexion Google n'est pas encore disponible sur cette version : votre progression est sauvegardée sur cet appareil.</p>`
+    : u ? `<p class="ac-sync ${cloud.status}"><i></i>${esc(syncTxt || 'Sauvegarde en ligne active')}</p>
+        <button class="btn ghost small" data-v="logout">Se déconnecter</button>`
+      : `<p class="set-note">Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
+        <button class="btn google" data-v="login"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg> Se connecter avec Google</button>`;
+  const id = 'ac-' + Date.now();
+  let action = null;
+  const p = modal({
+    title: 'Compte',
+    cls: 'account-modal',
+    body: `<div id="${id}">
+      <div class="ac-head">${pic}<div class="ac-id"><b>${esc(u ? u.name || u.email : 'Invité')}</b><small>${esc(u?.email || 'Progression sur cet appareil')}</small>
+        <button class="ac-title" data-v="title">${iconImg('flag', 14)}<span>${esc(titleName() || DATA.TITLES.recrue.name)}</span><i>›</i></button></div></div>
+      <div class="ac-nums">${nums.map(([ic, v, l]) => `<div>${iconImg(ic, 18)}<b>${v}</b><small>${l}</small></div>`).join('')}</div>
+      <h4>Sauvegarde en ligne</h4>
+      ${cloudBlock}
+    </div>`,
+    buttons: [{ label: 'Fermer', cls: 'primary', value: 'close' }],
+    dismissable: true,
+  });
+  const box = document.getElementById(id);
+  box.addEventListener('click', e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    action = b.dataset.v; sfx('tap');
+    box.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
+  });
+  await p;
+  if (action === 'login') return cloud.signIn();
+  if (action === 'title') return titleSheet().then(afterSheet);
+  if (action === 'logout') {
+    const ok = await modal({ title: 'Se déconnecter ?', body: '<p>Votre progression reste sur cet appareil et dans votre compte.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Se déconnecter', cls: 'primary', value: true }] });
+    if (ok) await cloud.signOut();
   }
   if (!battle) home();
 }
