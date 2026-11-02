@@ -9,7 +9,7 @@ document.addEventListener('contextmenu', e => { if (e.target.closest('img, .spel
 
 cloud.setRemoteHandler(onRemoteSave);
 // connexion Google : pas dans l'app (Google refuse les vues web intégrées), la sauvegarde reste sur l'appareil
-if (!isNative) initCloud().catch(() => {});
+initCloud().catch(() => {}); // compte : navigateur et app iOS (cloud.js)
 boot();
 
 // service worker : seulement pour la PWA (l'app embarque déjà tous ses fichiers)

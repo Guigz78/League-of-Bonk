@@ -2567,3 +2567,36 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
   .tb-brand { letter-spacing: .06em; }
   .tb-brand span { letter-spacing: .2em; }
 }
+
+/* ===== Connexion (r26) : bande en haut de l'accueil, fiche de connexion ===== */
+.login-strip { position: relative; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 7px 30px 7px 10px;
+  background: linear-gradient(90deg, rgba(63,208,255,.14), rgba(63,208,255,.04) 70%), var(--s1); border: 1px solid rgba(63,208,255,.35); animation: ss-fade .35s var(--ease) both; }
+.ls-ic { flex: none; font-size: 20px; line-height: 1; }
+.ls-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ls-t b { font: 700 13px/1.1 var(--fd); letter-spacing: .08em; text-transform: uppercase; color: #9ae8ff; }
+.ls-t small { font: 500 11.5px/1.2 var(--fb); color: var(--tx2); }
+.ls-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; font: 700 12.5px/1 var(--fd); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--tx); background: var(--s2); border: 1px solid var(--tap-ln); box-shadow: 0 3px 0 var(--lip); }
+.ls-btn.g { color: #1f1f1f; background: #fff; border-color: #fff; }
+.ls-btn svg { flex: none; }
+.ls-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); }
+.ls-x { position: absolute; top: 0; right: 0; width: 28px; height: 28px; font: 400 20px/1 var(--fb); color: var(--tx3); }
+@media (max-width: 370px) {
+  .login-strip { gap: 6px; padding-left: 8px; }
+  .ls-t small { display: none; }
+  .ls-btn { padding: 0 8px; }
+  .ls-btn span { display: none; } /* SE : logo Google et enveloppe seuls */
+}
+.si-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; font: 700 11px var(--fd); letter-spacing: .2em; text-transform: uppercase; color: var(--tx3); }
+.si-or::before, .si-or::after { content: ''; flex: 1; height: 1px; background: var(--ln2); }
+.si-l { display: block; margin-bottom: 6px; font: 600 13px var(--fb); color: var(--tx2); }
+.si-row { display: flex; gap: 8px; }
+.si-mail { flex: 1; min-width: 0; height: 44px; padding: 0 12px; font: 500 16px var(--fb); color: var(--tx); background: var(--bg1); border: 1px solid var(--ln3); border-radius: var(--rad); outline: none; -webkit-user-select: text; user-select: text; }
+.si-mail:focus { border-color: var(--cy); }
+.si-row .btn { flex: none; height: 44px; }
+.si-msg { min-height: 18px; margin: 8px 0 0; font-size: 13px; line-height: 1.35; color: var(--tx2); }
+.si-msg.ok { color: #9ae8a8; } .si-msg.bad { color: #ff8a8a; }
+.signin-modal .btn.google, .account-modal .btn.google { width: 100%; justify-content: center; }
+.ac-mail { width: 100%; margin-top: 8px; }
+.ls-t b, .ls-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ls-btn.m { width: 38px; padding: 0; justify-content: center; font-size: 17px; }

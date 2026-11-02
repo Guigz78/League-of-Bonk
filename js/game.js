@@ -32,7 +32,12 @@ let loginShown = '';
 
 // ---------- Démarrage ----------
 export function boot() {
-  cloud.onChange(() => { if (!battle) refreshTopbar(); });
+  cloud.onChange(() => {
+    if (battle) return;
+    refreshTopbar();
+    if (cloud.user) $('.login-strip')?.remove(); // connecté : la bande de connexion de l'accueil s'en va
+    if (cloud.lastError) { toast(`Connexion impossible : ${esc(cloud.lastError)}`, 5000); cloud.lastError = ''; }
+  });
   if (!supported()) setTimeout(() => toast(`${iconImg('cube', 16)} WebGL 2 indisponible : <b>mettez à jour iOS / Safari</b> pour jouer`, 6000), 600);
   if (!save.cls) return classSelect(true);
   home();
@@ -133,6 +138,9 @@ const handlers = {
   tab: el => home(el.dataset.tab),
   settings: () => settings(),
   account: () => accountSheet(),
+  signGoogle: () => signGoogle(),
+  signIn: () => signInSheet(),
+  hideStrip: () => { try { localStorage.setItem(STRIP_KEY, String(Date.now() + 3 * 864e5)); } catch (e) { /* stockage indisponible */ } $('.login-strip')?.remove(); },
   // tant que le monde 1 n'est pas battu, JOUER lance le chapitre 1 de l'histoire (tutoriel, partie facile) ; sinon la fiche du monde
   play: () => (firstSteps() ? playChapter(0) : quickPlay()),
   worlds: () => worldPicker(),
@@ -326,6 +334,7 @@ function adventureTab() {
     : `<button class="play-cta" data-act="play"><span class="pc-ic">${iconImg('play', 22)}</span>
         <span class="pc-txt"><b>Jouer</b><small>${esc(Z.name)}</small>${boostsOn.length ? `<em class="pc-boosts">${boostsOn.map(id => iconImg(BOOSTS[id].icon, 14)).join('')} ${boostsOn.length} bonus utilisé${boostsOn.length > 1 ? 's' : ''}</em>` : ''}</span><img class="px spr pc-boss" src="${bossOf(Z)}" alt=""></button>`;
   return `<section class="home">
+    ${loginStrip()}
     ${vet ? homeGoals(defisCount()) : ''}
     <button class="home-hero" data-act="changeClass" aria-label="Changer de champion">
       <canvas class="hc-3d"></canvas>
@@ -2046,6 +2055,67 @@ async function settings() {
   if (!battle) home();
 }
 
+// ---------- Connexion (Google ou e-mail) ----------
+const G_LOGO = '<svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
+const STRIP_KEY = 'lob_login_hide'; // bande de connexion de l'accueil cachée jusqu'à cette date (3 jours, cet appareil)
+const stripHidden = () => { try { return Date.now() < +(localStorage.getItem(STRIP_KEY) || 0); } catch (e) { return false; } };
+// bande en haut de l'accueil : joueur pas connecté (après sa première partie) ; Google direct, ou e-mail
+function loginStrip() {
+  if (!cloud.available || cloud.user || !save.stats.runs || stripHidden()) return '';
+  return `<div class="login-strip">
+    <span class="ls-ic">☁️</span>
+    <span class="ls-t"><b>Sauvegarde en ligne</b><small>Gardez votre progression</small></span>
+    <button class="ls-btn g" data-act="signGoogle" aria-label="Se connecter avec Google">${G_LOGO}<span>Google</span></button>
+    <button class="ls-btn m" data-act="signIn" aria-label="Se connecter par e-mail">✉️</button>
+    <button class="ls-x" data-act="hideStrip" aria-label="Plus tard">×</button>
+  </div>`;
+}
+async function signGoogle() {
+  const r = await cloud.signIn('google');
+  if (r?.error) toast(`Connexion Google impossible : ${esc(r.error)}`, 5000);
+}
+// fiche de connexion : Google, ou un lien de connexion envoyé par e-mail
+async function signInSheet() {
+  if (!cloud.available) return toast('La connexion n\'est pas disponible sur cette version.', 4000);
+  const id = 'si-' + Date.now();
+  let go = null;
+  const p = modal({
+    title: 'Se connecter',
+    cls: 'signin-modal',
+    body: `<div id="${id}">
+      <p class="set-note">Votre progression est <b>sauvegardée en ligne</b> et vous la retrouvez sur un autre appareil. Le jeu reste jouable hors connexion.</p>
+      <button class="btn google" data-v="google">${G_LOGO} Continuer avec Google</button>
+      <div class="si-or"><span>ou</span></div>
+      <label class="si-l" for="${id}-m">Recevoir un lien de connexion par e-mail</label>
+      <div class="si-row"><input id="${id}-m" class="si-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="vous@exemple.fr">
+        <button class="btn primary small" data-v="mail">Envoyer</button></div>
+      <p class="si-msg" aria-live="polite"></p>
+    </div>`,
+    buttons: [{ label: 'Plus tard', cls: 'ghost', value: null }],
+    dismissable: true,
+  });
+  const box = document.getElementById(id), msg = box.querySelector('.si-msg'), input = box.querySelector('.si-mail');
+  const send = async () => {
+    const email = input.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.className = 'si-msg bad'; msg.textContent = 'Adresse e-mail invalide.'; input.focus(); return; }
+    msg.className = 'si-msg'; msg.textContent = 'Envoi…';
+    const r = await cloud.signInEmail(email);
+    if (r?.error) { msg.className = 'si-msg bad'; msg.textContent = `Envoi impossible : ${r.error}`; return; }
+    msg.className = 'si-msg ok';
+    msg.innerHTML = `📬 Lien envoyé à <b>${esc(email)}</b>. Ouvrez l'e-mail <b>sur cet appareil</b> et touchez le lien : vous serez connecté.`;
+    sfx('loot');
+  };
+  box.addEventListener('click', e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    sfx('tap');
+    if (b.dataset.v === 'mail') return void send();
+    go = b.dataset.v; box.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
+  });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+  await p;
+  if (go === 'google') return signGoogle();
+}
+
 // ---------- Compte (bouton en haut à droite) ----------
 // profil (avatar Google ou champion, nom, titre), quelques chiffres de la progression, sauvegarde en ligne (connexion,
 // état de la synchronisation, déconnexion)
@@ -2060,11 +2130,12 @@ async function accountSheet() {
     ['crown', `${nAch}/${ach.length}`, 'Succès'], ['star', `${(save.mythGot || []).length}/${DATA.MYTHIC_ITEMS.length}`, 'Objets mythiques'],
   ];
   const cloudBlock = !cloud.available
-    ? `<p class="muted set-note">La connexion Google n'est pas encore disponible sur cette version : votre progression est sauvegardée sur cet appareil.</p>`
+    ? `<p class="muted set-note">La connexion n'est pas disponible sur cette version : votre progression est sauvegardée sur cet appareil. Mettez l'app à jour pour vous connecter.</p>`
     : u ? `<p class="ac-sync ${cloud.status}"><i></i>${esc(syncTxt || 'Sauvegarde en ligne active')}</p>
         <button class="btn ghost small" data-v="logout">Se déconnecter</button>`
       : `<p class="set-note">Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
-        <button class="btn google" data-v="login"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg> Se connecter avec Google</button>`;
+        <button class="btn google" data-v="login">${G_LOGO} Continuer avec Google</button>
+        <button class="btn ghost small ac-mail" data-v="mail">✉️ Autre : lien par e-mail</button>`;
   const id = 'ac-' + Date.now();
   let action = null;
   const p = modal({
@@ -2087,7 +2158,8 @@ async function accountSheet() {
     box.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
   });
   await p;
-  if (action === 'login') return cloud.signIn();
+  if (action === 'login') return signGoogle();
+  if (action === 'mail') return signInSheet();
   if (action === 'title') return titleSheet().then(afterSheet);
   if (action === 'logout') {
     const ok = await modal({ title: 'Se déconnecter ?', body: '<p>Votre progression reste sur cet appareil et dans votre compte.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Se déconnecter', cls: 'primary', value: true }] });

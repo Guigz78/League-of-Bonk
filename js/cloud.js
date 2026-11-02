@@ -1,8 +1,17 @@
-// Compte Google + synchronisation de la sauvegarde.
+// Compte (Google ou e-mail) + synchronisation de la sauvegarde.
 // Principe « hors ligne d'abord » : la partie est toujours enregistrée sur l'appareil ;
 // quand on est connecté et qu'il y a du réseau, elle est envoyée dans le cloud.
+// Navigateur (PWA) : la page de Google (ou le lien reçu par e-mail) revient sur l'adresse du jeu.
+// App iOS : la page s'ouvre dans une fenêtre Safari (module Browser) et revient dans l'app par son lien
+// com.guigz78.leagueofbonk://login (module App, déclaré dans Info.plist) ; le code reçu est échangé contre la session
+// (flux PKCE). Ce lien doit figurer dans Supabase → Authentication → URL Configuration → Redirect URLs.
 import { SUPABASE_URL, SUPABASE_KEY, SAVE_TABLE } from './config.js';
 import { save, onSave, replaceSave } from './save.js';
+import { isNative, nativePlugin } from './native.js';
+
+const APP_LINK = 'com.guigz78.leagueofbonk://login';
+const back = () => (isNative ? APP_LINK : location.origin + location.pathname);
+const errTxt = e => (e?.message || String(e || '')).slice(0, 160);
 
 const listeners = new Set();
 let sb = null;
@@ -13,14 +22,30 @@ export const cloud = {
   available: false,
   user: null,
   status: 'off', // off | synced | syncing | pending | error
+  lastError: '', // dernier échec de connexion (retour de Google ou du lien e-mail dans l'app)
   onChange(fn) { listeners.add(fn); },
   setRemoteHandler(fn) { onRemote = fn; },
-  async signIn() {
-    if (!sb) return;
-    await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: location.origin + location.pathname },
-    });
+  // provider : 'google' ; renvoie { error } si la connexion n'a pas pu démarrer
+  async signIn(provider = 'google') {
+    if (!sb) return { error: 'indisponible' };
+    try {
+      if (isNative) { // fenêtre Safari dans l'app, retour par le lien de l'app
+        const { data, error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: APP_LINK, skipBrowserRedirect: true } });
+        if (error || !data?.url) return { error: errTxt(error) || 'indisponible' };
+        await nativePlugin('Browser').open({ url: data.url, presentationStyle: 'popover' });
+        return {};
+      }
+      const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: back() } });
+      return error ? { error: errTxt(error) } : {};
+    } catch (e) { return { error: errTxt(e) }; }
+  },
+  // lien de connexion envoyé par e-mail (compte créé au premier envoi)
+  async signInEmail(email) {
+    if (!sb) return { error: 'indisponible' };
+    try {
+      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: back(), shouldCreateUser: true } });
+      return error ? { error: errTxt(error) } : {};
+    } catch (e) { return { error: errTxt(e) }; }
   },
   async signOut() {
     if (!sb) return;
@@ -100,13 +125,26 @@ function schedulePush() {
 
 export async function initCloud() {
   if (!SUPABASE_URL || !SUPABASE_KEY || !window.supabase) return;
+  // app iOS : il faut les modules Browser et App (versions de l'app d'avant : connexion indisponible)
+  if (isNative && !(nativePlugin('Browser') && nativePlugin('App'))) return;
   cloud.available = true;
   // affichage immédiat du compte, même hors ligne
   try { cloud.user = JSON.parse(localStorage.getItem('lob_user') || 'null'); } catch (e) { /* */ }
   if (cloud.user) cloud.status = navigator.onLine ? 'syncing' : 'pending';
 
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'lob_auth' },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !isNative, storageKey: 'lob_auth', ...(isNative ? { flowType: 'pkce' } : {}) },
+  });
+  // app iOS : retour de Google ou du lien e-mail par le lien de l'app → session
+  if (isNative) nativePlugin('App').addListener('appUrlOpen', async ({ url }) => {
+    if (!url || !url.startsWith('com.guigz78.leagueofbonk://')) return;
+    try { await nativePlugin('Browser').close(); } catch (e) { /* déjà fermée */ }
+    const u = new URL(url.replace('com.guigz78.leagueofbonk://', 'https://app/')), q = u.searchParams, h = new URLSearchParams(u.hash.slice(1));
+    const code = q.get('code');
+    if (code) { const { error } = await sb.auth.exchangeCodeForSession(code); if (error) cloud.lastError = errTxt(error); }
+    else if (h.get('access_token')) await sb.auth.setSession({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token') });
+    else if (q.get('error_description') || h.get('error_description')) cloud.lastError = q.get('error_description') || h.get('error_description');
+    emit();
   });
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT') return setUser(null);

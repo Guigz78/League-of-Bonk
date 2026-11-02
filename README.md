@@ -1,7 +1,7 @@
 # League of Bonk
 
 Roguelike d'action en **3D low-poly** façon Megabonk / PokéBonk, vu de dessus, dans un univers fantastique original.
-Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauvegarde sur l'appareil, synchronisation optionnelle avec un compte Google. Nécessite **WebGL 2** (iOS 15 ou plus récent).
+Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauvegarde sur l'appareil, synchronisation optionnelle avec un compte (Google ou lien par e-mail). Nécessite **WebGL 2** (iOS 15 ou plus récent).
 
 ## Jouer
 - Ouvrir le site dans Safari → **Partager** → **Sur l'écran d'accueil**.
@@ -30,10 +30,13 @@ python3 -m http.server 8000
 - `js/ads.js` : pub récompensée (simulée dans le navigateur, AdMob une fois emballé en app)
 - `sw.js` : fonctionnement hors ligne (`node tools/check-sw.mjs` vérifie que la liste des fichiers en cache est complète)
 
-## Compte Google (synchronisation)
-Les sauvegardes sont stockées dans le projet Supabase « Pompelup », table `lob_saves` (voir `supabase/schema.sql`).
-L'adresse du jeu doit figurer dans Supabase → Authentication → URL Configuration → Redirect URLs :
-`https://guigz78.github.io/League-of-Bonk/**`
+## Compte (synchronisation)
+Connexion avec **Google** ou par **lien envoyé par e-mail**, depuis la bande « Sauvegarde en ligne » en haut de
+l'accueil ou le bouton Compte (en haut à droite). Les sauvegardes sont stockées dans le projet Supabase « Pompelup »,
+table `lob_saves` (voir `supabase/schema.sql`). Dans Supabase → Authentication → URL Configuration → Redirect URLs,
+il faut ces deux adresses :
+- `https://guigz78.github.io/League-of-Bonk/**` (version web)
+- `com.guigz78.leagueofbonk://**` (app iOS : retour de Google ou du lien e-mail dans l'app)
 
 ## Mise en ligne
 GitHub → Settings → Pages → Source « Deploy from a branch » → `main` / `(root)`.
@@ -44,7 +47,8 @@ Le jeu est alors disponible sur https://guigz78.github.io/League-of-Bonk/
 Le jeu est aussi emballé en vraie app iPhone avec [Capacitor](https://capacitorjs.com) (dossier `ios/`, réglages dans
 `capacitor.config.json`). Le code du jeu est le même que la version web : `npm run www` le copie dans `www/`, puis
 `npx cap sync ios` le met dans le projet Xcode. Dans l'app, les vibrations passent par le moteur haptique de l'iPhone,
-l'écran est en portrait plein écran, et la connexion Google est désactivée (la sauvegarde reste sur l'appareil).
+l'écran est en portrait plein écran, et la connexion s'ouvre dans une fenêtre Safari (modules `@capacitor/browser` et
+`@capacitor/app`) puis revient dans l'app par son lien `com.guigz78.leagueofbonk://login` (déclaré dans `Info.plist`).
 
 **Compilation automatique (sans Mac)** : à chaque mise à jour du jeu sur `main`, l'action GitHub « App iOS »
 (`.github/workflows/ios.yml`) compile l'app sur un Mac de GitHub. On peut aussi la lancer à la main
