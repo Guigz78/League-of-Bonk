@@ -38,6 +38,17 @@ il faut ces deux adresses :
 - `https://guigz78.github.io/League-of-Bonk/**` (version web)
 - `com.guigz78.leagueofbonk://**` (app iOS : retour de Google ou du lien e-mail dans l'app)
 
+## Tests
+Les tests jouent au jeu dans un vrai Chromium, en iPhone 13 et iPhone SE simulés (Playwright) : chasse aux bugs sur
+tous les écrans et avec chaque champion, logique (déblocages, défis, saison, anciennes sauvegardes), histoire complète,
+objets mythiques, défilement au doigt de chaque écran, joystick tactile, barre du haut, connexion (réponses de Supabase
+simulées), expédition jusqu'au giga boss.
+- `node tests/run.mjs` : tout (~20 à 40 min) ; `node tests/run.mjs --rapide` : les tests courts (~2 min) ;
+  `node tests/run.mjs histoire mythiques` : seulement ceux-là. Il faut Playwright (`npm install --no-save playwright`
+  puis `npx playwright install chromium`).
+- Sur GitHub, l'action « Tests » les lance à chaque mise à jour : rapides sur les branches, complets sur `main`.
+  Captures et journaux dans l'artefact « tests-captures ».
+
 ## Mise en ligne
 GitHub → Settings → Pages → Source « Deploy from a branch » → `main` / `(root)`.
 Le jeu est alors disponible sur https://guigz78.github.io/League-of-Bonk/
