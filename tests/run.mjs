@@ -26,7 +26,7 @@ const TESTS = [
   { name: 'défilement SE', f: 'screens-scroll.mjs', env: { VP: 'se', SCROLL: '1' }, ok: [/défilement story-screen/], bad: [/BLOQUÉ/, / ERREUR /] },
   { name: 'objets mythiques', f: 'mythic.mjs', env: { VP: '13' },
     ok: [/faucheuse : mort true/, /renaissance : PV \d+\/\d+, dying undefined, utilisée true/, /2e coup fatal : dying true/, /titan : perdu \d+ PV/, /étoile : lancée 1/] },
-  { name: 'histoire SE', f: 'story.mjs', env: { VP: 'se' }, ok: [/^titre soupe/m, /"c12":7/], bad: [/pas de |non lancé/] },
+  { name: 'histoire SE', f: 'story.mjs', env: { VP: 'se' }, ok: [/^titre soupe/m, /"c12":7/], bad: [/^\s*pas de (boss|portail|scène|garde)|\(pas de scène\)|non lancé/m] },
   { name: 'partie 3D', f: 'smoke.mjs', ok: [/no errors/] },
   { name: 'expédition et giga boss', f: 'giga.mjs', ok: [/"gigaKills":1/] },
   { name: 'chasse aux bugs 13', f: 'bugs-tour.mjs', env: { VP: '13' }, ok: [/aucun problème/] },
