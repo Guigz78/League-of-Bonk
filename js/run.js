@@ -214,7 +214,7 @@ export class Run {
       x: 0, y: 0, h: 0, vh: 0, r: 14, face: { x: 0, y: -1 },
       maxHp: st.hp, hp: st.hp, atk: st.atk, crit: st.crit, regen: st.regen * 0.1 * this.diff.heal,
       speed: 160 * st.speed, magnet: 95 * st.magnet * (save.pet === 'phenix' ? 1.4 : 1),
-      armor: 0, xpMul: 1, area: 1, haste: 1, dmgMul: 1, critMul: 2,
+      armor: 0, xpMul: save.pet === 'plume' ? 1.15 : 1, area: 1, haste: 1, dmgMul: 1, critMul: 2,
       inv: 0, shieldHit: 0, aegis: has('egide') ? 3 : 0, level: 1, xp: 0, xpNext: xpNeed(1), ult: 0,
       weapons: [], tomes: {}, boons: {}, evo: 0,
       tv: {}, bv: {}, tr: {}, // valeurs cumulées des tomes / bénédictions (selon la rareté des cartes), rareté max par tome
@@ -609,7 +609,7 @@ export class Run {
       magnet: 95 * B.magnet * (1 + 0.35 * (t.magnet || 0) + 0.3 * (b.magnet || 0)) * (save.pet === 'phenix' ? 1.4 : 1),
       crit: Math.min(1, B.crit + 0.07 * (t.crit || 0) + 0.06 * (b.crit || 0)),
       armor: Math.min(0.6, 0.06 * (t.armor || 0) + I.armor),
-      xpMul: (1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0)) * this.bXp * (1 + I.xp),
+      xpMul: (1 + 0.15 * (t.wisdom || 0) + 0.2 * (b.xp || 0)) * this.bXp * (1 + I.xp) * (save.pet === 'plume' ? 1.15 : 1), // Plume : +15 %
       area: (1 + 0.12 * (t.area || 0)) * (1 + I.area),
       maxHp: Math.round(B.hp * (1 + 0.2 * (t.vital || 0) + 0.15 * (b.hp || 0)) * (1 + 0.15 * evo)),
       // vol de vie : talent des champions + équipement et Boutique + tome, autels, fiole de sang (plafond LS.max)
@@ -2152,6 +2152,7 @@ export class Run {
     if (!raw && L.fury && p.hp < p.maxHp * 0.4) dmg *= 1 + 0.3 * L.fury; // Furie : +30 % sous 40 % de PV
     if (!raw && (this.myth.reaper || this.myth.king)) dmg *= this.mythDmg(); // Faucheuse, Roi des Bonks (objets mythiques)
     if (!raw && this.cls.rage) dmg *= this.rageMul(); // Rage de Ragnar : jusqu'à +40 % selon les PV manquants
+    if (!raw && (e.boss || e.elite) && this.pet?.id === 'gorgothin') dmg *= 1.2; // Gorgothin : +20 % sur les boss et les élites
     if (!raw && this.cls.chill) this.chillC2(e); // Morsure du givre de Frida : l'ennemi touché ralentit
     const crit = !o.noCrit && Math.random() < p.crit;
     const d = Math.max(1, Math.round(dmg * (crit ? p.critMul : 1) * rand(0.92, 1.08)));
@@ -2395,7 +2396,7 @@ export class Run {
           it.taken = true;
           this.emit('pickup', { kind: it.type, x: it.x, y: it.y, v: it.v || 0 });
           if (it.type === 'xp') { this.gainXp(it.v); sfx('gem'); }
-          if (it.type === 'gold') { this.gold += it.v; sfx('coin'); }
+          if (it.type === 'gold') { this.gold += save.pet === 'grigou' ? Math.round(it.v * 1.2) : it.v; sfx('coin'); } // Grigou : +20 %
           if (it.type === 'heart') { this.track.hearts++; const h = Math.round(p.maxHp * 0.25 * this.diff.heal); p.hp = Math.min(p.maxHp, p.hp + h); this.text(p.x, p.y, 70, '+' + h, '#5ae87a', 1.2); sfx('heal'); }
           if (it.type === 'magnet') { for (const o of this.pickups) if (o.type === 'xp') o.pull = true; sfx('boing'); sfx('loot'); }
         }
@@ -2621,6 +2622,34 @@ export class Run {
         break;
       }
       case 'wisp': this.petT = 12; p.shieldHit = 1; break;
+      // Cocotte : louche de soupe brûlante autour d'elle
+      case 'cocotte': {
+        const t = this.nearest(240, pet); if (!t) { this.petT = 0.5; break; }
+        this.petT = 7;
+        const R = 120, cx = (pet.x + t.x) / 2, cy = (pet.y + t.y) / 2;
+        for (const e of this.grid.query(cx, cy, R + 30)) if (!e.dead && (e.x - cx) ** 2 + (e.y - cy) ** 2 < (R + e.r * 0.5) ** 2) this.hitEnemy(e, p.atk * p.dmgMul * 2.2, { color: '#ff9a3a', noCrit: true });
+        this.fx.push({ type: 'ring', x: cx, y: cy, r: R, life: 0.55, max: 0.55, color: '#ff9a3a' });
+        this.burst(cx, cy, 14, 18, '#ffb04a'); sfx('splat');
+        break;
+      }
+      // Givret : souffle glacé, les ennemis proches gelés (les boss ralentis)
+      case 'givret': {
+        if (!this.nearest(170, pet)) { this.petT = 0.5; break; }
+        this.petT = 9;
+        for (const e of this.grid.query(pet.x, pet.y, 200)) { if (e.dead || dist2(e, pet) > 170 * 170) continue; if (e.boss) e.slow = Math.max(e.slow, 1.5); else e.freeze = Math.max(e.freeze, 1.5); }
+        this.fx.push({ type: 'ring', x: pet.x, y: pet.y, r: 170, life: 0.6, max: 0.6, color: '#bfeaff' });
+        this.burst(pet.x, pet.y, 16, 22, '#dff6ff'); sfx('freeze');
+        break;
+      }
+      // Zip : éclair qui rebondit sur 3 ennemis
+      case 'zip': {
+        const t = this.nearest(300, pet); if (!t) { this.petT = 0.4; break; }
+        this.petT = 2.5;
+        this.fx.push({ type: 'bolt', x: t.x, y: t.y, life: 0.22, max: 0.22 });
+        this.hitEnemy(t, p.atk * p.dmgMul * 1.2, { legend: true, color: '#ffe84a' });
+        this.chainBolt(t);
+        break;
+      }
       default: this.petT = 999;
     }
   }

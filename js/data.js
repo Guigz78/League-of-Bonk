@@ -399,6 +399,19 @@ export const PETS = {
   phenix: { name: 'Phénixounet', desc: 'Attire l\'expérience de plus loin (+40 %).', pal: ['#5ab8ff', '#2a6ad8', '#e0f8ff'], body: 'bird', zone: 3 },
   wisp:   { name: 'Lanterne', desc: 'Bloque un coup toutes les 12 s.', pal: ['#3ae898', '#1f8a58', '#c8ffe0'], body: 'ghost', zone: 4 },
   voidy:  { name: 'Ver Jr', desc: 'Votre ultime se charge 2× plus vite.', pal: ['#8a2ad8', '#4a1478', '#e8a0ff'], body: 'worm', zone: 5 },
+  // familiers à débloquer autrement (unlock : txt, progression prog(save) et objectif n ; vérifié en fin de partie et à l'accueil)
+  cocotte:   { name: 'Cocotte', desc: 'Toutes les 7 s, éclabousse de soupe brûlante les ennemis autour d\'elle.', pal: ['#5a6272', '#30343e', '#ff9a3a'], body: 'blob',
+    unlock: { txt: 'Réussissez un défi de la semaine', n: 1, prog: s => s.stats?.weeklyWins | 0 } },
+  givret:    { name: 'Givret', desc: 'Toutes les 9 s, gèle 1,5 s les ennemis proches (ralentit les boss).', pal: ['#eaf6ff', '#a8d4f0', '#9ae8ff'], body: 'blob',
+    unlock: { txt: 'Tenez 5:00 en mode infini', n: 300, prog: s => Math.max(0, ...Object.values(s.endless || {}).map(v => +v || 0)), time: true } },
+  grigou:    { name: 'Grigou', desc: '+20 % d\'or ramassé.', pal: ['#a8642a', '#5a3214', '#ffd54a'], body: 'blob',
+    unlock: { txt: 'Ouvrez 40 coffres de butin', n: 40, prog: s => s.stats?.chests | 0 } },
+  zip:       { name: 'Zip', desc: 'Toutes les 2,5 s, un éclair frappe un ennemi et rebondit sur 3 autres.', pal: ['#ffd84a', '#d89a1a', '#fff8c0'], body: 'bird',
+    unlock: { txt: 'Battez un monde en Abysse III', n: 3, prog: s => Math.max(0, ...(s.abyss || []).map(n => +n || 0)) } },
+  plume:     { name: 'Plume', desc: '+15 % d\'expérience.', pal: ['#a07850', '#5a4028', '#f0e0c0'], body: 'bird',
+    unlock: { txt: 'Gagnez 24 étoiles dans l\'histoire', n: 24, prog: s => Object.values(s.storyCh || {}).reduce((n, b) => n + (b & 1) + ((b >> 1) & 1) + ((b >> 2) & 1), 0) } },
+  gorgothin: { name: 'Gorgothin', desc: 'Les boss et les élites subissent +20 % de dégâts.', pal: ['#5a5470', '#2a2638', '#ff8a2a'], body: 'golem',
+    unlock: { txt: 'Battez Gorgoth, le giga boss', n: 1, prog: s => s.stats?.gigaKills | 0 } },
 };
 // zone d'obtention = boss de la zone
 export const PET_BY_ZONE = ['poro', 'brambi', 'herald', 'phenix', 'wisp', 'voidy'];
@@ -1041,6 +1054,7 @@ export const ACH_MORE = [
   ach('myth1', 'coll', 'Légende vivante', 'Obtenir un objet mythique.', 'myth', 1, 500),
   ach('myth6', 'coll', 'Panthéon', 'Obtenir les 6 objets mythiques.', 'myth', 6, 5000, 'pantheon'),
   ach('pets6', 'coll', 'Ménagerie complète', 'Posséder les 6 familiers.', 'pets', 6, 400),
+  ach('pets12', 'coll', 'Zoo royal', 'Posséder les 12 familiers (défi de la semaine, mode infini, coffres, Abysse, histoire, giga boss).', 'pets', 12, 900),
   ach('bestiary', 'coll', 'Bestiaire complet', `Rencontrer les ${MONSTER_COUNT + BOSS_COUNT} créatures du bestiaire.`, 'seen', MONSTER_COUNT + BOSS_COUNT, 400),
   ach('forge2', 'coll', 'Maître forgeron', 'Fabriquer 15 objets à la forge.', 'crafted', 15, 200),
   ach('chests2', 'coll', 'Pilleur de coffres II', 'Ouvrir 250 coffres de butin.', 'chests', 250, 300),

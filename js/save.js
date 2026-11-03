@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, ZONES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS, masteryOf, masteryBonus, masteryPerks, upgMax, PETS } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -556,6 +556,18 @@ export function checkAchievements() {
       s.gold += a.gold;
       got.push(a);
     }
+  }
+  return got;
+}
+
+// familiers à débloquer autrement qu'avec un boss (défi de la semaine, mode infini, coffres, Abysse, histoire, giga boss) :
+// ajoutés dès que l'objectif est atteint ; renvoie les nouveaux
+export function checkPets() {
+  const got = [];
+  for (const [id, p] of Object.entries(PETS)) {
+    if (!p.unlock || save.pets.includes(id)) continue;
+    let v = 0; try { v = p.unlock.prog(save); } catch (e) { /* sauvegarde incomplète */ }
+    if (v >= p.unlock.n) { save.pets.push(id); got.push(id); }
   }
   return got;
 }
