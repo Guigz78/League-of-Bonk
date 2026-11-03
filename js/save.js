@@ -1,6 +1,6 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
 import { CLASSES, ZONES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
-  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
+  AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS, masteryOf, masteryBonus, masteryPerks, upgMax, PETS } from './data.js';
 
 const KEY = 'lob_save_v1';
 
@@ -39,7 +39,7 @@ export function freshSave() {
     achievements: {},
     // options : tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
     // taille du joystick (0,8 à 1,3), gaucher (ultime à gauche)
-    settings: { sound: true, music: true, vibrate: true, shake: 2, numbers: 'crit', numV: 2, joySize: 1, lefty: false, quality: 'auto' },
+    settings: { sound: true, music: true, vibrate: true, voice: true, shake: 2, numbers: 'crit', numV: 2, joySize: 1, lefty: false, quality: 'auto' },
     tutorialDone: false,
     story: 0,           // mode histoire (ancien compteur, gardé pour les vieilles sauvegardes : story.js le migre)
     storyCh: null,      // mode histoire : étoiles par chapitre { c1: bits } (créé par story.js au premier accès)
@@ -160,6 +160,7 @@ function cleanSettings(o) {
   o.lefty = !!o.lefty;
   o.autoPick = !!o.autoPick; // améliorations choisies automatiquement (la meilleure carte)
   o.quality = o.quality === 'lite' ? 'lite' : 'auto'; // graphismes : auto (s'adapte au téléphone) ou léger (vieux iPhone)
+  o.voice = o.voice !== false; // voix des personnages de l'histoire
   return o;
 }
 
@@ -556,6 +557,18 @@ export function checkAchievements() {
       s.gold += a.gold;
       got.push(a);
     }
+  }
+  return got;
+}
+
+// familiers à débloquer autrement qu'avec un boss (défi de la semaine, mode infini, coffres, Abysse, histoire, giga boss) :
+// ajoutés dès que l'objectif est atteint ; renvoie les nouveaux
+export function checkPets() {
+  const got = [];
+  for (const [id, p] of Object.entries(PETS)) {
+    if (!p.unlock || save.pets.includes(id)) continue;
+    let v = 0; try { v = p.unlock.prog(save); } catch (e) { /* sauvegarde incomplète */ }
+    if (v >= p.unlock.n) { save.pets.push(id); got.push(id); }
   }
   return got;
 }

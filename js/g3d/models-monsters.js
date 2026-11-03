@@ -709,6 +709,42 @@ const PET = {
     for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + PI / 4; s.put('box', '#3a3a30', Math.cos(a) * R * 0.98, cy, Math.sin(a) * R * 0.98, 0.06, R * 1.9, 0.06, 0, 0, 0, { grad: 0 }); }
   } }),
   voidy: c => worm(c, { segs: 4, antennae: true, eyeGlow: 0.2 }),
+  // Cocotte : petite marmite vivante (couvercle, anses, vapeur)
+  cocotte: c => chibi(c, { col: '#5e6676', dk: '#30343e', lt: '#7c8696', extra: (s, cy, R) => {
+    s.put('cyl:12', '#3a404c', 0, cy + R * 0.86, 0, R * 1.75, 0.09, R * 1.75);
+    s.put('sph:6:4', '#2a2e38', 0, cy + R * 0.97, 0, 0.16, 0.12, 0.16);
+    for (const sd of [-1, 1]) s.put('tor:0.05:4:10', '#30343e', R * 1.0 * sd, cy + R * 0.25, 0, 0.3, 0.3, 0.3, 0, PI / 2, 0);
+    s.put('tor:0.04:4:18', '#ff9a3a', 0, cy - R * 0.1, 0, R * 2.02, R * 2.02, R * 2.02, PI / 2, 0, 0, { glow: 0.6 });
+    for (let i = 0; i < 3; i++) s.put('sph:6:4', '#ffffff', (i - 1) * 0.16, cy + R * 1.2 + i * 0.13, -0.05, 0.16 - i * 0.03, 0.14 - i * 0.03, 0.16 - i * 0.03, 0, 0, 0, { glow: 0.25 });
+  } }),
+  // Givret : bébé yéti tout duveteux, cristaux de glace sur la tête
+  givret: c => furball(c, { col: '#f2f9ff', col2: '#d4eafa', horns: '#9ae0ff', R: 0.6 }),
+  // Grigou : petit coffre gourmand (cerclage d'or, serrure, pièce sur la tête, dents)
+  grigou: c => chibi(c, { col: '#a8642a', dk: '#5a3214', lt: '#c88a4a', extra: (s, cy, R) => {
+    s.put('tor:0.06:4:18', '#ffd54a', 0, cy + R * 0.2, 0, R * 2.04, R * 2.04, R * 2.04, PI / 2, 0, 0, { glow: 0.2 });
+    s.put('rbox:0.3', '#ffd54a', 0, cy - R * 0.45, R * 0.86, 0.2, 0.22, 0.08, 0, 0, 0, { glow: 0.2 });
+    s.put('cyl:12', '#ffd54a', 0, cy + R * 1.12, 0, 0.36, 0.06, 0.36, PI / 2, 0, 0, { glow: 0.5 });
+    for (let i = -2; i <= 2; i++) s.tip('cone:4', '#fff8e8', i * 0.09, cy - 0.06, R * 0.9, PI, 0, 0, 0.06, 0.1, 0.06);
+  } }),
+  // Zip : petit esprit éclair qui flotte, aigrette en zigzag
+  zip: c => chibi(c, { float: true, glow: 0.35, eyeGlow: 0.3, wings: '#fff6a0', extra: (s, cy, R) => {
+    s.tip('cone:4', '#ffffff', 0, cy + R * 0.85, 0, 0, 0, -0.6, 0.14, 0.32, 0.1, { glow: 1.2 });
+    s.tip('cone:4', '#ffffff', 0.1, cy + R * 1.1, 0, 0, 0, 0.7, 0.12, 0.28, 0.1, { glow: 1.2 });
+    s.tip('cone:4', '#fff6a0', 0.02, cy + R * 1.3, 0, 0, 0, -0.5, 0.1, 0.26, 0.08, { glow: 1.2 });
+  } }),
+  // Plume : petite chouette (aigrettes, bec, ailes)
+  plume: c => chibi(c, { wings: '#8a6440', extra: (s, cy, R) => {
+    s.symTip('cone:4', '#6a4a2a', 0.3, cy + R * 0.8, 0, 0, 0, -0.45, 0.14, 0.32, 0.12);
+    s.tip('cone:4', '#ffb02a', 0, cy - 0.02, R * 0.96, PI / 2 + 0.25, 0, 0, 0.1, 0.16, 0.08);
+    s.put('sph:7:5', '#f0e0c0', 0, cy - R * 0.32, R * 0.5, R * 1.1, R * 0.9, R * 0.6);
+  } }),
+  // Gorgothin : bébé Gorgoth (couronne d'or, petites cornes, fissures de magma)
+  gorgothin: c => chibi(c, { pupil: '#ff8a2a', eyeGlow: 0.6, extra: (s, cy, R) => {
+    s.put('tor:0.06:4:16', '#ffd54a', 0, cy + R * 0.8, 0, R * 1.1, R * 1.1, R * 1.1, PI / 2, 0, 0, { glow: 0.3 });
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; s.tip('cone:4', '#ffd54a', Math.cos(a) * R * 0.52, cy + R * 0.82, Math.sin(a) * R * 0.52, Math.sin(a) * 0.2, 0, -Math.cos(a) * 0.2, 0.12, 0.28, 0.12, { glow: 0.4 }); }
+    s.symTip('cone:4', '#d8c8a0', R * 0.78, cy + R * 0.45, 0, 0, 0, -0.9, 0.12, 0.26, 0.12);
+    for (const [x, y, r] of [[0.32, 0.12, 0.5], [-0.3, -0.2, -0.6], [0.12, -0.38, 0.2]]) s.put('box', '#ff8a2a', x, cy + y, R * 0.86, 0.04, 0.2, 0.03, 0, 0, r, { glow: 1.2 });
+  } }),
 };
 export function petModel(petId) {
   const p = PETS[petId] || PETS.poro, def = { name: 'pet-' + petId, body: p.body, pal: p.pal };
@@ -722,7 +758,7 @@ export function petModel(petId) {
   const SC = petId === 'voidy' ? 0.55 : 0.6, st = { yaw: PI / 2, ph: 0, t: 0 };
   const sObj = { x: 0, y: 0, z: 0, rot: PI / 2, scale: SC, flash: 0, freeze: false, mad: false, anim: 0, sq: 0, alpha: 1 };
   // les fantômes et les oiseaux flottent ; les autres sautillent
-  const fly = petId === 'wisp' || petId === 'phenix';
+  const fly = petId === 'wisp' || petId === 'phenix' || petId === 'zip';
   return {
     root: scene, height: pool.height * SC,
     update(dt, pose = {}) {

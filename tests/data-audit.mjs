@@ -58,7 +58,7 @@ const out = await p.evaluate(async () => {
   // histoire
   for (let n = 0; n < ST.storyLen; n++) { const c = ST.chapter(n); ok(D.ZONES[c.zone], `chapitre ${n + 1} : monde ${c.zone}`); ok(c.intro?.length && c.outro?.length && (c.mission ? ["collect", "survive", "elites"].includes(c.mission.type) : c.taunt), `chapitre ${n + 1} : dialogues`); ok(D.LOOT_TIERS[c.reward.chest], `chapitre ${n + 1} : coffre`); }
   // familiers
-  for (const [k, pt] of Object.entries(D.PETS)) ok(D.ZONES[pt.zone], `familier ${k} : monde`);
+  for (const [k, pt] of Object.entries(D.PETS)) ok(pt.unlock ? pt.unlock.txt && pt.unlock.n > 0 && typeof pt.unlock.prog === 'function' : D.ZONES[pt.zone], `familier ${k} : monde ou déblocage`);
   ok(D.PET_BY_ZONE.every(k => D.PETS[k]), 'PET_BY_ZONE');
   // armes du registre : chaque nouvelle arme d'arsenal a un comportement (registre ou moteur)
   const builtin = ['beam', 'orbs', 'lightning', 'arrows', 'boomerang', 'sword', 'aura', 'scythe', 'daggers', 'frost', 'snowball', 'shrooms'];

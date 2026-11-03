@@ -319,6 +319,44 @@ export function stopMusic() {
   seq = null;
 }
 
+// ---------- Voix des personnages (fichiers de voices/, choisis par js/voice.js) ----------
+// une seule réplique à la fois ; la musique baisse pendant qu'un personnage parle
+const vbuf = new Map();
+let vsrc = null, vtok = 0;
+async function loadVoice(c, url) {
+  if (vbuf.has(url)) return vbuf.get(url);
+  const p = fetch(url).then(r => (r.ok ? r.arrayBuffer() : null))
+    .then(a => (a ? new Promise((res, rej) => c.decodeAudioData(a, res, rej)) : null)).catch(() => null);
+  vbuf.set(url, p);
+  const b = await p; if (!b) vbuf.delete(url);
+  return b;
+}
+export function stopVoice() {
+  vtok++;
+  if (!vsrc) return;
+  try { vsrc.stop(); } catch (e) { /* déjà fini */ }
+  vsrc = null; voiceDuck(false);
+}
+function voiceDuck(on) {
+  if (!ctx || !musicBus) return;
+  musicBus.gain.cancelScheduledValues(now());
+  musicBus.gain.setTargetAtTime(on ? 0.2 : 0.55, now(), 0.12);
+}
+// charge à l'avance (début d'une scène de dialogue)
+export function preloadVoices(urls) { const c = ac(); if (c) for (const u of urls) loadVoice(c, u); }
+export async function playVoice(url) {
+  if (!save.settings.sound || save.settings.voice === false) return false;
+  const c = ac(); if (!c) return false;
+  stopVoice(); const tok = vtok;
+  const buf = await loadVoice(c, url);
+  if (!buf || tok !== vtok) return !!buf;
+  const s = c.createBufferSource(), g = c.createGain();
+  g.gain.value = 1.15; s.buffer = buf; s.connect(g); g.connect(master);
+  s.onended = () => { if (vsrc === s) { vsrc = null; voiceDuck(false); } };
+  voiceDuck(true); s.start(); vsrc = s;
+  return true;
+}
+
 // baisse la musique (pause, menus de niveau)
 export function duckMusic(on) {
   if (!ctx || !musicBus) return;

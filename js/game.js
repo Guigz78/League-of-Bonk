@@ -4,7 +4,7 @@ import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PET
 import * as DATA from './data.js';
 import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, maxDiff,
   canCraft, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
-  buyBoost, cleanBoostSel, consumeBoosts, rarityIdx, canForgeMythic } from './save.js';
+  buyBoost, cleanBoostSel, consumeBoosts, rarityIdx, canForgeMythic, checkPets } from './save.js';
 import { iconImg } from './art.js';
 import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported } from './visuals.js';
 import { rng } from './pixel.js';
@@ -30,7 +30,7 @@ import { chestScreen, lootAgg, partIcon } from './chests.js';
 import { forgeTab, selectForge, doCraft, doForgeMyth, doFuse, mythInfo } from './forge.js';
 import { settings, accountSheet, signGoogle, signInSheet, loginStrip, hideLoginStrip } from './account.js';
 
-export const APP_VERSION = 'v47'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
+export const APP_VERSION = 'v48'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
 let battle = null;
 let gearFilter = 'all';
@@ -1331,6 +1331,13 @@ function tipFor(sum, k = 0) {
 }
 
 export function announceAchievements() {
+  // nouveaux familiers (défi de la semaine, mode infini, coffres, Abysse, histoire, giga boss)
+  const pets = checkPets();
+  if (pets.length) {
+    const P = PETS[pets[0]];
+    toast(`<img class="px spr" src="${creatureURL('pet-' + pets[0], P.body, P.pal)}" width="26" height="26" alt=""> Nouveau familier : <b>${esc(pets.map(id => PETS[id].name).join(', '))}</b> · à choisir dans Héros`, 4200);
+    sfx('win');
+  }
   const got = checkAchievements();
   if (!got.length) return persist();
   const gold = fmt(got.reduce((n, a) => n + a.gold, 0)), ti = got.find(a => a.title && DATA.TITLES?.[a.title]);
@@ -1363,6 +1370,13 @@ function itemTile(it, { act = true, cur, isNew = false } = {}) {
   </${tag}>`;
 }
 
+// familier pas encore obtenu : comment l'avoir (boss d'un monde, ou objectif avec la progression)
+function petLock(p) {
+  if (!p.unlock) return `Terminez « ${esc(ZONES[p.zone].name)} »`;
+  const U = p.unlock; let v = 0; try { v = U.prog(save); } catch (e) { /* sauvegarde incomplète */ }
+  const f = U.time ? fmtTime : fmt;
+  return `${esc(U.txt)} <i class="pet-prog">${f(Math.min(v, U.n))} / ${f(U.n)}</i>`;
+}
 function gearTab() {
   const eqIds = Object.values(save.equipped);
   const fresh = new Set(save.inventory.filter(i => i.isNew).map(i => i.id));
@@ -1381,7 +1395,7 @@ function gearTab() {
     return `<button class="pet-card ${owned ? '' : 'locked'} ${save.pet === id ? 'on' : ''}" ${owned ? `data-act="pet" data-id="${id}"` : 'disabled'}>
       ${owned ? `<img class="px spr" src="${creatureURL('pet-' + id, p.body, p.pal)}" alt="">` : iconImg('lock', 24)}
       <b>${owned ? esc(p.name) : '???'}</b>
-      <small>${owned ? esc(p.desc) : `Terminez « ${esc(ZONES[p.zone].name)} »`}</small>
+      <small>${owned ? esc(p.desc) : petLock(p)}</small>
       ${save.pet === id ? '<em>Actif</em>' : ''}
     </button>`;
   }).join('');
@@ -1398,7 +1412,7 @@ function gearTab() {
       ${list.some(i => i.rarity === 'common' && !i.lv) ? '<button class="chip-btn sell" data-act="sellJunk">Trier les communs</button>' : ''}</div>
     ${list.length ? `<div class="inv-grid">${list.map(it => itemTile(it, { cur: save.inventory.find(i => i.id === save.equipped[it.slot]) || null, isNew: fresh.has(it.id) })).join('')}</div>`
     : '<p class="muted center empty-note">Ouvrez des coffres de butin et battez des boss pour trouver de l\'équipement.</p>'}
-    <h3 class="section-t">Familier <small>${save.pets.length}/6</small></h3>
+    <h3 class="section-t">Familier <small>${save.pets.length}/${Object.keys(PETS).length}</small></h3>
     ${save.pets.length ? tapHint('Touchez un familier pour l\'emmener (ou le laisser)') : ''}
     <div class="pets">${pets}</div>
     <h3 class="section-t">Bonus <small>${nB} en stock</small></h3>

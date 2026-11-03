@@ -1,0 +1,1 @@
+Voix des personnages (ElevenLabs) : un mp3 par réplique, liste dans js/voices-list.js.

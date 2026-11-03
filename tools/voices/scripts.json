@@ -1,0 +1,386 @@
+{
+ "narr": {
+  "voice": "86fYoxrFeaJKXplThwSl",
+  "base": "[warmly]",
+  "who": "narrateur",
+  "ids": [
+   "c1-intro-0",
+   "c2-intro-0",
+   "c4-intro-0",
+   "c6-intro-0",
+   "c8-intro-0",
+   "c10-intro-0",
+   "c12-intro-0",
+   "c12-epilogue-0",
+   "c12-epilogue-1",
+   "c12-epilogue-2",
+   "c12-end"
+  ],
+  "texts": [
+   "Dimanche matin. Ça sent bon la soupe dans toute la vallée… enfin, ça sentait.",
+   "La Jungle Grondante. Il fait chaud, ça pique, et ça grogne.",
+   "La Rivière Scintillante. L'eau est claire. Les crabes, beaucoup moins.",
+   "Les Pics Gelés. Moins quarante degrés. Pompon a mis son écharpe.",
+   "Le Marais Hanté. Même la brume a peur de la brume.",
+   "Le Néant. Il n'y a rien. Vraiment rien. Même pas un banc.",
+   "Au cœur du Néant, une énorme marmite fume doucement.",
+   "Le dimanche suivant, toute la vallée est venue manger la soupe.",
+   "Le Roi Gobelin a servi avec sa louche. Le Cryophénix a refroidi les bols.",
+   "Le Ver-Roi en a repris trois fois. Gorgoth a fait la vaisselle. En chantant.",
+   "Tout le monde a eu sa soupe. Même Gorgoth."
+  ],
+  "prompt": "[warmly] Dimanche matin. Ça sent bon la soupe dans toute la vallée… enfin, ça sentait. [long pause] [warmly] La Jungle Grondante. Il fait chaud, ça pique, et ça grogne. [long pause] [warmly] La Rivière Scintillante. L'eau est claire. Les crabes, beaucoup moins. [long pause] [warmly] Les Pics Gelés. Moins quarante degrés. Pompon a mis son écharpe. [long pause] [warmly] Le Marais Hanté. Même la brume a peur de la brume. [long pause] [warmly] Le Néant. Il n'y a rien. Vraiment rien. Même pas un banc. [long pause] [warmly] Au cœur du Néant, une énorme marmite fume doucement. [long pause] [warmly] Le dimanche suivant, toute la vallée est venue manger la soupe. [long pause] [warmly] Le Roi Gobelin a servi avec sa louche. Le Cryophénix a refroidi les bols. [long pause] [warmly] Le Ver-Roi en a repris trois fois. Gorgoth a fait la vaisselle. En chantant. [long pause] [warmly] Tout le monde a eu sa soupe. Même Gorgoth."
+ },
+ "heroM": {
+  "voice": "2i5dPPF5PJ5RQSrDsmUd",
+  "base": "",
+  "who": "champion (homme)",
+  "ids": [
+   "c1-intro-2",
+   "c1-outro-3",
+   "c2-intro-2",
+   "c2-intro-4",
+   "c2-outro-2",
+   "c3-intro-2",
+   "c3-outro-2",
+   "c4-intro-2",
+   "c4-outro-2",
+   "c5-intro-1",
+   "c6-intro-2",
+   "c6-outro-2",
+   "c7-intro-0",
+   "c7-outro-2",
+   "c8-intro-2",
+   "c8-outro-2",
+   "c9-intro-1",
+   "c9-outro-2",
+   "c10-intro-3",
+   "c11-intro-1",
+   "c11-outro-2",
+   "c12-intro-2",
+   "c12-outro-1"
+  ],
+  "texts": [
+   "Quoi ?! La marmite de la soupe du dimanche ?",
+   "Des carottes ? Pompon, on y va.",
+   "S'il les veut, c'est qu'elles comptent pour sa soupe.",
+   "Attention, ses gobelins les surveillent. Ça va secouer.",
+   "Oups. On a été repérés.",
+   "Et avant ça, celles du potager de mamie !",
+   "Attends… il fait VRAIMENT une soupe ?!",
+   "On tient bon jusqu'à ce qu'ils se fatiguent.",
+   "Il est là-bas, au bord de l'eau !",
+   "Quelqu'un fait trempette dans notre marmite.",
+   "On n'a même pas de marmite, c'est justement le problème !",
+   "On avance. Gorgoth n'est plus très loin.",
+   "Brrr… Pourquoi les méchants habitent toujours là où il fait froid ?",
+   "Une épice secrète ? C'est un concours de cuisine ou quoi ?",
+   "Gorgoth a dû les perdre en fuyant. Ramassons-les toutes !",
+   "Il est vraiment très mauvais pour garder des secrets.",
+   "Reste derrière moi, Pompon.",
+   "Gorgoth est parti en chercher. Direction le Néant.",
+   "Quatre gardes ? On en a vu d'autres.",
+   "Gorgoth n'est plus très loin. Je sens l'odeur de la soupe.",
+   "Pompon, sors les bols. On va récupérer cette marmite.",
+   "Rends la Grande Marmite, Gorgoth !",
+   "C'est tout ? Il suffisait de demander !"
+  ],
+  "prompt": "[angry] Quoi ?! La marmite de la soupe du dimanche ? [long pause] [happy] Des carottes ? Pompon, on y va. [long pause] [curious] S'il les veut, c'est qu'elles comptent pour sa soupe. [long pause] [curious] Attention, ses gobelins les surveillent. Ça va secouer. [long pause] [surprised] Oups. On a été repérés. [long pause] [angry] Et avant ça, celles du potager de mamie ! [long pause] [surprised] Attends… il fait VRAIMENT une soupe ?! [long pause] [angry] On tient bon jusqu'à ce qu'ils se fatiguent. [long pause] [surprised] Il est là-bas, au bord de l'eau ! [long pause] [angry] Quelqu'un fait trempette dans notre marmite. [long pause] [angry] On n'a même pas de marmite, c'est justement le problème ! [long pause] [happy] On avance. Gorgoth n'est plus très loin. [long pause] [sad] Brrr… Pourquoi les méchants habitent toujours là où il fait froid ? [long pause] [surprised] Une épice secrète ? C'est un concours de cuisine ou quoi ? [long pause] [happy] Gorgoth a dû les perdre en fuyant. Ramassons-les toutes ! [long pause] [curious] Il est vraiment très mauvais pour garder des secrets. [long pause] [curious] Reste derrière moi, Pompon. [long pause] [angry] Gorgoth est parti en chercher. Direction le Néant. [long pause] [happy] Quatre gardes ? On en a vu d'autres. [long pause] [curious] Gorgoth n'est plus très loin. Je sens l'odeur de la soupe. [long pause] [angry] Pompon, sors les bols. On va récupérer cette marmite. [long pause] [angry] Rends la Grande Marmite, Gorgoth ! [long pause] [surprised] C'est tout ? Il suffisait de demander !"
+ },
+ "heroF": {
+  "voice": "i6ke7jvmGEVUyV4zjSaT",
+  "base": "",
+  "who": "championne (femme)",
+  "ids": [
+   "c1-intro-2",
+   "c1-outro-3",
+   "c2-intro-2",
+   "c2-intro-4",
+   "c2-outro-2",
+   "c3-intro-2",
+   "c3-outro-2",
+   "c4-intro-2",
+   "c4-outro-2",
+   "c5-intro-1",
+   "c6-intro-2",
+   "c6-outro-2",
+   "c7-intro-0",
+   "c7-outro-2",
+   "c8-intro-2",
+   "c8-outro-2",
+   "c9-intro-1",
+   "c9-outro-2",
+   "c10-intro-3",
+   "c11-intro-1",
+   "c11-outro-2",
+   "c12-intro-2",
+   "c12-outro-1"
+  ],
+  "texts": [
+   "Quoi ?! La marmite de la soupe du dimanche ?",
+   "Des carottes ? Pompon, on y va.",
+   "S'il les veut, c'est qu'elles comptent pour sa soupe.",
+   "Attention, ses gobelins les surveillent. Ça va secouer.",
+   "Oups. On a été repérés.",
+   "Et avant ça, celles du potager de mamie !",
+   "Attends… il fait VRAIMENT une soupe ?!",
+   "On tient bon jusqu'à ce qu'ils se fatiguent.",
+   "Il est là-bas, au bord de l'eau !",
+   "Quelqu'un fait trempette dans notre marmite.",
+   "On n'a même pas de marmite, c'est justement le problème !",
+   "On avance. Gorgoth n'est plus très loin.",
+   "Brrr… Pourquoi les méchants habitent toujours là où il fait froid ?",
+   "Une épice secrète ? C'est un concours de cuisine ou quoi ?",
+   "Gorgoth a dû les perdre en fuyant. Ramassons-les toutes !",
+   "Il est vraiment très mauvais pour garder des secrets.",
+   "Reste derrière moi, Pompon.",
+   "Gorgoth est parti en chercher. Direction le Néant.",
+   "Quatre gardes ? On en a vu d'autres.",
+   "Gorgoth n'est plus très loin. Je sens l'odeur de la soupe.",
+   "Pompon, sors les bols. On va récupérer cette marmite.",
+   "Rends la Grande Marmite, Gorgoth !",
+   "C'est tout ? Il suffisait de demander !"
+  ],
+  "prompt": "[angry] Quoi ?! La marmite de la soupe du dimanche ? [long pause] [happy] Des carottes ? Pompon, on y va. [long pause] [curious] S'il les veut, c'est qu'elles comptent pour sa soupe. [long pause] [curious] Attention, ses gobelins les surveillent. Ça va secouer. [long pause] [surprised] Oups. On a été repérés. [long pause] [angry] Et avant ça, celles du potager de mamie ! [long pause] [surprised] Attends… il fait VRAIMENT une soupe ?! [long pause] [angry] On tient bon jusqu'à ce qu'ils se fatiguent. [long pause] [surprised] Il est là-bas, au bord de l'eau ! [long pause] [angry] Quelqu'un fait trempette dans notre marmite. [long pause] [angry] On n'a même pas de marmite, c'est justement le problème ! [long pause] [happy] On avance. Gorgoth n'est plus très loin. [long pause] [sad] Brrr… Pourquoi les méchants habitent toujours là où il fait froid ? [long pause] [surprised] Une épice secrète ? C'est un concours de cuisine ou quoi ? [long pause] [happy] Gorgoth a dû les perdre en fuyant. Ramassons-les toutes ! [long pause] [curious] Il est vraiment très mauvais pour garder des secrets. [long pause] [curious] Reste derrière moi, Pompon. [long pause] [angry] Gorgoth est parti en chercher. Direction le Néant. [long pause] [happy] Quatre gardes ? On en a vu d'autres. [long pause] [curious] Gorgoth n'est plus très loin. Je sens l'odeur de la soupe. [long pause] [angry] Pompon, sors les bols. On va récupérer cette marmite. [long pause] [angry] Rends la Grande Marmite, Gorgoth ! [long pause] [surprised] C'est tout ? Il suffisait de demander !"
+ },
+ "gorgoth": {
+  "voice": "AYfOkr1hDQYbhigmRZ16",
+  "base": "[deep voice] [dramatically]",
+  "who": "Gorgoth",
+  "ids": [
+   "c2-outro-1",
+   "c4-outro-1",
+   "c8-outro-1",
+   "c10-intro-1",
+   "c10-outro-0",
+   "c12-intro-1",
+   "c12-intro-3",
+   "c12-outro-0",
+   "c12-outro-3",
+   "c12-taunt"
+  ],
+  "texts": [
+   "QUI A PRIS MES CAROTTES ?! Ronce-Brûlante, ATTRAPE-LES !",
+   "Léviathan ! Garde ma marmite, je reviens dans cinq minutes !",
+   "HA HA ! La dernière page, c'est le Geôlier qui l'a ! Bon courage !",
+   "Mes gardes d'élite vont vous réduire en purée !",
+   "Mes gardes ! Bon… Ver-Roi, à toi de jouer !",
+   "QUI OSE DÉRANGER MA SOUPE ?! Je suis GORGOTH, ROI DES BONKS !",
+   "JAMAIS ! Viens la chercher, si tu l'oses !",
+   "Snif… Personne ne m'invite jamais au repas du dimanche…",
+   "…Je peux avoir deux bols ?",
+   "Ma soupe ne refroidira pas pour toi !"
+  ],
+  "prompt": "[deep voice] [dramatically] [angry] QUI A PRIS MES CAROTTES ?! Ronce-Brûlante, ATTRAPE-LES ! [long pause] [deep voice] [dramatically] [angry] Léviathan ! Garde ma marmite, je reviens dans cinq minutes ! [long pause] [deep voice] [dramatically] [happy] HA HA ! La dernière page, c'est le Geôlier qui l'a ! Bon courage ! [long pause] [deep voice] [dramatically] [angry] Mes gardes d'élite vont vous réduire en purée ! [long pause] [deep voice] [dramatically] [angry] Mes gardes ! Bon… Ver-Roi, à toi de jouer ! [long pause] [deep voice] [dramatically] [angry] QUI OSE DÉRANGER MA SOUPE ?! Je suis GORGOTH, ROI DES BONKS ! [long pause] [deep voice] [dramatically] [angry] JAMAIS ! Viens la chercher, si tu l'oses ! [long pause] [deep voice] [dramatically] [sad] Snif… Personne ne m'invite jamais au repas du dimanche… [long pause] [deep voice] [dramatically] [happy] …Je peux avoir deux bols ? [long pause] [deep voice] [dramatically] [angry] Ma soupe ne refroidira pas pour toi !"
+ },
+ "boss0": {
+  "voice": "Xy5q4w05TJGcKXPWeWoz",
+  "base": "[raspy] [mischievously]",
+  "who": "Roi Gobelin",
+  "ids": [
+   "c1-outro-0",
+   "c1-outro-2",
+   "c1-taunt"
+  ],
+  "texts": [
+   "Aïe ! Ça va, ça va… Gorgoth m'a juste laissé la louche.",
+   "Il est parti dans la jungle. Il cherchait des carottes.",
+   "Halte ! Je suis le Gardien Officiel de la Louche !"
+  ],
+  "prompt": "[raspy] [mischievously] [sad] Aïe ! Ça va, ça va… Gorgoth m'a juste laissé la louche. [long pause] [raspy] [mischievously] Il est parti dans la jungle. Il cherchait des carottes. [long pause] [raspy] [mischievously] [angry] Halte ! Je suis le Gardien Officiel de la Louche !"
+ },
+ "boss1": {
+  "voice": "b0Ev8lcOOXx2o9ZcF46H",
+  "base": "[raspy] [grumpy]",
+  "who": "Ronce-Brûlante",
+  "ids": [
+   "c3-intro-0",
+   "c3-outro-0",
+   "c3-outro-1",
+   "c3-taunt"
+  ],
+  "texts": [
+   "Ici c'est MA jungle. Et ce sont MES carottes, maintenant.",
+   "Pfff… Garde-les, tes carottes. Gorgoth en a plein sa marmite.",
+   "Il est parti à la rivière pour la remplir d'eau.",
+   "Personne ne touche à MES carottes !"
+  ],
+  "prompt": "[raspy] [grumpy] [angry] Ici c'est MA jungle. Et ce sont MES carottes, maintenant. [long pause] [raspy] [grumpy] [sad] Pfff… Garde-les, tes carottes. Gorgoth en a plein sa marmite. [long pause] [raspy] [grumpy] Il est parti à la rivière pour la remplir d'eau. [long pause] [raspy] [grumpy] [angry] Personne ne touche à MES carottes !"
+ },
+ "boss2": {
+  "voice": "wQjKP9DkO6pDLKdaqFn6",
+  "base": "[deep voice]",
+  "who": "Léviathan pourpre",
+  "ids": [
+   "c5-outro-0",
+   "c5-outro-2",
+   "c5-taunt"
+  ],
+  "texts": [
+   "Bon, j'avoue : j'ai dormi dans la marmite. Elle était toute tiède.",
+   "Gorgoth l'a emportée en montagne, pour garder la soupe au frais.",
+   "Chut ! Je fais la sieste… euh, JE MONTE LA GARDE !"
+  ],
+  "prompt": "[deep voice] [sad] Bon, j'avoue : j'ai dormi dans la marmite. Elle était toute tiède. [long pause] [deep voice] Gorgoth l'a emportée en montagne, pour garder la soupe au frais. [long pause] [deep voice] [angry] Chut ! Je fais la sieste… euh, JE MONTE LA GARDE !"
+ },
+ "boss3": {
+  "voice": "Nx7FcZgjGWVrAsCg0Csy",
+  "base": "[haughty]",
+  "who": "Cryophénix",
+  "ids": [
+   "c7-outro-0",
+   "c7-outro-1",
+   "c7-taunt"
+  ],
+  "texts": [
+   "Le sorbet à la carotte… c'était une très mauvaise idée.",
+   "Gorgoth cherche une épice secrète. Il est parti au marais.",
+   "Ici, toutes les soupes finissent en sorbet !"
+  ],
+  "prompt": "[haughty] [sad] Le sorbet à la carotte… c'était une très mauvaise idée. [long pause] [haughty] Gorgoth cherche une épice secrète. Il est parti au marais. [long pause] [haughty] [angry] Ici, toutes les soupes finissent en sorbet !"
+ },
+ "garde3": {
+  "voice": "H1Y1umtVANCB20JRXWfL",
+  "base": "[formal]",
+  "who": "Chevalier de givre",
+  "ids": [
+   "c6-intro-1",
+   "c6-outro-0"
+  ],
+  "texts": [
+   "Halte ! Douane des Pics Gelés. Les marmites sont interdites !",
+   "Bon… Passage autorisé. Mais essuyez vos pieds."
+  ],
+  "prompt": "[formal] [angry] Halte ! Douane des Pics Gelés. Les marmites sont interdites ! [long pause] [formal] [sad] Bon… Passage autorisé. Mais essuyez vos pieds."
+ },
+ "boss4": {
+  "voice": "pTN7Gg7vgFsxVj1J6eIa",
+  "base": "[whispers]",
+  "who": "Geôlier spectral",
+  "ids": [
+   "c9-outro-0",
+   "c9-taunt"
+  ],
+  "texts": [
+   "D'accord ! Voilà la dernière page. Mamie Bonk me faisait peur.",
+   "Je collectionne les âmes… et les recettes de grand-mère !"
+  ],
+  "prompt": "[whispers] [sad] D'accord ! Voilà la dernière page. Mamie Bonk me faisait peur. [long pause] [whispers] [angry] Je collectionne les âmes… et les recettes de grand-mère !"
+ },
+ "boss5": {
+  "voice": "X79PkZE4sUJaUOQBlYPp",
+  "base": "[deep voice] [slowly]",
+  "who": "Ver-Roi du Néant",
+  "ids": [
+   "c11-outro-0",
+   "c11-outro-1",
+   "c11-taunt"
+  ],
+  "texts": [
+   "Burp. Pardon. J'ai avalé une planète ce matin, je suis un peu lourd.",
+   "Gorgoth est juste derrière. Sa soupe est presque prête.",
+   "JE DÉVORE LES MONDES ! …Mais pas les légumes. Beurk."
+  ],
+  "prompt": "[deep voice] [slowly] [sad] Burp. Pardon. J'ai avalé une planète ce matin, je suis un peu lourd. [long pause] [deep voice] [slowly] Gorgoth est juste derrière. Sa soupe est presque prête. [long pause] [deep voice] [slowly] [angry] JE DÉVORE LES MONDES ! …Mais pas les légumes. Beurk."
+ },
+ "pomponA": {
+  "voice": "ZYOBieLaunTiQrTrvNQq",
+  "base": "[childlike voice] [high voice]",
+  "who": "Pompon",
+  "ids": [
+   "c1-intro-1",
+   "c1-intro-3",
+   "c1-outro-1",
+   "c2-intro-1",
+   "c2-intro-3",
+   "c2-outro-0",
+   "c3-intro-1",
+   "c4-intro-1",
+   "c4-intro-3",
+   "c4-outro-0",
+   "c5-intro-0",
+   "c5-outro-1",
+   "c6-intro-3",
+   "c6-outro-1",
+   "c7-intro-1",
+   "c8-intro-1",
+   "c8-outro-0",
+   "c9-intro-0",
+   "c9-outro-1",
+   "c10-intro-2",
+   "c10-outro-1",
+   "c11-intro-0",
+   "c12-outro-2",
+   "c12-epilogue-3"
+  ],
+  "texts": [
+   "Champion ! Debout ! Gorgoth, le Roi des Bonks, a volé la Grande Marmite !",
+   "Ses gobelins traînent dans la vallée. Va leur faire bonk !",
+   "Une louche sans marmite… c'est tellement triste.",
+   "Regarde ! Des carottes partout ! Gorgoth les a semées en courant.",
+   "Ramassons-les avant lui ! Sept carottes, pas une de moins !",
+   "Sept carottes ! Gorgoth va être furieux.",
+   "Techniquement, c'étaient celles de Gorgoth…",
+   "Le Léviathan a envoyé toute son armée de crabes !",
+   "Les crabes, ça se fatigue ? Bon… on va voir.",
+   "Ils repartent ! C'était l'heure de leur goûter, je crois.",
+   "Ça sent… le bouillon. Et un peu le poisson.",
+   "Beurk ! On la lavera. Deux fois.",
+   "Quatre gros gardes bloquent le col. Il faut les battre.",
+   "Je n'ai pas de pieds. J'ai des poils.",
+   "Pour avoir l'air cool, je crois.",
+   "Regarde ! Des pages déchirées… « Recette de mamie Bonk » !",
+   "« Ingrédient secret : une pincée de… » La dernière page manque !",
+   "J'ai pas peur, hein. Ce sont mes poils qui tremblent tout seuls.",
+   "« Ingrédient secret : une pincée de Néant. » Pardon ?",
+   "En purée ? Il ne pense vraiment qu'à manger.",
+   "Le Ver-Roi ? Celui qui mange des mondes entiers ?!",
+   "Il est ÉNORME. Et il a l'air d'avoir faim.",
+   "Tu peux venir. Mais c'est toi qui fais la vaisselle.",
+   "Meilleure soupe de toute ma vie. Et j'ai seulement six mois."
+  ],
+  "prompt": "[childlike voice] [high voice] [surprised] Champion ! Debout ! Gorgoth, le Roi des Bonks, a volé la Grande Marmite ! [long pause] [childlike voice] [high voice] [happy] Ses gobelins traînent dans la vallée. Va leur faire bonk ! [long pause] [childlike voice] [high voice] [sad] Une louche sans marmite… c'est tellement triste. [long pause] [childlike voice] [high voice] [surprised] Regarde ! Des carottes partout ! Gorgoth les a semées en courant. [long pause] [childlike voice] [high voice] [happy] Ramassons-les avant lui ! Sept carottes, pas une de moins ! [long pause] [childlike voice] [high voice] [happy] Sept carottes ! Gorgoth va être furieux. [long pause] [childlike voice] [high voice] [curious] Techniquement, c'étaient celles de Gorgoth… [long pause] [childlike voice] [high voice] [surprised] Le Léviathan a envoyé toute son armée de crabes ! [long pause] [childlike voice] [high voice] [curious] Les crabes, ça se fatigue ? Bon… on va voir. [long pause] [childlike voice] [high voice] [happy] Ils repartent ! C'était l'heure de leur goûter, je crois. [long pause] [childlike voice] [high voice] [curious] Ça sent… le bouillon. Et un peu le poisson. [long pause] [childlike voice] [high voice] [angry] Beurk ! On la lavera. Deux fois. [long pause] [childlike voice] [high voice] [curious] Quatre gros gardes bloquent le col. Il faut les battre. [long pause] [childlike voice] [high voice] [curious] Je n'ai pas de pieds. J'ai des poils. [long pause] [childlike voice] [high voice] [happy] Pour avoir l'air cool, je crois. [long pause] [childlike voice] [high voice] [surprised] Regarde ! Des pages déchirées… « Recette de mamie Bonk » ! [long pause] [childlike voice] [high voice] [surprised] « Ingrédient secret : une pincée de… » La dernière page manque ! [long pause] [childlike voice] [high voice] [sad] J'ai pas peur, hein. Ce sont mes poils qui tremblent tout seuls. [long pause] [childlike voice] [high voice] [surprised] « Ingrédient secret : une pincée de Néant. » Pardon ? [long pause] [childlike voice] [high voice] [curious] En purée ? Il ne pense vraiment qu'à manger. [long pause] [childlike voice] [high voice] [surprised] Le Ver-Roi ? Celui qui mange des mondes entiers ?! [long pause] [childlike voice] [high voice] [surprised] Il est ÉNORME. Et il a l'air d'avoir faim. [long pause] [childlike voice] [high voice] [happy] Tu peux venir. Mais c'est toi qui fais la vaisselle. [long pause] [childlike voice] [high voice] [happy] Meilleure soupe de toute ma vie. Et j'ai seulement six mois."
+ },
+ "pomponB": {
+  "voice": "ZYOBieLaunTiQrTrvNQq",
+  "base": "[childlike voice] [high voice]",
+  "who": "Pompon",
+  "ids": [
+   "pompon-start-boss",
+   "pompon-start-giga",
+   "pompon-start-collect",
+   "pompon-start-survive",
+   "pompon-start-defend",
+   "pompon-start-endless",
+   "pompon-start-elites",
+   "pompon-item-first",
+   "pompon-item-last",
+   "pompon-item-mid",
+   "pompon-guard",
+   "pompon-half",
+   "pompon-lowhp",
+   "pompon-bossHalf",
+   "pompon-potLow",
+   "pompon-done"
+  ],
+  "texts": [
+   "L'autel du boss est quelque part. Prends des niveaux d'abord !",
+   "C'est lui, Gorgoth ! Monte de niveau avant d'aller à son autel.",
+   "Suis les flèches ! Chaque objet est gardé : sois prêt.",
+   "Tiens bon ! Une horde va arriver : bouge sans arrêt.",
+   "Ils veulent la marmite ! Reste dans son cercle : quand tu es là, elle encaisse quatre fois moins.",
+   "Pas de boss, pas de portail : on tient le plus longtemps possible !",
+   "Les gardes sont marqués d'une cible. Va les chercher !",
+   "Et d'un !",
+   "Plus qu'un ! Tu y es presque !",
+   "On tient le bon bout !",
+   "Un garde de moins !",
+   "À mi-chemin ! Courage, ils fatiguent !",
+   "Aïe aïe aïe ! Fais attention, tu n'as presque plus de PV !",
+   "Il faiblit ! Continue comme ça !",
+   "La marmite ne tient plus qu'à un fil ! Reviens vite !",
+   "C'est gagné ! Le portail s'ouvre, file dedans !"
+  ],
+  "prompt": "[childlike voice] [high voice] [excited] L'autel du boss est quelque part. Prends des niveaux d'abord ! [long pause] [childlike voice] [high voice] [surprised] C'est lui, Gorgoth ! Monte de niveau avant d'aller à son autel. [long pause] [childlike voice] [high voice] [excited] Suis les flèches ! Chaque objet est gardé : sois prêt. [long pause] [childlike voice] [high voice] [excited] Tiens bon ! Une horde va arriver : bouge sans arrêt. [long pause] [childlike voice] [high voice] [surprised] Ils veulent la marmite ! Reste dans son cercle : quand tu es là, elle encaisse quatre fois moins. [long pause] [childlike voice] [high voice] [excited] Pas de boss, pas de portail : on tient le plus longtemps possible ! [long pause] [childlike voice] [high voice] [excited] Les gardes sont marqués d'une cible. Va les chercher ! [long pause] [childlike voice] [high voice] [happy] Et d'un ! [long pause] [childlike voice] [high voice] [excited] Plus qu'un ! Tu y es presque ! [long pause] [childlike voice] [high voice] [happy] On tient le bon bout ! [long pause] [childlike voice] [high voice] [happy] Un garde de moins ! [long pause] [childlike voice] [high voice] [excited] À mi-chemin ! Courage, ils fatiguent ! [long pause] [childlike voice] [high voice] [surprised] Aïe aïe aïe ! Fais attention, tu n'as presque plus de PV ! [long pause] [childlike voice] [high voice] [excited] Il faiblit ! Continue comme ça ! [long pause] [childlike voice] [high voice] [surprised] La marmite ne tient plus qu'à un fil ! Reviens vite ! [long pause] [childlike voice] [high voice] [happy] C'est gagné ! Le portail s'ouvre, file dedans !"
+ }
+}
