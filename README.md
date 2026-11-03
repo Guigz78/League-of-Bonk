@@ -11,6 +11,8 @@ Version web installable sur iPhone (PWA) : fonctionne **hors connexion**, sauveg
 - À chaque niveau : choisissez 1 amélioration parmi 3 (11 armes, 9 tomes, 5 niveaux chacun). Les élites lâchent des coffres.
 - 6 zones, 30 monstres, 5 boss, 6 familiers, équipement, boutique d'améliorations permanentes, succès, bestiaire.
 - À la mort : une pub permet de revivre une fois par partie.
+- Modes spéciaux (bouton Monde) : **défi de la semaine** (mêmes règles pour tout le monde, change le lundi : monde, difficulté, mission comme « Défendre la marmite », 2 malédictions ; récompense une fois par semaine) et **mode infini** (pas de boss, record par monde).
+- Options → Graphismes « Léger » pour les vieux iPhone.
 
 ## Lancer en local
 ```
@@ -23,7 +25,8 @@ python3 -m http.server 8000
 - `js/run.js` : moteur de jeu (déplacement, hordes, armes, évolutions, autels, coffres, boss)
 - `js/visuals.js` : accès au rendu pour le reste du jeu
 - `js/g3d/` : rendu 3D low-poly (Three.js, `vendor/three.module.min.js`) : `renderer.js` caméra fixe ; `world.js` sol, décor et bandeaux des zones ; `layout.js` thèmes et tracés des mondes ; `objects.js` objets ; `fx.js` effets ; `overlay.js` calque 2D (chiffres, flèches, mini-carte) ; `models*.js` personnages ; `portraits.js` / `preview.js` portraits et aperçus des menus ; `tex2d.js` petites textures
-- `js/game.js` : écrans (carte, équipement, boutique, succès, niveaux, bilan)
+- `js/game.js` : écrans (carte, équipement, boutique, succès, niveaux, bilan) ; `js/forge.js` forge ; `js/chests.js` ouverture des coffres ; `js/account.js` options, compte, connexion ; `js/item-ui.js` affichage des objets
+- `js/modes.js` : défi de la semaine et mode infini ; `js/story.js` + `js/story-mission.js` : histoire et missions (dont « Défendre la marmite »)
 - `js/save.js` : sauvegarde locale et statistiques
 - `js/cloud.js` + `js/config.js` : compte Google et synchronisation (Supabase)
 - `js/pixel.js`, `js/art.js` : pixel art (héros dessinés, monstres générés)
@@ -42,7 +45,8 @@ il faut ces deux adresses :
 Les tests jouent au jeu dans un vrai Chromium, en iPhone 13 et iPhone SE simulés (Playwright) : chasse aux bugs sur
 tous les écrans et avec chaque champion, logique (déblocages, défis, saison, anciennes sauvegardes), histoire complète,
 objets mythiques, défilement au doigt de chaque écran, joystick tactile, barre du haut, connexion (réponses de Supabase
-simulées), expédition jusqu'au giga boss.
+simulées, choix entre deux sauvegardes), forge, coffres et options, défi de la semaine et mode infini, expédition
+jusqu'au giga boss.
 - `node tests/run.mjs` : tout (~20 à 40 min) ; `node tests/run.mjs --rapide` : les tests courts (~2 min) ;
   `node tests/run.mjs histoire mythiques` : seulement ceux-là. Il faut Playwright (`npm install --no-save playwright`
   puis `npx playwright install chromium`).
