@@ -2559,8 +2559,9 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
 .account-modal .btn.google { width: 100%; }
 .set-link { margin-bottom: 4px; border: 1px solid var(--tap-ln); box-shadow: 0 3px 0 var(--lip); }
 .set-link:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); }
-.topbar .cur-v b { white-space: nowrap; }
-@media (max-width: 370px) { .topbar .cur-v b { font-size: 14px; } }
+/* chiffres dans la police du jeu (fournie avec le jeu) : même largeur sur iPhone, Android et ordinateur, rien ne déborde */
+.topbar .cur-v b { white-space: nowrap; font: 700 17px/1 var(--fd); letter-spacing: .02em; }
+@media (max-width: 370px) { .topbar .cur-v b { font-size: 16px; } }
 @media (max-width: 370px) {
   .topbar { gap: 4px; }
   .topbar .cur { gap: 4px; padding: 0 6px 0 5px; }
@@ -2600,3 +2601,49 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
 .ac-mail { width: 100%; margin-top: 8px; }
 .ls-t b, .ls-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ls-btn.m { width: 38px; padding: 0; justify-content: center; font-size: 17px; }
+
+/* ===== r27 : messages en bas (au-dessus des onglets), badges qui ne coupent plus la rareté, « Équipé ! » en coin ===== */
+.toasts:not(.in-run) { top: auto; bottom: calc(var(--safe-b) + 84px); flex-direction: column-reverse; }
+.toasts:not(.in-run) .toast.out { transform: translateY(8px); }
+.itile .it-new, .itile .it-better { top: 20px; right: 3px; }
+.rcard .rc-eq { position: absolute; z-index: 2; top: 30px; right: 10px; margin: 0; }
+
+/* ===== r27 : choix entre deux sauvegardes ===== */
+.sv-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.sv-card { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--s1); border: 1px solid var(--ln2); }
+.sv-h { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; font-size: 20px; line-height: 1; }
+.sv-h b { font: 700 14px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+.sv-h small { font: 500 11.5px var(--fb); color: var(--tx2); }
+.sv-l { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--tx2); }
+.sv-l img { width: 14px; height: 14px; flex: none; }
+.sv-l b { color: var(--tx); }
+
+/* ===== r27 : modes spéciaux (défi de la semaine, mode infini) ===== */
+.world-modal .wp-h { margin: 4px 0 8px; }
+.world-modal .wp-h:first-child { margin-top: 0; }
+.wp-mode { position: relative; width: 100%; display: flex; align-items: center; gap: 10px; min-height: 64px; margin-bottom: 8px; padding: 8px 8px 8px 10px; text-align: left;
+  background: linear-gradient(90deg, rgba(245,180,0,.14), var(--s2) 70%); border: 1px solid rgba(245,180,0,.5); box-shadow: 0 3px 0 var(--lip); }
+.wp-mode.endless { background: linear-gradient(90deg, rgba(168,85,247,.16), var(--s2) 70%); border-color: rgba(168,85,247,.5); }
+.wp-mode.done { border-color: rgba(61,220,132,.5); }
+.wp-mode:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); }
+.wm-ic { flex: none; width: 40px; height: 40px; display: grid; place-items: center; font: 700 24px/1 var(--fd); font-style: normal; background: rgba(0,0,0,.3); box-shadow: inset 0 0 0 1px var(--ln2); }
+.wm-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wm-t small { font: 700 10.5px/1.1 var(--fd); letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
+.wp-mode.endless .wm-t small { color: #c9a0ff; }
+.wp-mode.done .wm-t small { color: var(--green); }
+.wm-t b { font: 700 14.5px/1.15 var(--fd); letter-spacing: .02em; }
+.wm-t em { font: 500 11.5px/1.25 var(--fb); font-style: normal; color: var(--tx2); }
+.wm-go { flex: none; font: 700 26px/1 var(--fd); font-style: normal; color: var(--tx2); }
+.hs-btn { position: relative; }
+.hs-dot { position: absolute; top: -7px; right: -5px; display: grid; place-items: center; width: 20px; height: 20px; font-size: 12px; font-style: normal; background: var(--acc); border: 2px solid var(--bg); box-shadow: 0 0 10px rgba(245,180,0,.6); }
+.ms-big { position: relative; font: 700 64px/1 var(--fd); color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,.5), 0 0 24px rgba(245,180,0,.6); }
+.ms-rules { display: flex; flex-direction: column; gap: 6px; }
+.ms-rules span { display: flex; align-items: center; gap: 8px; font: 600 13.5px/1.3 var(--fb); }
+.ms-rules img { width: 16px; height: 16px; flex: none; }
+.ms-rules .curse { align-items: flex-start; flex-wrap: wrap; padding: 6px 8px; background: rgba(255,77,94,.08); border-left: 2px solid var(--red); }
+.ms-rules .curse b { color: #ff9aa4; }
+.ms-rules .curse small { flex-basis: 100%; padding-left: 24px; font-size: 12px; color: var(--tx2); }
+.ms-best { margin: 0; font: 600 14px var(--fb); color: var(--tx2); }
+.ms-best b { font: 700 26px var(--fd); color: #c9a0ff; }
+.ms-note { margin: 12px 0 0; font-size: 12.5px; }
+.ms-res .ms-ic { display: grid; place-items: center; width: 60px; height: 60px; font: 700 34px/1 var(--fd); color: var(--acc); }

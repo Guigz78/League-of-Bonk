@@ -1,0 +1,44 @@
+# Tests du jeu dans un vrai Chromium (iPhone 13 et iPhone SE simulés) à chaque mise à jour.
+# Rapides sur les branches de travail, complets sur main et à la main (onglet Actions → Tests → Run workflow).
+# Captures et journaux : artefact « tests-captures » du run.
+name: Tests
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      complet:
+        description: 'Tous les tests (sinon : les tests rapides)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Playwright et Chromium
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Tests
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ inputs.complet }}" = "true" ]; then
+            node tests/run.mjs
+          else
+            node tests/run.mjs --rapide
+          fi
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: tests-captures
+          path: tests/out
+          retention-days: 7

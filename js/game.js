@@ -1,34 +1,41 @@
 // Écrans du jeu et déroulé d'une expédition.
-import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, ACHIEVEMENTS, MONSTER_COUNT, BOSS_COUNT, DIFFICULTIES, ELITE_MODS,
-  LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES, LEGEND_EFFECTS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS } from './data.js';
+import { CLASSES, WEAPONS, TOMES, ULTS, ZONE_TIME, EVOLUTIONS, BOONS, ZONES, PETS, PET_BY_ZONE, SLOTS, RARITY, BOSS_ITEMS, UPGRADES, MONSTER_COUNT, BOSS_COUNT, DIFFICULTIES, ELITE_MODS,
+  LOOT_TIERS, RARITIES, PARTS, FORGE, BOOSTS, BOOST_SLOTS, HEAT_GOLD, AFFIXES } from './data.js';
 import * as DATA from './data.js';
-import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, resetSave, maxDiff,
-  openChest, canCraft, craftItem, canFuse, fuseParts, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
-  buyBoost, cleanBoostSel, consumeBoosts, rarityIdx, canForgeMythic, forgeMythic, mythLeft } from './save.js';
-import { iconImg, chestURL, anvilURL, hammerURL } from './art.js';
-import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported, itemURL } from './visuals.js';
+import { save, persist, playerStats, upgradeCost, makeItem, makeBossItem, addItem, itemPower, sellValue, maxDiff,
+  canCraft, itemUpgradeCost, canUpgrade, upgradeItem, statsAt, salvageValue, salvageItem,
+  buyBoost, cleanBoostSel, consumeBoosts, rarityIdx, canForgeMythic } from './save.js';
+import { iconImg } from './art.js';
+import { heroURL, creatureURL, mountPreview, zoneBannerURL, supported } from './visuals.js';
 import { rng } from './pixel.js';
 import { sfx, music, stopMusic } from './audio.js';
-import { app, mount, $, $$, bind, modal, toast, fmt, pct, esc, wait, countUp } from './ui.js';
+import { mount, $, $$, bind, modal, toast, fmt, pct, esc, countUp } from './ui.js';
 import { Run, LS, BOSS_LV, MSG_T } from './run.js';
 import { showRewardedAd } from './ads.js';
 import { cloud } from './cloud.js';
 import { loginState, dailyBadge } from './daily.js';
 // L1 : saison, quêtes de la semaine, calendrier de 20 jours, succès, titres
-import { seasonRun, checkAchievements, achList, titleName } from './season.js';
-import { hubStrip, homeGoals, heroTitle, seasonScreen, runPassBlock, questSheet, loginSheet, achBlock, titleSheet, seasonNotice } from './season-ui.js';
+import { seasonRun, checkAchievements } from './season.js';
+import { homeGoals, seasonScreen, runPassBlock, questSheet, loginSheet, achBlock, titleSheet, seasonNotice } from './season-ui.js';
 // L2 : défis de déblocage, maîtrise des champions, Abysse
-import { l2Home, endRunL2, l2Results, defisScreen, defisTile, defisCount, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
+import { l2Home, endRunL2, l2Results, defisScreen, defisCount, clsLocked, clsLockPanel, auraPicker, pickAura, isFree, lockLine } from './unlocks.js';
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
-import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
+import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssPause } from './abyss.js';
 // mode histoire « La Grande Marmite » (chapitres, dialogues, récompenses)
-import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, chatter, storyEnd, storyBlock, storyScreenHTML, chapterSheet, unlocked, totalStars } from './story.js';
+import { chapter, storyDone, storyNext, storyLen, cutscene, taunt, chatter, missionChatter, storyEnd, storyBlock, storyScreenHTML, chapterSheet, unlocked, totalStars } from './story.js';
+import { weekly, weeklyWin, weeklyDaysLeft, endlessBest, endlessEnd, WEEKLY_REWARD, mmss as mmssM } from './modes.js';
+// écrans séparés : objets (item-ui.js), coffres (chests.js), forge (forge.js), options et compte (account.js)
+import { AFX, STAT_ORDER, nf, affVal, itemArt, affShort, statKeys, statRows, effectBox, tapHint, mythBox, itemFx, buzz } from './item-ui.js';
+import { chestScreen, lootAgg, partIcon } from './chests.js';
+import { forgeTab, selectForge, doCraft, doForgeMyth, doFuse, mythInfo } from './forge.js';
+import { settings, accountSheet, signGoogle, signInSheet, loginStrip, hideLoginStrip } from './account.js';
 
-const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
+export const APP_VERSION = 'v47'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
 let battle = null;
 let gearFilter = 'all';
 let loginShown = '';
+export const inBattle = () => !!battle; // une partie est en cours (les écrans de l'accueil ne se redessinent pas)
 
 // ---------- Démarrage ----------
 export function boot() {
@@ -84,13 +91,13 @@ function topbar() {
   </header>`;
 }
 
-function refreshTopbar() {
+export function refreshTopbar() {
   const t = $('.topbar');
   if (t) t.outerHTML = topbar();
   const g = $('#goldN'); if (g) g.textContent = short(save.gold);
 }
 
-function nav() {
+export function nav() {
   const items = [
     ['adventure', 'Jouer', 'play'],
     ['gear', 'Héros', 'user'],
@@ -132,7 +139,7 @@ export function home(t) {
   if (tab === 'adventure') seasonNotice(openPass);
 }
 const openPass = () => seasonScreen(() => { announceAchievements(); home(); });
-const afterSheet = () => { announceAchievements(); if (!battle) home(); };
+export const afterSheet = () => { announceAchievements(); if (!battle) home(); };
 
 const handlers = {
   tab: el => home(el.dataset.tab),
@@ -140,7 +147,7 @@ const handlers = {
   account: () => accountSheet(),
   signGoogle: () => signGoogle(),
   signIn: () => signInSheet(),
-  hideStrip: () => { try { localStorage.setItem(STRIP_KEY, String(Date.now() + 3 * 864e5)); } catch (e) { /* stockage indisponible */ } $('.login-strip')?.remove(); },
+  hideStrip: () => hideLoginStrip(),
   // tant que le monde 1 n'est pas battu, JOUER lance le chapitre 1 de l'histoire (tutoriel, partie facile) ; sinon la fiche du monde
   play: () => (firstSteps() ? playChapter(0) : quickPlay()),
   worlds: () => worldPicker(),
@@ -165,67 +172,13 @@ const handlers = {
   cur: el => toast(el.dataset.k === 'gold'
     ? `${iconImg('gold', 16)} <b>${fmt(save.gold)} or</b> : améliorations de la Boutique, bonus et Forge. Gagné en partie et dans les coffres.`
     : `${iconImg('part', 16)} <b>${fmt(partsTotal())} pièces de forge</b> : fabriquer et améliorer l'équipement (Forge). Dans les coffres de butin ou en recyclant.`, 4200),
-  forgeSel: el => { forgeSel = { slot: el.dataset.slot, r: +el.dataset.r }; renderForge(); },
+  forgeSel: el => selectForge(el.dataset.slot, +el.dataset.r),
   craft: () => doCraft(),
   forgeMyth: () => doForgeMyth(),
   mythInfo: el => mythInfo(el.dataset.id),
   fuse: el => doFuse(el.dataset.all === '1'),
   buyBoost: el => doBuyBoost(el.dataset.id),
 };
-
-// ---------- Caractéristiques (objets et champion) ----------
-// icône et libellé court de chaque caractéristique (listes compactes)
-const AFX = {
-  atk: ['fist', 'ATQ'], hp: ['heart', 'PV'], crit: ['target', 'crit.'], critDmg: ['critdmg', 'dégâts crit.'], lifesteal: ['lifesteal', 'vol de vie'],
-  haste: ['haste', 'vit. d\'attaque'], speed: ['arrow', 'vitesse'], area: ['area', 'taille des attaques'], armor: ['shield', 'armure'],
-  regen: ['potion', 'PV/s'], thorns: ['thorns', 'épines'], dodge: ['dodge', 'esquive'], xp: ['tome', 'XP'], magnet: ['ring', 'ramassage'],
-  gold: ['gold', 'or'], ult: ['nova', 'ultime'],
-};
-const STAT_ORDER = Object.keys(AFX);
-const nf = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('fr-FR');
-// valeur d'un bonus : « +12 », « +2,5 % », « +0,3 PV/s »
-function affVal(k, v) {
-  const f = AFFIXES[k]?.fmt;
-  if (f === 'pct') { const p = v * 100; return `+${p >= 10 ? Math.round(p) : nf(p)} %`; }
-  if (f === 'regen') return `+${nf(v / 10)} PV/s`;
-  return `+${fmt(v)}`;
-}
-// « Vol de vie +2 % » ; épines : en % de l'ATQ
-const affLine = (k, v) => `${AFFIXES[k]?.name || k} ${affVal(k, v)}${k === 'thorns' ? ' de l\'ATQ' : ''}`;
-// version courte : « +12 ATQ », « +2 % vol de vie »
-// image 3D d'un objet (js/g3d/items3d.js), éclats pour les légendaires ; sans WebGL : l'icône
-const itemArt = (it, size = 64, cls = '') => {
-  const url = itemURL(it.name, it.rarity === 'mythic' ? 'M' : it.rarity === 'legendary');
-  return url ? `<img class="it-art ${cls}" src="${url}" width="${size}" height="${size}" alt="">` : iconImg(it.icon, size);
-};
-const affShort = (k, v) => (AFFIXES[k]?.fmt === 'regen' ? affVal(k, v) : `${affVal(k, v)} ${AFX[k]?.[1] || k}`);
-const statKeys = it => { const ks = Object.keys(it.stat || {}); const m = it.main && ks.includes(it.main) ? it.main : ks[0]; return m ? [m, ...ks.filter(k => k !== m)] : []; };
-
-// lignes de caractéristiques d'un objet (principale en premier), avec l'écart par rapport à cmp (objet équipé)
-function statRows(it, { cmp = null, next = null } = {}) {
-  const ks = statKeys(it);
-  const rows = ks.map((k, i) => {
-    const v = it.stat[k];
-    let tail = '';
-    if (next) tail = `<i class="sr-arrow">›</i><b class="sr-next">${affVal(k, next[k] ?? v)}</b>`;
-    else if (cmp) {
-      const d = v - (cmp.stat?.[k] || 0), eps = AFFIXES[k]?.fmt === 'pct' ? 0.0005 : 0.5;
-      if (Math.abs(d) > eps) tail = `<i class="sr-d ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>`;
-    }
-    return `<span class="srow ${i === 0 ? 'main' : ''}">${iconImg(AFX[k]?.[0] || 'star', 18)}<span class="sr-l">${esc(AFFIXES[k]?.name || k)}${k === 'thorns' ? ' <small>(ATQ)</small>' : ''}</span><b class="sr-v">${affVal(k, v)}</b>${tail}</span>`;
-  });
-  // ce que l'objet équipé a en plus
-  if (cmp && !next) for (const k of statKeys(cmp)) if (!(k in it.stat)) rows.push(`<span class="srow lost">${iconImg(AFX[k]?.[0] || 'star', 18)}<span class="sr-l">${esc(AFFIXES[k]?.name || k)}</span><b class="sr-v">${affVal(k, cmp.stat[k]).replace('+', '−')}</b><i class="sr-d down">▼</i></span>`);
-  return rows.join('');
-}
-// encadré de l'effet unique d'un objet légendaire
-const effectBox = id => (LEGEND_EFFECTS[id] ? `<div class="fx-box"><b>${iconImg('star', 16)} ${esc(LEGEND_EFFECTS[id].name)}</b><small>${esc(LEGEND_EFFECTS[id].desc)}</small></div>` : '');
-// consigne « touchez… » au-dessus d'une liste d'éléments à toucher (tuiles en relief)
-const tapHint = t => `<p class="tap-hint"><i>👆</i>${t}</p>`;
-// pouvoir d'un objet mythique (js/mythic.js)
-const mythBox = id => (MYTHIC_POWERS[id] ? `<div class="fx-box myth"><b><i class="mb-ic">${MYTHIC_POWERS[id].icon}</i><span><small>Pouvoir mythique</small>${esc(MYTHIC_POWERS[id].name)}</span></b><small>${esc(MYTHIC_POWERS[id].desc)}</small></div>` : '');
-// effet légendaire ou pouvoir mythique d'un objet
-const itemFx = it => (it.myth ? mythBox(it.myth) : it.effect ? effectBox(it.effect) : '');
 
 // valeur d'une caractéristique du champion (fiche complète)
 function heroStat(k, st) {
@@ -308,9 +261,20 @@ function worldPicker() {
       <span class="wp-n">${i + 1}</span><span class="wp-t"><b>${esc(z.name)}</b>${locked ? `<small>${iconImg('lock', 12)} Terminez le monde ${i}</small>` : zoneStars(n)}</span>
       <span class="wp-boss">${locked ? iconImg('lock', 20) : `<img class="px spr" src="${bossOf(z)}" alt="">`}</span></button>`;
   }).join('');
-  const p = modal({ title: 'Choisir un monde', cls: 'world-modal', body: `<div class="wp-list">${rows}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: null }], dismissable: true });
+  const W = weekly(), bestE = endlessBest(cur);
+  const modes = `<h4 class="wp-h">Modes spéciaux</h4>
+    <button class="wp-mode weekly ${W.done ? 'done' : ''}" data-mode="weekly"><i class="wm-ic">⚡</i>
+      <span class="wm-t"><small>Défi de la semaine · ${W.done ? 'réussi ✔' : `encore ${weeklyDaysLeft()} j`}</small><b>${esc(W.mission.what)}</b>
+      <em>${esc(ZONES[W.zone].name)} · ${esc(DIFFICULTIES[W.diff].name)} · ${W.curses.map(c => esc(c.name)).join(', ')}</em></span><i class="wm-go">›</i></button>
+    <button class="wp-mode endless" data-mode="endless"><i class="wm-ic">∞</i>
+      <span class="wm-t"><small>Mode infini · ${esc(ZONES[cur].name)}</small><b>Survivre le plus longtemps possible</b>
+      <em>Record ici : ${bestE ? mmssM(bestE) : 'aucun'}</em></span><i class="wm-go">›</i></button>
+    <h4 class="wp-h">Mondes</h4>`;
+  const p = modal({ title: 'Choisir un monde', cls: 'world-modal', body: `${modes}<div class="wp-list">${rows}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: null }], dismissable: true });
   const box = document.querySelector('.world-modal');
   box?.addEventListener('click', e => {
+    const m = e.target.closest('.wp-mode');
+    if (m) { sfx('tap'); box.closest('.modal-wrap')?.querySelector('.modal-btns .btn')?.click(); setTimeout(() => modeSheet(m.dataset.mode), 200); return; }
     const r = e.target.closest('.wp-row'); if (!r) return;
     const i = +r.dataset.z;
     if (i > save.unlockedZone) { sfx('tap'); toast(`${iconImg('lock', 16)} Terminez d'abord « ${esc(ZONES[i - 1].name)} »`); return; }
@@ -318,6 +282,60 @@ function worldPicker() {
     setTimeout(() => zoneSheet(i).then(() => { if (!battle) home(); }), 200);
   });
   return p;
+}
+
+// ---------- Modes spéciaux (js/modes.js) ----------
+// partie spéciale prête à lancer : weekly (règles de la semaine) ou endless (monde choisi, sa difficulté)
+function specialRun(kind) {
+  if (kind === 'weekly') {
+    const W = weekly();
+    return { z: W.zone, k: W.diff, special: { kind, label: 'Défi de la semaine', W, mission: W.mission, curses: W.curses } };
+  }
+  const z = playZone(), { k } = zoneDiff(z);
+  return { z, k, special: { kind, label: 'Mode infini', mission: { type: 'endless', icon: '∞', name: 'Mode infini', what: 'Survivez le plus longtemps possible', best: endlessBest(z) } } };
+}
+function playSpecial(kind) {
+  const R = specialRun(kind);
+  cleanBoostSel();
+  startRun(R.z, R.k, 0, { special: R.special });
+}
+// fiche d'un mode : règles, récompense, record ; « Jouer » lance la partie
+async function modeSheet(kind) {
+  const R = specialRun(kind), Z = ZONES[R.z];
+  let body;
+  if (kind === 'weekly') {
+    const W = R.special.W;
+    body = `<div class="chs-hero" style="background-image:url(${zoneBannerURL(Z)})"><span class="ms-big">⚡</span></div>
+      <p class="chs-goal">${esc(W.mission.icon)} ${esc(W.mission.what)}</p>
+      <h4>Règles de la semaine</h4>
+      <div class="ms-rules"><span>${iconImg('map', 16)} ${esc(Z.name)}</span><span style="color:${DIFFICULTIES[W.diff].color}">${iconImg(DIFFICULTIES[W.diff].icon, 16)} ${esc(DIFFICULTIES[W.diff].name)}</span>
+        ${W.curses.map(c => `<span class="curse">${iconImg(c.icon, 16)} <b>${esc(c.name)}</b> <small>${esc(c.desc)}</small></span>`).join('')}</div>
+      <h4>Récompense ${W.done ? '<small>(déjà obtenue cette semaine)</small>' : '<small>(une fois par semaine)</small>'}</h4>
+      <div class="chs-rw"><em>${iconImg('gold', 16)} ${fmt(WEEKLY_REWARD.gold)} or</em><em>${iconImg('chest', 16)} ${esc(LOOT_TIERS[WEEKLY_REWARD.chest].name)}</em><em><i class="shard-ic">✦</i> ${WEEKLY_REWARD.shards} éclat mythique</em></div>
+      <p class="muted ms-note">Nouveau défi chaque lundi · encore ${weeklyDaysLeft()} jour${weeklyDaysLeft() > 1 ? 's' : ''}.</p>`;
+  } else {
+    const best = endlessBest(R.z);
+    body = `<div class="chs-hero" style="background-image:url(${zoneBannerURL(Z)})"><span class="ms-big">∞</span></div>
+      <p class="chs-goal">Pas de boss ni de portail : survivez le plus longtemps possible. Après le chrono, les monstres deviennent fous, puis le monde s'effondre.</p>
+      <h4>Record dans ce monde</h4>
+      <p class="ms-best">${best ? `<b>${mmssM(best)}</b>` : 'Aucun pour l\'instant'}</p>
+      <h4>Récompense</h4>
+      <div class="chs-rw"><em>${iconImg('gold', 16)} + de l'or selon le temps tenu</em></div>
+      <p class="muted ms-note">${esc(Z.name)} · ${esc(DIFFICULTIES[R.k].name)} (changez de monde ou de difficulté dans la liste des mondes).</p>`;
+  }
+  const go = await modal({ title: `<span class="eyebrow">Mode spécial</span>${kind === 'weekly' ? 'Défi de la semaine' : 'Mode infini'}`, cls: 'chapter-modal mode-modal', body,
+    buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: `${iconImg('play', 16)} Jouer`, cls: 'primary', value: true }], dismissable: true });
+  if (go) playSpecial(kind); else if (!battle) home();
+}
+// bilan d'une partie spéciale
+function specialBlock(X) {
+  if (!X) return '';
+  if (X.kind === 'weekly') return `<div class="story-res ms-res ${X.ok ? 'ok' : 'ko'}"><span class="sr-img ms-ic">⚡</span><span class="sr-t"><small>Défi de la semaine</small>
+    <b>${esc(X.mission.what)}</b><span>${X.ok ? (X.first ? 'Réussi : récompense de la semaine gagnée !' : 'Réussi (récompense déjà obtenue cette semaine)') : 'Raté… nouvel essai quand vous voulez.'}</span></span>
+    ${X.first ? `<span class="sr-rw"><em>${iconImg('gold', 14)} +${fmt(X.gold)}</em><em>${iconImg('chest', 14)} ${esc(X.chest)}</em><em><i class="shard-ic">✦</i> +${X.shards} éclat</em></span>` : ''}</div>`;
+  return `<div class="story-res ms-res ok"><span class="sr-img ms-ic">∞</span><span class="sr-t"><small>Mode infini</small>
+    <b>${mmssM(X.secs)} tenues</b><span>${X.record ? (X.before ? `Nouveau record ! (avant : ${mmssM(X.before)})` : 'Premier record !') : `Record : ${mmssM(X.best)}`}</span></span>
+    <span class="sr-rw"><em>${iconImg('gold', 14)} +${fmt(X.gold)} or (temps tenu)</em></span></div>`;
 }
 
 // Accueil : tout tient sur un écran. En haut, les objectifs (boutons ronds) ; au centre, le champion (touche = changer) ;
@@ -345,7 +363,7 @@ function adventureTab() {
     <div class="home-cta">
       ${cta}
       ${vet ? `<div class="home-sub">
-        <button class="hs-btn" data-act="worlds">${iconImg('map', 20)}<span><small>Monde ${pz + 1}</small><b style="--dc:${D.color}">${esc(D.name)}</b></span><i>›</i></button>
+        <button class="hs-btn" data-act="worlds">${iconImg('map', 20)}<span><small>Monde ${pz + 1}</small><b style="--dc:${D.color}">${esc(D.name)}</b></span><i>›</i>${weekly().done ? '' : '<em class="hs-dot" title="Défi de la semaine">⚡</em>'}</button>
         <button class="hs-btn story ${all ? '' : 'hot'}" data-act="story">${iconImg('book', 20)}<span><small>Histoire · ★ ${totalStars()}</small><b>${all ? 'Terminée' : `Chapitre ${storyNext() + 1}/${storyLen}`}</b></span><i>›</i></button>
       </div>` : ''}
     </div>
@@ -595,6 +613,7 @@ function pauseGoal(r) {
 let run = null;
 let runBoosts = [];
 let storyCur = null; // chapitre de l'histoire en cours (null : expédition)
+let specialCur = null; // partie spéciale en cours (défi de la semaine, mode infini ; js/modes.js)
 
 // premiers pas : monde 1 jamais battu et chapitre 1 pas terminé (JOUER lance le chapitre 1, le tutoriel)
 const firstSteps = () => !save.zoneCleared[0] && !storyDone();
@@ -620,21 +639,23 @@ function storyScreen() {
 }
 
 // story = n° du chapitre (mode histoire : un seul niveau, dialogues, pas de menu de portail)
-function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
+function startRun(z, diff = 0, abyss = 0, { story = null, special = null } = {}) {
   if (!supported()) return noWebGL(); // rien n'est dépensé (bonus, partie comptée)
-  diff = Math.max(0, Math.min(diff, maxDiff(z)));
+  diff = Math.max(0, Math.min(diff, special ? DIFFICULTIES.length - 1 : maxDiff(z))); // défi de la semaine : difficulté imposée
   abyss = Math.max(0, Math.min(abyss | 0, abyssTop(z))); // L2 : palier d'Abysse (en Cauchemar)
   save.stats.runs++;
   const boosts = runBoosts = consumeBoosts(); // enregistre aussi la partie commencée
   const zone = ZONES[z], ch = story == null ? null : chapter(story);
   storyCur = ch ? story : null;
+  specialCur = special;
   run = new Run({
     zone,
     diff,
     abyss,
     boosts,
     story: ch ? { n: story, giga: !!ch.giga, mission: ch.mission || null } : null,
-    onStory: ch ? (ev, d) => chatter(story, ev, d) : null, // commentaires de Pompon pendant le chapitre
+    special,
+    onStory: ch ? (ev, d) => chatter(story, ev, d) : special ? (ev, d) => missionChatter(special.mission, ev, d) : null, // commentaires de Pompon
     easy: !save.tutorialDone, // toute première partie : monstres et boss plus faibles (le guide montre tout en jouant)
     onBoss: ch ? () => setTimeout(() => { if (run && !run.over) taunt(story); }, ch.giga ? 3600 : 700) : null,
     onPause: resume => pauseMenu(resume),
@@ -642,7 +663,8 @@ function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
     onChest: (c, gold, done) => chestMenu(c, gold, done),
     onDefeat: canRevive => defeatMenu(canRevive),
     // mode histoire : au portail, les bulles de fin du chapitre puis le bilan
-    onPortal: ch ? (info, choose) => cutscene(story, 'outro', { inRun: true }).then(() => choose('home')) : (info, choose) => portalMenu(info, choose),
+    onPortal: ch ? (info, choose) => cutscene(story, 'outro', { inRun: true }).then(() => choose('home'))
+      : special ? (info, choose) => choose('home') : (info, choose) => portalMenu(info, choose),
     onEnd: sum => endRun(zone, sum),
   });
   run.onPortal ??= (info, choose) => portalMenu(info, choose);
@@ -1183,255 +1205,15 @@ function endRun(z, sum) {
   const story = sc ? storyEnd(storyCur, { ok: sc.giga ? !!sum.giga : sc.mission ? !!sum.mission : cleared.includes(sc.zone), revived: !!sum.revived, time: sum.time || 0, hp: sum.hp ?? 1 }) : null;
   storyCur = null;
   if (story?.ok) save.tutorialDone = true; // chapitre réussi : le guide de la première partie ne revient plus
+  // modes spéciaux : défi de la semaine (récompense la 1re fois de la semaine), mode infini (record par monde)
+  const sp = specialCur; specialCur = null;
+  const special = !sp ? null : sp.kind === 'weekly' ? { ...sp, ok: !!sum.mission, ...(sum.mission ? weeklyWin(sp.W) : { first: false }) }
+    : { ...sp, ...endlessEnd(start.id, sum.time) };
   const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass, route, gigaRec,
-    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start, story };
+    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start, story, special };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
   if (save.pendingChests.length) chestScreen(show, true); else show([]);
-}
-
-// ---------- Ouverture des coffres de butin ----------
-// tuile d'une pièce d'équipement (couleur de sa rareté)
-function partIcon(slot, r, size = 28) {
-  return `<span class="part-ic r-${RARITIES[r]}">${iconImg(PARTS[slot].icon, size)}</span>`;
-}
-
-// regroupe le contenu de plusieurs coffres
-function lootAgg(results) {
-  const parts = {}, boosts = {}, items = [], upgs = [];
-  let gold = 0, shards = 0;
-  for (const res of results) {
-    for (const p of res.parts) parts[p.slot + ':' + p.r] = (parts[p.slot + ':' + p.r] || 0) + p.n;
-    if (res.boost) boosts[res.boost] = (boosts[res.boost] || 0) + 1;
-    for (const it of res.items || []) items.push(it);
-    if (res.upg) upgs.push({ key: res.upg, lv: res.upgLv });
-    gold += res.gold; shards += res.shards | 0;
-  }
-  return {
-    parts: Object.entries(parts).map(([key, n]) => { const [slot, r] = key.split(':'); return { slot, r: +r, n }; }).sort((a, b) => b.r - a.r || b.n - a.n),
-    boosts, items, upgs, gold, shards,
-  };
-}
-
-// cartes à révéler une par une, comme dans les jeux de cartes : le plus commun d'abord, le meilleur pour la fin
-function lootSeq(results) {
-  const A = lootAgg(results), out = [];
-  if (A.gold) out.push({ k: 'gold', n: A.gold });
-  for (const p of [...A.parts].sort((a, b) => a.r - b.r || a.n - b.n)) out.push({ k: 'part', ...p });
-  for (const [id, n] of Object.entries(A.boosts)) out.push({ k: 'boost', id, n });
-  for (const it of [...A.items].sort((a, b) => rarityIdx(a) - rarityIdx(b) || itemPower(a) - itemPower(b))) out.push({ k: 'item', it });
-  for (const u of A.upgs) out.push({ k: 'upg', ...u });
-  if (A.shards) { const i = out.findIndex(x => x.k === 'item' && x.it.rarity === 'mythic'); out.splice(i < 0 ? out.length : i, 0, { k: 'shard', n: A.shards }); } // avant l'objet mythique
-  return out;
-}
-const isEq = it => save.equipped[it.slot] === it.id;
-
-// grande carte d'un objet (coffre, forge) : rareté, toutes ses caractéristiques, effet légendaire
-function itemCard(it, { ribbon = '' } = {}) {
-  const R = RARITY[it.rarity];
-  return `<div class="rcard icard r-${it.rarity}">
-    ${ribbon ? `<i class="rc-ribbon">${ribbon}</i>` : ''}
-    <span class="rc-rar">${R.name}</span>
-    <span class="rc-ic">${itemArt(it, 88)}${it.lv ? `<em class="lv-badge">+${it.lv}</em>` : ''}</span>
-    <b class="rc-name">${esc(it.name)}</b>
-    <span class="rc-sub">${SLOTS[it.slot]}${it.crafted ? ' · forgé' : ''}</span>
-    <span class="rc-stats">${statRows(it)}</span>
-    ${itemFx(it)}
-    ${isEq(it) ? '<span class="rc-eq">Équipé !</span>' : ''}
-  </div>`;
-}
-
-function bigCard(x) {
-  if (x.k === 'item') return itemCard(x.it, { ribbon: x.it.rarity === 'mythic' ? 'Objet mythique !' : 'Nouvel objet' });
-  if (x.k === 'shard') return `<div class="rcard r-mythic rc-shard"><span class="rc-rar">Mythique</span><span class="rc-ic"><i class="shard-ic big">✦</i></span>
-      <b class="rc-n">×${x.n}</b><span class="rc-name">Éclat${x.n > 1 ? 's' : ''} mythique${x.n > 1 ? 's' : ''}</span><small class="rc-desc">${fmt(save.mythShards | 0)}/${MYTHIC.shards} : à ${MYTHIC.shards}, la Forge fabrique un objet mythique</small></div>`;
-  if (x.k === 'gold') return `<div class="rcard rc-gold"><span class="rc-ic">${iconImg('gold', 76)}</span><b class="rc-n">+${fmt(x.n)}</b><span class="rc-name">Pièces d'or</span></div>`;
-  if (x.k === 'part') {
-    const rk = RARITIES[x.r], P = PARTS[x.slot];
-    return `<div class="rcard r-${rk}"><span class="rc-rar">${RARITY[rk].name}</span><span class="rc-ic">${partIcon(x.slot, x.r, 60)}</span>
-      <b class="rc-n">×${x.n}</b><span class="rc-name">${esc(x.n > 1 ? P.plural : P.name)}</span><small class="rc-desc">Pour fabriquer et améliorer à la Forge</small></div>`;
-  }
-  if (x.k === 'boost') {
-    const B = BOOSTS[x.id];
-    return `<div class="rcard rc-boost"><i class="rc-ribbon">Bonus</i><span class="rc-ic">${iconImg(B.icon, 64)}</span>
-      <b class="rc-n">×${x.n}</b><span class="rc-name">${esc(B.name)}</span><small class="rc-desc">${esc(B.desc)}</small></div>`;
-  }
-  return upgCard(x);
-}
-// niveau gratuit d'amélioration permanente
-function upgCard(x) {
-  const U = UPGRADES[x.key];
-  return `<div class="rcard rc-upg"><i class="rc-ribbon">Amélioration gratuite !</i><span class="rc-ic">${iconImg(U.icon, 64)}</span>
-    <b class="rc-name">${esc(U.name)}</b><span class="rc-lv"><s>Niv. ${x.lv - 1}</s><i>›</i><b>Niv. ${x.lv}</b></span><small class="rc-desc">${esc(U.desc)} · pour tous les champions</small></div>`;
-}
-
-// petite carte du récapitulatif
-function miniCard(x, i) {
-  const d = `style="--d:${(i * 0.06).toFixed(2)}s"`;
-  if (x.k === 'gold') return `<div class="mcard rc-gold" ${d}>${iconImg('gold', 36)}<b>+${fmt(x.n)}</b><small>Or</small></div>`;
-  if (x.k === 'part') return `<div class="mcard r-${RARITIES[x.r]}" ${d}>${partIcon(x.slot, x.r, 30)}<i class="mc-n">×${x.n}</i><small>${esc(PARTS[x.slot].name)}</small></div>`;
-  if (x.k === 'boost') return `<div class="mcard rc-boost" ${d}>${iconImg(BOOSTS[x.id].icon, 36)}<i class="mc-n">×${x.n}</i><small>${esc(BOOSTS[x.id].name)}</small></div>`;
-  if (x.k === 'item') return `<div class="mcard r-${x.it.rarity}" ${d}>${itemArt(x.it, 44)}${isEq(x.it) ? '<i class="mc-eq">Équipé</i>' : ''}<small>${esc(x.it.name)}</small></div>`;
-  if (x.k === 'shard') return `<div class="mcard r-mythic" ${d}><i class="shard-ic">✦</i><i class="mc-n">×${x.n}</i><small>Éclat mythique</small></div>`;
-  return `<div class="mcard rc-upg" ${d}>${iconImg(UPGRADES[x.key].icon, 36)}<i class="mc-n">niv. ${x.lv}</i><small>${esc(UPGRADES[x.key].name)}</small></div>`;
-}
-
-// scène d'ouverture façon jeu de cartes : le coffre tombe et rebondit, tremble quand on le touche, éclate,
-// puis son contenu sort carte par carte (touchez pour la suivante), avant un récapitulatif
-function revealStage(results, tier, title, { quick = false } = {}) {
-  return new Promise(resolve => {
-    const seq = lootSeq(results);
-    const w = document.createElement('div');
-    w.className = `chest-stage t${tier}`;
-    w.style.setProperty('--tc', LOOT_TIERS[tier].color);
-    w.innerHTML = `<h2 class="cst-title">${title}</h2>
-      <div class="cst-scene">
-        <i class="cst-rays"></i>
-        <div class="cst-card"></div>
-        <div class="cst-recap"></div>
-        <div class="cst-chest"><i class="cst-shadow"></i><i class="cst-dust"></i><img src="${chestURL(tier)}" alt=""><i class="cst-flash"></i>
-          <b class="cst-left"></b><div class="cst-burst">${'<i></i>'.repeat(16)}</div></div>
-      </div>
-      <p class="cst-hint">Touchez le coffre !</p>
-      <div class="cst-btns"><button class="btn small ghost cst-skip">Tout voir</button><button class="btn primary big cst-ok">Continuer</button></div>`;
-    w.querySelectorAll('.cst-burst i').forEach((p, i) => {
-      const a = i / 16 * Math.PI * 2 + Math.random() * 0.3, d = 110 + Math.random() * 110;
-      p.style.cssText = `--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 40}px;--s:${0.6 + Math.random() * 0.9}`;
-    });
-    app.appendChild(w);
-    const $w = s => w.querySelector(s), hint = $w('.cst-hint'), left = $w('.cst-left'), cardBox = $w('.cst-card');
-    let state = 'drop', idx = -1, readyAt = 0;
-    const T = [];
-    const at = (ms, fn) => T.push(setTimeout(fn, ms));
-    requestAnimationFrame(() => w.classList.add('in'));
-    at(380, () => { sfx('boing'); buzz(15); });
-    at(650, () => { state = 'ready'; w.classList.add('ready'); if (quick) shake(); });
-    function shake() {
-      state = 'shake';
-      w.classList.remove('ready'); w.classList.add('shake');
-      hint.textContent = '';
-      sfx('chestShake'); buzz(20);
-      at(260, () => sfx('chestShake'));
-      at(520, burst);
-    }
-    function burst() {
-      w.classList.remove('shake'); w.classList.add('open');
-      $w('.cst-chest img').src = chestURL(tier, true);
-      sfx('chestOpen'); buzz(50);
-      at(380, () => next());
-    }
-    function next() {
-      idx++;
-      if (idx >= seq.length) return recap();
-      const x = seq[idx], old = cardBox.firstElementChild;
-      if (old) { old.classList.add('gone'); setTimeout(() => old.remove(), 300); }
-      cardBox.insertAdjacentHTML('beforeend', `<div class="cst-slot">${bigCard(x)}</div>`);
-      const n = seq.length - idx - 1;
-      left.innerHTML = `<b>${n}</b><small>restant${n > 1 ? "s" : ""}</small>`; left.classList.toggle("none", !n);
-      left.classList.remove('bump'); void left.offsetWidth; left.classList.add('bump');
-      const myth = x.k === 'item' && x.it.rarity === 'mythic', legend = myth || (x.k === 'item' && x.it.rarity === 'legendary'), epic = x.k === 'item' && x.it.rarity === 'epic';
-      w.classList.toggle('legend', legend); w.classList.toggle('epic', epic); w.classList.toggle('mythic', myth);
-      sfx(x.k === 'gold' ? 'coin' : x.k === 'part' ? (x.r >= 2 ? 'loot' : 'gem') : x.k === 'boost' ? 'pick' : x.k === 'upg' ? 'levelup' : x.k === 'shard' ? 'shrine' : legend || epic ? 'chest' : 'loot');
-      if (myth) { sfx('evolve'); setTimeout(() => sfx('win'), 350); }
-      buzz(myth ? [80, 60, 160] : legend ? 60 : 15);
-      hint.textContent = n ? 'Touchez pour la carte suivante' : 'Touchez pour le récapitulatif';
-      w.classList.add('cards');
-      state = 'card'; readyAt = performance.now() + 380;
-    }
-    function recap() {
-      state = 'recap';
-      w.classList.remove('cards', 'legend', 'epic', 'mythic'); w.classList.add('recapping');
-      cardBox.innerHTML = '';
-      $w('.cst-recap').innerHTML = `<h3 class="cst-rt">Butin obtenu</h3><div class="cst-grid ${seq.length > 9 ? 'dense' : ''}">${seq.map(miniCard).join('')}</div>`;
-      hint.textContent = '';
-      sfx('win');
-      at(350, () => { state = 'done'; w.classList.add('done'); });
-    }
-    w.addEventListener('click', e => {
-      if (e.target.closest('.cst-skip')) { if (state === 'card') { sfx('tap'); recap(); } return; }
-      if (e.target.closest('.cst-ok')) {
-        if (state !== 'done') return;
-        sfx('tap'); T.forEach(clearTimeout);
-        w.classList.add('out');
-        setTimeout(() => { w.remove(); resolve(); }, 220);
-        return;
-      }
-      if (state === 'ready') shake();
-      else if (state === 'card' && performance.now() >= readyAt) next();
-    });
-  });
-}
-
-const buzz = ms => { if (save.settings.vibrate && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { /* non supporté */ } };
-
-// écran des coffres en attente : à la fin d'une partie, ou depuis l'accueil
-// nom d'un coffre de butin (le Giga coffre du giga boss est un coffre mythique amélioré)
-const chestName = c => (c.giga ? 'Giga coffre' : LOOT_TIERS[c.tier]?.name || '');
-
-function chestScreen(done, afterRun = false) {
-  const list = [...save.pendingChests].sort((a, b) => b.tier + (b.giga ? 0.5 : 0) - a.tier - (a.giga ? 0.5 : 0));
-  const opened = [];
-  let busy = false;
-  mount(`<div class="chest-screen">
-    <h2 class="rs-title">${afterRun ? 'Butin de l\'expédition' : 'Coffres de butin'}</h2>
-    <p class="center muted cs-hint">Touchez un coffre pour l'ouvrir</p>
-    <div class="chest-grid ${list.length <= 4 ? 'few' : ''} ${list.length === 3 ? 'n3' : ''}" style="--n:${list.length === 3 ? 3 : Math.min(2, list.length)}">${list.map((c, i) => `<button class="cg-card t${c.tier}${c.giga ? ' giga' : ''}" data-i="${i}" style="--tc:${LOOT_TIERS[c.tier].color};--d:${(i * 0.06).toFixed(2)}s">
-        <span class="cg-glow"></span><img class="cg-img" src="${chestURL(c.tier)}" alt="">
-        <b>${esc(chestName(c))}</b><small>${esc(ZONES[c.zone]?.name || '')}</small>
-      </button>`).join('')}</div>
-    <div class="end-btns cs-btns"></div>
-  </div>`);
-  const root = $('.chest-screen'), btnBox = $('.cs-btns');
-  const left = () => list.filter(c => save.pendingChests.includes(c)).length;
-  const drawBtns = () => {
-    const n = left();
-    $('.cs-hint').textContent = n ? 'Touchez un coffre pour l\'ouvrir' : 'Tous les coffres sont ouverts !';
-    btnBox.innerHTML = n
-      ? `<button class="btn ghost" data-act="later">${afterRun ? 'Plus tard' : 'Retour'}</button><button class="btn primary" data-act="all">Tout ouvrir (${n})</button>`
-      : `<button class="btn primary big" data-act="next">Continuer</button>`;
-  };
-  const markOpen = (i, res) => {
-    const card = root.querySelector(`.cg-card[data-i="${i}"]`);
-    card.classList.add('opened'); card.disabled = true;
-    card.querySelector('.cg-img').src = chestURL(res.tier, true);
-    card.querySelector('small').textContent = 'Ouvert';
-  };
-  const finish = () => { announceAchievements(); done(opened); };
-  drawBtns();
-  root.addEventListener('click', async e => {
-    if (busy) return;
-    const card = e.target.closest('.cg-card'), act = e.target.closest('[data-act]')?.dataset.act;
-    if (card && !card.disabled) {
-      const i = +card.dataset.i, idx = save.pendingChests.indexOf(list[i]);
-      if (idx < 0) return;
-      busy = true;
-      const res = openChest(idx); // contenu enregistré tout de suite
-      opened.push(res);
-      card.classList.add('pick');
-      await revealStage([res], res.tier, esc(chestName(res)));
-      markOpen(i, res);
-      busy = false; drawBtns();
-      return;
-    }
-    if (act === 'later' || act === 'next') { sfx('tap'); finish(); return; }
-    if (act === 'all') {
-      busy = true; sfx('tap');
-      const batch = [];
-      const cards = list.map((c, i) => [c, i]).filter(([c]) => save.pendingChests.includes(c));
-      for (const [c, i] of cards) {
-        const card = root.querySelector(`.cg-card[data-i="${i}"]`);
-        card.classList.add('quake'); sfx('chestShake');
-        card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        await wait(cards.length > 8 ? 110 : 190);
-        const res = openChest(save.pendingChests.indexOf(c));
-        batch.push(res); opened.push(res); markOpen(i, res);
-      }
-      await wait(250);
-      const top = batch.reduce((m, x) => Math.max(m, x.tier), 0);
-      await revealStage(batch, top, batch.length > 1 ? `${batch.length} coffres ouverts !` : esc(LOOT_TIERS[top].name), { quick: true });
-      busy = false; drawBtns();
-    }
-  });
 }
 
 // ---------- Bilan de l'expédition ----------
@@ -1468,9 +1250,11 @@ function summaryScreen(R, opened = []) {
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
-  const S = R.story;
-  const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite') : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
-  const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
+  const S = R.story, X = R.special;
+  const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite')
+    : X ? (X.kind === 'weekly' ? (X.ok ? 'Défi réussi\u00a0!' : 'Défi raté') : X.record ? 'Nouveau record\u00a0!' : 'Mode infini')
+    : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
+  const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : X ? `${esc(X.label)} · ${esc(start.name)}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
@@ -1491,6 +1275,7 @@ function summaryScreen(R, opened = []) {
     <h2 class="rs-title">${title}</h2>
     <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
     ${storyBlock(S)}
+    ${specialBlock(X)}
     ${gigaBlock}
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
@@ -1502,7 +1287,7 @@ function summaryScreen(R, opened = []) {
     ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns rs-btns">
       <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
-      <button class="btn primary" data-act="${S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
+      <button class="btn primary" data-act="${X ? 'special' : S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${X ? 'Rejouer' : S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
     </div>
     <details class="rs-more"><summary>Voir le détail de la partie</summary>
     ${runPassBlock(R.pass)}
@@ -1526,6 +1311,7 @@ function summaryScreen(R, opened = []) {
     home: () => home('adventure'),
     season: () => seasonScreen(() => home('adventure')),
     chapter: () => playChapter(S.ok ? S.next ?? S.n : S.n),
+    special: () => playSpecial(X.kind),
     again: () => {
       if (S) return playChapter(S.n);
       save.diffSel[nextZ] = Math.min(nextK, maxDiff(nextZ));
@@ -1544,16 +1330,15 @@ function tipFor(sum, k = 0) {
   return 'Astuce : prenez des tomes de PV et d\'armure si vous mourez souvent, et équipez vos meilleurs objets.';
 }
 
-function announceAchievements() {
+export function announceAchievements() {
   const got = checkAchievements();
-  if (got.length > 3) { // beaucoup d'un coup (ancienne sauvegarde, nouveaux succès) : un seul message
-    toast(`${iconImg('crown', 18)} <b>${got.length} succès</b> débloqués (+${fmt(got.reduce((n, a) => n + a.gold, 0))} or)`, 3600);
-    sfx('loot'); persist(); return;
-  }
-  for (const a of got) {
-    toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)${a.title && DATA.TITLES?.[a.title] ? ` · titre « ${esc(DATA.TITLES[a.title].name)} »` : ''}`, 3200);
-    sfx('loot');
-  }
+  if (!got.length) return persist();
+  const gold = fmt(got.reduce((n, a) => n + a.gold, 0)), ti = got.find(a => a.title && DATA.TITLES?.[a.title]);
+  // un seul message, même pour plusieurs succès d'un coup (avant : une pile de messages qui cachait l'écran)
+  toast(got.length === 1
+    ? `${iconImg('crown', 18)} Succès : <b>${esc(got[0].name)}</b> (+${gold} or)${ti ? ` · titre « ${esc(DATA.TITLES[ti.title].name)} »` : ''}`
+    : `${iconImg('crown', 18)} <b>${got.length} succès</b> : ${got.slice(0, 2).map(a => esc(a.name)).join(', ')}${got.length > 2 ? '…' : ''} (+${gold} or)${ti ? ' · nouveau titre' : ''}`, got.length > 1 ? 3600 : 3000);
+  sfx('loot');
   persist();
 }
 
@@ -1655,7 +1440,7 @@ function itemBody(it, equipped, cur) {
     : equipped ? '' : `<button class="btn small ghost it-salv" data-v="salvage">${iconImg('spin', 16)} Recycler : +${salvageValue(it)} ${esc(PARTS[it.slot].plural.toLowerCase())}</button>`}`;
 }
 
-async function itemSheet(id) {
+export async function itemSheet(id) {
   const it = save.inventory.find(i => i.id === id);
   if (!it) return;
   const equipped = save.equipped[it.slot] === id;
@@ -1739,170 +1524,6 @@ async function sellJunk() {
   persist(); announceAchievements(); home();
 }
 
-// ---------- Forge ----------
-let forgeSel = { slot: 'weapon', r: 0 };
-const rTag = r => `<i class="rtag" style="--rc:${RARITY[RARITIES[r]].color}">${RARITY[RARITIES[r]].name}</i>`;
-
-function forgeTab() {
-  return `<section class="forge-hero">
-      <div class="fh-art"><i class="fh-fire"></i><img class="fh-anvil" src="${anvilURL()}" alt=""><img class="fh-hammer" src="${hammerURL()}" alt=""></div>
-      <div class="fh-txt"><b>La Forge</b><small>Fabriquez de l'équipement avec les pièces trouvées dans les coffres de butin.</small></div>
-    </section>
-    <div id="forgeBody">${forgeBody()}</div>`;
-}
-
-function forgeBody() {
-  const total = Object.values(save.parts).reduce((n, a) => n + a.reduce((x, y) => x + y, 0), 0);
-  const { slot, r } = forgeSel, have = save.parts[slot][r], R = RARITY[RARITIES[r]];
-  const cost = FORGE.craft.gold[r], top = r >= RARITIES.length - 1;
-  const grid = `<div class="parts-grid">
-    <span></span>${RARITIES.map((_, k) => `<span class="pg-h" style="color:${RARITY[RARITIES[k]].color}">${RARITY[RARITIES[k]].name}</span>`).join('')}
-    ${Object.keys(PARTS).map(s => `<span class="pg-row">${iconImg(PARTS[s].icon, 18)}${SLOTS[s]}</span>${RARITIES.map((_, k) => {
-      const n = save.parts[s][k];
-      return `<button class="pg-cell ${n ? '' : 'zero'} ${s === slot && k === r ? 'on' : ''} ${canCraft(s, k) ? 'ready' : ''}" data-act="forgeSel" data-slot="${s}" data-r="${k}" style="--rc:${RARITY[RARITIES[k]].color}">
-        ${partIcon(s, k, 22)}<b>${n}</b></button>`;
-    }).join('')}`).join('')}
-  </div>`;
-  const nFuse = Math.floor(have / FORGE.fuse);
-  return `<h3 class="section-t">Pièces <small>${total} au total</small></h3>
-    ${tapHint('Touchez une case pour choisir les pièces à utiliser')}
-    ${grid}
-    <div class="forge-panel card">
-      <div class="fp-head">${partIcon(slot, r, 30)}<div><b>${esc(PARTS[slot].plural)}</b><small>${rTag(r)} ${have} en stock</small></div></div>
-      <div class="fp-act">
-        <div class="fp-t"><b>${iconImg('hammer', 16)} Fabriquer</b><small>Un objet ${rTag(r)} (${SLOTS[slot].toLowerCase()}) de la puissance du monde ${save.unlockedZone + 1}, +10 %.</small></div>
-        <div class="fp-go">
-          <span class="iu-cost ${have >= FORGE.craft.parts ? '' : 'bad'}">${partIcon(slot, r, 16)} ${have}/${FORGE.craft.parts}</span>
-          <span class="iu-cost ${save.gold >= cost ? '' : 'bad'}">${iconImg('gold', 14)} ${fmt(cost)}</span>
-          <button class="btn primary small" data-act="craft" ${canCraft(slot, r) ? '' : 'disabled'}>Fabriquer</button>
-        </div>
-      </div>
-      <div class="fp-act">
-        <div class="fp-t"><b>${iconImg('upg', 16)} Fusionner</b><small>${top ? 'Rareté maximale : ces pièces servent à fabriquer et améliorer les objets légendaires.' : `${FORGE.fuse} pièces ${rTag(r)} → 1 pièce ${rTag(r + 1)}`}</small></div>
-        ${top ? '' : `<div class="fp-go">
-          <span class="iu-cost ${have >= FORGE.fuse ? '' : 'bad'}">${partIcon(slot, r, 16)} ${have}/${FORGE.fuse}</span>
-          ${nFuse > 1 ? `<button class="btn ghost small" data-act="fuse" data-all="1">Tout (×${nFuse})</button>` : ''}
-          <button class="btn small" data-act="fuse" ${canFuse(slot, r) ? '' : 'disabled'}>Fusionner</button>
-        </div>`}
-      </div>
-    </div>
-    <p class="muted forge-note">${iconImg('upg', 14)}<span>Améliorez (+1, +2… à l'infini) ou recyclez vos objets depuis l'onglet <b>Héros</b>.</span></p>
-    ${mythForge()}`;
-}
-
-// objets mythiques : éclats, collection (silhouettes des objets pas encore obtenus), fabrication
-function mythForge() {
-  const n = save.mythShards | 0, got = save.mythGot || [], all = got.length >= MYTHIC_ITEMS.length;
-  const cells = MYTHIC_ITEMS.map(M => {
-    const it = got.includes(M.id) && save.inventory.find(i => i.mid === M.id), url = itemURL(M.name);
-    return `<button class="mf-cell ${it ? 'got' : ''}" data-act="mythInfo" data-id="${M.id}">
-      ${it ? itemArt(it, 54) : url ? `<img class="it-art sil" src="${url}" width="54" height="54" alt="">` : `<i class="mf-q">?</i>`}
-      <small>${it ? esc(M.name) : '???'}</small><em>${MYTHIC_POWERS[M.power].icon}</em></button>`;
-  }).join('');
-  return `<section class="myth-forge">
-    <div class="mf-head"><i class="shard-ic">✦</i><div><b>Objets mythiques <small>${got.length}/${MYTHIC_ITEMS.length}</small></b>
-      <small>Uniques et surpuissants. Seul Gorgoth en laisse : battez-le au bout d'une expédition. Son Giga coffre donne des éclats (plus en Difficile et en Cauchemar) et parfois un objet mythique.</small></div></div>
-    ${tapHint('Touchez un objet pour voir son pouvoir')}
-    <div class="mf-col">${cells}</div>
-    ${all ? '<p class="mf-done">✦ Collection complète : vous êtes une légende.</p>' : `<div class="mf-bar"><span class="pbar"><i style="width:${Math.min(100, n / MYTHIC.shards * 100).toFixed(1)}%"></i></span><b>${n}/${MYTHIC.shards}</b><small>éclats</small></div>
-    <button class="btn myth-btn" data-act="forgeMyth" ${canForgeMythic() ? '' : 'disabled'}><i class="shard-ic">✦</i> Forger un objet mythique</button>`}
-  </section>`;
-}
-
-// fiche d'un objet mythique de la collection : l'objet s'il est obtenu, sinon son pouvoir et comment l'avoir
-function mythInfo(id) {
-  const M = MYTHIC_ITEMS.find(m => m.id === id); if (!M) return;
-  const it = (save.mythGot || []).includes(id) && save.inventory.find(i => i.mid === id);
-  if (it) return itemSheet(it.id);
-  sfx('tap');
-  modal({ title: `<span class="it-title r-mythic">???</span>`, cls: 'item-modal',
-    body: `<div class="mi-sil">${itemURL(M.name) ? `<img class="it-art sil" src="${itemURL(M.name)}" width="110" height="110" alt="">` : ''}<span>${SLOTS[M.slot]} mythique</span></div>
-      ${mythBox(M.power)}
-      <p class="muted myth-note">Pas encore obtenu. Battez Gorgoth au bout d'une expédition : le Giga coffre donne des éclats mythiques (${MYTHIC.shards} = un objet mythique à la Forge) et parfois l'objet lui-même.</p>`,
-    buttons: [{ label: 'Fermer', cls: 'primary', value: true }], dismissable: true });
-}
-
-async function doForgeMyth() {
-  const it = forgeMythic();
-  if (!it) return;
-  renderForge();
-  await forgeAnim({ color: RARITY.mythic.color, big: true, bare: true, html: itemCard(it, { ribbon: 'Objet mythique !' }) }, { title: 'Objet mythique forgé' });
-  announceAchievements();
-  renderForge();
-}
-
-// met à jour la forge sur place (garde le défilement), l'or et les pastilles
-function renderForge() {
-  const b = $('#forgeBody');
-  if (!b) return home();
-  b.innerHTML = forgeBody();
-  refreshTopbar();
-  const t = $('.tabs'); if (t) t.outerHTML = nav();
-}
-
-// animation de forge : le marteau frappe trois fois l'enclume, puis l'objet apparaît
-function forgeAnim(result, { title = 'Objet forgé', fuse = null } = {}) {
-  return new Promise(resolve => {
-    const w = document.createElement('div');
-    w.className = 'forge-anim' + (fuse ? ' fusing' : '');
-    w.innerHTML = `<div class="fa-stage">
-        <i class="fa-glow"></i>
-        ${fuse ? `<div class="fu-row">${Array.from({ length: Math.min(4, FORGE.fuse) }, (_, i) => `<span class="fu-p" style="--x:${(1.5 - i) * 62}px">${partIcon(fuse.slot, fuse.r, 30)}</span>`).join('')}</div>` : ''}
-        <img class="fa-anvil" src="${anvilURL()}" alt=""><i class="fa-ingot"></i>
-        <img class="fa-hammer" src="${hammerURL()}" alt=""><div class="fa-sparks"></div>
-      </div>
-      <p class="fa-wait eyebrow">${fuse ? 'Fusion en cours' : 'Forge en cours'}</p>
-      <div class="fa-result" style="--rc:${result.color}"><i class="fa-rays"></i>
-        <div class="fa-head"><span class="eyebrow">${fuse ? 'Forge · fusion' : 'Forge · fabrication'}</span><h2 class="fa-title">${title}</h2></div>
-        <div class="fa-card ${result.bare ? 'bare' : ''}">${result.html}</div></div>
-      <button class="btn primary big fa-ok" disabled>Continuer</button>`;
-    app.appendChild(w);
-    requestAnimationFrame(() => w.classList.add('in'));
-    const sparks = w.querySelector('.fa-sparks'), ingot = w.querySelector('.fa-ingot');
-    const hit = () => {
-      buzz(20);
-      ingot.classList.remove('hit'); void ingot.offsetWidth; ingot.classList.add('hit');
-      for (let i = 0; i < 9; i++) {
-        const s = document.createElement('i'), a = -Math.PI * (0.1 + Math.random() * 0.8), d = 40 + Math.random() * 70;
-        s.style.cssText = `--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px`;
-        sparks.appendChild(s); setTimeout(() => s.remove(), 600);
-      }
-    };
-    const off = fuse ? 250 : 0; // la fusion commence par rassembler les pièces
-    setTimeout(() => sfx('forge'), 380 + off);
-    [380, 540, 700].forEach(t => setTimeout(hit, t + off));
-    setTimeout(() => { w.classList.add('done'); sfx(result.big ? 'win' : 'loot'); }, 1050 + off);
-    setTimeout(() => { w.querySelector('.fa-ok').disabled = false; }, 1450 + off);
-    w.addEventListener('click', e => {
-      const b = e.target.closest('.fa-ok'); if (!b || b.disabled) return;
-      sfx('tap'); w.classList.add('out');
-      setTimeout(() => { w.remove(); resolve(); }, 200);
-    });
-  });
-}
-
-async function doCraft() {
-  const { slot, r } = forgeSel;
-  const res = craftItem(slot, r);
-  if (!res) return;
-  const it = res.item, R = RARITY[it.rarity];
-  renderForge();
-  await forgeAnim({ color: R.color, big: r >= 3, bare: true, html: itemCard(it, { ribbon: 'Forgé !' }) });
-  announceAchievements();
-  renderForge();
-}
-
-async function doFuse(all = false) {
-  const { slot, r } = forgeSel;
-  let n = 0;
-  while (canFuse(slot, r) && (all || !n)) { fuseParts(slot, r); n++; }
-  if (!n) return;
-  const R = RARITY[RARITIES[r + 1]];
-  renderForge();
-  await forgeAnim({ color: R.color, html: `${partIcon(slot, r + 1, 48)}<b>${esc(PARTS[slot].name)} ×${n}</b><small style="color:${R.color}">${R.name}</small>` }, { title: 'Fusion réussie', fuse: { slot, r } });
-  renderForge();
-}
-
 // ---------- Boutique ----------
 function shopTab() {
   return `<h3 class="section-t first">Améliorations permanentes</h3>
@@ -1971,201 +1592,6 @@ function trophiesTab() {
       const known = st.seen[m.name];
       return `<div class="beast ${known ? '' : 'unknown'} ${m.boss ? 'boss' : ''}"><img class="px spr" src="${creatureURL(`${z.id}-${k}-${m.name}`, m.body, m.pal, { boss: m.boss })}" alt=""><small>${known ? esc(m.name) : '???'}</small></div>`;
     }).join('')).join('')}</div>`;
-}
-
-// ---------- Compte & options ----------
-async function settings() {
-  const u = cloud.user;
-  const statusTxt = {
-    synced: 'Sauvegarde synchronisée',
-    syncing: 'Synchronisation…',
-    pending: 'Hors ligne : sera synchronisé au retour du réseau',
-    error: 'Erreur de synchronisation, nouvel essai bientôt',
-    off: '',
-  }[cloud.status] || '';
-  const wrapId = 'set-' + Date.now();
-  const S = save.settings;
-  const seg = (k, opts) => `<div class="seg" data-k="${k}">${opts.map(([v, l]) => `<button data-sv="${v}" class="${String(S[k]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
-  const row = (ic, label, sub, ctrl, col = false) => `<div class="set-row ${col ? 'col' : ''}">${iconImg(ic, 20)}<span class="set-l">${label}${sub ? `<small>${sub}</small>` : ''}</span>${ctrl}</div>`;
-  const sw = (id, on) => `<label class="sw"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></label>`;
-  const joyTxt = v => `${Math.round(v * 100)} %`;
-  const p = modal({
-    title: 'Options',
-    cls: 'settings-modal',
-    body: `<div id="${wrapId}">
-      <h4 class="first">Jeu</h4>
-      <div class="set-list">
-        ${row('shake', 'Tremblements de l\'écran', '', seg('shake', [[0, 'Aucun'], [1, 'Faibles'], [2, 'Normaux']]), true)}
-        ${row('numbers', 'Chiffres de dégâts', '', seg('numbers', [['all', 'Tous'], ['crit', 'Critiques'], ['none', 'Aucun']]), true)}
-        ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
-        ${row('upg', 'Choix automatique', 'Prend la meilleure amélioration à chaque niveau', sw('sAuto', S.autoPick))}
-        ${row('hand', 'Mode gaucher', 'Bouton d\'ultime à gauche', sw('sLefty', S.lefty))}
-      </div>
-      <h4>Son</h4>
-      <div class="set-list">
-        ${row('sound', 'Effets sonores', '', sw('sSound', S.sound))}
-        ${row('music', 'Musique', '', sw('sMus', S.music !== false))}
-        ${row('vibrate', 'Vibrations', '', sw('sVib', S.vibrate))}
-      </div>
-      <h4>Compte</h4>
-      <button class="set-row set-link" data-v="account">${u?.avatar ? `<img class="avatar" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : iconImg('user', 20)}<span class="set-l">${u ? esc(u.name || u.email) : 'Non connecté'}<small>${u ? esc(statusTxt || 'Sauvegarde en ligne') : 'Sauvegarde en ligne, profil, statistiques'}</small></span><i class="set-go">›</i></button>
-      <h4 class="web-only">Installer sur iPhone</h4>
-      <p class="muted set-note web-only">Dans Safari, touchez <b>Partager</b> puis <b>« Sur l'écran d'accueil »</b>. Le jeu s'ouvrira en plein écran et fonctionnera hors connexion.</p>
-      <div class="danger-zone">
-        <button class="btn ghost small danger" data-v="reset">Effacer la progression</button>
-      </div>
-      <p class="ver">League of Bonk · ${APP_VERSION}</p>
-    </div>`,
-    buttons: [{ label: 'Fermer', cls: 'primary', value: 'close' }],
-    dismissable: true,
-  });
-  // boutons internes
-  const wrap = document.getElementById(wrapId);
-  const o = { shake: S.shake, numbers: S.numbers };
-  let action = null;
-  wrap.addEventListener('click', e => {
-    const sv = e.target.closest('[data-sv]');
-    if (sv) {
-      const g = sv.closest('.seg'), k = g.dataset.k;
-      o[k] = k === 'shake' ? +sv.dataset.sv : sv.dataset.sv;
-      g.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === sv));
-      sfx('tap'); return;
-    }
-    const b = e.target.closest('[data-v]');
-    if (!b) return;
-    action = b.dataset.v;
-    wrap.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
-  });
-  wrap.querySelector('#sJoy').addEventListener('input', e => { wrap.querySelector('#sJoyV').textContent = joyTxt(+e.target.value); });
-  await p;
-  S.sound = wrap.querySelector('#sSound').checked;
-  S.vibrate = wrap.querySelector('#sVib').checked;
-  S.lefty = wrap.querySelector('#sLefty').checked;
-  S.autoPick = !!wrap.querySelector('#sAuto')?.checked;
-  S.joySize = Math.max(0.8, Math.min(1.3, +wrap.querySelector('#sJoy').value || 1));
-  Object.assign(S, o);
-  const mOn = wrap.querySelector('#sMus').checked;
-  if (mOn !== S.music) { S.music = mOn; if (!mOn) stopMusic(); }
-  persist({ touch: false });
-  if (action === 'account') return accountSheet();
-  if (action === 'reset') {
-    const ok = await modal({ title: 'Tout effacer ?', body: '<p>Votre or, vos objets, familiers et zones débloquées seront <b>définitivement</b> supprimés de cet appareil' + (u ? ' et de votre compte' : '') + '.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Tout effacer', cls: 'danger', value: true }] });
-    if (ok) { resetSave(); boot(); }
-  }
-  if (!battle) home();
-}
-
-// ---------- Connexion (Google ou e-mail) ----------
-const G_LOGO = '<svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
-const STRIP_KEY = 'lob_login_hide'; // bande de connexion de l'accueil cachée jusqu'à cette date (3 jours, cet appareil)
-const stripHidden = () => { try { return Date.now() < +(localStorage.getItem(STRIP_KEY) || 0); } catch (e) { return false; } };
-// bande en haut de l'accueil : joueur pas connecté (après sa première partie) ; Google direct, ou e-mail
-function loginStrip() {
-  if (!cloud.available || cloud.user || !save.stats.runs || stripHidden()) return '';
-  return `<div class="login-strip">
-    <span class="ls-ic">☁️</span>
-    <span class="ls-t"><b>Sauvegarde en ligne</b><small>Gardez votre progression</small></span>
-    <button class="ls-btn g" data-act="signGoogle" aria-label="Se connecter avec Google">${G_LOGO}<span>Google</span></button>
-    <button class="ls-btn m" data-act="signIn" aria-label="Se connecter par e-mail">✉️</button>
-    <button class="ls-x" data-act="hideStrip" aria-label="Plus tard">×</button>
-  </div>`;
-}
-async function signGoogle() {
-  const r = await cloud.signIn('google');
-  if (r?.error) toast(`Connexion Google impossible : ${esc(r.error)}`, 5000);
-}
-// fiche de connexion : Google, ou un lien de connexion envoyé par e-mail
-async function signInSheet() {
-  if (!cloud.available) return toast('La connexion n\'est pas disponible sur cette version.', 4000);
-  const id = 'si-' + Date.now();
-  let go = null;
-  const p = modal({
-    title: 'Se connecter',
-    cls: 'signin-modal',
-    body: `<div id="${id}">
-      <p class="set-note">Votre progression est <b>sauvegardée en ligne</b> et vous la retrouvez sur un autre appareil. Le jeu reste jouable hors connexion.</p>
-      <button class="btn google" data-v="google">${G_LOGO} Continuer avec Google</button>
-      <div class="si-or"><span>ou</span></div>
-      <label class="si-l" for="${id}-m">Recevoir un lien de connexion par e-mail</label>
-      <div class="si-row"><input id="${id}-m" class="si-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="vous@exemple.fr">
-        <button class="btn primary small" data-v="mail">Envoyer</button></div>
-      <p class="si-msg" aria-live="polite"></p>
-    </div>`,
-    buttons: [{ label: 'Plus tard', cls: 'ghost', value: null }],
-    dismissable: true,
-  });
-  const box = document.getElementById(id), msg = box.querySelector('.si-msg'), input = box.querySelector('.si-mail');
-  const send = async () => {
-    const email = input.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.className = 'si-msg bad'; msg.textContent = 'Adresse e-mail invalide.'; input.focus(); return; }
-    msg.className = 'si-msg'; msg.textContent = 'Envoi…';
-    const r = await cloud.signInEmail(email);
-    if (r?.error) { msg.className = 'si-msg bad'; msg.textContent = `Envoi impossible : ${r.error}`; return; }
-    msg.className = 'si-msg ok';
-    msg.innerHTML = `📬 Lien envoyé à <b>${esc(email)}</b>. Ouvrez l'e-mail <b>sur cet appareil</b> et touchez le lien : vous serez connecté.`;
-    sfx('loot');
-  };
-  box.addEventListener('click', e => {
-    const b = e.target.closest('[data-v]'); if (!b) return;
-    sfx('tap');
-    if (b.dataset.v === 'mail') return void send();
-    go = b.dataset.v; box.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
-  });
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
-  await p;
-  if (go === 'google') return signGoogle();
-}
-
-// ---------- Compte (bouton en haut à droite) ----------
-// profil (avatar Google ou champion, nom, titre), quelques chiffres de la progression, sauvegarde en ligne (connexion,
-// état de la synchronisation, déconnexion)
-async function accountSheet() {
-  const u = cloud.user, c = CLASSES[save.cls] || Object.values(CLASSES)[0], st = save.stats;
-  const syncTxt = { synced: 'Sauvegarde synchronisée', syncing: 'Synchronisation…', pending: 'Hors ligne : sera synchronisé au retour du réseau', error: 'Erreur de synchronisation, nouvel essai bientôt' }[cloud.status] || '';
-  const pic = u?.avatar ? `<img class="ac-pic" src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer">` : `<img class="ac-pic px" src="${heroURL(c.id, c.colors, 0)}" alt="">`;
-  const ach = achList(), nAch = ach.filter(a => a.got).length;
-  const nums = [
-    ['play', fmt(st.runs || 0), 'Parties'], ['skull', fmt(st.kills || 0), 'Monstres vaincus'],
-    ['map', `${save.zoneCleared.filter(Boolean).length}/${ZONES.length}`, 'Mondes vaincus'], ['book', `★ ${totalStars()}`, 'Étoiles d\'histoire'],
-    ['crown', `${nAch}/${ach.length}`, 'Succès'], ['star', `${(save.mythGot || []).length}/${DATA.MYTHIC_ITEMS.length}`, 'Objets mythiques'],
-  ];
-  const cloudBlock = !cloud.available
-    ? `<p class="muted set-note">La connexion n'est pas disponible sur cette version : votre progression est sauvegardée sur cet appareil. Mettez l'app à jour pour vous connecter.</p>`
-    : u ? `<p class="ac-sync ${cloud.status}"><i></i>${esc(syncTxt || 'Sauvegarde en ligne active')}</p>
-        <button class="btn ghost small" data-v="logout">Se déconnecter</button>`
-      : `<p class="set-note">Connectez-vous pour <b>sauvegarder votre progression en ligne</b> et la retrouver sur un autre appareil. Le jeu reste jouable hors connexion.</p>
-        <button class="btn google" data-v="login">${G_LOGO} Continuer avec Google</button>
-        <button class="btn ghost small ac-mail" data-v="mail">✉️ Autre : lien par e-mail</button>`;
-  const id = 'ac-' + Date.now();
-  let action = null;
-  const p = modal({
-    title: 'Compte',
-    cls: 'account-modal',
-    body: `<div id="${id}">
-      <div class="ac-head">${pic}<div class="ac-id"><b>${esc(u ? u.name || u.email : 'Invité')}</b><small>${esc(u?.email || 'Progression sur cet appareil')}</small>
-        <button class="ac-title" data-v="title">${iconImg('flag', 14)}<span>${esc(titleName() || DATA.TITLES.recrue.name)}</span><i>›</i></button></div></div>
-      <div class="ac-nums">${nums.map(([ic, v, l]) => `<div>${iconImg(ic, 18)}<b>${v}</b><small>${l}</small></div>`).join('')}</div>
-      <h4>Sauvegarde en ligne</h4>
-      ${cloudBlock}
-    </div>`,
-    buttons: [{ label: 'Fermer', cls: 'primary', value: 'close' }],
-    dismissable: true,
-  });
-  const box = document.getElementById(id);
-  box.addEventListener('click', e => {
-    const b = e.target.closest('[data-v]'); if (!b) return;
-    action = b.dataset.v; sfx('tap');
-    box.closest('.modal-wrap').querySelector('.modal-btns .btn').click();
-  });
-  await p;
-  if (action === 'login') return signGoogle();
-  if (action === 'mail') return signInSheet();
-  if (action === 'title') return titleSheet().then(afterSheet);
-  if (action === 'logout') {
-    const ok = await modal({ title: 'Se déconnecter ?', body: '<p>Votre progression reste sur cet appareil et dans votre compte.</p>', buttons: [{ label: 'Annuler', cls: 'ghost', value: false }, { label: 'Se déconnecter', cls: 'primary', value: true }] });
-    if (ok) await cloud.signOut();
-  }
-  if (!battle) home();
 }
 
 // rafraîchit l'écran quand la sauvegarde arrive du cloud

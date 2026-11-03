@@ -290,10 +290,20 @@ export class Overlay {
     const run = this.run, M = run.mission;
     if (!M || M.done) return;
     const t = this.gfx.t, p = run.p, vw = this.vw, vh = this.vh, top = 228, bot = vh - 132;
-    const pts = M.type === 'collect' ? run.missionShown() : M.type === 'elites' && M.cur && !M.cur.dead ? [M.cur] : [];
+    const pts = M.type === 'collect' ? run.missionShown() : M.type === 'elites' && M.cur && !M.cur.dead ? [M.cur] : M.type === 'defend' ? [M.pot] : [];
     if (!pts.length) return;
     const ic = emoji(M.icon), off = [];
     for (const o of pts) {
+      if (o === M.pot) { // marmite : barre de PV au-dessus (rouge quand elle est frappée), flèche au bord si hors champ
+        const [x, y, ok] = this.gfx.ws(o.x, o.y, 120);
+        if (ok && x > 16 && x < vw - 16 && y > top - 40 && y < vh - 30) {
+          const w = 70, k = Math.max(0, o.hp / o.max), hit = o.hitT > 0;
+          g.fillStyle = 'rgba(6,8,13,.85)'; g.fillRect(x - w / 2 - 2, y - 7, w + 4, 12);
+          g.fillStyle = hit ? '#ff4a4a' : k < 0.35 ? '#ff7a3a' : '#ffd54a'; g.fillRect(x - w / 2, y - 5, w * k, 8);
+          g.font = tf(11); g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = '#fff'; g.fillText(`${M.icon} ${Math.ceil(o.hp)} %`, x, y - 9);
+        } else off.push(o);
+        continue;
+      }
       const lift = o === M.cur ? 115 : 26, [x, y, ok] = this.gfx.ws(o.x, o.y, lift);
       if (ok && x > 16 && x < vw - 16 && y > top - 40 && y < vh - 30) {
         const ph = o.ph || 0, S = (o === M.cur ? 34 : 40) + Math.sin(t * 5 + ph) * 3, yy = y - 10 + Math.sin(t * 3 + ph) * 5;

@@ -31,12 +31,15 @@ export function supported() {
 const FOV = 32, VIEW_W = 22; // ≈ 460 px de large au niveau du héros (écran portrait)
 const QSTEPS = [1, 0.85, 0.72, 0.6]; // paliers de résolution de la 3D
 let qLevel = 0, qLite = false;       // gardés d'un monde à l'autre (run.nextWorld recrée le rendu)
+// réglage « Graphismes : léger » (Options) : on part du palier LITE_Q en mode allégé et on n'en remonte jamais
+const LITE_Q = 2, litePref = () => save.settings?.quality === 'lite';
 
 export class Gfx {
   constructor(run, canvas) {
     this.run = run;
     this.cv = canvas;
     this.t = 0; this.dt = 0;
+    if (litePref()) { qLevel = Math.max(qLevel, LITE_Q); qLite = true; }
     this.quality = QSTEPS[qLevel]; this.frameMs = 16; this.slowT = 0; this.fastT = 0; this.badT = []; this.lite = false;
     // toile WebGL sous la toile 2D (qui garde les entrées et l'interface dessinée)
     const c3 = this.c3 = document.createElement('canvas');
@@ -135,6 +138,7 @@ export class Gfx {
       this.slowT = 0; this.fastT += dt;
       if (this.fastT > 8) {
         this.fastT = 0;
+        if (litePref()) return; // graphismes légers : on reste bas
         if (this.lite) this.setLite(false);
         else if (qLevel > 0 && this.t - (this.badT[qLevel - 1] ?? -1e9) > 45) { qLevel--; this.quality = QSTEPS[qLevel]; this.resize(); }
       }

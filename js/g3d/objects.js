@@ -45,6 +45,27 @@ export class Objects {
     this.coin = mk(b => { b.add(G.cyl(0.42, 0.42, 0.12, 10), '#ffc83a', T(0, 0, 0, 1, 1, 1, Math.PI / 2), 0.05); b.add(G.cyl(0.25, 0.25, 0.14, 8), '#fff0a0', T(0, 0, 0, 1, 1, 1, Math.PI / 2)); }, 300, glowy);
     this.heart = mk(b => { b.add(G.ico(0.3, 1), '#ff4a6a', T(-0.2, 0.12, 0)); b.add(G.ico(0.3, 1), '#ff4a6a', T(0.2, 0.12, 0)); b.add(G.cone(0.42, 0.55, 4), '#e8324e', T(0, -0.22, 0, 1.1, 1, 0.75, Math.PI, Math.PI / 4)); b.add(G.ico(0.09, 0), '#ffffff', T(-0.26, 0.3, 0.2)); }, 40, glowy);
     this.magnet = mk(b => { b.add(G.tor(0.38, 0.13, 5, 10, Math.PI), '#e8324e', T(0, 0.1, 0, 1, 1, 1, 0, 0, 0)); for (const s of [-1, 1]) b.add(G.box(0.27, 0.3, 0.27), '#e8eef8', T(s * 0.38, -0.12, 0)); }, 20, glowy);
+    // ---- objets des missions (histoire, défi de la semaine) : carotte, page de recette, gemme géante, marmite ----
+    this.carrot = mk(b => {
+      b.add(G.cone(0.34, 1.25, 7), '#ff8a2a', T(0, 0.62, 0, 1, 1, 1, Math.PI), 0.08);
+      for (let i = 0; i < 4; i++) b.add(G.box(0.36, 0.05, 0.04), '#c85a14', T(0, 0.35 + i * 0.22, 0.2 - i * 0.03, 1 - i * 0.18, 1, 1, 0, 0, 0.2));
+      for (const [x, rz] of [[-0.12, 0.45], [0, 0], [0.12, -0.45]]) b.add(G.cone(0.1, 0.62, 4), '#4cd26e', T(x, 1.5, 0, 1, 1, 1, 0, 0, rz));
+    }, 12);
+    this.scroll = mk(b => {
+      b.add(G.box(1.0, 0.04, 0.8), '#f2e4c4', T(0, 0.1, 0.2, 1, 1, 1, -0.25));
+      b.add(G.cyl(0.18, 0.18, 1.1, 8), '#e8d4a8', T(0, 0.22, -0.25, 1, 1, 1, 0, 0, Math.PI / 2));
+      b.add(G.cyl(0.2, 0.2, 0.12, 8), '#c83a3a', T(0, 0.22, -0.25, 1, 1, 1, 0, 0, Math.PI / 2));
+      for (let i = 0; i < 3; i++) b.add(G.box(0.62 - i * 0.12, 0.02, 0.05), '#8a6a4a', T(-0.05, 0.14, 0.05 + i * 0.16, 1, 1, 1, -0.25));
+    }, 12);
+    this.bigGem = mk(b => { b.add(G.oct(0.6), (x, y) => (y > 0 ? '#e0fbff' : '#4fd0ff'), T(0, 0, 0, 0.8, 1.5, 0.8), 0.1); }, 12, glowy, { color: true });
+    this.pot = mk(b => {
+      b.add(G.cyl(1.25, 0.95, 1.2, 10), '#2e3038', T(0, 0.85, 0), 0.08);
+      b.add(G.cyl(1.38, 1.38, 0.16, 10), '#4a4c58', T(0, 1.46, 0));
+      b.add(G.cyl(1.18, 1.18, 0.08, 10), '#ff9a3a', T(0, 1.5, 0));
+      for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.4; b.add(G.ico(0.16, 0), '#ffd27a', T(Math.cos(a) * 0.55, 1.58, Math.sin(a) * 0.55)); }
+      for (let i = 0; i < 3; i++) { const a = i / 3 * TAU; b.add(G.box(0.18, 0.5, 0.18), '#22242a', T(Math.cos(a) * 0.8, 0.2, Math.sin(a) * 0.8)); }
+      for (const s of [-1, 1]) b.add(G.tor(0.28, 0.07, 4, 8), '#4a4c58', T(s * 1.35, 1.2, 0, 1, 1, 1, 0, Math.PI / 2, 0));
+    }, 2, lowpoly(), { color: true });
     // ---- coffres d'amélioration (bleu à pièce d'or) et d'élite (violet à étoile) ----
     const chest = (b, C, emblem, open) => {
       b.add(G.box(1.5, 0.85, 1.05), C[0], T(0, 0.42, 0), 0.05);
@@ -155,7 +176,7 @@ export class Objects {
     this.portalRunes = rr(runeRing('#7ae8ff', '#ffffff', 16), true);
     this.portalSwirlG = rr(canvasTex(swirlTex('#3a1a8a', '#a05aff', '#e8f4ff')), true);
     this.altarSwirl = rr(canvasTex(swirlTex('#6a0a14', '#ff3a2a', '#ffd8a0')), true);
-    this.pools = [this.gem, this.coin, this.heart, this.magnet, this.chestB, this.chestBo, this.chestP, this.chestPo, ...this.loot, this.shrine, this.crystal, ...Object.values(this.totem), this.altarBase, this.skull, this.portalBase, this.arch];
+    this.pools = [this.gem, this.coin, this.heart, this.magnet, this.carrot, this.scroll, this.bigGem, this.pot, this.chestB, this.chestBo, this.chestP, this.chestPo, ...this.loot, this.shrine, this.crystal, ...Object.values(this.totem), this.altarBase, this.skull, this.portalBase, this.arch];
     this.suck = [];
     this.arrival = 1.6;
     this.arenaT = 0; this.arenaPrev = null; this.arenaFall = null;
@@ -193,6 +214,29 @@ export class Objects {
         this.magnet.put(X, 0.9 + bob, Z, t * 2, 1.2);
         fx.glow3(X, 0.9, Z, 2.4, '#4fb8ff', 0.5); fx.shadow(it.x, it.y, 18, 0.25);
       }
+    }
+    // ---- objets de mission : à ramasser (posés au sol, tournent doucement) et marmite à défendre ----
+    const M = run.mission;
+    if (M?.type === 'collect' && !M.done) for (const o of run.missionShown()) {
+      if (!near(o.x, o.y, 80)) continue;
+      const P = M.icon === '🥕' ? this.carrot : M.icon === '📜' ? this.scroll : this.bigGem, bob = Math.sin(t * 3 + o.ph) * 0.18;
+      const sc = P === this.scroll ? 2.2 : 1.7, y = P === this.bigGem ? 1.4 : 0.15;
+      P.put(o.x * S, y + bob, o.y * S, t * 1.2 + o.ph, sc);
+      fx.glow3(o.x * S, 1.2, o.y * S, 3.4, '#ffd54a', 0.42 + Math.sin(t * 4 + o.ph) * 0.08);
+      fx.ringAt(o.x, o.y, 42, '#ffd54a', 0.75, 0.06, 0, 1, -t * 0.4, 12, 0.5, 0.3);
+      fx.shadow(o.x, o.y, 26, 0.3);
+      if (Math.sin(t * 2.7 + o.ph) > 0.95) fx.sparkle(o.x + rand(-16, 16), o.y, 40, '#fff4b0');
+    }
+    if (M?.pot && near(M.pot.x, M.pot.y, 140)) {
+      const P = M.pot, w = P.hitT > 0 ? Math.sin(t * 60) * 0.05 : 0, k = Math.max(0, P.hp / P.max);
+      const i = this.pot.put(P.x * S, 0, P.y * S, 0.3, 1.45 * (1 + w), 1.45 * (1 - w), 1.45 * (1 + w));
+      this.pot.tint(i, col(P.hitT > 0 ? '#ffb0a0' : '#ffffff'));
+      fx.glow3(P.x * S, 2.3, P.y * S, 4 + k * 2, '#ff9a3a', 0.35 + k * 0.25);
+      fx.ringAt(P.x, P.y, 70, k < 0.35 ? '#ff4a4a' : '#ffd54a', 0.6, 0.05, 0, k, -Math.PI / 2, 0, 0, 0.6);
+      // cercle de protection : le héros dedans, la marmite encaisse 4 fois moins (story-mission.js MIS.guardR, guardK)
+      fx.ringAt(P.x, P.y, 230, P.guarded ? '#5ae87a' : '#ffffff', P.guarded ? 0.55 : 0.25, 0.02, 0, 1, t * 0.15, 28, 0.5, 0.3);
+      fx.shadow(P.x, P.y, 60, 0.35);
+      if (Math.random() < 0.25) fx.puff(P.x + rand(-20, 20), P.y, 1, 14, 0.35, '#f4efe6');
     }
     // ---- coffres d'amélioration et d'élite ----
     for (const [arr, gold] of [[run.chests, false], [run.dropChests, true]]) for (const c of arr) {
