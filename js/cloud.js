@@ -17,6 +17,11 @@ const listeners = new Set();
 let sb = null;
 let pushTimer = null;
 let onRemote = () => {};
+let onConflict = null; // (local, remote) => Promise<'local' | 'remote'> : demandé au joueur (game.js)
+// dernière synchronisation réussie sur cet appareil (par compte) : sert à repérer un vrai conflit
+const SYNC_KEY = 'lob_synced';
+const lastSync = () => { try { const o = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); return o && o.uid === cloud.user?.id ? +o.at || 0 : 0; } catch (e) { return 0; } };
+const markSync = at => { try { localStorage.setItem(SYNC_KEY, JSON.stringify({ uid: cloud.user?.id, at })); } catch (e) { /* stockage indisponible */ } };
 
 export const cloud = {
   available: false,
@@ -25,6 +30,7 @@ export const cloud = {
   lastError: '', // dernier échec de connexion (retour de Google ou du lien e-mail dans l'app)
   onChange(fn) { listeners.add(fn); },
   setRemoteHandler(fn) { onRemote = fn; },
+  setConflictHandler(fn) { onConflict = fn; },
   // provider : 'google' ; renvoie { error } si la connexion n'a pas pu démarrer
   async signIn(provider = 'google') {
     if (!sb) return { error: 'indisponible' };
@@ -88,16 +94,28 @@ async function pull() {
   const local = save;
   const localFresh = progressScore(local) === 0;
   const remoteNewer = (remote.updatedAt || 0) > (local.updatedAt || 0);
-  // la partie la plus récente gagne ; une partie vierge ne remplace jamais une vraie progression
+  // vrai conflit : les deux ont une progression et ont changé chacune depuis la dernière synchronisation de cet
+  // appareil (ou première connexion ici) → on demande au joueur laquelle garder
+  const since = lastSync(), lu = local.updatedAt || 0, ru = remote.updatedAt || 0;
+  if (onConflict && !localFresh && progressScore(remote) > 0 && lu !== ru && lu > since && ru > since) {
+    setStatus('pending');
+    const pick = await onConflict(local, remote);
+    if (pick === 'remote') { replaceSave(remote); markSync(remote.updatedAt || 0); setStatus('synced'); onRemote(); }
+    else await pushNow();
+    return;
+  }
+  // sinon la partie la plus récente gagne ; une partie vierge ne remplace jamais une vraie progression
   if (localFresh || (remoteNewer && progressScore(remote) > 0)) {
     // on ne coupe pas une expédition en cours sur cet appareil
     if (local.run && !remote.run && !localFresh) { await pushNow(); return; }
     replaceSave(remote);
+    markSync(remote.updatedAt || 0);
     setStatus('synced');
     onRemote();
   } else if ((local.updatedAt || 0) > (remote.updatedAt || 0)) {
     await pushNow();
   } else {
+    markSync(remote.updatedAt || 0);
     setStatus('synced');
   }
 }
@@ -114,6 +132,7 @@ async function pushNow() {
   });
   setStatus(error ? 'error' : 'synced');
   if (error) pushTimer = setTimeout(pushNow, 15000);
+  else markSync(save.updatedAt || 0);
 }
 
 function schedulePush() {

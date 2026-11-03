@@ -22,7 +22,8 @@ import { l2Home, endRunL2, l2Results, defisScreen, defisTile, defisCount, clsLoc
 import { masteryPanel, masteryChip, masteryLv } from './mastery.js';
 import { runDiff, abyssTop, abyssBlock, abyssInfo, abyssRewards, abyssBadge, abyssPause } from './abyss.js';
 // mode histoire « La Grande Marmite » (chapitres, dialogues, récompenses)
-import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, chatter, storyEnd, storyBlock, storyScreenHTML, chapterSheet, unlocked, totalStars } from './story.js';
+import { STORY, chapter, storyDone, storyNext, storyLen, cutscene, taunt, chatter, missionChatter, storyEnd, storyBlock, storyScreenHTML, chapterSheet, unlocked, totalStars } from './story.js';
+import { weekly, weeklyWin, weeklyDaysLeft, endlessBest, endlessEnd, WEEKLY_REWARD, mmss as mmssM } from './modes.js';
 
 const APP_VERSION = 'v20'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
@@ -308,9 +309,20 @@ function worldPicker() {
       <span class="wp-n">${i + 1}</span><span class="wp-t"><b>${esc(z.name)}</b>${locked ? `<small>${iconImg('lock', 12)} Terminez le monde ${i}</small>` : zoneStars(n)}</span>
       <span class="wp-boss">${locked ? iconImg('lock', 20) : `<img class="px spr" src="${bossOf(z)}" alt="">`}</span></button>`;
   }).join('');
-  const p = modal({ title: 'Choisir un monde', cls: 'world-modal', body: `<div class="wp-list">${rows}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: null }], dismissable: true });
+  const W = weekly(), bestE = endlessBest(cur);
+  const modes = `<h4 class="wp-h">Modes spéciaux</h4>
+    <button class="wp-mode weekly ${W.done ? 'done' : ''}" data-mode="weekly"><i class="wm-ic">⚡</i>
+      <span class="wm-t"><small>Défi de la semaine · ${W.done ? 'réussi ✔' : `encore ${weeklyDaysLeft()} j`}</small><b>${esc(W.mission.what)}</b>
+      <em>${esc(ZONES[W.zone].name)} · ${esc(DIFFICULTIES[W.diff].name)} · ${W.curses.map(c => esc(c.name)).join(', ')}</em></span><i class="wm-go">›</i></button>
+    <button class="wp-mode endless" data-mode="endless"><i class="wm-ic">∞</i>
+      <span class="wm-t"><small>Mode infini · ${esc(ZONES[cur].name)}</small><b>Survivre le plus longtemps possible</b>
+      <em>Record ici : ${bestE ? mmssM(bestE) : 'aucun'}</em></span><i class="wm-go">›</i></button>
+    <h4 class="wp-h">Mondes</h4>`;
+  const p = modal({ title: 'Choisir un monde', cls: 'world-modal', body: `${modes}<div class="wp-list">${rows}</div>`, buttons: [{ label: 'Fermer', cls: 'ghost', value: null }], dismissable: true });
   const box = document.querySelector('.world-modal');
   box?.addEventListener('click', e => {
+    const m = e.target.closest('.wp-mode');
+    if (m) { sfx('tap'); box.closest('.modal-wrap')?.querySelector('.modal-btns .btn')?.click(); setTimeout(() => modeSheet(m.dataset.mode), 200); return; }
     const r = e.target.closest('.wp-row'); if (!r) return;
     const i = +r.dataset.z;
     if (i > save.unlockedZone) { sfx('tap'); toast(`${iconImg('lock', 16)} Terminez d'abord « ${esc(ZONES[i - 1].name)} »`); return; }
@@ -318,6 +330,60 @@ function worldPicker() {
     setTimeout(() => zoneSheet(i).then(() => { if (!battle) home(); }), 200);
   });
   return p;
+}
+
+// ---------- Modes spéciaux (js/modes.js) ----------
+// partie spéciale prête à lancer : weekly (règles de la semaine) ou endless (monde choisi, sa difficulté)
+function specialRun(kind) {
+  if (kind === 'weekly') {
+    const W = weekly();
+    return { z: W.zone, k: W.diff, special: { kind, label: 'Défi de la semaine', W, mission: W.mission, curses: W.curses } };
+  }
+  const z = playZone(), { k } = zoneDiff(z);
+  return { z, k, special: { kind, label: 'Mode infini', mission: { type: 'endless', icon: '∞', name: 'Mode infini', what: 'Survivez le plus longtemps possible', best: endlessBest(z) } } };
+}
+function playSpecial(kind) {
+  const R = specialRun(kind);
+  cleanBoostSel();
+  startRun(R.z, R.k, 0, { special: R.special });
+}
+// fiche d'un mode : règles, récompense, record ; « Jouer » lance la partie
+async function modeSheet(kind) {
+  const R = specialRun(kind), Z = ZONES[R.z];
+  let body;
+  if (kind === 'weekly') {
+    const W = R.special.W;
+    body = `<div class="chs-hero" style="background-image:url(${zoneBannerURL(Z)})"><span class="ms-big">⚡</span></div>
+      <p class="chs-goal">${esc(W.mission.icon)} ${esc(W.mission.what)}</p>
+      <h4>Règles de la semaine</h4>
+      <div class="ms-rules"><span>${iconImg('map', 16)} ${esc(Z.name)}</span><span style="color:${DIFFICULTIES[W.diff].color}">${iconImg(DIFFICULTIES[W.diff].icon, 16)} ${esc(DIFFICULTIES[W.diff].name)}</span>
+        ${W.curses.map(c => `<span class="curse">${iconImg(c.icon, 16)} <b>${esc(c.name)}</b> <small>${esc(c.desc)}</small></span>`).join('')}</div>
+      <h4>Récompense ${W.done ? '<small>(déjà obtenue cette semaine)</small>' : '<small>(une fois par semaine)</small>'}</h4>
+      <div class="chs-rw"><em>${iconImg('gold', 16)} ${fmt(WEEKLY_REWARD.gold)} or</em><em>${iconImg('chest', 16)} ${esc(LOOT_TIERS[WEEKLY_REWARD.chest].name)}</em><em><i class="shard-ic">✦</i> ${WEEKLY_REWARD.shards} éclat mythique</em></div>
+      <p class="muted ms-note">Nouveau défi chaque lundi · encore ${weeklyDaysLeft()} jour${weeklyDaysLeft() > 1 ? 's' : ''}.</p>`;
+  } else {
+    const best = endlessBest(R.z);
+    body = `<div class="chs-hero" style="background-image:url(${zoneBannerURL(Z)})"><span class="ms-big">∞</span></div>
+      <p class="chs-goal">Pas de boss ni de portail : survivez le plus longtemps possible. Après le chrono, les monstres deviennent fous, puis le monde s'effondre.</p>
+      <h4>Record dans ce monde</h4>
+      <p class="ms-best">${best ? `<b>${mmssM(best)}</b>` : 'Aucun pour l\'instant'}</p>
+      <h4>Récompense</h4>
+      <div class="chs-rw"><em>${iconImg('gold', 16)} + de l'or selon le temps tenu</em></div>
+      <p class="muted ms-note">${esc(Z.name)} · ${esc(DIFFICULTIES[R.k].name)} (changez de monde ou de difficulté dans la liste des mondes).</p>`;
+  }
+  const go = await modal({ title: `<span class="eyebrow">Mode spécial</span>${kind === 'weekly' ? 'Défi de la semaine' : 'Mode infini'}`, cls: 'chapter-modal mode-modal', body,
+    buttons: [{ label: 'Retour', cls: 'ghost', value: false }, { label: `${iconImg('play', 16)} Jouer`, cls: 'primary', value: true }], dismissable: true });
+  if (go) playSpecial(kind); else if (!battle) home();
+}
+// bilan d'une partie spéciale
+function specialBlock(X) {
+  if (!X) return '';
+  if (X.kind === 'weekly') return `<div class="story-res ms-res ${X.ok ? 'ok' : 'ko'}"><span class="sr-img ms-ic">⚡</span><span class="sr-t"><small>Défi de la semaine</small>
+    <b>${esc(X.mission.what)}</b><span>${X.ok ? (X.first ? 'Réussi : récompense de la semaine gagnée !' : 'Réussi (récompense déjà obtenue cette semaine)') : 'Raté… nouvel essai quand vous voulez.'}</span></span>
+    ${X.first ? `<span class="sr-rw"><em>${iconImg('gold', 14)} +${fmt(X.gold)}</em><em>${iconImg('chest', 14)} ${esc(X.chest)}</em><em><i class="shard-ic">✦</i> +${X.shards} éclat</em></span>` : ''}</div>`;
+  return `<div class="story-res ms-res ok"><span class="sr-img ms-ic">∞</span><span class="sr-t"><small>Mode infini</small>
+    <b>${mmssM(X.secs)} tenues</b><span>${X.record ? (X.before ? `Nouveau record ! (avant : ${mmssM(X.before)})` : 'Premier record !') : `Record : ${mmssM(X.best)}`}</span></span>
+    <span class="sr-rw"><em>${iconImg('gold', 14)} +${fmt(X.gold)} or (temps tenu)</em></span></div>`;
 }
 
 // Accueil : tout tient sur un écran. En haut, les objectifs (boutons ronds) ; au centre, le champion (touche = changer) ;
@@ -345,7 +411,7 @@ function adventureTab() {
     <div class="home-cta">
       ${cta}
       ${vet ? `<div class="home-sub">
-        <button class="hs-btn" data-act="worlds">${iconImg('map', 20)}<span><small>Monde ${pz + 1}</small><b style="--dc:${D.color}">${esc(D.name)}</b></span><i>›</i></button>
+        <button class="hs-btn" data-act="worlds">${iconImg('map', 20)}<span><small>Monde ${pz + 1}</small><b style="--dc:${D.color}">${esc(D.name)}</b></span><i>›</i>${weekly().done ? '' : '<em class="hs-dot" title="Défi de la semaine">⚡</em>'}</button>
         <button class="hs-btn story ${all ? '' : 'hot'}" data-act="story">${iconImg('book', 20)}<span><small>Histoire · ★ ${totalStars()}</small><b>${all ? 'Terminée' : `Chapitre ${storyNext() + 1}/${storyLen}`}</b></span><i>›</i></button>
       </div>` : ''}
     </div>
@@ -595,6 +661,7 @@ function pauseGoal(r) {
 let run = null;
 let runBoosts = [];
 let storyCur = null; // chapitre de l'histoire en cours (null : expédition)
+let specialCur = null; // partie spéciale en cours (défi de la semaine, mode infini ; js/modes.js)
 
 // premiers pas : monde 1 jamais battu et chapitre 1 pas terminé (JOUER lance le chapitre 1, le tutoriel)
 const firstSteps = () => !save.zoneCleared[0] && !storyDone();
@@ -620,21 +687,23 @@ function storyScreen() {
 }
 
 // story = n° du chapitre (mode histoire : un seul niveau, dialogues, pas de menu de portail)
-function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
+function startRun(z, diff = 0, abyss = 0, { story = null, special = null } = {}) {
   if (!supported()) return noWebGL(); // rien n'est dépensé (bonus, partie comptée)
-  diff = Math.max(0, Math.min(diff, maxDiff(z)));
+  diff = Math.max(0, Math.min(diff, special ? DIFFICULTIES.length - 1 : maxDiff(z))); // défi de la semaine : difficulté imposée
   abyss = Math.max(0, Math.min(abyss | 0, abyssTop(z))); // L2 : palier d'Abysse (en Cauchemar)
   save.stats.runs++;
   const boosts = runBoosts = consumeBoosts(); // enregistre aussi la partie commencée
   const zone = ZONES[z], ch = story == null ? null : chapter(story);
   storyCur = ch ? story : null;
+  specialCur = special;
   run = new Run({
     zone,
     diff,
     abyss,
     boosts,
     story: ch ? { n: story, giga: !!ch.giga, mission: ch.mission || null } : null,
-    onStory: ch ? (ev, d) => chatter(story, ev, d) : null, // commentaires de Pompon pendant le chapitre
+    special,
+    onStory: ch ? (ev, d) => chatter(story, ev, d) : special ? (ev, d) => missionChatter(special.mission, ev, d) : null, // commentaires de Pompon
     easy: !save.tutorialDone, // toute première partie : monstres et boss plus faibles (le guide montre tout en jouant)
     onBoss: ch ? () => setTimeout(() => { if (run && !run.over) taunt(story); }, ch.giga ? 3600 : 700) : null,
     onPause: resume => pauseMenu(resume),
@@ -642,7 +711,8 @@ function startRun(z, diff = 0, abyss = 0, { story = null } = {}) {
     onChest: (c, gold, done) => chestMenu(c, gold, done),
     onDefeat: canRevive => defeatMenu(canRevive),
     // mode histoire : au portail, les bulles de fin du chapitre puis le bilan
-    onPortal: ch ? (info, choose) => cutscene(story, 'outro', { inRun: true }).then(() => choose('home')) : (info, choose) => portalMenu(info, choose),
+    onPortal: ch ? (info, choose) => cutscene(story, 'outro', { inRun: true }).then(() => choose('home'))
+      : special ? (info, choose) => choose('home') : (info, choose) => portalMenu(info, choose),
     onEnd: sum => endRun(zone, sum),
   });
   run.onPortal ??= (info, choose) => portalMenu(info, choose);
@@ -1183,8 +1253,12 @@ function endRun(z, sum) {
   const story = sc ? storyEnd(storyCur, { ok: sc.giga ? !!sum.giga : sc.mission ? !!sum.mission : cleared.includes(sc.zone), revived: !!sum.revived, time: sum.time || 0, hp: sum.hp ?? 1 }) : null;
   storyCur = null;
   if (story?.ok) save.tutorialDone = true; // chapitre réussi : le guide de la première partie ne revient plus
+  // modes spéciaux : défi de la semaine (récompense la 1re fois de la semaine), mode infini (record par monde)
+  const sp = specialCur; specialCur = null;
+  const special = !sp ? null : sp.kind === 'weekly' ? { ...sp, ok: !!sum.mission, ...(sum.mission ? weeklyWin(sp.W) : { first: false }) }
+    : { ...sp, ...endlessEnd(start.id, sum.time) };
   const R = { start, k, D, sum, cleared, worlds, found, gold, heat, heatGold, stage, unlocked, newZone, got, record, l2, pass, route, gigaRec,
-    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start, story };
+    final: !!sum.giga, reached: ZONES[route[route.length - 1]] || start, story, special };
   sfx(cleared.length ? 'win' : 'coin');
   const show = opened => summaryScreen(R, opened);
   if (save.pendingChests.length) chestScreen(show, true); else show([]);
@@ -1468,9 +1542,11 @@ function summaryScreen(R, opened = []) {
       </div>
       <div class="wr-lines">${w.lines.map(l => `<div class="rw">${l.replace(/^(<img[^>]*>)\s*([\s\S]*)$/, '$1<span>$2</span>')}</div>`).join('')}</div>
     </div>`).join('');
-  const S = R.story;
-  const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite') : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
-  const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
+  const S = R.story, X = R.special;
+  const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite')
+    : X ? (X.kind === 'weekly' ? (X.ok ? 'Défi réussi !' : 'Défi raté') : X.record ? 'Nouveau record !' : 'Mode infini')
+    : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
+  const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : X ? `${esc(X.label)} · ${esc(start.name)}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer
   const nextZ = R.newZone ?? start.id, nextK = R.newZone != null ? 0 : R.unlocked ?? k;
   const nextLabel = R.newZone != null ? `Partir : ${esc(ZONES[R.newZone].name)}` : R.unlocked ? `Tenter ${esc(DIFFICULTIES[R.unlocked].name)}` : 'Rejouer';
@@ -1491,6 +1567,7 @@ function summaryScreen(R, opened = []) {
     <h2 class="rs-title">${title}</h2>
     <p class="rs-zone">${route} <span class="diff-tag d${k}${D.abyss ? ' ab' : ''}">${esc(D.name)}</span></p>
     ${storyBlock(S)}
+    ${specialBlock(X)}
     ${gigaBlock}
     <div class="run-stats">
       <div><b>${fmtTime(sum.time)}</b><small>Durée</small></div>
@@ -1502,7 +1579,7 @@ function summaryScreen(R, opened = []) {
     ${!won ? `<p class="tip">${tipFor(sum, k)}</p>` : ''}
     <div class="end-btns rs-btns">
       <button class="btn ghost" data-act="home">${iconImg('home', 16)} Accueil</button>
-      <button class="btn primary" data-act="${S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
+      <button class="btn primary" data-act="${X ? 'special' : S && !S.last ? 'chapter' : S?.last && S.ok ? 'home' : 'again'}">${X ? 'Rejouer' : S ? (S.ok ? (S.last ? `${iconImg('home', 16)} Accueil` : 'Chapitre suivant') : 'Réessayer') : nextLabel}</button>
     </div>
     <details class="rs-more"><summary>Voir le détail de la partie</summary>
     ${runPassBlock(R.pass)}
@@ -1526,6 +1603,7 @@ function summaryScreen(R, opened = []) {
     home: () => home('adventure'),
     season: () => seasonScreen(() => home('adventure')),
     chapter: () => playChapter(S.ok ? S.next ?? S.n : S.n),
+    special: () => playSpecial(X.kind),
     again: () => {
       if (S) return playChapter(S.n);
       save.diffSel[nextZ] = Math.min(nextK, maxDiff(nextZ));
@@ -1999,6 +2077,7 @@ async function settings() {
         ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
         ${row('upg', 'Choix automatique', 'Prend la meilleure amélioration à chaque niveau', sw('sAuto', S.autoPick))}
         ${row('hand', 'Mode gaucher', 'Bouton d\'ultime à gauche', sw('sLefty', S.lefty))}
+        ${row('cube', 'Graphismes', 'Léger : plus fluide sur les vieux iPhone (image moins fine, moins d\'effets)', seg('quality', [['auto', 'Auto'], ['lite', 'Léger']]), true)}
       </div>
       <h4>Son</h4>
       <div class="set-list">
@@ -2020,7 +2099,7 @@ async function settings() {
   });
   // boutons internes
   const wrap = document.getElementById(wrapId);
-  const o = { shake: S.shake, numbers: S.numbers };
+  const o = { shake: S.shake, numbers: S.numbers, quality: S.quality || 'auto' };
   let action = null;
   wrap.addEventListener('click', e => {
     const sv = e.target.closest('[data-sv]');
@@ -2165,6 +2244,26 @@ async function accountSheet() {
     if (ok) await cloud.signOut();
   }
   if (!battle) home();
+}
+
+// deux sauvegardes différentes (cet appareil / en ligne) qui ont chacune avancé : le joueur choisit laquelle garder
+export function chooseSave(local, remote) {
+  const when = t => (t ? new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '?');
+  const stars = s => Object.values(s.storyCh || {}).reduce((n, b) => n + (b & 1) + ((b >> 1) & 1) + ((b >> 2) & 1), 0);
+  const card = (s, label, ic) => `<div class="sv-card">
+      <span class="sv-h">${ic}<b>${label}</b><small>${esc(when(s.updatedAt))}</small></span>
+      <span class="sv-l">${iconImg('gold', 14)}<b>${fmt(s.gold || 0)}</b> or</span>
+      <span class="sv-l">${iconImg('map', 14)}<b>${(s.zoneCleared || []).filter(Boolean).length}/${ZONES.length}</b> mondes</span>
+      <span class="sv-l">${iconImg('book', 14)}<b>★ ${stars(s)}</b> histoire</span>
+      <span class="sv-l">${iconImg('play', 14)}<b>${fmt(s.stats?.runs || 0)}</b> parties</span>
+    </div>`;
+  return modal({
+    title: 'Deux sauvegardes',
+    cls: 'save-modal',
+    body: `<p class="set-note">Votre progression a avancé <b>sur cet appareil</b> et <b>sur un autre</b>. Laquelle garder ? L'autre sera remplacée.</p>
+      <div class="sv-cards">${card(local, 'Cet appareil', '📱')}${card(remote, 'En ligne', '☁️')}</div>`,
+    buttons: [{ label: '📱 Cet appareil', cls: 'ghost', value: 'local' }, { label: '☁️ En ligne', cls: 'primary', value: 'remote' }],
+  }).then(v => v || 'local');
 }
 
 // rafraîchit l'écran quand la sauvegarde arrive du cloud

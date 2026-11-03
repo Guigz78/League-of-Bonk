@@ -21,6 +21,7 @@ import './arsenal-engineer.js'; // armes de Tess (tourelle, drone d'appui, lance
 import './arsenal-monk.js'; // armes de Kenji (poings de fer, paume de ki, vague de chi, dragon de ki)
 import './arsenal-pirate.js'; // armes de Morgane (pistolets, sabre d'abordage, canon, perroquet)
 import { runDiff, curseList, abyssName } from './abyss.js';
+import { specialDiff } from './modes.js'; // défi de la semaine : malédictions imposées
 import { iconImg } from './art.js';
 import { rng } from './pixel.js';
 import { createGfx } from './visuals.js';
@@ -171,12 +172,15 @@ class Grid {
 }
 
 export class Run {
-  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal, onBoss, onStory, story = null, easy = false }) {
+  constructor({ zone, diff = 0, abyss = 0, boosts = [], onEnd, onPause, onLevelUp, onChest, onDefeat, onPortal, onBoss, onStory, story = null, special = null, easy = false }) {
     this.zone = zone;
     this.startZone = zone.id;
     this.diffId = Math.max(0, Math.min(DIFFICULTIES.length - 1, diff | 0));
     // Abysse (palier 1 à 10, toujours sur la base de Cauchemar) : difficulté renforcée + malédictions cumulées
     this.diff = runDiff(this.diffId, abyss);
+    // partie spéciale (js/modes.js) : { kind: 'weekly' | 'endless', label, mission, curses } ; un seul niveau
+    this.special = special;
+    if (special?.curses?.length) this.diff = specialDiff(this.diff, special.curses.map(c => c.id || c));
     this.abyss = this.diff.abyss || 0;
     if (this.abyss) this.diffId = DIFFICULTIES.length - 1;
     this.curse = this.diff.curses || new Set();
@@ -365,9 +369,9 @@ export class Run {
     this.renderLoadout();
     this.renderEvo();
     this.renderWorld();
-    if (save.tutorialDone) this.banner(`<small>${this.story ? `Chapitre ${this.story.n + 1}` : `Niveau 1/${EXPE_LEVELS}`} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>${this.mission ? `${this.mission.icon} ${esc(this.mission.what)}` : 'Trouvez l\'autel du boss !'}`, 2400, 'world');
+    if (save.tutorialDone) this.banner(`<small>${this.story ? `Chapitre ${this.story.n + 1}` : this.special ? esc(this.special.label) : `Niveau 1/${EXPE_LEVELS}`} · Monde ${this.zone.id + 1} · ${esc(this.zone.name)}${this.diffId ? ' · ' + esc(this.diff.name) : ''}</small>${this.mission ? `${this.mission.icon} ${esc(this.mission.what)}` : 'Trouvez l\'autel du boss !'}`, 2400, 'world');
     if (this.abyss) setTimeout(() => { if (!this.over) this.banner(`<small>${esc(abyssName(this.abyss))} · malédictions</small>${curseList(this.abyss, 'small')}`, 3200, 'small abyss'); }, 2500);
-    if (this.story) setTimeout(() => { if (!this.over) this.onStory?.('start'); }, 2600); // Pompon rappelle l'objectif
+    if (this.story || this.special) setTimeout(() => { if (!this.over) this.onStory?.('start'); }, 2600); // Pompon rappelle l'objectif
     music('zone' + this.zone.id);
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -678,7 +682,9 @@ export class Run {
   // niveau de l'expédition et monde courant dans le bandeau du haut : « Niveau 2/3 · Jungle »
   renderWorld() {
     const el = $('#worldTag'); if (!el) return;
-    el.innerHTML = this.story ? `Chapitre <b>${this.story.n + 1}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}` : `Niveau <b>${this.stage + 1}/${EXPE_LEVELS}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
+    el.innerHTML = this.story ? `Chapitre <b>${this.story.n + 1}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`
+      : this.special ? `<b>${esc(this.special.label)}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`
+      : `Niveau <b>${this.stage + 1}/${EXPE_LEVELS}</b> · ${esc(WORLD_SHORT[this.zone.id] || this.zone.name)}`;
     el.classList.toggle('giga', !!this.gigaLevel);
   }
 
@@ -1073,7 +1079,7 @@ export class Run {
       this.otLevel = lv;
       this.emit('overtimeStep', { level: lv });
       if (this.boss && !this.boss.dead) this.boss.dmg *= 1.1;
-      if (lv === DOOM_LV) this.banner('<small>Le monde s\'effondre !</small>Fuyez par le portail !', 2200, 'boss ot');
+      if (lv === DOOM_LV) this.banner(`<small>Le monde s'effondre !</small>${this.mission?.type === 'endless' ? 'Tenez le plus longtemps possible !' : 'Fuyez par le portail !'}`, 2200, 'boss ot');
       else if (lv % 2 === 0) this.banner(`<small>Ils sont de plus en plus fous…</small>Folie niv. ${lv}`, 1500, 'warn ot');
       sfx('alarm');
     }
@@ -1215,7 +1221,9 @@ export class Run {
       e.freeze = Math.max(0, e.freeze - dt);
       if (e.invuln > 0) e.invuln -= dt;
       if (e.regen && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
-      const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
+      // monstre d'assaut (mission « défendre la marmite ») : il vise la marmite, pas le héros
+      const pot = e.siege && this.mission?.pot && !this.mission.done ? this.mission.pot : null, tg = pot || p;
+      const dx = tg.x - e.x, dy = tg.y - e.y, d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
       const fury = e.rage && e.hp < e.maxHp * 0.5 ? 1.3 : 1;
       const sp = e.speed * fury * (e.slow ? 0.5 : e.chillT > this.runTime ? e.chillK : 1) * (e.freeze ? 0 : 1); // chill : Morsure du givre (Frida)
       if (e.boss) this.bossAI(e, dt, nx, ny, d, sp);
@@ -1239,9 +1247,14 @@ export class Run {
       }
       const a = e.act, dashing = !!a && a.stage === 1 && (a.kind === 'dash' || a.kind === 'strafe');
       if (!e.freeze) e.ang = dashing && a.kind === 'dash' ? Math.atan2(a.dx, a.dy) : Math.atan2(dx, dy);
-      if (!e.boss && !a && d > SPAWN_R * 1.5) { const [nx2, ny2] = this.spawnPoint(); e.x = nx2; e.y = ny2; }
+      if (!e.boss && !a && !pot && d > SPAWN_R * 1.5) { const [nx2, ny2] = this.spawnPoint(); e.x = nx2; e.y = ny2; }
       // contact (pas pendant un bond du giga boss)
       if (e.burrowed || e.air) continue;
+      if (pot) {
+        if (d < e.r * 0.7 + pot.r) this.missionPotHit(e, dt);
+        if (Math.hypot(p.x - e.x, p.y - e.y) < e.r * 0.7 + p.r) this.hurtPlayer(e.dmg * fury, e);
+        continue;
+      }
       if (d < e.r * 0.7 + p.r) this.hurtPlayer(e.dmg * fury * (dashing ? 1.3 : 1), e);
     }
   }
@@ -2510,7 +2523,7 @@ export class Run {
   // monde du niveau suivant de l'expédition : le monde suivant ; s'il n'existe pas (ou a déjà été visité), le monde débloqué
   // le plus avancé pas encore visité. null après le dernier niveau (ou le giga boss vaincu).
   nextZone() {
-    if (this.story || this.gigaWon || this.stage + 1 >= EXPE_LEVELS) return null; // mode histoire : un seul niveau
+    if (this.story || this.special || this.gigaWon || this.stage + 1 >= EXPE_LEVELS) return null; // histoire, modes spéciaux : un seul niveau
     const nx = ZONES[this.zone.id + 1], seen = id => this.route.includes(id);
     if (nx && !seen(nx.id)) return nx;
     const top = Math.max(save.unlockedZone || 0, this.zone.id), open = ZONES.filter(z => !seen(z.id) && z.id <= top);
@@ -2693,7 +2706,7 @@ export class Run {
       loot: this.loot.map(l => ({ tier: l.tier, zone: l.zone, ...(l.giga ? { giga: 1 } : {}) })), heat: this.heat, boosts: [...this.boosts],
       combo: this.comboBest, evos: this.p.weapons.filter(w => w.evo).map(w => w.id),
       abyss: this.abyss, track: { ...this.track, weaponKills: { ...this.track.weaponKills } },
-      mission: !!this.mission?.done, hp: this.p.maxHp ? Math.max(0, this.p.hp) / this.p.maxHp : 0, // mode histoire
+      mission: !!this.mission?.done && !this.mission.failed, hp: this.p.maxHp ? Math.max(0, this.p.hp) / this.p.maxHp : 0, // histoire, modes spéciaux (ratée : marmite renversée)
     });
   }
 
@@ -2707,8 +2720,9 @@ export class Run {
     // chrono du monde, puis temps de folie en rouge (« +0:12 »)
     const left = this.duration - this.time, ot = left < 0, fight = this.boss && !this.boss.dead;
     // mission « tenez bon » de l'histoire : le grand chrono compte le temps qu'il reste à tenir
-    const MS = this.mission, hold = MS && !MS.done && MS.type === 'survive' ? Math.max(0, MS.t - MS.el) : null;
-    tm.textContent = hold != null ? mmss(Math.ceil(hold)) : ot ? '+' + mmss(-left) : mmss(Math.ceil(left));
+    const MS = this.mission, hold = MS && !MS.done && (MS.type === 'survive' || MS.type === 'defend') ? Math.max(0, MS.t - MS.el) : null;
+    const inf = MS?.type === 'endless'; // mode infini : le grand chrono compte le temps tenu
+    tm.textContent = inf ? mmss(Math.floor(this.time)) : hold != null ? mmss(Math.ceil(hold)) : ot ? '+' + mmss(-left) : mmss(Math.ceil(left));
     tm.classList.toggle('ot', ot && hold == null);
     tm.classList.toggle('low', hold != null ? hold < 15 : !ot && left < 20 && !fight);
     tm.classList.toggle('boss', fight && !ot);

@@ -307,22 +307,28 @@ function bubbleInRun(s, text, cls = '', tries = 0) {
 // commentaires de Pompon pendant le chapitre (événements de run.onStory) ; au plus un toutes les 9 s (sauf mission)
 let lastChat = 0;
 const said = new Set();
-export function chatter(n, ev, d = {}) {
-  const c = CH[n], m = c?.mission, now = performance.now();
+export const chatter = (n, ev, d = {}) => talk(CH[n], ev, d);
+// modes spéciaux (défi de la semaine, mode infini) : mêmes commentaires, d'après la mission seule
+export const missionChatter = (m, ev, d = {}) => talk({ mission: m }, ev, d);
+function talk(c, ev, d = {}) {
+  const m = c?.mission, now = performance.now();
   if (!c || ($('.run .coach') && ev !== 'done')) return; // pas pendant le guide de la première partie
   if (ev === 'start') said.clear();
   const key = ev + (ev === 'lowhp' ? Math.floor(now / 20000) : '');
   if (said.has(key) && ev !== 'item' && ev !== 'guard') return;
-  const urgent = ev === 'item' || ev === 'guard' || ev === 'done' || ev === 'half';
+  const urgent = ev === 'item' || ev === 'guard' || ev === 'done' || ev === 'half' || ev === 'potLow';
   if (!urgent && now - lastChat < 9000) return;
   let t = '';
   if (ev === 'start') t = !m ? (c.giga ? 'C\'est lui, Gorgoth ! Monte de niveau avant d\'aller à son autel.' : 'L\'autel du boss est quelque part. Prends des niveaux d\'abord !')
-    : m.type === 'collect' ? `Suis les flèches vers les ${m.icon} ! Chacun est gardé : sois prêt.` : m.type === 'survive' ? `Tiens ${m.t} secondes ! Une horde va arriver : bouge sans arrêt.` : 'Les gardes sont marqués d\'une 🎯. Va les chercher !';
+    : m.type === 'collect' ? `Suis les flèches vers les ${m.icon} ! Chacun est gardé : sois prêt.` : m.type === 'survive' ? `Tiens ${m.t} secondes ! Une horde va arriver : bouge sans arrêt.`
+    : m.type === 'defend' ? 'Ils veulent la marmite ! Reste dans son cercle : quand tu es là, elle encaisse 4 fois moins.' : m.type === 'endless' ? 'Pas de boss, pas de portail : on tient le plus longtemps possible !'
+    : 'Les gardes sont marqués d\'une 🎯. Va les chercher !';
   else if (ev === 'item') t = d.k >= d.n ? '' : d.n - d.k === 1 ? `Plus qu'un ${m.icon} ! Tu y es presque !` : d.k === 1 ? `Et d'un ! Encore ${d.n - d.k}.` : `${d.k}/${d.n} ! On tient le bon bout.`;
   else if (ev === 'guard') t = d.k >= d.n ? '' : `Un garde de moins ! Encore ${d.n - d.k}.`;
   else if (ev === 'half') t = 'À mi-chemin ! Courage, ils fatiguent !';
   else if (ev === 'lowhp') t = 'Aïe aïe aïe ! Fais attention, tu n\'as presque plus de PV !';
   else if (ev === 'bossHalf') t = 'Il faiblit ! Continue comme ça !';
+  else if (ev === 'potLow') t = 'La marmite ne tient plus qu\'à un fil ! Reviens vite !';
   else if (ev === 'done') t = 'C\'est gagné ! Le portail s\'ouvre, file dedans !';
   if (!t) return;
   said.add(key); lastChat = now;
