@@ -2600,3 +2600,9 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
 .ac-mail { width: 100%; margin-top: 8px; }
 .ls-t b, .ls-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ls-btn.m { width: 38px; padding: 0; justify-content: center; font-size: 17px; }
+
+/* ===== r27 : messages en bas (au-dessus des onglets), badges qui ne coupent plus la rareté, « Équipé ! » en coin ===== */
+.toasts:not(.in-run) { top: auto; bottom: calc(var(--safe-b) + 84px); flex-direction: column-reverse; }
+.toasts:not(.in-run) .toast.out { transform: translateY(8px); }
+.itile .it-new, .itile .it-better { top: 20px; right: 3px; }
+.rcard .rc-eq { position: absolute; z-index: 2; top: 30px; right: 10px; margin: 0; }

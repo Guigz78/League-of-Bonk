@@ -1546,14 +1546,13 @@ function tipFor(sum, k = 0) {
 
 function announceAchievements() {
   const got = checkAchievements();
-  if (got.length > 3) { // beaucoup d'un coup (ancienne sauvegarde, nouveaux succès) : un seul message
-    toast(`${iconImg('crown', 18)} <b>${got.length} succès</b> débloqués (+${fmt(got.reduce((n, a) => n + a.gold, 0))} or)`, 3600);
-    sfx('loot'); persist(); return;
-  }
-  for (const a of got) {
-    toast(`${iconImg('crown', 18)} Succès : <b>${esc(a.name)}</b> (+${a.gold} or)${a.title && DATA.TITLES?.[a.title] ? ` · titre « ${esc(DATA.TITLES[a.title].name)} »` : ''}`, 3200);
-    sfx('loot');
-  }
+  if (!got.length) return persist();
+  const gold = fmt(got.reduce((n, a) => n + a.gold, 0)), ti = got.find(a => a.title && DATA.TITLES?.[a.title]);
+  // un seul message, même pour plusieurs succès d'un coup (avant : une pile de messages qui cachait l'écran)
+  toast(got.length === 1
+    ? `${iconImg('crown', 18)} Succès : <b>${esc(got[0].name)}</b> (+${gold} or)${ti ? ` · titre « ${esc(DATA.TITLES[ti.title].name)} »` : ''}`
+    : `${iconImg('crown', 18)} <b>${got.length} succès</b> : ${got.slice(0, 2).map(a => esc(a.name)).join(', ')}${got.length > 2 ? '…' : ''} (+${gold} or)${ti ? ' · nouveau titre' : ''}`, got.length > 1 ? 3600 : 3000);
+  sfx('loot');
   persist();
 }
 

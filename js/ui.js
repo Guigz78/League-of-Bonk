@@ -77,6 +77,8 @@ let toastBox = null;
 const toastQ = [];
 export function toast(html, ms = 2200) {
   if (!toastBox) { toastBox = document.createElement('div'); toastBox.className = 'toasts'; document.body.appendChild(toastBox); }
+  // menus : en bas, au-dessus des onglets (le haut de l'écran reste visible) ; en partie : en haut (le bas est au pouce)
+  toastBox.classList.toggle('in-run', !!document.querySelector('.run'));
   if (toastBox.children.length >= 2) { toastQ.push([html, ms]); return; }
   const t = document.createElement('div');
   t.className = 'toast';
