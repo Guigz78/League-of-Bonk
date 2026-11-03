@@ -12,11 +12,14 @@ const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 // MIS : réglages (rayon de ramassage, distances des objets, objets visibles à la fois, rayon et taille des embuscades,
 // délai entre deux gardes, renfort des apparitions pendant « tenez bon » : 1, la horde du monde à 60 s suffit)
-export const MIS = { pick: 58, near: 480, far: 1320, show: 3, ambush: 380, pack: 4, guardGap: 3.5, guardDist: 560, surviveSpawn: 1 };
+export const MIS = { pick: 58, near: 480, far: 1320, show: 3, ambush: 380, pack: 4, guardGap: 3.5, guardDist: 560, surviveSpawn: 1,
+  // défendre la marmite : position, PV, dégâts par seconde d'un monstre d'assaut au contact (élite ×3), vagues d'assaut
+  potY: -170, potR: 46, potHp: 100, potDps: 0.7, potElite: 2, siegeEvery: 8, siegeMin: 4.5, siegePack: 2, siegeDist: 600,
+  guardR: 230, guardK: 0.25 }; // héros à moins de guardR de la marmite : elle ne prend que guardK des dégâts
 
 export const MISSION = {
   initMission() {
-    const m = this.story?.mission; this.mission = null;
+    const m = this.story?.mission || this.special?.mission; this.mission = null; // histoire, ou défi de la semaine / mode infini
     if (!m) return;
     const M = this.mission = { ...m, k: 0, el: 0, done: false, items: [], cur: null, next: 2.5, half: false };
     this.altar = null; // pas de boss dans un chapitre « mission »
@@ -28,6 +31,7 @@ export const MISSION = {
       }
     }
     if (m.type === 'survive') this.wm.spawn *= MIS.surviveSpawn;
+    if (m.type === 'defend') { M.pot = { x: 0, y: MIS.potY, r: MIS.potR, hp: MIS.potHp, max: MIS.potHp, hitT: 0 }; M.siegeT = 4; }
   },
 
   updateMission(dt) {
@@ -48,6 +52,17 @@ export const MISSION = {
       M.el += dt;
       if (!M.half && M.el >= M.t / 2) { M.half = true; this.onStory?.('half'); }
       if (M.el >= M.t) return this.missionDone();
+    } else if (M.type === 'defend') {
+      const P = M.pot;
+      M.el += dt; P.hitT = Math.max(0, P.hitT - dt);
+      P.guarded = Math.hypot(this.p.x - P.x, this.p.y - P.y) < MIS.guardR; // le héros la protège
+      if (!M.half && M.el >= M.t / 2) { M.half = true; this.onStory?.('half'); }
+      if (!M.low && P.hp < P.max * 0.35) { M.low = true; this.onStory?.('potLow'); }
+      if (P.hp <= 0) return this.missionFail('<small>La marmite est renversée !</small>Mission ratée');
+      if ((M.siegeT -= dt) <= 0) { M.siegeT = Math.max(MIS.siegeMin, MIS.siegeEvery - M.el / 40); this.missionSiege(); }
+      if (M.el >= M.t) return this.missionDone();
+    } else if (M.type === 'endless') {
+      M.el += dt; // pas de fin : la folie monte après le chrono, puis le monde s'effondre (record = temps tenu)
     } else if (M.type === 'elites' && !M.cur && M.k < M.n && (M.next -= dt) <= 0) { // garde suivant
       const a = Math.random() * Math.PI * 2, lim = HALF - 200;
       const x = clamp(p.x + Math.cos(a) * MIS.guardDist, -lim, lim), y = clamp(p.y + Math.sin(a) * MIS.guardDist, -lim, lim);
@@ -81,6 +96,37 @@ export const MISSION = {
     sfx('honk'); buzz(30);
   },
 
+  // vague d'assaut sur la marmite : une meute arrive d'un côté et ne vise que la marmite (plus grosse au fil du temps)
+  missionSiege() {
+    const M = this.mission, P = M.pot, mons = this.zone.monsters, lim = HALF - 120;
+    const a0 = Math.random() * Math.PI * 2, n = MIS.siegePack + Math.floor(M.el / 45), k = Math.min(3, Math.floor(M.el / 35));
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i / n - 0.5) * 0.9, kk = Math.max(0, k - (i % 2));
+      const e = this.addEnemy(mons[kk], kk, { x: clamp(P.x + Math.cos(a) * MIS.siegeDist, -lim, lim), y: clamp(P.y + Math.sin(a) * MIS.siegeDist, -lim, lim) });
+      e.siege = true;
+    }
+    if (M.el > 50 && Math.random() < 0.25) { // de temps en temps, un élite mène l'assaut
+      const e = this.addEnemy(mons[4], 4, { elite: true, x: clamp(P.x + Math.cos(a0) * (MIS.siegeDist + 60), -lim, lim), y: clamp(P.y + Math.sin(a0) * (MIS.siegeDist + 60), -lim, lim) });
+      e.siege = true; this.emit('elite', { e });
+    }
+  },
+  // un monstre d'assaut au contact de la marmite (run.updateEnemies)
+  missionPotHit(e, dt) {
+    const P = this.mission.pot;
+    P.hp = Math.max(0, P.hp - MIS.potDps * (e.elite ? MIS.potElite : 1) * (P.guarded ? MIS.guardK : 1) * dt);
+    if (P.hitT <= 0) { P.hitT = 0.35; this.emit('potHit', { x: P.x, y: P.y }); }
+  },
+  // mission ratée (marmite renversée) : fin de la partie
+  missionFail(html) {
+    const M = this.mission;
+    if (M.failed) return;
+    M.failed = true; M.done = true;
+    this.banner(html, 2200, 'boss ot');
+    this.shake = 12; sfx('lose'); buzz(120);
+    this.emit('potBreak', { x: M.pot?.x || this.p.x, y: M.pot?.y || this.p.y });
+    setTimeout(() => { if (!this.over) this.finish(false); }, 1800);
+  },
+
   // un garde marqué est tombé
   missionKill(e) {
     const M = this.mission;
@@ -109,7 +155,10 @@ export const MISSION = {
   // texte sous le chrono : progression de la mission
   missionText() {
     const M = this.mission;
+    if (M.failed) return 'Mission ratée';
+    if (M.type === 'endless') return `∞ Record ${M.best ? `${Math.floor(M.best / 60)}:${String(M.best % 60).padStart(2, '0')}` : '—'}`;
     if (M.done) return 'Mission accomplie : au portail !';
+    if (M.type === 'defend') return `${M.icon} Marmite ${Math.ceil(M.pot.hp)} %${M.pot.guarded ? ' · protégée' : ' · sans vous !'}`;
     if (M.type === 'collect') return `${M.icon} ${M.name} ${M.k}/${M.n}`;
     if (M.type === 'survive') return `${M.icon} Tenez bon !`; // le temps restant est dans le grand chrono (run.hud)
     return `${M.icon} ${M.name} ${M.k}/${M.n}`;

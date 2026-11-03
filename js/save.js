@@ -1,5 +1,5 @@
 // Sauvegarde locale (toujours) + calcul des statistiques du joueur.
-import { CLASSES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
+import { CLASSES, ZONES, UPGRADES, ITEM_BASES, BOSS_ITEMS, ACHIEVEMENTS, DIFFICULTIES, PARTS, RARITIES, LOOT_TIERS, CHEST_LOOT, FORGE, BOOSTS, BOOST_SLOTS, RENAMED,
   AFFIXES, AFFIX_POOLS, LEGEND_EFFECTS, ITEM_RESCALE, LOCKED, ABYSS_TIERS, MYTHIC, MYTHIC_ITEMS, MYTHIC_POWERS, masteryOf, masteryBonus, masteryPerks, upgMax } from './data.js';
 
 const KEY = 'lob_save_v1';
@@ -34,6 +34,8 @@ export function freshSave() {
     pendingChests: [],
     mythShards: 0,      // éclats mythiques (MYTHIC.shards = un objet mythique à la forge)
     mythGot: [],        // objets mythiques déjà obtenus (ids de MYTHIC_ITEMS) : la forge ne redonne pas le même
+    weekChal: null,     // défi de la semaine : { key: '2026-W45', done } (js/modes.js ; save.weekly = quêtes de la semaine)
+    endless: {},        // mode infini : record par monde (secondes)
     achievements: {},
     // options : tremblements (0 aucun, 1 faible, 2 normal), chiffres de dégâts (all, crit, none),
     // taille du joystick (0,8 à 1,3), gaucher (ultime à gauche)
@@ -181,6 +183,8 @@ function migrateLoot(out, s) {
   out.pendingChests = (Array.isArray(out.pendingChests) ? out.pendingChests : [])
     .filter(c => c && typeof c === 'object').map(c => ({ tier: int(c.tier, LOOT_TIERS.length - 1), zone: int(c.zone, 5), ...(c.giga ? { giga: 1, diff: int(c.diff, MYTHIC.giga.length - 1) } : {}) })); // giga = Giga coffre (diff : difficulté)
   out.mythShards = int(out.mythShards, 999);
+  out.weekChal = out.weekChal && typeof out.weekChal === 'object' && typeof out.weekChal.key === 'string' ? { key: out.weekChal.key, done: !!out.weekChal.done } : null;
+  out.endless = Object.fromEntries(Object.entries(obj(out.endless)).filter(([z]) => +z >= 0 && +z < ZONES.length).map(([z, v]) => [z, int(v, 1e6)]));
   const myth = new Set(MYTHIC_ITEMS.map(m => m.id));
   out.mythGot = [...new Set([...(Array.isArray(out.mythGot) ? out.mythGot : []), ...(out.inventory || []).map(i => i?.mid)])].filter(id => myth.has(id));
   const st = out.stats;
