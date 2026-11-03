@@ -2559,8 +2559,9 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
 .account-modal .btn.google { width: 100%; }
 .set-link { margin-bottom: 4px; border: 1px solid var(--tap-ln); box-shadow: 0 3px 0 var(--lip); }
 .set-link:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--lip); }
-.topbar .cur-v b { white-space: nowrap; }
-@media (max-width: 370px) { .topbar .cur-v b { font-size: 14px; } }
+/* chiffres dans la police du jeu (fournie avec le jeu) : même largeur sur iPhone, Android et ordinateur, rien ne déborde */
+.topbar .cur-v b { white-space: nowrap; font: 700 17px/1 var(--fd); letter-spacing: .02em; }
+@media (max-width: 370px) { .topbar .cur-v b { font-size: 16px; } }
 @media (max-width: 370px) {
   .topbar { gap: 4px; }
   .topbar .cur { gap: 4px; padding: 0 6px 0 5px; }

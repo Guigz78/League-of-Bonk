@@ -75,6 +75,8 @@ for (const t of list) {
     for (const m of r.missing) console.log(`    attendu, pas trouvé : ${m}`);
     for (const f of r.found) console.log(`    problème : ${(r.log.match(f) || [''])[0].slice(0, 160)}`);
     console.log(`    journal : tests/out/${r.slug}.log`);
+    // sur GitHub, la fin du journal s'affiche directement (les captures sont dans l'artefact « tests-captures »)
+    if (process.env.CI) console.log(r.log.trim().split('\n').slice(-15).map(l => '    | ' + l.slice(0, 220)).join('\n'));
   }
 }
 close();
