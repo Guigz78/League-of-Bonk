@@ -1252,7 +1252,7 @@ function summaryScreen(R, opened = []) {
     </div>`).join('');
   const S = R.story, X = R.special;
   const title = S ? (S.ok ? (S.last ? 'Fin de l\'histoire' : 'Chapitre terminé') : 'Défaite')
-    : X ? (X.kind === 'weekly' ? (X.ok ? 'Défi réussi !' : 'Défi raté') : X.record ? 'Nouveau record !' : 'Mode infini')
+    : X ? (X.kind === 'weekly' ? (X.ok ? 'Défi réussi\u00a0!' : 'Défi raté') : X.record ? 'Nouveau record\u00a0!' : 'Mode infini')
     : R.final ? 'Victoire de l\'expédition' : sum.win ? 'Victoire' : won ? 'Expédition terminée' : 'Défaite';
   const eyebrow = S ? `Histoire · chapitre ${S.n + 1}/${storyLen}` : X ? `${esc(X.label)} · ${esc(start.name)}` : R.final ? `${esc(G.name)} est tombé` : won ? `${cleared.length} monde${cleared.length > 1 ? 's' : ''} vaincu${cleared.length > 1 ? 's' : ''} · niveau ${R.stage + 1}/${DATA.EXPE_LEVELS}` : 'Fin de partie';
   // bouton principal : nouveau monde débloqué, niveau supérieur, ou rejouer

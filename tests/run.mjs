@@ -32,7 +32,7 @@ const TESTS = [
     ok: [/faucheuse : mort true/, /renaissance : PV \d+\/\d+, dying undefined, utilisée true/, /2e coup fatal : dying true/, /titan : perdu \d+ PV/, /étoile : lancée 1/] },
   { name: 'histoire SE', f: 'story.mjs', env: { VP: 'se' }, ok: [/^titre soupe/m, /"c12":7/], bad: [/^\s*pas de (boss|portail|scène|garde)|\(pas de scène\)|non lancé/m] },
   { name: 'modes spéciaux', f: 'modes.mjs', env: { VP: '13' },
-    ok: [/liste : .*DÉFI DE LA SEMAINE.*MODE INFINI/, /partie : \{"kind":"weekly","type":"defend","pot":true/, /défense : marmite [1-9]\d* % /, /bilan : DÉFI RÉUSSI !/,
+    ok: [/liste : .*DÉFI DE LA SEMAINE.*MODE INFINI/, /partie : \{"kind":"weekly","type":"defend","pot":true/, /défense : marmite [1-9]\d* % /, /bilan : DÉFI RÉUSSI\s!/,
       /semaine : \{"weekChal":\{"key":"\d{4}-W\d{2}","done":true\},"quêtesSemaine":true,"shards":1\}/, /abandon : marmite tombée après \d+ s \(échec\)/, /échec : DÉFI RATÉ/,
       /"type":"endless","altar":false,"boss":false/, /bilan infini : (NOUVEAU RECORD|MODE INFINI)/], bad: [/pas de portail/] },
   { name: 'partie 3D', f: 'smoke.mjs', ok: [/no errors/] },
