@@ -14,6 +14,7 @@ const jwt = b64({ alg: 'HS256', typ: 'JWT' }) + '.' + b64({ sub: 'u-123', email:
 const SESSION = { access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r-123',
   user: { id: 'u-123', aud: 'authenticated', role: 'authenticated', email: 'joueur@exemple.fr', app_metadata: { provider: 'google' }, user_metadata: { full_name: 'Joueur Test', avatar_url: '' }, created_at: new Date().toISOString() } };
 const seen = [];
+let REMOTE = null; // sauvegarde en ligne renvoyée par la table lob_saves (null : aucune)
 async function setup(ctx) {
   await ctx.route(`${SB}/**`, async route => {
     const r = route.request(), u = r.url();
@@ -22,7 +23,12 @@ async function setup(ctx) {
     if (u.includes('/auth/v1/token')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SESSION) });
     if (u.includes('/auth/v1/user')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SESSION.user) });
     if (u.includes('/auth/v1/authorize')) return route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google (factice)</h1>' });
-    if (u.includes('/rest/v1/lob_saves')) return route.fulfill({ status: r.method() === 'GET' ? 200 : 201, contentType: 'application/json', body: r.method() === 'GET' ? '[]' : '' });
+    if (u.includes('/rest/v1/lob_saves')) {
+      if (r.method() !== 'GET') return route.fulfill({ status: 201, contentType: 'application/json', body: '' });
+      const row = REMOTE ? { data: REMOTE, updated_at: new Date(REMOTE.updatedAt).toISOString() } : null;
+      const one = /vnd\.pgrst\.object/.test(r.headers().accept || '');
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(one ? row : row ? [row] : []) });
+    }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 }
@@ -92,6 +98,20 @@ const shot = (p, n) => p.screenshot({ path: `${OUT}/${VP}-${n}.png` });
   await shot(p, '05-app-connecte');
   await p.click('[data-act=account]', { force: true }); await wait(p, 800); await shot(p, '06-app-compte');
   console.log('compte :', await p.evaluate(() => document.querySelector('.account-modal')?.innerText.replace(/\s+/g, ' ').slice(0, 160)));
+  await ctx.close();
+}
+// ---------- conflit : la sauvegarde en ligne et celle de l'appareil ont chacune avancé ----------
+{
+  const { ctx, p } = await open(true);
+  REMOTE = await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('lob_save_v1')); return { ...s, gold: 77777, updatedAt: Date.now() + 60000, stats: { ...s.stats, runs: 42 } }; });
+  await p.click('.login-strip [data-act=signGoogle]', { force: true }); await wait(p, 1200); // fenêtre Google (vérificateur PKCE)
+  await p.evaluate(() => window.__appUrl('com.guigz78.leagueofbonk://login?code=xyz')); await wait(p, 2500);
+  const modalTxt = await p.evaluate(() => document.querySelector('.save-modal')?.innerText.replace(/\s+/g, ' ') || '');
+  await p.screenshot({ path: `${OUT}/${VP}-07-conflit.png` });
+  console.log('conflit : fenêtre', !!modalTxt, '|', modalTxt.slice(0, 120));
+  await p.evaluate(() => [...document.querySelectorAll('.save-modal .modal-btns .btn')].find(b => /En ligne/.test(b.textContent))?.click()); await wait(p, 1500);
+  console.log('conflit : choix en ligne → or', await p.evaluate(async () => (await import('/js/save.js')).save.gold), '| état', await p.evaluate(async () => (await import('/js/cloud.js')).cloud.status));
+  REMOTE = null;
   await ctx.close();
 }
 console.log('requêtes Supabase :', [...new Set(seen)].join(' | '));

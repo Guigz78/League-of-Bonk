@@ -2606,3 +2606,13 @@ button:not(:disabled):active, [data-act]:active, summary:active, label.sw:active
 .toasts:not(.in-run) .toast.out { transform: translateY(8px); }
 .itile .it-new, .itile .it-better { top: 20px; right: 3px; }
 .rcard .rc-eq { position: absolute; z-index: 2; top: 30px; right: 10px; margin: 0; }
+
+/* ===== r27 : choix entre deux sauvegardes ===== */
+.sv-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.sv-card { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--s1); border: 1px solid var(--ln2); }
+.sv-h { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; font-size: 20px; line-height: 1; }
+.sv-h b { font: 700 14px/1.1 var(--fd); letter-spacing: .06em; text-transform: uppercase; }
+.sv-h small { font: 500 11.5px var(--fb); color: var(--tx2); }
+.sv-l { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--tx2); }
+.sv-l img { width: 14px; height: 14px; flex: none; }
+.sv-l b { color: var(--tx); }

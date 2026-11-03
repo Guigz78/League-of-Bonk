@@ -1,4 +1,4 @@
-import { boot, onRemoteSave } from './game.js';
+import { boot, onRemoteSave, chooseSave } from './game.js';
 import { initCloud, cloud } from './cloud.js';
 import { isNative } from './native.js';
 
@@ -8,6 +8,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('contextmenu', e => { if (e.target.closest('img, .spell')) e.preventDefault(); });
 
 cloud.setRemoteHandler(onRemoteSave);
+cloud.setConflictHandler(chooseSave); // deux sauvegardes qui ont avancé chacune : le joueur choisit
 // connexion Google : pas dans l'app (Google refuse les vues web intégrées), la sauvegarde reste sur l'appareil
 initCloud().catch(() => {}); // compte : navigateur et app iOS (cloud.js)
 boot();

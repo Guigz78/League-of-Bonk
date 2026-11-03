@@ -1999,6 +1999,7 @@ async function settings() {
         ${row('joystick', 'Taille du joystick', '', `<span class="range"><input type="range" id="sJoy" min="0.8" max="1.3" step="0.05" value="${S.joySize}"><b id="sJoyV">${joyTxt(S.joySize)}</b></span>`)}
         ${row('upg', 'Choix automatique', 'Prend la meilleure amélioration à chaque niveau', sw('sAuto', S.autoPick))}
         ${row('hand', 'Mode gaucher', 'Bouton d\'ultime à gauche', sw('sLefty', S.lefty))}
+        ${row('cube', 'Graphismes', 'Léger : plus fluide sur les vieux iPhone (image moins fine, moins d\'effets)', seg('quality', [['auto', 'Auto'], ['lite', 'Léger']]), true)}
       </div>
       <h4>Son</h4>
       <div class="set-list">
@@ -2020,7 +2021,7 @@ async function settings() {
   });
   // boutons internes
   const wrap = document.getElementById(wrapId);
-  const o = { shake: S.shake, numbers: S.numbers };
+  const o = { shake: S.shake, numbers: S.numbers, quality: S.quality || 'auto' };
   let action = null;
   wrap.addEventListener('click', e => {
     const sv = e.target.closest('[data-sv]');
@@ -2165,6 +2166,26 @@ async function accountSheet() {
     if (ok) await cloud.signOut();
   }
   if (!battle) home();
+}
+
+// deux sauvegardes différentes (cet appareil / en ligne) qui ont chacune avancé : le joueur choisit laquelle garder
+export function chooseSave(local, remote) {
+  const when = t => (t ? new Date(t).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '?');
+  const stars = s => Object.values(s.storyCh || {}).reduce((n, b) => n + (b & 1) + ((b >> 1) & 1) + ((b >> 2) & 1), 0);
+  const card = (s, label, ic) => `<div class="sv-card">
+      <span class="sv-h">${ic}<b>${label}</b><small>${esc(when(s.updatedAt))}</small></span>
+      <span class="sv-l">${iconImg('gold', 14)}<b>${fmt(s.gold || 0)}</b> or</span>
+      <span class="sv-l">${iconImg('map', 14)}<b>${(s.zoneCleared || []).filter(Boolean).length}/${ZONES.length}</b> mondes</span>
+      <span class="sv-l">${iconImg('book', 14)}<b>★ ${stars(s)}</b> histoire</span>
+      <span class="sv-l">${iconImg('play', 14)}<b>${fmt(s.stats?.runs || 0)}</b> parties</span>
+    </div>`;
+  return modal({
+    title: 'Deux sauvegardes',
+    cls: 'save-modal',
+    body: `<p class="set-note">Votre progression a avancé <b>sur cet appareil</b> et <b>sur un autre</b>. Laquelle garder ? L'autre sera remplacée.</p>
+      <div class="sv-cards">${card(local, 'Cet appareil', '📱')}${card(remote, 'En ligne', '☁️')}</div>`,
+    buttons: [{ label: '📱 Cet appareil', cls: 'ghost', value: 'local' }, { label: '☁️ En ligne', cls: 'primary', value: 'remote' }],
+  }).then(v => v || 'local');
 }
 
 // rafraîchit l'écran quand la sauvegarde arrive du cloud
