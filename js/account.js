@@ -44,6 +44,7 @@ export async function settings() {
       <div class="set-list">
         ${row('sound', 'Effets sonores', '', sw('sSound', S.sound))}
         ${row('music', 'Musique', '', sw('sMus', S.music !== false))}
+        ${row('sound', 'Voix des personnages', 'Dialogues de l\'histoire et commentaires de Pompon', sw('sVoice', S.voice !== false))}
         ${row('vibrate', 'Vibrations', '', sw('sVib', S.vibrate))}
       </div>
       <h4>Compte</h4>
@@ -79,6 +80,7 @@ export async function settings() {
   await p;
   S.sound = wrap.querySelector('#sSound').checked;
   S.vibrate = wrap.querySelector('#sVib').checked;
+  S.voice = !!wrap.querySelector('#sVoice')?.checked;
   S.lefty = wrap.querySelector('#sLefty').checked;
   S.autoPick = !!wrap.querySelector('#sAuto')?.checked;
   S.joySize = Math.max(0.8, Math.min(1.3, +wrap.querySelector('#sJoy').value || 1));

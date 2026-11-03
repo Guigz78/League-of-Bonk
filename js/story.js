@@ -13,6 +13,7 @@ import { heroURL, creatureURL, zoneBannerURL } from './visuals.js';
 import { sfx } from './audio.js';
 import { $, esc, fmt, modal } from './ui.js';
 import { earnTitle } from './season.js';
+import { speak, preload, hush } from './voice.js';
 
 // répliques : [qui, texte, émotion] ; qui = h (champion), p (Pompon), b (boss du chapitre), m (chef des gardes du monde),
 // g (Gorgoth en hologramme), n (narration). Émotions : angry, happy, sad, surprise, think. {h} = nom du champion.
@@ -218,11 +219,14 @@ export function cutscene(n, part = 'intro', { inRun = false } = {}) {
     const bub = w.querySelector('.ss-bubble'), nameEl = w.querySelector('.ss-name'), txt = w.querySelector('.ss-txt');
     const slot = { h: w.querySelector('.ss-h'), p: w.querySelector('.ss-pet'), r: w.querySelector('.ss-b') };
     let seq = lines, i = -1, full = '', shown = 0, typing = 0, done = false, ending = false, card = part === 'intro', rk = right;
+    // voix (js/voice.js) : id de la réplique = chapitre-partie-numéro (épilogue du banquet, phrase de fin)
+    const lineId = () => `${c.id}-${seq === epi ? 'epilogue' : part}-${i}`;
+    preload([...lines.map((l, j) => [`${c.id}-${part}-${j}`, l[0]]), ...(epi || []).map((l, j) => [`${c.id}-epilogue-${j}`, l[0]]), ...(c.end && part === 'outro' ? [[`${c.id}-end`, 'n']] : [])]);
     const run = inRun ? $('.run') : null;
     run?.classList.add('story-on');
     const close = () => {
       if (done) return;
-      done = true; cancelAnimationFrame(typing);
+      done = true; cancelAnimationFrame(typing); hush();
       run?.classList.remove('story-on');
       w.classList.add('out');
       setTimeout(() => { w.remove(); resolve(); }, 260);
@@ -243,7 +247,7 @@ export function cutscene(n, part = 'intro', { inRun = false } = {}) {
       i++;
       if (i >= seq.length) {
         if (epi && seq !== epi) { seq = epi; i = 0; w.classList.add('banquet'); sfx('win'); } // banquet final
-        else if (c.end && part === 'outro') { ending = true; w.classList.add('ending'); sfx('win'); return; }
+        else if (c.end && part === 'outro') { ending = true; w.classList.add('ending'); sfx('win'); speak(`${c.id}-end`, 'n'); return; }
         else return close();
       }
       const [k, t, mood] = seq[i], s = cast[k] || cast.h;
@@ -267,7 +271,7 @@ export function cutscene(n, part = 'intro', { inRun = false } = {}) {
       }
       txt.innerHTML = `<span class="ss-ghost">${full}</span>`; // place réservée tout de suite (la bulle ne saute pas)
       bub.classList.remove('ready');
-      sfx(mood === 'angry' && k !== 'h' ? 'talkLow' : s.voice);
+      if (!speak(lineId(), k)) sfx(mood === 'angry' && k !== 'h' ? 'talkLow' : s.voice);
       type();
     };
     w.addEventListener('click', e => {
@@ -284,21 +288,21 @@ export function cutscene(n, part = 'intro', { inRun = false } = {}) {
 // réplique du boss à son arrivée (en jeu, sans pause) : portrait + bulle, 5 s
 export function taunt(n) {
   const c = CH[n]; if (!c?.taunt) return;
-  bubbleInRun(who('b', c), c.taunt, c.giga ? 'giga' : '');
+  bubbleInRun(who('b', c), c.taunt, c.giga ? 'giga' : '', 0, [`${c.id}-taunt`, 'b']);
 }
 // bulle en jeu (réplique ou commentaire de Pompon) : une à la fois, 5 s
 let bubbleT = 0;
-function bubbleInRun(s, text, cls = '', tries = 0) {
+function bubbleInRun(s, text, cls = '', tries = 0, vo = null) {
   const hud = $('.run .hud'); if (!hud || $('.run.story-on')) return;
   hud.querySelector('.taunt')?.remove(); // l'ancienne bulle s'efface tout de suite
   // une grande bannière est affichée (boss invoqué, mission accomplie) : la bulle attend qu'elle parte (4 s au plus)
-  if ($('#banner.show') && tries < 16) return void setTimeout(() => bubbleInRun(s, text, cls, tries + 1), 250);
+  if ($('#banner.show') && tries < 16) return void setTimeout(() => bubbleInRun(s, text, cls, tries + 1, vo), 250);
   const el = document.createElement('div');
   el.className = `taunt ${cls} ${s.side === 'l' ? 'left' : ''}`;
   el.innerHTML = `<img src="${s.img}" alt=""><span><b style="--nc:${s.color}">${esc(s.name)}</b>${say(text)}</span>`;
   hud.appendChild(el);
   const run = $('.run'); run?.classList.add('taunting'); // le guide de la première partie s'efface le temps de la bulle
-  sfx(s.voice);
+  if (!(vo && speak(vo[0], vo[1]))) sfx(s.voice);
   requestAnimationFrame(() => el.classList.add('in'));
   clearTimeout(bubbleT);
   bubbleT = setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.remove(); run?.classList.remove('taunting'); }, 500); }, 5000);
@@ -332,7 +336,8 @@ function talk(c, ev, d = {}) {
   else if (ev === 'done') t = 'C\'est gagné ! Le portail s\'ouvre, file dedans !';
   if (!t) return;
   said.add(key); lastChat = now;
-  bubbleInRun(who('p', c), t, 'pompon');
+  const vk = ev === 'start' ? 'start-' + (!m ? (c.giga ? 'giga' : 'boss') : m.type) : ev === 'item' ? (d.k === 1 ? 'item-first' : d.n - d.k === 1 ? 'item-last' : 'item-mid') : ev;
+  bubbleInRun(who('p', c), t, 'pompon', 0, ['pompon-' + vk, 'p']);
 }
 
 // ---------- Fin d'un chapitre (bilan) ----------

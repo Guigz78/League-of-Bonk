@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'www');
-const COPY = ['index.html', 'manifest.webmanifest', 'css', 'js', 'vendor', 'fonts', 'icons'];
+const COPY = ['index.html', 'manifest.webmanifest', 'css', 'js', 'vendor', 'fonts', 'icons', 'voices'];
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out);
