@@ -1,4 +1,5 @@
-import { boot, onRemoteSave, chooseSave } from './game.js';
+import { boot, onRemoteSave } from './game.js';
+import { chooseSave } from './account.js';
 import { initCloud, cloud } from './cloud.js';
 import { isNative } from './native.js';
 
