@@ -8,7 +8,8 @@ const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftsha
 const dev = VP === 'se' ? { ...devices['iPhone SE'], viewport: { width: 320, height: 568 } } : { ...devices['iPhone 13'] };
 const wait = (p, ms) => p.waitForTimeout(ms);
 const errs = [];
-const SB = 'https://bplagnxryyxqwumhrxco.supabase.co';
+// adresse du projet Supabase lue dans js/config.js (le test suit le projet utilisé par le jeu)
+const SB = fs.readFileSync(new URL('../js/config.js', import.meta.url), 'utf8').match(/SUPABASE_URL = '([^']+)'/)[1];
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = b64({ alg: 'HS256', typ: 'JWT' }) + '.' + b64({ sub: 'u-123', email: 'joueur@exemple.fr', exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated', aud: 'authenticated' }) + '.sig';
 const SESSION = { access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r-123',
