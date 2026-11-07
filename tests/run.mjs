@@ -26,6 +26,8 @@ const TESTS = [
   { name: 'forge, coffres, options', f: 'screens-split.mjs', env: { VP: 'se' }, rapide: true,
     ok: [/fabrication : objets (\d+) → (?!\1)\d+ \| pièces arme commune 4 \| animation fermée true/, /fusion : pièces arme commune 0, peu commune 2 \| forge affichée true/,
       /case choisie : weapon 1/, /coffres : restants 0 \| accueil true/, /graphismes : lite/, /compte : .+ \| 6 chiffres/, /bande « Plus tard » : (cachée true \| mémorisée true|pas de bande)/, /no errors/] },
+  { name: 'hors connexion', f: 'offline.mjs', rapide: true,
+    ok: [/cache : lob-v\d+ : \d+ fichiers/, /réseau coupé : oui/, /accueil hors ligne : true \| jouer : true/, /partie hors ligne : true \| 3D : true/, /no errors/] },
   { name: 'défilement 13', f: 'screens-scroll.mjs', env: { VP: '13', SCROLL: '1' }, ok: [/défilement story-screen/], bad: [/BLOQUÉ/, / ERREUR /] },
   { name: 'défilement SE', f: 'screens-scroll.mjs', env: { VP: 'se', SCROLL: '1' }, ok: [/défilement story-screen/], bad: [/BLOQUÉ/, / ERREUR /] },
   { name: 'objets mythiques', f: 'mythic.mjs', env: { VP: '13' },
