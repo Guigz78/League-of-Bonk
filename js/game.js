@@ -30,7 +30,7 @@ import { chestScreen, lootAgg, partIcon } from './chests.js';
 import { forgeTab, selectForge, doCraft, doForgeMyth, doFuse, mythInfo } from './forge.js';
 import { settings, accountSheet, signGoogle, signInSheet, loginStrip, hideLoginStrip } from './account.js';
 
-export const APP_VERSION = 'v48'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
+export const APP_VERSION = 'v49'; // affichée dans les options (même numéro que le cache hors ligne de sw.js)
 let tab = 'adventure';
 let battle = null;
 let gearFilter = 'all';

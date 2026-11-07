@@ -17,12 +17,31 @@ function ac() {
     musicBus = ctx.createGain(); musicBus.gain.value = 0.55;
     sfxBus.connect(comp); musicBus.connect(comp); comp.connect(master); master.connect(ctx.destination);
     // iOS : le son ne démarre qu'après un geste de l'utilisateur
-    const unlock = () => { ctx.resume(); };
+    const unlock = () => { if (!document.hidden) ctx.resume(); };
     window.addEventListener('pointerdown', unlock, { passive: true });
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  // « interrupted » : iOS après un appel ou l'écran verrouillé ; jamais pendant que la page est cachée
+  if (ctx.state !== 'running' && ctx.state !== 'closed' && !document.hidden) ctx.resume().catch(() => {});
   return ctx;
 }
+
+// page cachée (autre onglet, autre app, écran verrouillé) : tout le son s'arrête net. Avant, la musique continuait en
+// saccades : Safari ralentit les minuteries d'une page en arrière-plan alors que le son, lui, continue de jouer.
+// Au retour, le son reprend et la musique repart en mesure, sans rejouer d'un coup les notes manquées.
+function hideAudio() {
+  stopVoice();
+  if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {});
+}
+function showAudio() {
+  if (!ctx || document.hidden) return;
+  ctx.resume().catch(() => {});
+  if (seq) seq.next = now() + 0.08;
+}
+document.addEventListener('visibilitychange', () => (document.hidden ? hideAudio() : showAudio()));
+window.addEventListener('pagehide', hideAudio);
+window.addEventListener('pageshow', showAudio);
+// état du son (tests)
+export const audioInfo = () => ({ state: ctx?.state || 'none', music: seq?.name || null, voices });
 
 // ---------- Briques de base ----------
 let voices = 0;
@@ -269,8 +288,10 @@ function kazooAt(f, d, at) {
 }
 
 function tick() {
-  if (!seq || !ctx) return;
+  if (!seq || !ctx || document.hidden || ctx.state !== 'running') return;
   const th = seq.th, stepDur = 60 / th.bpm / 4;
+  // le jeu a calé (menu lourd, coffre, chargement) : on reprend en mesure au lieu de jouer les notes manquées en rafale
+  if (seq.next < now() - 0.12) seq.next = now() + 0.05;
   while (seq.next < now() + 0.2) {
     const t = seq.next, i = seq.step % 16, bar = Math.floor(seq.step / 16);
     const chordDeg = th.prog[bar % th.prog.length];
